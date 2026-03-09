@@ -1,0 +1,156 @@
+@page "/agents"
+@inject HttpClient Http
+@using System.Timers
+@implements IDisposable
+
+<PageTitle>Agents</PageTitle>
+
+<h1>Agents</h1>
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+}
+else if (status is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Clients</h5>
+                    <p class="card-text display-6">@status.Clients.Count</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Relays</h5>
+                    <p class="card-text display-6">@status.Relays.Count</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h3>Clients</h3>
+    @if (status.Clients.Connections.Length == 0)
+    {
+        <p><em>No clients connected.</em></p>
+    }
+    else
+    {
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Connected At</th>
+                    <th>Relayed</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var client in status.Clients.Connections)
+                {
+                    <tr>
+                        <td><code>@client.Id</code></td>
+                        <td>@DateTimeOffset.FromUnixTimeMilliseconds((long)client.ConnectedAt).LocalDateTime.ToString("g")</td>
+                        <td>
+                            @if (client.Relayed)
+                            {
+                                <span class="badge bg-success">Yes</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">No</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <h3>Relays</h3>
+    @if (status.Relays.Connections.Length == 0)
+    {
+        <p><em>No active relays.</em></p>
+    }
+    else
+    {
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Connection</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var relay in status.Relays.Connections)
+                {
+                    <tr>
+                        <td>@relay</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+    private RelayStatus? status;
+    private string? error;
+    private Timer? timer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadStatus();
+
+        timer = new Timer(5000);
+        timer.Elapsed += async (_, _) =>
+        {
+            await LoadStatus();
+            await InvokeAsync(StateHasChanged);
+        };
+        timer.Start();
+    }
+
+    private async Task LoadStatus()
+    {
+        try
+        {
+            status = await Http.GetFromJsonAsync<RelayStatus>("https://relay.nostdlib.workers.dev/");
+            error = null;
+        }
+        catch (Exception ex)
+        {
+            error = $"Failed to load: {ex.Message}";
+        }
+    }
+
+    public void Dispose()
+    {
+        timer?.Stop();
+        timer?.Dispose();
+    }
+
+    public class RelayStatus
+    {
+        public GroupInfo Clients { get; set; } = new();
+        public GroupInfo Relays { get; set; } = new();
+    }
+
+    public class GroupInfo
+    {
+        public int Count { get; set; }
+        public ClientConnection[] Connections { get; set; } = [];
+    }
+
+    public class ClientConnection
+    {
+        public string Id { get; set; } = "";
+        public double ConnectedAt { get; set; }
+        public bool Relayed { get; set; }
+    }
+}
