@@ -353,6 +353,12 @@ else
                         existing.Relayed = false;
                         existing.RelayId = null;
                     }
+
+                    if (Wm.Relay.ConnectedAgentId == agent.Id)
+                    {
+                        _ = Wm.DisconnectRelay();
+                        error = "Agent relay disconnected.";
+                    }
                 }
 
                 error = null;
