@@ -70,7 +70,7 @@ else
 }
 
 @code {
-    private GroupInfo? agents;
+    private GroupInfo<AgentConnection>? agents;
     private string? error;
     private Timer? timer;
 
@@ -92,7 +92,7 @@ else
         try
         {
             var status = await Http.GetFromJsonAsync<RelayStatus>("https://relay.nostdlib.workers.dev/");
-            agents = status?.Clients;
+            agents = status?.Agents;
             error = null;
         }
         catch (Exception ex)
@@ -118,29 +118,5 @@ else
     {
         timer?.Stop();
         timer?.Dispose();
-    }
-
-    public class RelayStatus
-    {
-        public GroupInfo Clients { get; set; } = new();
-    }
-
-    public class GroupInfo
-    {
-        public int Count { get; set; }
-        public AgentConnection[] Connections { get; set; } = [];
-    }
-
-    public class AgentConnection
-    {
-        public string Id { get; set; } = "";
-        public double ConnectedAt { get; set; }
-        public bool Relayed { get; set; }
-        public string? RelayId { get; set; }
-        public string Ip { get; set; } = "";
-        public string Country { get; set; } = "";
-        public string City { get; set; } = "";
-        public int MessageCount { get; set; }
-        public double LastActiveAt { get; set; }
     }
 }

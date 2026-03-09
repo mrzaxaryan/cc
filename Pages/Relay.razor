@@ -21,8 +21,8 @@ else
         <div class="col-md-6">
             <div class="card">
                 <div class="card-body">
-                    <h5 class="card-title">Clients</h5>
-                    <p class="card-text display-6">@status.Clients.Count</p>
+                    <h5 class="card-title">Agents</h5>
+                    <p class="card-text display-6">@status.Agents.Count</p>
                 </div>
             </div>
         </div>
@@ -36,10 +36,10 @@ else
         </div>
     </div>
 
-    <h3>Clients</h3>
-    @if (status.Clients.Connections.Length == 0)
+    <h3>Agents</h3>
+    @if (status.Agents.Connections.Length == 0)
     {
-        <p><em>No clients connected.</em></p>
+        <p><em>No agents connected.</em></p>
     }
     else
     {
@@ -56,16 +56,16 @@ else
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var client in status.Clients.Connections)
+                    @foreach (var agent in status.Agents.Connections)
                     {
                         <tr>
-                            <td><code>@client.Id</code></td>
-                            <td><code>@client.Ip</code></td>
-                            <td>@FormatLocation(client)</td>
-                            <td>@FormatTimestamp(client.ConnectedAt)</td>
-                            <td>@client.MessageCount</td>
+                            <td><code>@agent.Id</code></td>
+                            <td><code>@agent.Ip</code></td>
+                            <td>@FormatLocation(agent)</td>
+                            <td>@FormatTimestamp(agent.ConnectedAt)</td>
+                            <td>@agent.MessageCount</td>
                             <td>
-                                @if (client.Relayed)
+                                @if (agent.Relayed)
                                 {
                                     <span class="badge bg-success">Yes</span>
                                 }
@@ -146,7 +146,7 @@ else
         return DateTimeOffset.FromUnixTimeMilliseconds((long)ms).LocalDateTime.ToString("g");
     }
 
-    private static string FormatLocation(ClientConnection c)
+    private static string FormatLocation(AgentConnection c)
     {
         var parts = new List<string>();
         if (!string.IsNullOrEmpty(c.City)) parts.Add(c.City);
@@ -158,37 +158,5 @@ else
     {
         timer?.Stop();
         timer?.Dispose();
-    }
-
-    public class RelayStatus
-    {
-        public GroupInfo<ClientConnection> Clients { get; set; } = new();
-        public GroupInfo<RelayConnection> Relays { get; set; } = new();
-    }
-
-    public class GroupInfo<T>
-    {
-        public int Count { get; set; }
-        public T[] Connections { get; set; } = [];
-    }
-
-    public class ClientConnection
-    {
-        public string Id { get; set; } = "";
-        public double ConnectedAt { get; set; }
-        public bool Relayed { get; set; }
-        public string? RelayId { get; set; }
-        public string Ip { get; set; } = "";
-        public string Country { get; set; } = "";
-        public string City { get; set; } = "";
-        public int MessageCount { get; set; }
-        public double LastActiveAt { get; set; }
-    }
-
-    public class RelayConnection
-    {
-        public string Id { get; set; } = "";
-        public double ConnectedAt { get; set; }
-        public string ClientId { get; set; } = "";
     }
 }
