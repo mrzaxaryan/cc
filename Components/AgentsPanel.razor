@@ -311,6 +311,11 @@ else
                     {
                         existing.Relayed = true;
                         existing.RelayId = agent.RelayId;
+                        agents = new GroupInfo<AgentConnection>
+                        {
+                            Count = agents.Count,
+                            Connections = agents.Connections.ToArray()
+                        };
                     }
                 }
                 else if (type == "agent_unrelayed" && agent is not null)
@@ -320,6 +325,11 @@ else
                     {
                         existing.Relayed = false;
                         existing.RelayId = null;
+                        agents = new GroupInfo<AgentConnection>
+                        {
+                            Count = agents.Count,
+                            Connections = agents.Connections.ToArray()
+                        };
                     }
 
                     if (Wm.ConnectedAgentIds.Contains(agent.Id))
