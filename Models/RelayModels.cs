@@ -42,7 +42,7 @@ public class RelayConnection
 {
     public string Id { get; set; } = "";
     public double ConnectedAt { get; set; }
-    public string ClientId { get; set; } = "";
+    public string AgentId { get; set; } = "";
 }
 
 public class EventListenerConnection
