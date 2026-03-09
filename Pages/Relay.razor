@@ -1,32 +1,45 @@
-@page "/agents"
+@page "/relay"
 @inject HttpClient Http
 @using System.Timers
 @implements IDisposable
 
-<PageTitle>Agents</PageTitle>
+<PageTitle>Relay</PageTitle>
 
-<h1>Agents</h1>
+<h1>Relay</h1>
 
 @if (error is not null)
 {
     <div class="alert alert-danger">@error</div>
 }
-else if (agents is null)
+else if (status is null)
 {
     <p><em>Loading...</em></p>
 }
 else
 {
-    <div class="card mb-3">
-        <div class="card-body">
-            <h5 class="card-title">Connected</h5>
-            <p class="card-text display-6">@agents.Count</p>
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Clients</h5>
+                    <p class="card-text display-6">@status.Clients.Count</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Relays</h5>
+                    <p class="card-text display-6">@status.Relays.Count</p>
+                </div>
+            </div>
         </div>
     </div>
 
-    @if (agents.Connections.Length == 0)
+    <h3>Clients</h3>
+    @if (status.Clients.Connections.Length == 0)
     {
-        <p><em>No agents connected.</em></p>
+        <p><em>No clients connected.</em></p>
     }
     else
     {
@@ -43,16 +56,16 @@ else
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var agent in agents.Connections)
+                    @foreach (var client in status.Clients.Connections)
                     {
                         <tr>
-                            <td><code>@agent.Id</code></td>
-                            <td><code>@agent.Ip</code></td>
-                            <td>@FormatLocation(agent)</td>
-                            <td>@FormatTimestamp(agent.ConnectedAt)</td>
-                            <td>@agent.MessageCount</td>
+                            <td><code>@client.Id</code></td>
+                            <td><code>@client.Ip</code></td>
+                            <td>@FormatLocation(client)</td>
+                            <td>@FormatTimestamp(client.ConnectedAt)</td>
+                            <td>@client.MessageCount</td>
                             <td>
-                                @if (agent.Relayed)
+                                @if (client.Relayed)
                                 {
                                     <span class="badge bg-success">Yes</span>
                                 }
@@ -67,10 +80,38 @@ else
             </table>
         </div>
     }
+
+    <h3>Relays</h3>
+    @if (status.Relays.Connections.Length == 0)
+    {
+        <p><em>No active relays.</em></p>
+    }
+    else
+    {
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Client ID</th>
+                    <th>Connected At</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var relay in status.Relays.Connections)
+                {
+                    <tr>
+                        <td><code>@relay.Id</code></td>
+                        <td><code>@relay.ClientId</code></td>
+                        <td>@FormatTimestamp(relay.ConnectedAt)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
 }
 
 @code {
-    private GroupInfo? agents;
+    private RelayStatus? status;
     private string? error;
     private Timer? timer;
 
@@ -91,8 +132,7 @@ else
     {
         try
         {
-            var status = await Http.GetFromJsonAsync<RelayStatus>("https://relay.nostdlib.workers.dev/");
-            agents = status?.Clients;
+            status = await Http.GetFromJsonAsync<RelayStatus>("https://relay.nostdlib.workers.dev/");
             error = null;
         }
         catch (Exception ex)
@@ -106,7 +146,7 @@ else
         return DateTimeOffset.FromUnixTimeMilliseconds((long)ms).LocalDateTime.ToString("g");
     }
 
-    private static string FormatLocation(AgentConnection c)
+    private static string FormatLocation(ClientConnection c)
     {
         var parts = new List<string>();
         if (!string.IsNullOrEmpty(c.City)) parts.Add(c.City);
@@ -122,16 +162,17 @@ else
 
     public class RelayStatus
     {
-        public GroupInfo Clients { get; set; } = new();
+        public GroupInfo<ClientConnection> Clients { get; set; } = new();
+        public GroupInfo<RelayConnection> Relays { get; set; } = new();
     }
 
-    public class GroupInfo
+    public class GroupInfo<T>
     {
         public int Count { get; set; }
-        public AgentConnection[] Connections { get; set; } = [];
+        public T[] Connections { get; set; } = [];
     }
 
-    public class AgentConnection
+    public class ClientConnection
     {
         public string Id { get; set; } = "";
         public double ConnectedAt { get; set; }
@@ -142,5 +183,12 @@ else
         public string City { get; set; } = "";
         public int MessageCount { get; set; }
         public double LastActiveAt { get; set; }
+    }
+
+    public class RelayConnection
+    {
+        public string Id { get; set; } = "";
+        public double ConnectedAt { get; set; }
+        public string ClientId { get; set; } = "";
     }
 }

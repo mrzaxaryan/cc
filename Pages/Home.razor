@@ -1,7 +1,103 @@
-﻿@page "/"
+@page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>cc</PageTitle>
 
-<h1>Hello, world!</h1>
+<h1>cc</h1>
 
-Welcome to your new app.
+<p>Real-time dashboard for monitoring <a href="https://github.com/mrzaxaryan/Position-Independent-Agent">Position-Independent-Agent</a> connections. Built with Blazor WebAssembly (.NET 10).</p>
+
+<h2>Overview</h2>
+
+<p><strong>cc</strong> is a command center that connects to the <a href="https://github.com/mrzaxaryan/relay">relay</a> service and displays live status of connected agents and relay pairings. Data auto-refreshes every 5 seconds.</p>
+
+<h3>Features</h3>
+
+<ul>
+    <li>Live client and relay connection counts</li>
+    <li>Client details: ID, IP, location, connection time, message count, relay status</li>
+    <li>Relay details: ID, paired client ID, connection time</li>
+    <li>Auto-refresh with loading and error states</li>
+</ul>
+
+<h2>Architecture</h2>
+
+<pre><code>+---------------------------+         +---------------------------+
+|  Position-Independent     |         |                           |
+|  Runtime (PIR)            |         |  cc (this project)        |
+|  C++23 shellcode runtime  |         |  Blazor WebAssembly       |
+|  Zero-dependency, cross-  |         |  monitoring dashboard     |
+|  platform                 |         |                           |
++------------+--------------+         +------------+--------------+
+             |                                     |
+             v                                     v
++---------------------------+         +---------------------------+
+|  Position-Independent     |  &lt;---&gt;  |  relay                    |
+|  Agent                    |   WS    |  Cloudflare Workers +     |
+|  Cross-platform remote    |         |  Durable Objects          |
+|  agent built on PIR       |         |  WebSocket relay server   |
++---------------------------+         +---------------------------+</code></pre>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Component</th>
+            <th>Description</th>
+            <th>Repo</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>PIR</strong></td>
+            <td>C++23 position-independent runtime -- cryptography, networking, TLS 1.3, all without libc or CRT</td>
+            <td><a href="https://github.com/mrzaxaryan/Position-Independent-Runtime">Position-Independent-Runtime</a></td>
+        </tr>
+        <tr>
+            <td><strong>Agent</strong></td>
+            <td>Cross-platform remote agent built on PIR -- file system, hashing, binary command protocol over WebSocket</td>
+            <td><a href="https://github.com/mrzaxaryan/Position-Independent-Agent">Position-Independent-Agent</a></td>
+        </tr>
+        <tr>
+            <td><strong>Relay</strong></td>
+            <td>WebSocket relay on Cloudflare Workers -- pairs agents with relay connections 1:1 via Durable Objects</td>
+            <td><a href="https://github.com/mrzaxaryan/relay">relay</a></td>
+        </tr>
+        <tr>
+            <td><strong>cc</strong></td>
+            <td>This project -- Blazor WebAssembly dashboard that polls the relay for live connection data</td>
+            <td><a href="https://github.com/mrzaxaryan/cc">cc</a></td>
+        </tr>
+    </tbody>
+</table>
+
+<h2>Data Source</h2>
+
+<p>Fetches from <a href="https://relay.nostdlib.workers.dev/">https://relay.nostdlib.workers.dev/</a> which returns:</p>
+
+<pre><code>{
+  "clients": {
+    "count": 1,
+    "connections": [{ "id": "...", "ip": "...", "location": "...", "connectedAt": 0, "messageCount": 0, "relayed": false }]
+  },
+  "relays": {
+    "count": 0,
+    "connections": []
+  }
+}</code></pre>
+
+<h2>Development</h2>
+
+<pre><code># Run
+dotnet run
+
+# Or with hot reload
+dotnet watch</code></pre>
+
+<p>Starts on <code>http://localhost:5057</code> / <code>https://localhost:7104</code>.</p>
+
+<h2>Tech Stack</h2>
+
+<ul>
+    <li>.NET 10.0 / Blazor WebAssembly</li>
+    <li>Bootstrap 5</li>
+    <li>C# with nullable reference types</li>
+</ul>
