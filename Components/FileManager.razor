@@ -167,6 +167,7 @@
     private const long PageSize = 8192;
 
     [Parameter] public RelaySocket? Relay { get; set; }
+    [Parameter] public string? AgentId { get; set; }
 
     private string currentPath = "";
     private string[] pathSegments = [];
@@ -235,6 +236,7 @@
             var (parsed, parseError) = DirEntry.ParseDirectoryResponse(response);
             if (parseError is not null) { Msg.Error(parseError); return; }
             entries = parsed;
+            await MirrorEntriesToCache();
             await CheckCachedFiles();
         }
         catch (Exception ex)
@@ -363,9 +365,39 @@
 
     // --- Cache sync ---
 
-    private string CacheSubPath => currentPath.Replace('\\', '/').Trim('/').Replace(":", "");
+    private string AgentCacheRoot => string.IsNullOrEmpty(AgentId) ? "" : AgentId;
+    private string CacheSubPath
+    {
+        get
+        {
+            var remotePath = currentPath.Replace('\\', '/').Trim('/').Replace(":", "");
+            return string.IsNullOrEmpty(AgentCacheRoot) ? remotePath : $"{AgentCacheRoot}/{remotePath}";
+        }
+    }
 
     private bool IsDownloading(string name) => downloading.Contains(name);
+
+    private async Task MirrorEntriesToCache()
+    {
+        if (!Cache.HasDirectory || entries is null || string.IsNullOrEmpty(AgentId)) return;
+
+        foreach (var entry in entries)
+        {
+            try
+            {
+                if (entry.IsDirectory || entry.IsDrive)
+                {
+                    await Cache.CreateDirectoryAsync(CacheSubPath, entry.Name);
+                }
+                else
+                {
+                    if (!await Cache.FileExistsAsync(CacheSubPath, entry.Name))
+                        await Cache.WriteFileAsync(CacheSubPath, entry.Name, Array.Empty<byte>());
+                }
+            }
+            catch { }
+        }
+    }
 
     private async Task CheckCachedFiles()
     {
