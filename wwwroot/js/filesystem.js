@@ -136,6 +136,17 @@ window.ccFileSystem = {
         return true;
     },
 
+    // Resume writing: keep existing data and seek to offset
+    async beginResumeWriteById(fileId, offset) {
+        if (!_rootHandle) throw new Error('No directory selected');
+        const fsDir = await _rootHandle.getDirectoryHandle('.fs', { create: true });
+        const fileHandle = await fsDir.getFileHandle(fileId, { create: true });
+        this._activeWritable = await fileHandle.createWritable({ keepExistingData: true });
+        await this._activeWritable.seek(offset);
+        this._activeFileId = fileId;
+        return true;
+    },
+
     async writeChunk(data) {
         if (!this._activeWritable) throw new Error('No active writable stream');
         await this._activeWritable.write(data);

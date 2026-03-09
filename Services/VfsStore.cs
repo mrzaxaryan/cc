@@ -29,13 +29,18 @@ public class VfsFile
 public class VfsStore
 {
     private readonly IJSRuntime _js;
+    private readonly CacheManager _cache;
 
     /// <summary>Sentinel parentId for root-level entries (drives / top-level dirs).</summary>
     public const string RootParentId = "__root__";
 
     public event Action? OnChanged;
 
-    public VfsStore(IJSRuntime js) => _js = js;
+    public VfsStore(IJSRuntime js, CacheManager cache)
+    {
+        _js = js;
+        _cache = cache;
+    }
 
     // --- Directories ---
 
@@ -101,14 +106,39 @@ public class VfsStore
         return currentParent;
     }
 
+    /// <summary>Recursively remove a directory: deletes child files (with blobs), child dirs, then self.</summary>
     public async Task RemoveDirectoryAsync(string id)
     {
+        var dir = await GetDirectoryAsync(id);
+        if (dir is null) return;
+
+        // Delete child files (blobs + DB)
+        var files = await GetFilesInDirectoryAsync(dir.AgentUuid, id);
+        foreach (var f in files)
+            await RemoveFileAsync(f.Id, raiseEvent: false);
+
+        // Recurse into child directories
+        var childDirs = await GetChildDirectoriesAsync(dir.AgentUuid, id);
+        foreach (var child in childDirs)
+            await RemoveDirectoryAsync(child.Id);
+
         await _js.InvokeVoidAsync("ccDirectoryDb.remove", id);
         OnChanged?.Invoke();
     }
 
+    /// <summary>Remove all VFS data and blobs for an agent.</summary>
     public async Task ClearAgentAsync(string agentUuid)
     {
+        // Delete all blobs for this agent's files
+        var files = await _js.InvokeAsync<VfsFile[]>("ccFileDb.getByAgent", agentUuid);
+        if (files is not null)
+        {
+            foreach (var f in files)
+            {
+                try { await _cache.DeleteBlobAsync(f.Id); } catch { }
+            }
+        }
+
         await _js.InvokeVoidAsync("ccDirectoryDb.removeByAgent", agentUuid);
         await _js.InvokeVoidAsync("ccFileDb.removeByAgent", agentUuid);
         OnChanged?.Invoke();
@@ -159,9 +189,11 @@ public class VfsStore
         return files?.FirstOrDefault(f => string.Equals(f.Name, name, StringComparison.OrdinalIgnoreCase));
     }
 
-    public async Task RemoveFileAsync(string id)
+    /// <summary>Remove a file: deletes blob from filesystem and metadata from IndexedDB.</summary>
+    public async Task RemoveFileAsync(string id, bool raiseEvent = true)
     {
+        try { await _cache.DeleteBlobAsync(id); } catch { }
         await _js.InvokeVoidAsync("ccFileDb.remove", id);
-        OnChanged?.Invoke();
+        if (raiseEvent) OnChanged?.Invoke();
     }
 }

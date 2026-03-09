@@ -1,6 +1,7 @@
 @inject CacheManager Cache
 @inject VfsStore Vfs
 @inject AgentStore AgentDb
+@inject DownloadStore Downloads
 @inject MessageService Msg
 @implements IDisposable
 
@@ -10,6 +11,7 @@
         <span class="badge bg-primary">@(Cache.DirectoryName ?? "No folder")</span>
         <small class="text-muted">@Formatters.FormatSize((ulong)cacheSize)</small>
         <button class="btn btn-outline-secondary btn-sm py-0 px-1 ms-auto" @onclick="Refresh" disabled="@loading" title="Refresh">&#x21bb;</button>
+        <button class="btn btn-outline-danger btn-sm py-0 px-1" @onclick="DeleteAllCache" disabled="@(loading || cacheSize == 0)" title="Delete all cache">DEL ALL</button>
         <button class="btn btn-outline-warning btn-sm py-0 px-1" @onclick="ChangeFolder" title="Change folder">&#x1f4c1;</button>
     </div>
 
@@ -235,16 +237,39 @@
     {
         try
         {
-            // Delete blob from filesystem
-            if (await Cache.BlobExistsAsync(file.Id))
-                await Cache.DeleteBlobAsync(file.Id);
-            // Delete metadata from IndexedDB
             await Vfs.RemoveFileAsync(file.Id);
             await Refresh();
         }
         catch (Exception ex)
         {
             Msg.Error(ex.Message);
+        }
+    }
+
+    private async Task DeleteAllCache()
+    {
+        try
+        {
+            loading = true;
+            StateHasChanged();
+
+            // Clear VFS + blobs for each agent
+            foreach (var agent in AgentDb.Agents.Values)
+                await Vfs.ClearAgentAsync(agent.Uuid);
+
+            // Clear download records
+            await Downloads.ClearAsync();
+
+            await NavigateToRoot();
+        }
+        catch (Exception ex)
+        {
+            Msg.Error(ex.Message);
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
         }
     }
 

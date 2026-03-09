@@ -94,7 +94,11 @@ public class CacheManager
     }
 
     /// <summary>Download a file from an agent via relay and stream directly to .fs/{fileId}.</summary>
-    public async Task<bool> DownloadFromAgentAsync(RelaySocket relay, string remotePath, string fileId, Func<long, long, Task>? onProgress = null)
+    public async Task<bool> DownloadFromAgentAsync(
+        RelaySocket relay, string remotePath, string fileId,
+        long resumeOffset = 0,
+        CancellationToken cancellationToken = default,
+        Func<long, long, Task>? onProgress = null)
     {
         if (!relay.IsConnected || !HasDirectory) return false;
 
@@ -104,16 +108,21 @@ public class CacheManager
         if (probeResp is null || probeResp.Length < 12) return false;
 
         // Open a streaming writable to .fs/{fileId}
-        await _js.InvokeVoidAsync("ccFileSystem.beginWriteById", fileId);
+        if (resumeOffset > 0)
+            await _js.InvokeVoidAsync("ccFileSystem.beginResumeWriteById", fileId, resumeOffset);
+        else
+            await _js.InvokeVoidAsync("ccFileSystem.beginWriteById", fileId);
 
         const long chunkSize = 65536;
-        long offset = 0;
+        long offset = resumeOffset;
         bool success = false;
 
         try
         {
             while (true)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 var payload = RelaySocket.BuildFileCommand(0x02, remotePath, chunkSize, offset);
                 var response = await relay.SendAndReceive(payload);
                 if (response is null || response.Length < 4) return false;
@@ -139,10 +148,18 @@ public class CacheManager
             OnChanged?.Invoke();
             return true;
         }
+        catch (OperationCanceledException)
+        {
+            // Paused: save partial data
+            await _js.InvokeVoidAsync("ccFileSystem.endWrite");
+            throw;
+        }
         finally
         {
             if (!success)
-                await _js.InvokeVoidAsync("ccFileSystem.abortWrite");
+            {
+                try { await _js.InvokeVoidAsync("ccFileSystem.abortWrite"); } catch { }
+            }
         }
     }
 

@@ -102,6 +102,17 @@
                                                 <span class="d-flex align-items-center gap-1" style="font-size:0.6rem;">
                                                     <span class="spinner-border spinner-border-sm" style="width:0.8rem;height:0.8rem;"></span>
                                                     <span class="text-muted">@pct%</span>
+                                                    <button class="btn btn-outline-warning btn-sm px-1 py-0" style="font-size:0.6rem"
+                                                            @onclick:stopPropagation="true" @onclick="() => PauseDownload(e)" title="Pause">&#x23F8;</button>
+                                                </span>
+                                            }
+                                            else if (dl?.Status == DownloadStatus.Paused)
+                                            {
+                                                var pctPaused = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
+                                                <span class="d-flex align-items-center gap-1" style="font-size:0.6rem;">
+                                                    <span class="badge bg-warning text-dark py-0" style="font-size:0.55rem;">@pctPaused%</span>
+                                                    <button class="btn btn-outline-success btn-sm px-1 py-0" style="font-size:0.6rem"
+                                                            @onclick:stopPropagation="true" @onclick="() => ResumeDownload(e)" title="Resume" disabled="@(!IsConnected)">&#x25B6;</button>
                                                 </span>
                                             }
                                             else if (dl?.Status == DownloadStatus.Completed)
@@ -205,6 +216,7 @@
 
     // Cache tracking
     private bool _syncing;
+    private readonly Dictionary<string, CancellationTokenSource> _downloadCts = new();
 
     private bool viewingFile;
     private string viewingFileName = "";
@@ -526,7 +538,7 @@
         return Downloads.Find(AgentUuid, remotePath);
     }
 
-    private async Task DownloadToCache(DirEntry entry)
+    private async Task DownloadToCache(DirEntry entry, long resumeOffset = 0)
     {
         if (Relay is null || !Relay.IsConnected || !Cache.HasDirectory || string.IsNullOrEmpty(AgentUuid)) return;
 
@@ -538,8 +550,17 @@
         var parentId = await Vfs.ResolveOrCreatePathAsync(AgentUuid, parentRemotePath);
         var vfsFile = await Vfs.PutFileAsync(AgentUuid, parentId, entry.Name, remotePath.Replace('\\', '/'), totalSize);
 
-        var record = await Downloads.AddAsync(
-            AgentUuid, AgentName ?? "", remotePath, entry.Name, vfsFile.Id, totalSize);
+        // Find existing or create download record
+        var record = Downloads.Find(AgentUuid, remotePath);
+        if (record is null || record.Status == DownloadStatus.Completed)
+        {
+            record = await Downloads.AddAsync(
+                AgentUuid, AgentName ?? "", remotePath, entry.Name, vfsFile.Id, totalSize);
+        }
+
+        // Set up cancellation
+        var cts = new CancellationTokenSource();
+        _downloadCts[remotePath] = cts;
 
         StateHasChanged();
 
@@ -547,6 +568,7 @@
         {
             var success = await Cache.DownloadFromAgentAsync(
                 Relay, remotePath, vfsFile.Id,
+                resumeOffset, cts.Token,
                 async (downloaded, _) =>
                 {
                     await Downloads.UpdateProgressAsync(record.Id, downloaded);
@@ -557,6 +579,10 @@
             else
                 await Downloads.FailAsync(record.Id, "Download returned failure");
         }
+        catch (OperationCanceledException)
+        {
+            await Downloads.PauseAsync(record.Id);
+        }
         catch (Exception ex)
         {
             await Downloads.FailAsync(record.Id, ex.Message);
@@ -564,8 +590,26 @@
         }
         finally
         {
+            _downloadCts.Remove(remotePath);
+            cts.Dispose();
             StateHasChanged();
         }
+    }
+
+    private void PauseDownload(DirEntry entry)
+    {
+        var remotePath = currentPath + entry.Name;
+        if (_downloadCts.TryGetValue(remotePath, out var cts))
+            cts.Cancel();
+    }
+
+    private async Task ResumeDownload(DirEntry entry)
+    {
+        if (string.IsNullOrEmpty(AgentUuid)) return;
+        var remotePath = currentPath + entry.Name;
+        var record = Downloads.Find(AgentUuid, remotePath);
+        if (record is null) return;
+        await DownloadToCache(entry, record.DownloadedSize);
     }
 
     private async Task RetryDownload(DirEntry entry)

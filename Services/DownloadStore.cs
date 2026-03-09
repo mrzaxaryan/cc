@@ -5,7 +5,9 @@ namespace cc.Services;
 
 public class DownloadRecord
 {
-    [JsonPropertyName("id")] public int Id { get; set; }
+    [JsonPropertyName("id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int Id { get; set; }
     [JsonPropertyName("agentUuid")] public string AgentUuid { get; set; } = "";
     [JsonPropertyName("agentName")] public string AgentName { get; set; } = "";
     [JsonPropertyName("remotePath")] public string RemotePath { get; set; } = "";
@@ -23,6 +25,7 @@ public static class DownloadStatus
 {
     public const string Pending = "pending";
     public const string Downloading = "downloading";
+    public const string Paused = "paused";
     public const string Completed = "completed";
     public const string Failed = "failed";
 }
@@ -95,6 +98,16 @@ public class DownloadStore
         record.Status = DownloadStatus.Completed;
         record.DownloadedSize = record.TotalSize;
         record.CompletedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        await _js.InvokeVoidAsync("ccDownloadDb.put", record);
+        OnChanged?.Invoke();
+    }
+
+    public async Task PauseAsync(int id)
+    {
+        var record = _cache.FirstOrDefault(r => r.Id == id);
+        if (record is null) return;
+
+        record.Status = DownloadStatus.Paused;
         await _js.InvokeVoidAsync("ccDownloadDb.put", record);
         OnChanged?.Invoke();
     }
