@@ -40,15 +40,20 @@ public class WindowManager
             Title = panel,
             X = 100 + offset,
             Y = 80 + offset,
-            Width = panel == "File Manager" ? 800 : 700,
+            Width = panel == "File Manager" ? 800 : panel == "Cache Manager" ? 600 : 700,
             Height = 500
         });
         OnChanged?.Invoke();
     }
 
-    public void CloseWindow(WindowState win)
+    public async Task CloseWindow(WindowState win)
     {
         Windows.Remove(win);
+        if (Windows.Count == 0 && Relay.IsConnected)
+        {
+            await Relay.Disconnect();
+            Output = "";
+        }
         OnChanged?.Invoke();
     }
 

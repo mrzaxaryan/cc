@@ -1,5 +1,6 @@
 @using System.Net.WebSockets
 @using System.Text
+@inject CacheManager Cache
 
 <div>
     @if (fmError is not null)
@@ -89,6 +90,22 @@
                                     {
                                         <button class="btn btn-outline-secondary btn-sm px-1 py-0" style="font-size:0.7rem"
                                                 @onclick:stopPropagation="true" @onclick="() => ViewFile(e.Name)" title="View file">VIEW</button>
+                                        @if (Cache.HasDirectory)
+                                        {
+                                            @if (IsDownloading(e.Name))
+                                            {
+                                                <span class="spinner-border spinner-border-sm" style="width:0.8rem;height:0.8rem;"></span>
+                                            }
+                                            else if (cachedFiles.Contains(e.Name))
+                                            {
+                                                <span class="badge bg-success py-0" style="font-size:0.6rem" title="Cached">&#x2713;</span>
+                                            }
+                                            else
+                                            {
+                                                <button class="btn btn-outline-success btn-sm px-1 py-0" style="font-size:0.7rem"
+                                                        @onclick:stopPropagation="true" @onclick="() => DownloadToCache(e)" title="Download to cache">DL</button>
+                                            }
+                                        }
                                     }
                                 </span>
                             </button>
@@ -165,6 +182,10 @@
     private DirEntry? selectedEntry;
     private bool loading;
 
+    // Cache tracking
+    private HashSet<string> cachedFiles = new();
+    private HashSet<string> downloading = new();
+
     private bool viewingFile;
     private string viewingFileName = "";
     private string viewingFilePath = "";
@@ -224,6 +245,7 @@
             var (parsed, parseError) = DirEntry.ParseDirectoryResponse(response);
             if (parseError is not null) { fmError = parseError; return; }
             entries = parsed;
+            await CheckCachedFiles();
         }
         catch (Exception ex)
         {
@@ -345,6 +367,61 @@
         finally
         {
             fileLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    // --- Cache sync ---
+
+    private string CacheSubPath => currentPath.Replace('\\', '/').Trim('/');
+
+    private bool IsDownloading(string name) => downloading.Contains(name);
+
+    private async Task CheckCachedFiles()
+    {
+        cachedFiles.Clear();
+        if (!Cache.HasDirectory || entries is null) return;
+
+        foreach (var entry in entries.Where(e => !e.IsDirectory && !e.IsDrive))
+        {
+            try
+            {
+                if (await Cache.FileExistsAsync(CacheSubPath, entry.Name))
+                    cachedFiles.Add(entry.Name);
+            }
+            catch { }
+        }
+    }
+
+    private async Task DownloadToCache(DirEntry entry)
+    {
+        if (Relay is null || !Relay.IsConnected || !Cache.HasDirectory) return;
+
+        downloading.Add(entry.Name);
+        StateHasChanged();
+
+        try
+        {
+            var remotePath = currentPath + entry.Name;
+            var success = await Cache.DownloadFromAgentAsync(
+                Relay, remotePath, CacheSubPath, entry.Name,
+                (downloaded, _) =>
+                {
+                    InvokeAsync(StateHasChanged);
+                });
+
+            if (success)
+                cachedFiles.Add(entry.Name);
+            else
+                fmError = $"Failed to download {entry.Name}";
+        }
+        catch (Exception ex)
+        {
+            fmError = $"Download failed: {ex.Message}";
+        }
+        finally
+        {
+            downloading.Remove(entry.Name);
             StateHasChanged();
         }
     }

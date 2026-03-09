@@ -22,12 +22,16 @@
             <span class="app-window-title">@win.Title — @(Wm.Relay.ConnectedAgentId ?? "")</span>
             <button class="app-window-btn" @onclick="() => Wm.ToggleMinimize(win)" @onmousedown:stopPropagation="true" title="@(win.Minimized ? "Restore" : "Minimize")">@(win.Minimized ? "\u25a1" : "\u2014")</button>
             <button class="app-window-btn" @onclick="() => Wm.ToggleMaximize(win)" @onmousedown:stopPropagation="true" title="@(win.Maximized ? "Restore" : "Maximize")">@(win.Maximized ? "\u25a1" : "\u29c9")</button>
-            <button class="app-window-btn close-btn" @onclick="() => Wm.CloseWindow(win)" @onmousedown:stopPropagation="true" title="Close">&times;</button>
+            <button class="app-window-btn close-btn" @onclick="async () => await Wm.CloseWindow(win)" @onmousedown:stopPropagation="true" title="Close">&times;</button>
         </div>
         <div class="app-window-body">
             @if (win.Panel == "File Manager")
             {
                 <FileManager @ref="fileManagerRef" Relay="Wm.Relay" />
+            }
+            else if (win.Panel == "Cache Manager")
+            {
+                <CacheManagerPanel />
             }
             else if (win.Panel == "Commands")
             {

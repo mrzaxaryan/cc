@@ -1,0 +1,135 @@
+@inject CacheManager Cache
+
+<div class="welcome-overlay">
+    <div class="welcome-card">
+        <h2 class="mb-3">Welcome to CC</h2>
+
+        @if (!Cache.IsSupported)
+        {
+            <p class="text-muted">Your browser does not support the File System Access API. Please use a Chromium-based browser (Chrome, Edge, Brave) for local file caching.</p>
+            <button class="btn btn-secondary" @onclick="Skip">Continue without cache</button>
+        }
+        else if (Cache.NeedsPermission)
+        {
+            <p class="text-muted">Your previously selected cache folder needs permission to be re-granted. Click below to allow access.</p>
+
+            @if (pickError is not null)
+            {
+                <div class="alert alert-danger py-2 mb-3"><small>@pickError</small></div>
+            }
+
+            <button class="btn btn-primary btn-lg me-2" @onclick="ReGrantPermission" disabled="@picking">
+                @if (picking)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                Grant Access
+            </button>
+            <button class="btn btn-outline-secondary" @onclick="PickFolder" disabled="@picking">Pick Different Folder</button>
+        }
+        else
+        {
+            <p class="text-muted">Select a folder on your device to use as the local file cache. Files downloaded from agents will be stored here.</p>
+
+            @if (pickError is not null)
+            {
+                <div class="alert alert-danger py-2 mb-3"><small>@pickError</small></div>
+            }
+
+            <button class="btn btn-primary btn-lg" @onclick="PickFolder" disabled="@picking">
+                @if (picking)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                Select Cache Folder
+            </button>
+
+            <p class="text-muted small mt-3 mb-0">You can change this later in the Cache Manager.</p>
+        }
+    </div>
+</div>
+
+<style>
+    .welcome-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        background: rgba(0,0,0,0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .welcome-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 2.5rem;
+        max-width: 480px;
+        width: 90%;
+        text-align: center;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+</style>
+
+@code {
+    [Parameter] public EventCallback OnComplete { get; set; }
+
+    private bool picking;
+    private string? pickError;
+
+    private async Task ReGrantPermission()
+    {
+        picking = true;
+        pickError = null;
+        StateHasChanged();
+
+        try
+        {
+            var success = await Cache.ReRequestPermissionAsync();
+            if (success)
+                await OnComplete.InvokeAsync();
+            else
+                pickError = "Permission denied. Try again or pick a different folder.";
+        }
+        catch (Exception ex)
+        {
+            pickError = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            picking = false;
+        }
+    }
+
+    private async Task PickFolder()
+    {
+        picking = true;
+        pickError = null;
+        StateHasChanged();
+
+        try
+        {
+            var success = await Cache.PickDirectoryAsync();
+            if (success)
+            {
+                await OnComplete.InvokeAsync();
+            }
+            else
+            {
+                pickError = "No folder selected. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            pickError = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            picking = false;
+        }
+    }
+
+    private async Task Skip()
+    {
+        await OnComplete.InvokeAsync();
+    }
+}

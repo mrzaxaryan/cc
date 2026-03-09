@@ -1,5 +1,6 @@
 ﻿@inherits LayoutComponentBase
 @using cc.Components
+@inject CacheManager Cache
 
 <div class="page">
     <div class="sidebar">
@@ -18,3 +19,33 @@
 </div>
 
 <FloatingWindows />
+
+@if (showWelcome)
+{
+    <Welcome OnComplete="OnWelcomeComplete" />
+}
+
+@code {
+    private bool showWelcome;
+    private bool initialized;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !initialized)
+        {
+            initialized = true;
+            await Cache.InitializeAsync();
+            if (Cache.SetupRequired || Cache.NeedsPermission)
+            {
+                showWelcome = true;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void OnWelcomeComplete()
+    {
+        showWelcome = false;
+        StateHasChanged();
+    }
+}

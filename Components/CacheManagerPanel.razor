@@ -1,0 +1,191 @@
+@inject CacheManager Cache
+
+<div>
+    @if (panelError is not null)
+    {
+        <div class="alert alert-danger alert-dismissible py-2 mb-2">
+            <small>@panelError</small>
+            <button type="button" class="btn-close btn-close-sm" @onclick="() => panelError = null"></button>
+        </div>
+    }
+
+    @* Header info *@
+    <div class="d-flex align-items-center gap-2 mb-2">
+        <span class="badge bg-primary">@(Cache.DirectoryName ?? "No folder")</span>
+        <small class="text-muted">@Formatters.FormatSize((ulong)cacheSize)</small>
+        <button class="btn btn-outline-secondary btn-sm py-0 px-1 ms-auto" @onclick="Refresh" disabled="@loading" title="Refresh">&#x21bb;</button>
+        <button class="btn btn-outline-warning btn-sm py-0 px-1" @onclick="ChangeFolder" title="Change folder">&#x1f4c1;</button>
+    </div>
+
+    @* Breadcrumb *@
+    <nav aria-label="breadcrumb" class="mb-2">
+        <ol class="breadcrumb mb-0 small">
+            <li class="breadcrumb-item">
+                <a href="javascript:void(0)" @onclick='() => NavigateTo("")' @onclick:preventDefault>Root</a>
+            </li>
+            @for (int i = 0; i < segments.Length; i++)
+            {
+                var idx = i;
+                var seg = segments[idx];
+                if (idx == segments.Length - 1)
+                {
+                    <li class="breadcrumb-item active">@seg</li>
+                }
+                else
+                {
+                    <li class="breadcrumb-item">
+                        <a href="javascript:void(0)" @onclick="() => NavigateToBreadcrumb(idx)" @onclick:preventDefault>@seg</a>
+                    </li>
+                }
+            }
+        </ol>
+    </nav>
+
+    @* Entry list *@
+    <div class="list-group list-group-flush" style="max-height:55vh;overflow-y:auto;">
+        @if (loading)
+        {
+            <div class="list-group-item text-center py-3">
+                <span class="spinner-border spinner-border-sm"></span>
+            </div>
+        }
+        else if (entries is not null)
+        {
+            @if (segments.Length > 0)
+            {
+                <button class="list-group-item list-group-item-action py-1 font-monospace small"
+                        @onclick="NavigateUp">..</button>
+            }
+            @foreach (var entry in entries)
+            {
+                var e = entry;
+                <div class="list-group-item py-1 font-monospace small d-flex align-items-center gap-1">
+                    <span class="flex-shrink-0 me-1" style="width:1.2em;text-align:center;">@(e.IsDirectory ? "\ud83d\udcc1" : "\ud83d\udcc4")</span>
+                    @if (e.IsDirectory)
+                    {
+                        <a href="javascript:void(0)" class="flex-grow-1 text-truncate" @onclick="() => NavigateTo(SubPath(e.Name))" @onclick:preventDefault>@e.Name</a>
+                    }
+                    else
+                    {
+                        <span class="flex-grow-1 text-truncate">@e.Name</span>
+                        <small class="text-muted flex-shrink-0">@Formatters.FormatSize((ulong)e.Size)</small>
+                    }
+                    <button class="btn btn-outline-danger btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.65rem"
+                            @onclick="() => DeleteEntry(e)" title="Delete">DEL</button>
+                </div>
+            }
+            @if (entries.Count == 0)
+            {
+                <div class="list-group-item text-muted small"><em>Empty</em></div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private string currentPath = "";
+    private string[] segments = [];
+    private List<CacheEntry>? entries;
+    private long cacheSize;
+    private bool loading;
+    private string? panelError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Cache.OnChanged += OnCacheChanged;
+        await Refresh();
+    }
+
+    private async void OnCacheChanged()
+    {
+        await InvokeAsync(async () =>
+        {
+            await Refresh();
+            StateHasChanged();
+        });
+    }
+
+    private async Task Refresh()
+    {
+        if (!Cache.HasDirectory) return;
+        loading = true;
+        StateHasChanged();
+
+        try
+        {
+            entries = await Cache.ListDirectoryAsync(currentPath);
+            cacheSize = await Cache.GetCacheSizeAsync("");
+        }
+        catch (Exception ex)
+        {
+            panelError = ex.Message;
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task NavigateTo(string path)
+    {
+        currentPath = path;
+        segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        await Refresh();
+    }
+
+    private async Task NavigateUp()
+    {
+        if (segments.Length <= 1)
+        {
+            await NavigateTo("");
+            return;
+        }
+        var parent = string.Join("/", segments.Take(segments.Length - 1));
+        await NavigateTo(parent);
+    }
+
+    private async Task NavigateToBreadcrumb(int index)
+    {
+        var path = string.Join("/", segments.Take(index + 1));
+        await NavigateTo(path);
+    }
+
+    private string SubPath(string name) => string.IsNullOrEmpty(currentPath) ? name : $"{currentPath}/{name}";
+
+    private async Task DeleteEntry(CacheEntry entry)
+    {
+        try
+        {
+            if (entry.IsDirectory)
+                await Cache.DeleteDirectoryAsync(currentPath, entry.Name);
+            else
+                await Cache.DeleteFileAsync(currentPath, entry.Name);
+            await Refresh();
+        }
+        catch (Exception ex)
+        {
+            panelError = ex.Message;
+        }
+    }
+
+    private async Task ChangeFolder()
+    {
+        try
+        {
+            await Cache.PickDirectoryAsync();
+            currentPath = "";
+            segments = [];
+            await Refresh();
+        }
+        catch (Exception ex)
+        {
+            panelError = ex.Message;
+        }
+    }
+
+    public void Dispose()
+    {
+        Cache.OnChanged -= OnCacheChanged;
+    }
+}
