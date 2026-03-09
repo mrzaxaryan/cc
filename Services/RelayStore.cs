@@ -5,6 +5,7 @@ namespace cc.Services;
 
 public class RelayEntry
 {
+    [JsonPropertyName("id")] public string Id { get; set; } = "";
     [JsonPropertyName("url")] public string Url { get; set; } = "";
     [JsonPropertyName("name")] public string Name { get; set; } = "";
     [JsonPropertyName("active")] public bool Active { get; set; }
@@ -25,6 +26,9 @@ public class RelayStore
 
     public IReadOnlyList<RelayEntry> Relays => _relays ?? [];
     public string ActiveUrl => _relays?.FirstOrDefault(r => r.Active)?.Url ?? DefaultUrl;
+
+    public RelayEntry? GetById(string id) => _relays?.FirstOrDefault(r => r.Id == id);
+    public RelayEntry? GetByUrl(string url) => _relays?.FirstOrDefault(r => r.Url == url);
     public bool SetupRequired { get; private set; }
 
     public string HttpBaseUrl
@@ -55,10 +59,17 @@ public class RelayStore
             _relays = new();
         }
 
+        // Backfill IDs for entries that don't have one
+        foreach (var r in _relays.Where(r => string.IsNullOrEmpty(r.Id)))
+        {
+            r.Id = Guid.NewGuid().ToString("N")[..8];
+            await _js.InvokeVoidAsync("ccRelayDb.put", r);
+        }
+
         if (_relays.Count == 0)
         {
             SetupRequired = true;
-            var entry = new RelayEntry { Url = DefaultUrl, Name = DefaultName, Active = true };
+            var entry = new RelayEntry { Id = Guid.NewGuid().ToString("N")[..8], Url = DefaultUrl, Name = DefaultName, Active = true };
             _relays.Add(entry);
             await _js.InvokeVoidAsync("ccRelayDb.put", entry);
         }
@@ -74,7 +85,7 @@ public class RelayStore
     {
         url = url.TrimEnd('/');
         if (_relays!.Any(r => r.Url == url)) return;
-        var entry = new RelayEntry { Url = url, Name = name };
+        var entry = new RelayEntry { Id = Guid.NewGuid().ToString("N")[..8], Url = url, Name = name };
         _relays!.Add(entry);
         await _js.InvokeVoidAsync("ccRelayDb.put", entry);
         OnChanged?.Invoke();

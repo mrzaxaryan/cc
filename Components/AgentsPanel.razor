@@ -57,18 +57,20 @@ else
             <table class="table table-striped mb-0" style="table-layout:fixed">
                 <colgroup>
                     <col style="width:80px" />
-                    <col style="width:15%" />
+                    <col style="width:14%" />
+                    <col style="width:90px" />
                     <col style="width:100px" />
-                    <col style="width:130px" />
-                    <col style="width:20%" />
-                    <col />
                     <col style="width:120px" />
+                    <col style="width:18%" />
+                    <col />
+                    <col style="width:110px" />
                 </colgroup>
                 <thead>
                     <tr>
                         <th>Status</th>
                         <th>Name</th>
                         <th>UUID</th>
+                        <th>Relay</th>
                         <th>IP</th>
                         <th>Location</th>
                         <th>Network</th>
@@ -104,6 +106,7 @@ else
                                 }
                             </td>
                             <td><code title="@row.Uuid">@(row.Uuid is not null ? row.Uuid[..Math.Min(8, row.Uuid.Length)] : "...")</code></td>
+                            <td>@row.RelayName</td>
                             <td><code>@row.Ip</code></td>
                             <td>@row.Location</td>
                             <td>@row.Network</td>
@@ -269,7 +272,8 @@ else
         {
             if (seenUuids.Contains(record.Uuid)) continue;
 
-            var relayName = relayStates.TryGetValue(record.RelayUrl, out var s) ? s.Name : record.RelayUrl;
+            var relayEntry = !string.IsNullOrEmpty(record.RelayStoreId) ? Store.GetById(record.RelayStoreId) : null;
+            var relayName = relayEntry?.Name ?? "—";
 
             rows.Add(new AgentRow
             {
@@ -277,7 +281,7 @@ else
                 Name = record.Name,
                 Uuid = record.Uuid,
                 AgentId = record.AgentId,
-                RelayUrl = record.RelayUrl,
+                RelayUrl = relayEntry?.Url ?? "",
                 RelayName = relayName,
                 Ip = record.Ip,
                 Location = FormatStoredLocation(record),
@@ -412,7 +416,8 @@ else
                 if (status == 0)
                 {
                     var uuid = RelaySocket.ReadUuid(response).ToString();
-                    await AgentDb.UpsertAsync(uuid, agent, relayUrl);
+                    var relayEntry = Store.GetByUrl(relayUrl);
+                    await AgentDb.UpsertAsync(uuid, agent, relayEntry?.Id ?? "");
                     await InvokeAsync(StateHasChanged);
                 }
             }

@@ -2,6 +2,7 @@
 @using System.Text
 @inject CacheManager Cache
 @inject MessageService Msg
+@implements IDisposable
 
 <div>
     @if (!IsConnected)
@@ -188,6 +189,7 @@
 
     // Cache tracking
     private HashSet<string> cachedFiles = new();
+    private bool _syncing;
     private HashSet<string> downloading = new();
 
     private bool viewingFile;
@@ -205,6 +207,22 @@
         {
             await NavigateTo(currentPath);
         }
+    }
+
+    protected override void OnInitialized()
+    {
+        Cache.OnChanged += OnCacheChanged;
+    }
+
+    private void OnCacheChanged()
+    {
+        if (!_syncing && Cache.HasDirectory && entries is not null)
+            _ = SyncCacheAsync();
+    }
+
+    public void Dispose()
+    {
+        Cache.OnChanged -= OnCacheChanged;
     }
 
     public void Reset()
@@ -247,8 +265,7 @@
             var (parsed, parseError) = DirEntry.ParseDirectoryResponse(response);
             if (parseError is not null) { Msg.Error(parseError); return; }
             entries = parsed;
-            await MirrorEntriesToCache();
-            await CheckCachedFiles();
+            _ = SyncCacheAsync();
         }
         catch (Exception ex)
         {
@@ -376,6 +393,27 @@
 
     // --- Cache sync ---
 
+    private async Task SyncCacheAsync()
+    {
+        if (_syncing) return;
+        if (!Cache.HasDirectory || entries is null || string.IsNullOrEmpty(AgentCacheRoot)) return;
+        var subPath = CacheSubPath;
+        var snapshot = entries.ToList();
+
+        _syncing = true;
+        try
+        {
+            await MirrorEntriesToCache(subPath, snapshot);
+            await CheckCachedFiles(subPath, snapshot);
+            await InvokeAsync(StateHasChanged);
+        }
+        catch { }
+        finally
+        {
+            _syncing = false;
+        }
+    }
+
     private string AgentCacheRoot => AgentUuid ?? "";
     private string CacheSubPath
     {
@@ -389,59 +427,53 @@
     private bool IsDownloading(string name) => downloading.Contains(name);
 
     private static string CacheName(DirEntry entry) =>
-        entry.IsDrive ? entry.Name.Replace(":", "") : entry.Name;
+        entry.IsDrive ? entry.Name.Replace(":", "").Replace("\\", "").Replace("/", "") : entry.Name;
 
-    private async Task EnsureCachePathAsync()
+    private async Task EnsureCachePathAsync(string subPath)
     {
-        if (!Cache.HasDirectory || string.IsNullOrEmpty(AgentCacheRoot)) return;
+        if (!Cache.HasDirectory) return;
 
-        // Ensure the current directory path exists in cache
-        var sub = CacheSubPath;
-        if (!string.IsNullOrEmpty(sub))
+        var parts = subPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length > 1)
         {
-            var parts = sub.Split('/', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length > 1)
-            {
-                var parent = string.Join("/", parts.Take(parts.Length - 1));
-                await Cache.CreateDirectoryAsync(parent, parts.Last());
-            }
+            var parent = string.Join("/", parts.Take(parts.Length - 1));
+            await Cache.CreateDirectoryAsync(parent, parts.Last());
         }
     }
 
-    private async Task MirrorEntriesToCache()
+    private async Task MirrorEntriesToCache(string subPath, List<DirEntry> snapshot)
     {
-        await EnsureCachePathAsync();
-        if (!Cache.HasDirectory || entries is null || string.IsNullOrEmpty(AgentCacheRoot)) return;
+        await EnsureCachePathAsync(subPath);
 
-        foreach (var entry in entries)
+        foreach (var entry in snapshot)
         {
             try
             {
                 var name = CacheName(entry);
                 if (entry.IsDirectory || entry.IsDrive)
                 {
-                    await Cache.CreateDirectoryAsync(CacheSubPath, name);
+                    await Cache.CreateDirectoryAsync(subPath, name);
                 }
                 else
                 {
-                    if (!await Cache.FileExistsAsync(CacheSubPath, name))
-                        await Cache.WriteFileAsync(CacheSubPath, name, Array.Empty<byte>());
+                    if (!await Cache.FileExistsAsync(subPath, name))
+                        await Cache.WriteFileAsync(subPath, name, Array.Empty<byte>());
                 }
             }
             catch { }
         }
     }
 
-    private async Task CheckCachedFiles()
+    private async Task CheckCachedFiles(string subPath, List<DirEntry> snapshot)
     {
         cachedFiles.Clear();
-        if (!Cache.HasDirectory || entries is null) return;
+        if (!Cache.HasDirectory) return;
 
-        foreach (var entry in entries.Where(e => !e.IsDirectory && !e.IsDrive))
+        foreach (var entry in snapshot.Where(e => !e.IsDirectory && !e.IsDrive))
         {
             try
             {
-                if (await Cache.FileExistsAsync(CacheSubPath, entry.Name))
+                if (await Cache.FileExistsAsync(subPath, entry.Name))
                     cachedFiles.Add(entry.Name);
             }
             catch { }

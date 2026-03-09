@@ -9,7 +9,7 @@ public class AgentRecord
     [JsonPropertyName("uuid")] public string Uuid { get; set; } = "";
     [JsonPropertyName("name")] public string Name { get; set; } = "";
     [JsonPropertyName("agentId")] public string AgentId { get; set; } = "";
-    [JsonPropertyName("relayUrl")] public string RelayUrl { get; set; } = "";
+    [JsonPropertyName("relayStoreId")] public string RelayStoreId { get; set; } = "";
     [JsonPropertyName("ip")] public string Ip { get; set; } = "";
     [JsonPropertyName("country")] public string Country { get; set; } = "";
     [JsonPropertyName("city")] public string City { get; set; } = "";
@@ -55,7 +55,7 @@ public class AgentStore
         }
     }
 
-    public async Task UpsertAsync(string uuid, AgentConnection agent, string relayUrl)
+    public async Task UpsertAsync(string uuid, AgentConnection agent, string relayStoreId)
     {
         var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
@@ -64,7 +64,7 @@ public class AgentStore
             Uuid = uuid,
             Name = $"Agent #{_cache.Count + 1}",
             AgentId = agent.Id,
-            RelayUrl = relayUrl,
+            RelayStoreId = relayStoreId,
             Ip = agent.Ip,
             Country = agent.Country,
             City = agent.City,
