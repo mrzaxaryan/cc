@@ -83,7 +83,8 @@ public class RelaySocket
     public static (ulong bytesRead, byte[] data) ReadFileContent(byte[] response)
     {
         var bytesRead = BitConverter.ToUInt64(response, 4);
-        var data = response.AsSpan(12, (int)Math.Min((int)bytesRead, response.Length - 12));
+        var length = (int)Math.Min(bytesRead, (ulong)(response.Length - 12));
+        var data = response.AsSpan(12, length);
         return (bytesRead, data.ToArray());
     }
 

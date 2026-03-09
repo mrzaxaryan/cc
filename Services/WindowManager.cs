@@ -57,9 +57,14 @@ public class WindowManager
         OnChanged?.Invoke();
     }
 
-    public void CloseAllWindows()
+    public async Task CloseAllWindows()
     {
         Windows.Clear();
+        if (Relay.IsConnected)
+        {
+            await Relay.Disconnect();
+            Output = "";
+        }
         OnChanged?.Invoke();
     }
 

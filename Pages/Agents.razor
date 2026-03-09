@@ -249,13 +249,9 @@ else
             {
                 break;
             }
-            catch
+            catch (Exception) when (!token.IsCancellationRequested)
             {
-                eventsConnected = false;
-                agents = null;
-                if (Wm.Relay.ConnectedAgentId is not null)
-                    await Wm.DisconnectRelay();
-                await InvokeAsync(StateHasChanged);
+                // Connection error — cleanup happens in finally
             }
             finally
             {
@@ -265,6 +261,7 @@ else
                 agents = null;
                 if (Wm.Relay.ConnectedAgentId is not null)
                     await Wm.DisconnectRelay();
+                await InvokeAsync(StateHasChanged);
             }
 
             if (!token.IsCancellationRequested)
@@ -360,8 +357,6 @@ else
                         error = "Agent relay disconnected.";
                     }
                 }
-
-                error = null;
             }
         }
         catch (Exception ex)
@@ -391,6 +386,11 @@ else
     public async ValueTask DisposeAsync()
     {
         eventsCts?.Cancel();
+        if (eventsWs is not null)
+        {
+            eventsWs.Dispose();
+            eventsWs = null;
+        }
         eventsCts?.Dispose();
     }
 }

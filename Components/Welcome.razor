@@ -244,8 +244,8 @@
             var existing = Relay.Relays.FirstOrDefault(r => r.Url == Relay.ActiveUrl);
             if (existing != null && existing.Url == url)
             {
-                // Same URL, just update the name
-                existing.Name = name;
+                // Same URL, just update the name and persist
+                await Relay.UpdateRelayName(url, name);
             }
             else
             {

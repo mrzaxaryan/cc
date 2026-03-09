@@ -19,6 +19,7 @@ public class RelayStore
     private readonly IJSRuntime _js;
     private List<RelayEntry>? _relays;
     private string? _activeUrl;
+    private bool _loaded;
 
     public RelayStore(IJSRuntime js) => _js = js;
 
@@ -41,6 +42,9 @@ public class RelayStore
 
     public async Task LoadAsync()
     {
+        if (_loaded) return;
+        _loaded = true;
+
         try
         {
             var json = await _js.InvokeAsync<string?>("localStorage.getItem", StorageKey);
@@ -91,6 +95,16 @@ public class RelayStore
     {
         _activeUrl = url;
         await _js.InvokeVoidAsync("localStorage.setItem", ActiveKey, url);
+    }
+
+    public async Task UpdateRelayName(string url, string name)
+    {
+        var entry = _relays?.FirstOrDefault(r => r.Url == url);
+        if (entry is not null)
+        {
+            entry.Name = name;
+            await SaveAsync();
+        }
     }
 
     private async Task SaveAsync()
