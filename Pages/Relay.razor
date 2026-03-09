@@ -17,8 +17,24 @@ else if (status is null)
 }
 else
 {
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">@status.Service</h5>
+            <p class="card-text">@status.Description</p>
+            <div class="d-flex gap-2">
+                @foreach (var repo in new[] { ("Relay", status.Repos.Relay), ("Agent", status.Repos.Agent), ("cc", status.Repos.Cc) })
+                {
+                    @if (!string.IsNullOrEmpty(repo.Item2))
+                    {
+                        <a href="@repo.Item2" class="btn btn-outline-secondary btn-sm" target="_blank">@repo.Item1</a>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+
     <div class="row mb-3">
-        <div class="col-md-6">
+        <div class="col-md-4">
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">Agents</h5>
@@ -26,7 +42,7 @@ else
                 </div>
             </div>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-4">
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">Relays</h5>
@@ -34,7 +50,39 @@ else
                 </div>
             </div>
         </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Event Listeners</h5>
+                    <p class="card-text display-6">@status.EventListeners.Count</p>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <h3>Endpoints</h3>
+    @if (status.Endpoints is not null && status.Endpoints.Value.ValueKind == System.Text.Json.JsonValueKind.Object)
+    {
+        <div class="table-responsive mb-3">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Endpoint</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var ep in status.Endpoints.Value.EnumerateObject())
+                    {
+                        <tr>
+                            <td><code>@ep.Name</code></td>
+                            <td>@ep.Value.GetString()</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
 
     <h3>Agents</h3>
     @if (status.Agents.Connections.Length == 0)
@@ -50,7 +98,10 @@ else
                         <th>ID</th>
                         <th>IP</th>
                         <th>Location</th>
+                        <th>Network</th>
+                        <th>TLS</th>
                         <th>Connected At</th>
+                        <th>Last Active</th>
                         <th>Messages</th>
                         <th>Relayed</th>
                     </tr>
@@ -61,13 +112,16 @@ else
                         <tr>
                             <td><code>@agent.Id</code></td>
                             <td><code>@agent.Ip</code></td>
-                            <td>@FormatLocation(agent)</td>
+                            <td title="@FormatCoords(agent)">@FormatLocation(agent)</td>
+                            <td>@FormatNetwork(agent)</td>
+                            <td><code>@agent.TlsVersion</code></td>
                             <td>@FormatTimestamp(agent.ConnectedAt)</td>
+                            <td>@FormatTimestamp(agent.LastActiveAt)</td>
                             <td>@agent.MessageCount</td>
                             <td>
                                 @if (agent.Relayed)
                                 {
-                                    <span class="badge bg-success">Yes</span>
+                                    <span class="badge bg-success" title="@agent.RelayId">Yes</span>
                                 }
                                 else
                                 {
@@ -108,6 +162,32 @@ else
             </tbody>
         </table>
     }
+
+    <h3>Event Listeners</h3>
+    @if (status.EventListeners.Connections.Length == 0)
+    {
+        <p><em>No event listeners connected.</em></p>
+    }
+    else
+    {
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Connected At</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var listener in status.EventListeners.Connections)
+                {
+                    <tr>
+                        <td><code>@listener.Id</code></td>
+                        <td>@FormatTimestamp(listener.ConnectedAt)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
 }
 
 @code {
@@ -143,6 +223,7 @@ else
 
     private static string FormatTimestamp(double ms)
     {
+        if (ms <= 0) return "-";
         return DateTimeOffset.FromUnixTimeMilliseconds((long)ms).LocalDateTime.ToString("g");
     }
 
@@ -150,8 +231,25 @@ else
     {
         var parts = new List<string>();
         if (!string.IsNullOrEmpty(c.City)) parts.Add(c.City);
+        if (!string.IsNullOrEmpty(c.Region) && c.Region != c.City) parts.Add(c.Region);
         if (!string.IsNullOrEmpty(c.Country)) parts.Add(c.Country);
         return parts.Count > 0 ? string.Join(", ", parts) : "-";
+    }
+
+    private static string FormatNetwork(AgentConnection c)
+    {
+        if (c.Asn > 0 && !string.IsNullOrEmpty(c.AsOrganization))
+            return $"AS{c.Asn} ({c.AsOrganization})";
+        if (c.Asn > 0)
+            return $"AS{c.Asn}";
+        return "-";
+    }
+
+    private static string FormatCoords(AgentConnection c)
+    {
+        if (!string.IsNullOrEmpty(c.Latitude) && !string.IsNullOrEmpty(c.Longitude))
+            return $"{c.Latitude}, {c.Longitude}";
+        return "";
     }
 
     public void Dispose()

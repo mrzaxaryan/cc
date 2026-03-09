@@ -1,9 +1,23 @@
+using System.Text.Json;
+
 namespace cc.Models;
 
 public class RelayStatus
 {
+    public string Service { get; set; } = "";
+    public string Description { get; set; } = "";
+    public ServiceRepos Repos { get; set; } = new();
+    public JsonElement? Endpoints { get; set; }
     public GroupInfo<AgentConnection> Agents { get; set; } = new();
     public GroupInfo<RelayConnection> Relays { get; set; } = new();
+    public GroupInfo<EventListenerConnection> EventListeners { get; set; } = new();
+}
+
+public class ServiceRepos
+{
+    public string Relay { get; set; } = "";
+    public string Agent { get; set; } = "";
+    public string Cc { get; set; } = "";
 }
 
 public class GroupInfo<T>
@@ -18,11 +32,23 @@ public class AgentConnection
     public double ConnectedAt { get; set; }
     public bool Relayed { get; set; }
     public string? RelayId { get; set; }
+    public int MessageCount { get; set; }
+    public double LastActiveAt { get; set; }
     public string Ip { get; set; } = "";
     public string Country { get; set; } = "";
     public string City { get; set; } = "";
-    public int MessageCount { get; set; }
-    public double LastActiveAt { get; set; }
+    public string Region { get; set; } = "";
+    public string Continent { get; set; } = "";
+    public string Timezone { get; set; } = "";
+    public string PostalCode { get; set; } = "";
+    public string Latitude { get; set; } = "";
+    public string Longitude { get; set; } = "";
+    public int Asn { get; set; }
+    public string AsOrganization { get; set; } = "";
+    public string UserAgent { get; set; } = "";
+    public string Protocol { get; set; } = "";
+    public string TlsVersion { get; set; } = "";
+    public string HttpVersion { get; set; } = "";
 }
 
 public class RelayConnection
@@ -30,4 +56,17 @@ public class RelayConnection
     public string Id { get; set; } = "";
     public double ConnectedAt { get; set; }
     public string ClientId { get; set; } = "";
+}
+
+public class EventListenerConnection
+{
+    public string Id { get; set; } = "";
+    public double ConnectedAt { get; set; }
+}
+
+// WebSocket event models
+public class AgentEvent
+{
+    public string Type { get; set; } = "";
+    public AgentConnection? Agent { get; set; }
 }

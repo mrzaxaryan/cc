@@ -2,7 +2,7 @@
 @inject HttpClient Http
 @using System.Net.WebSockets
 @using System.Text
-@using System.Timers
+@using System.Text.Json
 @implements IAsyncDisposable
 
 <PageTitle>Agents</PageTitle>
@@ -15,14 +15,19 @@
 }
 else if (agents is null)
 {
-    <p><em>Loading...</em></p>
+    <p><em>Connecting to events...</em></p>
 }
 else
 {
     <div class="card mb-3">
-        <div class="card-body">
-            <h5 class="card-title">Connected</h5>
-            <p class="card-text display-6">@agents.Count</p>
+        <div class="card-body d-flex align-items-center gap-3">
+            <div>
+                <h5 class="card-title mb-0">Connected</h5>
+                <p class="card-text display-6 mb-0">@agents.Count</p>
+            </div>
+            <span class="badge @(eventsConnected ? "bg-success" : "bg-danger") ms-auto">
+                @(eventsConnected ? "Live" : "Disconnected")
+            </span>
         </div>
     </div>
 
@@ -39,6 +44,7 @@ else
                         <th>ID</th>
                         <th>IP</th>
                         <th>Location</th>
+                        <th>Network</th>
                         <th>Connected At</th>
                         <th>Messages</th>
                         <th>Relayed</th>
@@ -52,6 +58,7 @@ else
                             <td><code>@agent.Id</code></td>
                             <td><code>@agent.Ip</code></td>
                             <td>@FormatLocation(agent)</td>
+                            <td>@FormatNetwork(agent)</td>
                             <td>@FormatTimestamp(agent.ConnectedAt)</td>
                             <td>@agent.MessageCount</td>
                             <td>
@@ -67,7 +74,7 @@ else
                             <td>
                                 @if (relayedAgentId == agent.Id)
                                 {
-                                    <button class="btn btn-outline-danger btn-sm" @onclick="Disconnect">Disconnect</button>
+                                    <button class="btn btn-outline-danger btn-sm" @onclick="DisconnectRelay">Disconnect</button>
                                 }
                                 else if (relayedAgentId is null)
                                 {
@@ -124,12 +131,18 @@ else
 }
 
 @code {
+    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
+
     private GroupInfo<AgentConnection>? agents;
     private string? error;
-    private Timer? timer;
+    private bool eventsConnected;
 
-    // Command state
-    private ClientWebSocket? ws;
+    // Events WebSocket
+    private ClientWebSocket? eventsWs;
+    private CancellationTokenSource? eventsCts;
+
+    // Relay command state
+    private ClientWebSocket? relayWs;
     private string? relayedAgentId;
     private bool sending;
     private string commandPath = @"C:\";
@@ -141,56 +154,147 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadStatus();
-
-        timer = new Timer(5000);
-        timer.Elapsed += async (_, _) =>
-        {
-            await LoadStatus();
-            await InvokeAsync(StateHasChanged);
-        };
-        timer.Start();
+        await ConnectToEvents();
     }
 
-    private async Task LoadStatus()
+    private async Task ConnectToEvents()
+    {
+        eventsCts = new CancellationTokenSource();
+        var token = eventsCts.Token;
+
+        while (!token.IsCancellationRequested)
+        {
+            try
+            {
+                eventsWs = new ClientWebSocket();
+                await eventsWs.ConnectAsync(new Uri("wss://relay.nostdlib.workers.dev/events"), token);
+                eventsConnected = true;
+                await InvokeAsync(StateHasChanged);
+
+                var buffer = new byte[65536];
+                while (eventsWs.State == WebSocketState.Open && !token.IsCancellationRequested)
+                {
+                    using var ms = new MemoryStream();
+                    WebSocketReceiveResult result;
+                    do
+                    {
+                        result = await eventsWs.ReceiveAsync(buffer, token);
+                        ms.Write(buffer, 0, result.Count);
+                    } while (!result.EndOfMessage);
+
+                    if (result.MessageType == WebSocketMessageType.Close) break;
+
+                    var json = Encoding.UTF8.GetString(ms.ToArray());
+                    HandleEventMessage(json);
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch
+            {
+                eventsConnected = false;
+                await InvokeAsync(StateHasChanged);
+            }
+            finally
+            {
+                eventsWs?.Dispose();
+                eventsWs = null;
+                eventsConnected = false;
+            }
+
+            if (!token.IsCancellationRequested)
+                await Task.Delay(3000, token).ContinueWith(_ => { });
+        }
+    }
+
+    private void HandleEventMessage(string json)
     {
         try
         {
-            var status = await Http.GetFromJsonAsync<RelayStatus>("https://relay.nostdlib.workers.dev/");
-            agents = status?.Agents;
+            // Try parsing as initial full agent list (array)
+            var agentArray = JsonSerializer.Deserialize<AgentConnection[]>(json, JsonOptions);
+            if (agentArray is not null)
+            {
+                agents = new GroupInfo<AgentConnection>
+                {
+                    Count = agentArray.Length,
+                    Connections = agentArray
+                };
+                error = null;
+                return;
+            }
+        }
+        catch { }
+
+        try
+        {
+            var evt = JsonSerializer.Deserialize<AgentEvent>(json, JsonOptions);
+            if (evt is null || agents is null) return;
+
+            if (evt.Type == "agent_connected" && evt.Agent is not null)
+            {
+                var list = agents.Connections.ToList();
+                list.Add(evt.Agent);
+                agents = new GroupInfo<AgentConnection>
+                {
+                    Count = list.Count,
+                    Connections = list.ToArray()
+                };
+            }
+            else if (evt.Type == "agent_disconnected" && evt.Agent is not null)
+            {
+                var list = agents.Connections.Where(a => a.Id != evt.Agent.Id).ToList();
+                agents = new GroupInfo<AgentConnection>
+                {
+                    Count = list.Count,
+                    Connections = list.ToArray()
+                };
+
+                if (relayedAgentId == evt.Agent.Id)
+                {
+                    _ = DisconnectRelay();
+                    output += "Agent disconnected.\n";
+                }
+            }
+
             error = null;
         }
         catch (Exception ex)
         {
-            error = $"Failed to load: {ex.Message}";
+            error = $"Event parse error: {ex.Message}";
         }
     }
+
+    // --- Relay commands ---
 
     private async Task ConnectToAgent(string agentId)
     {
         try
         {
             error = null;
-            ws = new ClientWebSocket();
-            await ws.ConnectAsync(new Uri($"wss://relay.nostdlib.workers.dev/relay/{agentId}"), CancellationToken.None);
+            relayWs = new ClientWebSocket();
+            await relayWs.ConnectAsync(new Uri($"wss://relay.nostdlib.workers.dev/relay/{agentId}"), CancellationToken.None);
             relayedAgentId = agentId;
             output = "Connected. Ready to send commands.\n";
         }
         catch (Exception ex)
         {
             error = $"Connection failed: {ex.Message}";
-            ws?.Dispose();
-            ws = null;
+            relayWs?.Dispose();
+            relayWs = null;
         }
     }
 
-    private async Task Disconnect()
+    private async Task DisconnectRelay()
     {
-        if (ws is not null)
+        if (relayWs is not null)
         {
-            try { await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None); } catch { }
-            ws.Dispose();
-            ws = null;
+            try { await relayWs.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None); } catch { }
+            relayWs.Dispose();
+            relayWs = null;
         }
         relayedAgentId = null;
         output = "";
@@ -298,7 +402,7 @@ else
 
     private async Task<byte[]?> SendAndReceive(byte[] payload)
     {
-        if (ws is null || ws.State != WebSocketState.Open)
+        if (relayWs is null || relayWs.State != WebSocketState.Open)
         {
             error = "Not connected";
             return null;
@@ -309,14 +413,14 @@ else
 
         try
         {
-            await ws.SendAsync(payload, WebSocketMessageType.Binary, true, CancellationToken.None);
+            await relayWs.SendAsync(payload, WebSocketMessageType.Binary, true, CancellationToken.None);
 
             var buffer = new byte[65536];
             using var ms = new MemoryStream();
             WebSocketReceiveResult result;
             do
             {
-                result = await ws.ReceiveAsync(buffer, CancellationToken.None);
+                result = await relayWs.ReceiveAsync(buffer, CancellationToken.None);
                 ms.Write(buffer, 0, result.Count);
             } while (!result.EndOfMessage);
 
@@ -357,18 +461,28 @@ else
     {
         var parts = new List<string>();
         if (!string.IsNullOrEmpty(c.City)) parts.Add(c.City);
+        if (!string.IsNullOrEmpty(c.Region) && c.Region != c.City) parts.Add(c.Region);
         if (!string.IsNullOrEmpty(c.Country)) parts.Add(c.Country);
         return parts.Count > 0 ? string.Join(", ", parts) : "-";
     }
 
+    private static string FormatNetwork(AgentConnection c)
+    {
+        if (c.Asn > 0 && !string.IsNullOrEmpty(c.AsOrganization))
+            return $"AS{c.Asn} ({c.AsOrganization})";
+        if (c.Asn > 0)
+            return $"AS{c.Asn}";
+        return "-";
+    }
+
     public async ValueTask DisposeAsync()
     {
-        timer?.Stop();
-        timer?.Dispose();
-        if (ws is not null)
+        eventsCts?.Cancel();
+        eventsCts?.Dispose();
+        if (relayWs is not null)
         {
-            try { await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None); } catch { }
-            ws.Dispose();
+            try { await relayWs.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None); } catch { }
+            relayWs.Dispose();
         }
     }
 }

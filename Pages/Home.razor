@@ -71,18 +71,9 @@
 
 <h2>Data Source</h2>
 
-<p>Fetches from <a href="https://relay.nostdlib.workers.dev/">https://relay.nostdlib.workers.dev/</a> which returns:</p>
+<p>Fetches from <a href="https://relay.nostdlib.workers.dev/">https://relay.nostdlib.workers.dev/</a> (HTTP GET for status, WebSocket <code>/events</code> for live updates).</p>
 
-<pre><code>{
-  "clients": {
-    "count": 1,
-    "connections": [{ "id": "...", "ip": "...", "location": "...", "connectedAt": 0, "messageCount": 0, "relayed": false }]
-  },
-  "relays": {
-    "count": 0,
-    "connections": []
-  }
-}</code></pre>
+<p>The Agents page uses the <code>WS /events</code> endpoint for real-time updates — receives all agents on connect, then <code>agent_connected</code> / <code>agent_disconnected</code> events.</p>
 
 <h2>Development</h2>
 
