@@ -67,6 +67,7 @@ else
                         <th>Connected At</th>
                         <th>Messages</th>
                         <th>Relayed</th>
+                        <th>Relay ID</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -92,6 +93,7 @@ else
                                     <span class="badge bg-secondary">No</span>
                                 }
                             </td>
+                            <td><code>@(agent.RelayId ?? "—")</code></td>
                         </tr>
                     }
                 </tbody>
