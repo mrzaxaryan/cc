@@ -13,6 +13,16 @@
          @onmousemove:preventDefault="true"></div>
 }
 
+@* Resize overlay — captures mouse events globally during resize *@
+@if (_resizing is not null)
+{
+    <div class="position-fixed top-0 start-0 w-100 h-100"
+         style="z-index:9999;cursor:nwse-resize;"
+         @onmousemove="OnResizeMove"
+         @onmouseup="OnResizeEnd"
+         @onmousemove:preventDefault="true"></div>
+}
+
 @* Floating windows *@
 @foreach (var win in Wm.Windows)
 {
@@ -76,6 +86,10 @@
                 </div>
             }
         </div>
+        @if (!win.Maximized)
+        {
+            <div class="app-window-resize" @onmousedown="(e) => OnResizeStart(e, win)" @onmousedown:stopPropagation="true"></div>
+        }
     </div>
 }
 
@@ -98,6 +112,9 @@
     // Drag state
     private DragState? _dragging;
 
+    // Resize state
+    private ResizeState? _resizing;
+
     private class DragState
     {
         public WindowState Window { get; init; } = null!;
@@ -105,6 +122,15 @@
         public double StartMouseY { get; init; }
         public double StartWinX { get; init; }
         public double StartWinY { get; init; }
+    }
+
+    private class ResizeState
+    {
+        public WindowState Window { get; init; } = null!;
+        public double StartMouseX { get; init; }
+        public double StartMouseY { get; init; }
+        public double StartWidth { get; init; }
+        public double StartHeight { get; init; }
     }
 
     protected override void OnInitialized()
@@ -152,6 +178,29 @@
     }
 
     private void OnDragEnd(MouseEventArgs e) => _dragging = null;
+
+    private void OnResizeStart(MouseEventArgs e, WindowState win)
+    {
+        if (win.Maximized) return;
+        Wm.BringToFront(win);
+        _resizing = new ResizeState
+        {
+            Window = win,
+            StartMouseX = e.ClientX,
+            StartMouseY = e.ClientY,
+            StartWidth = win.Width,
+            StartHeight = win.Height
+        };
+    }
+
+    private void OnResizeMove(MouseEventArgs e)
+    {
+        if (_resizing is null) return;
+        _resizing.Window.Width = Math.Max(320, _resizing.StartWidth + (e.ClientX - _resizing.StartMouseX));
+        _resizing.Window.Height = Math.Max(120, _resizing.StartHeight + (e.ClientY - _resizing.StartMouseY));
+    }
+
+    private void OnResizeEnd(MouseEventArgs e) => _resizing = null;
 
     // --- Raw commands ---
 
