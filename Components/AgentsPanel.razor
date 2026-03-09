@@ -121,7 +121,7 @@ else
 {
     <div class="position-fixed top-0 start-0 w-100 h-100" style="z-index:1050;" @onclick="HideContextMenu" @oncontextmenu="HideContextMenu" @oncontextmenu:preventDefault="true"></div>
     <div class="dropdown-menu show shadow" style="position:fixed;left:@(ctxX)px;top:@(ctxY)px;z-index:1051;">
-        <button class="dropdown-item @(!ctxIsOnline ? "disabled" : "")" @onclick="CtxOpenFiles" disabled="@(!ctxIsOnline)">File Manager</button>
+        <button class="dropdown-item" @onclick="CtxOpenFiles">File Manager</button>
         <button class="dropdown-item" @onclick="CtxStartRename">Rename</button>
         @if (Wm.ConnectedAgentIds.Contains(ctxAgentId!))
         {
@@ -351,8 +351,7 @@ else
     private async Task OpenAgentWindow(string panel, string agentId, string relayUrl)
     {
         var relay = await CreateRelay(agentId, relayUrl);
-        if (relay is not null)
-            Wm.OpenAgentWindow(panel, agentId, relay);
+        Wm.OpenAgentWindow(panel, agentId, relay);
     }
 
     // --- Rename ---

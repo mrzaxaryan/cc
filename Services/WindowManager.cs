@@ -52,7 +52,7 @@ public class WindowManager
         OnChanged?.Invoke();
     }
 
-    public void OpenAgentWindow(string panel, string agentId, RelaySocket relay)
+    public void OpenAgentWindow(string panel, string agentId, RelaySocket? relay = null)
     {
         // Reuse existing window for same panel + agent
         var existing = Windows.FirstOrDefault(w => w.Panel == panel && w.AgentId == agentId);
@@ -121,7 +121,6 @@ public class WindowManager
         {
             if (win.Relay is not null)
                 await win.Relay.Disconnect();
-            Windows.Remove(win);
         }
         OnChanged?.Invoke();
     }

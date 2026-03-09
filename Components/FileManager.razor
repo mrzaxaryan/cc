@@ -4,12 +4,12 @@
 @inject MessageService Msg
 @inject AgentStore AgentDb
 
-<div style="position:relative">
-    @if (Relay is null || !Relay.IsConnected)
+<div>
+    @if (!IsConnected)
     {
-        <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
-             style="z-index:10;background:rgba(0,0,0,0.5);border-radius:inherit;">
-            <span class="badge bg-danger fs-6">Disconnected</span>
+        <div class="alert alert-warning py-1 px-2 mb-2 small d-flex align-items-center gap-1">
+            <span class="badge bg-danger">Offline</span>
+            <span>Agent disconnected — browsing cached data only.</span>
         </div>
     }
     @* Breadcrumb *@
@@ -39,8 +39,8 @@
     @* Path bar *@
     <div class="input-group input-group-sm mb-3">
         <input class="form-control font-monospace" @bind="currentPath" @onkeydown="OnPathKeyDown" />
-        <button class="btn btn-outline-primary" @onclick="() => NavigateTo(currentPath)" disabled="@loading">Go</button>
-        <button class="btn btn-outline-secondary" @onclick="NavigateUp" disabled="@loading">Up</button>
+        <button class="btn btn-outline-primary" @onclick="() => NavigateTo(currentPath)" disabled="@(loading || !IsConnected)">Go</button>
+        <button class="btn btn-outline-secondary" @onclick="NavigateUp" disabled="@(loading || !IsConnected)">Up</button>
     </div>
 
     <div class="row g-3">
@@ -59,7 +59,7 @@
                             <span class="text-muted ms-1">(@entries.Count)</span>
                         }
                     </small>
-                    <button class="btn btn-outline-secondary btn-sm py-0 px-1" @onclick="() => NavigateTo(currentPath)" disabled="@loading">&#x21bb;</button>
+                    <button class="btn btn-outline-secondary btn-sm py-0 px-1" @onclick="() => NavigateTo(currentPath)" disabled="@(loading || !IsConnected)">&#x21bb;</button>
                 </div>
                 <div class="list-group list-group-flush" style="max-height:50vh;overflow-y:auto;">
                     @if (entries is not null)
@@ -67,7 +67,7 @@
                         @if (pathSegments.Length > 0)
                         {
                             <button class="list-group-item list-group-item-action py-1 font-monospace small"
-                                    @onclick="NavigateUp">..</button>
+                                    @onclick="NavigateUp" disabled="@(!IsConnected)">..</button>
                         }
                         @foreach (var entry in entries)
                         {
@@ -85,12 +85,12 @@
                                     @if (e.IsDirectory || e.IsDrive)
                                     {
                                         <button class="btn btn-outline-primary btn-sm px-1 py-0" style="font-size:0.7rem"
-                                                @onclick:stopPropagation="true" @onclick="() => OpenAsDirectory(e.Name)" title="Open folder">OPEN</button>
+                                                @onclick:stopPropagation="true" @onclick="() => OpenAsDirectory(e.Name)" title="Open folder" disabled="@(!IsConnected)">OPEN</button>
                                     }
                                     else
                                     {
                                         <button class="btn btn-outline-secondary btn-sm px-1 py-0" style="font-size:0.7rem"
-                                                @onclick:stopPropagation="true" @onclick="() => ViewFile(e.Name)" title="View file">VIEW</button>
+                                                @onclick:stopPropagation="true" @onclick="() => ViewFile(e.Name)" title="View file" disabled="@(!IsConnected)">VIEW</button>
                                         @if (Cache.HasDirectory)
                                         {
                                             @if (IsDownloading(e.Name))
@@ -104,7 +104,7 @@
                                             else
                                             {
                                                 <button class="btn btn-outline-success btn-sm px-1 py-0" style="font-size:0.7rem"
-                                                        @onclick:stopPropagation="true" @onclick="() => DownloadToCache(e)" title="Download to cache">DL</button>
+                                                        @onclick:stopPropagation="true" @onclick="() => DownloadToCache(e)" title="Download to cache" disabled="@(!IsConnected)">DL</button>
                                             }
                                         }
                                     }
@@ -130,7 +130,7 @@
                         <div class="d-flex gap-1">
                             @if (!fileLoading)
                             {
-                                <button class="btn btn-outline-secondary btn-sm py-0 px-1" @onclick="HashFile" title="SHA-256">#</button>
+                                <button class="btn btn-outline-secondary btn-sm py-0 px-1" @onclick="HashFile" title="SHA-256" disabled="@(!IsConnected)">#</button>
                             }
                             <button class="btn btn-outline-danger btn-sm py-0 px-1" @onclick="CloseFileViewer">X</button>
                         </div>
@@ -154,11 +154,11 @@
                                 <div class="ms-auto d-flex gap-1">
                                     @if (fileViewOffset > 0)
                                     {
-                                        <button class="btn btn-outline-secondary btn-sm py-0" @onclick="PrevPage">Prev</button>
+                                        <button class="btn btn-outline-secondary btn-sm py-0" @onclick="PrevPage" disabled="@(!IsConnected)">Prev</button>
                                     }
                                     @if (fileBytesRead >= PageSize)
                                     {
-                                        <button class="btn btn-outline-secondary btn-sm py-0" @onclick="NextPage">Next</button>
+                                        <button class="btn btn-outline-secondary btn-sm py-0" @onclick="NextPage" disabled="@(!IsConnected)">Next</button>
                                     }
                                 </div>
                             </div>
@@ -176,6 +176,8 @@
 
     [Parameter] public RelaySocket? Relay { get; set; }
     [Parameter] public string? AgentId { get; set; }
+
+    private bool IsConnected => Relay is not null && Relay.IsConnected;
 
     private string currentPath = "";
     private string[] pathSegments = [];
@@ -403,6 +405,7 @@
 
     private async Task MirrorEntriesToCache()
     {
+        await AgentDb.LoadAsync();
         if (!Cache.HasDirectory || entries is null || string.IsNullOrEmpty(AgentCacheRoot)) return;
 
         foreach (var entry in entries)
