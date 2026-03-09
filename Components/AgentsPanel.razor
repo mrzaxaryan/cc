@@ -20,10 +20,6 @@ else
                 <p class="card-text display-6 mb-0">@agents.Count</p>
             </div>
             <div class="ms-auto d-flex align-items-center gap-2">
-                @foreach (var id in Wm.ConnectedAgentIds)
-                {
-                    <span class="badge bg-info">Relay: <code class="text-white">@id</code></span>
-                }
                 <span class="badge @(eventsConnected ? "bg-success" : "bg-danger")">
                     @(eventsConnected ? "Live" : "Disconnected")
                 </span>
@@ -97,7 +93,6 @@ else
     <div class="position-fixed top-0 start-0 w-100 h-100" style="z-index:1050;" @onclick="HideContextMenu" @oncontextmenu="HideContextMenu" @oncontextmenu:preventDefault="true"></div>
     <div class="dropdown-menu show shadow" style="position:fixed;left:@(ctxX)px;top:@(ctxY)px;z-index:1051;">
         <button class="dropdown-item" @onclick="CtxOpenFiles">File Manager</button>
-        <button class="dropdown-item" @onclick="CtxOpenCommands">Commands</button>
         @if (Wm.ConnectedAgentIds.Contains(ctxAgentId!))
         {
             <button class="dropdown-item text-danger" @onclick="CtxDisconnect">Disconnect</button>
@@ -146,13 +141,6 @@ else
         HideContextMenu();
         if (ctxAgentId is not null)
             await OpenAgentWindow("File Manager", ctxAgentId);
-    }
-
-    private async Task CtxOpenCommands()
-    {
-        HideContextMenu();
-        if (ctxAgentId is not null)
-            await OpenAgentWindow("Commands", ctxAgentId);
     }
 
     private async Task CtxDisconnect()
