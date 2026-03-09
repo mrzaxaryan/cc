@@ -1,0 +1,443 @@
+@using System.Net.WebSockets
+@using System.Text
+
+<div>
+    @if (fmError is not null)
+    {
+        <div class="alert alert-danger alert-dismissible py-2 mb-2">
+            <small>@fmError</small>
+            <button type="button" class="btn-close btn-close-sm" @onclick="() => fmError = null"></button>
+        </div>
+    }
+
+    @* Breadcrumb *@
+    <nav aria-label="breadcrumb" class="mb-2">
+        <ol class="breadcrumb mb-0 small">
+            <li class="breadcrumb-item">
+                <a href="javascript:void(0)" @onclick="NavigateToRoot" @onclick:preventDefault>Root</a>
+            </li>
+            @for (int i = 0; i < pathSegments.Length; i++)
+            {
+                var idx = i;
+                var segment = pathSegments[idx];
+                if (idx == pathSegments.Length - 1)
+                {
+                    <li class="breadcrumb-item active">@segment</li>
+                }
+                else
+                {
+                    <li class="breadcrumb-item">
+                        <a href="javascript:void(0)" @onclick="() => NavigateToBreadcrumb(idx)" @onclick:preventDefault>@segment</a>
+                    </li>
+                }
+            }
+        </ol>
+    </nav>
+
+    @* Path bar *@
+    <div class="input-group input-group-sm mb-3">
+        <input class="form-control font-monospace" @bind="currentPath" @onkeydown="OnPathKeyDown" placeholder="C:\" />
+        <button class="btn btn-outline-primary" @onclick="() => NavigateTo(currentPath)" disabled="@loading">Go</button>
+        <button class="btn btn-outline-secondary" @onclick="NavigateUp" disabled="@loading">Up</button>
+    </div>
+
+    <div class="row g-3">
+        @* Directory listing *@
+        <div class="@(viewingFile ? "col-md-5" : "col-12")">
+            <div class="card">
+                <div class="card-header d-flex align-items-center justify-content-between py-1">
+                    <small>
+                        @if (loading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        @currentPath
+                        @if (entries is not null)
+                        {
+                            <span class="text-muted ms-1">(@entries.Count)</span>
+                        }
+                    </small>
+                    <button class="btn btn-outline-secondary btn-sm py-0 px-1" @onclick="() => NavigateTo(currentPath)" disabled="@loading">&#x21bb;</button>
+                </div>
+                <div class="list-group list-group-flush" style="max-height:50vh;overflow-y:auto;">
+                    @if (entries is not null)
+                    {
+                        @if (pathSegments.Length > 0)
+                        {
+                            <button class="list-group-item list-group-item-action py-1 font-monospace small"
+                                    @onclick="NavigateUp">..</button>
+                        }
+                        @foreach (var entry in entries)
+                        {
+                            var name = entry;
+                            <button class="list-group-item list-group-item-action py-1 font-monospace small d-flex align-items-center gap-1 @(selectedEntry == name ? "active" : "")"
+                                    @onclick="() => selectedEntry = name"
+                                    @ondblclick="() => OpenAsDirectory(name)">
+                                <span class="flex-grow-1 text-truncate">@name</span>
+                                <span class="d-flex gap-1 flex-shrink-0">
+                                    <button class="btn btn-outline-primary btn-sm px-1 py-0" style="font-size:0.7rem"
+                                            @onclick:stopPropagation="true" @onclick="() => OpenAsDirectory(name)" title="Open as folder">DIR</button>
+                                    <button class="btn btn-outline-secondary btn-sm px-1 py-0" style="font-size:0.7rem"
+                                            @onclick:stopPropagation="true" @onclick="() => ViewFile(name)" title="View file">VIEW</button>
+                                </span>
+                            </button>
+                        }
+                    }
+                    else if (!loading)
+                    {
+                        <div class="list-group-item text-muted small"><em>Enter a path and press Go.</em></div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        @* File viewer *@
+        @if (viewingFile)
+        {
+            <div class="col-md-7">
+                <div class="card">
+                    <div class="card-header d-flex align-items-center justify-content-between py-1">
+                        <small class="text-truncate font-monospace">@viewingFileName</small>
+                        <div class="d-flex gap-1">
+                            @if (!fileLoading)
+                            {
+                                <button class="btn btn-outline-secondary btn-sm py-0 px-1" @onclick="HashFile" title="SHA-256">#</button>
+                            }
+                            <button class="btn btn-outline-danger btn-sm py-0 px-1" @onclick="CloseFileViewer">X</button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        @if (fileLoading)
+                        {
+                            <div class="p-3"><span class="spinner-border spinner-border-sm me-1"></span> Loading...</div>
+                        }
+                        else
+                        {
+                            @if (fileHash is not null)
+                            {
+                                <div class="px-3 pt-2">
+                                    <small class="text-muted">SHA-256:</small>
+                                    <code class="user-select-all small">@fileHash</code>
+                                </div>
+                            }
+                            <div class="d-flex align-items-center gap-2 px-3 pt-2">
+                                <small class="text-muted">@fileBytesRead bytes (offset @fileViewOffset)</small>
+                                <div class="ms-auto d-flex gap-1">
+                                    @if (fileViewOffset > 0)
+                                    {
+                                        <button class="btn btn-outline-secondary btn-sm py-0" @onclick="PrevPage">Prev</button>
+                                    }
+                                    @if (fileBytesRead >= PageSize)
+                                    {
+                                        <button class="btn btn-outline-secondary btn-sm py-0" @onclick="NextPage">Next</button>
+                                    }
+                                </div>
+                            </div>
+                            <pre class="bg-dark text-light p-3 m-0 rounded-0" style="max-height:45vh;overflow:auto;white-space:pre-wrap;word-break:break-all;font-size:0.8rem;">@fileContent</pre>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private const long PageSize = 8192;
+
+    [Parameter] public ClientWebSocket? RelayWs { get; set; }
+
+    private string? fmError;
+    private string currentPath = @"C:\";
+    private string[] pathSegments = [];
+    private List<string>? entries;
+    private string? selectedEntry;
+    private bool loading;
+
+    private bool viewingFile;
+    private string viewingFileName = "";
+    private string viewingFilePath = "";
+    private string fileContent = "";
+    private long fileBytesRead;
+    private long fileViewOffset;
+    private bool fileLoading;
+    private string? fileHash;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (RelayWs is not null && RelayWs.State == WebSocketState.Open && entries is null)
+        {
+            await NavigateTo(currentPath);
+        }
+    }
+
+    public void Reset()
+    {
+        currentPath = @"C:\";
+        pathSegments = [];
+        entries = null;
+        selectedEntry = null;
+        viewingFile = false;
+        fileContent = "";
+        fileHash = null;
+        fmError = null;
+    }
+
+    // --- Navigation ---
+
+    private void UpdatePathSegments()
+    {
+        pathSegments = currentPath
+            .Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries)
+            .ToArray();
+    }
+
+    private async Task NavigateTo(string path)
+    {
+        currentPath = path.TrimEnd('\\', '/');
+        if (!string.IsNullOrEmpty(currentPath) && !currentPath.EndsWith(@"\"))
+            currentPath += @"\";
+
+        UpdatePathSegments();
+        loading = true;
+        entries = null;
+        fmError = null;
+        StateHasChanged();
+
+        try
+        {
+            var pathBytes = Encoding.Unicode.GetBytes(currentPath + "\0");
+            var payload = new byte[1 + pathBytes.Length];
+            payload[0] = 0x01;
+            pathBytes.CopyTo(payload, 1);
+
+            var response = await SendAndReceive(payload);
+            if (response is null) return;
+
+            if (response.Length < 4) { fmError = "Invalid response"; return; }
+            var status = BitConverter.ToUInt32(response, 0);
+            if (status != 0) { fmError = $"Error listing directory (status={status})"; return; }
+            if (response.Length < 12) { fmError = "Invalid response"; return; }
+
+            var entryCount = BitConverter.ToUInt64(response, 4);
+            var list = new List<string>();
+            var offset = 12;
+            for (ulong i = 0; i < entryCount && offset < response.Length; i++)
+            {
+                var entry = ReadWideString(response, ref offset);
+                if (!string.IsNullOrEmpty(entry))
+                    list.Add(entry);
+            }
+            entries = list;
+        }
+        catch (Exception ex)
+        {
+            fmError = $"Failed: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task NavigateUp()
+    {
+        if (pathSegments.Length <= 1)
+        {
+            await NavigateTo("");
+            return;
+        }
+        var parent = string.Join(@"\", pathSegments.Take(pathSegments.Length - 1));
+        await NavigateTo(parent);
+    }
+
+    private async Task NavigateToRoot() => await NavigateTo("");
+
+    private async Task NavigateToBreadcrumb(int index)
+    {
+        var path = string.Join(@"\", pathSegments.Take(index + 1));
+        await NavigateTo(path);
+    }
+
+    private async Task OnPathKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await NavigateTo(currentPath);
+    }
+
+    private async Task OpenAsDirectory(string name) => await NavigateTo(currentPath + name);
+
+    // --- File viewer ---
+
+    private async Task ViewFile(string name)
+    {
+        viewingFileName = name;
+        viewingFilePath = currentPath + name;
+        fileViewOffset = 0;
+        fileHash = null;
+        await LoadFilePage();
+        viewingFile = true;
+    }
+
+    private async Task LoadFilePage()
+    {
+        fileLoading = true;
+        fileContent = "";
+        fileBytesRead = 0;
+        StateHasChanged();
+
+        try
+        {
+            var pathBytes = Encoding.Unicode.GetBytes(viewingFilePath + "\0");
+            var payload = new byte[1 + 8 + 8 + pathBytes.Length];
+            payload[0] = 0x02;
+            BitConverter.TryWriteBytes(payload.AsSpan(1), (ulong)PageSize);
+            BitConverter.TryWriteBytes(payload.AsSpan(9), (ulong)fileViewOffset);
+            pathBytes.CopyTo(payload, 17);
+
+            var response = await SendAndReceive(payload);
+            if (response is null) return;
+
+            if (response.Length < 4) { fmError = "Invalid response"; return; }
+            var status = BitConverter.ToUInt32(response, 0);
+            if (status != 0) { fmError = $"Error reading file (status={status})"; return; }
+            if (response.Length < 12) { fmError = "Invalid response"; return; }
+
+            fileBytesRead = (long)BitConverter.ToUInt64(response, 4);
+            var data = response.AsSpan(12, (int)Math.Min(fileBytesRead, response.Length - 12));
+
+            try { fileContent = Encoding.UTF8.GetString(data); }
+            catch { fileContent = FormatHexDump(data.ToArray()); }
+        }
+        catch (Exception ex)
+        {
+            fmError = $"Failed to read file: {ex.Message}";
+        }
+        finally
+        {
+            fileLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task NextPage() { fileViewOffset += PageSize; await LoadFilePage(); }
+    private async Task PrevPage() { fileViewOffset = Math.Max(0, fileViewOffset - PageSize); await LoadFilePage(); }
+
+    private void CloseFileViewer()
+    {
+        viewingFile = false;
+        fileContent = "";
+        fileHash = null;
+    }
+
+    private async Task HashFile()
+    {
+        fileLoading = true;
+        fileHash = null;
+        StateHasChanged();
+
+        try
+        {
+            var pathBytes = Encoding.Unicode.GetBytes(viewingFilePath + "\0");
+            var payload = new byte[1 + 8 + 8 + pathBytes.Length];
+            payload[0] = 0x03;
+            BitConverter.TryWriteBytes(payload.AsSpan(1), (ulong)PageSize);
+            BitConverter.TryWriteBytes(payload.AsSpan(9), (ulong)fileViewOffset);
+            pathBytes.CopyTo(payload, 17);
+
+            var response = await SendAndReceive(payload);
+            if (response is null) return;
+
+            if (response.Length < 4) return;
+            var status = BitConverter.ToUInt32(response, 0);
+            if (status != 0) { fmError = $"Hash error (status={status})"; return; }
+            if (response.Length < 36) return;
+
+            fileHash = Convert.ToHexString(response.AsSpan(4, 32));
+        }
+        catch (Exception ex)
+        {
+            fmError = $"Hash failed: {ex.Message}";
+        }
+        finally
+        {
+            fileLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    // --- WebSocket ---
+
+    private async Task<byte[]?> SendAndReceive(byte[] payload)
+    {
+        if (RelayWs is null || RelayWs.State != WebSocketState.Open)
+        {
+            fmError = "Not connected to agent";
+            return null;
+        }
+
+        try
+        {
+            await RelayWs.SendAsync(payload, WebSocketMessageType.Binary, true, CancellationToken.None);
+
+            var buffer = new byte[65536];
+            using var ms = new MemoryStream();
+            WebSocketReceiveResult result;
+            do
+            {
+                result = await RelayWs.ReceiveAsync(buffer, CancellationToken.None);
+                ms.Write(buffer, 0, result.Count);
+            } while (!result.EndOfMessage);
+
+            return ms.ToArray();
+        }
+        catch (Exception ex)
+        {
+            fmError = $"Command failed: {ex.Message}";
+            return null;
+        }
+    }
+
+    // --- Helpers ---
+
+    private static string ReadWideString(byte[] data, ref int offset)
+    {
+        var sb = new System.Text.StringBuilder();
+        while (offset + 1 < data.Length)
+        {
+            var ch = BitConverter.ToChar(data, offset);
+            offset += 2;
+            if (ch == '\0') break;
+            sb.Append(ch);
+        }
+        return sb.ToString();
+    }
+
+    private static string FormatHexDump(byte[] data)
+    {
+        var sb = new System.Text.StringBuilder();
+        for (int i = 0; i < data.Length; i += 16)
+        {
+            sb.Append($"{i:X8}  ");
+            var end = Math.Min(i + 16, data.Length);
+            for (int j = i; j < end; j++)
+            {
+                sb.Append($"{data[j]:X2} ");
+                if (j == i + 7) sb.Append(' ');
+            }
+            for (int j = end; j < i + 16; j++)
+            {
+                sb.Append("   ");
+                if (j == i + 7) sb.Append(' ');
+            }
+            sb.Append(" |");
+            for (int j = i; j < end; j++)
+            {
+                var c = (char)data[j];
+                sb.Append(c >= 32 && c < 127 ? c : '.');
+            }
+            sb.AppendLine("|");
+        }
+        return sb.ToString();
+    }
+}

