@@ -11,6 +11,9 @@
     <link rel="stylesheet" href="css/app.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <link href="cc.styles.css" rel="stylesheet" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
+    <meta name="theme-color" content="#1b6ec2" />
     <script type="importmap"></script>
 </head>
 
@@ -28,7 +31,11 @@
         <a href="." class="reload">Reload</a>
         <span class="dismiss">🗙</span>
     </div>
+    <div id="update-available" style="display:none;position:fixed;bottom:0;left:0;right:0;padding:0.6rem 1.25rem;background:#1b6ec2;color:#fff;text-align:center;z-index:9999;">
+        A new version is available. <a href="#" onclick="location.reload();return false;" style="color:#fff;font-weight:bold;text-decoration:underline;">Reload</a>
+    </div>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+    <script>navigator.serviceWorker.register('service-worker.js').then(reg=>{reg.addEventListener('updatefound',()=>{const w=reg.installing;w.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller)document.getElementById('update-available').style.display='block'})})}).catch(e=>console.warn('SW registration failed:',e))</script>
 </body>
 
 </html>
