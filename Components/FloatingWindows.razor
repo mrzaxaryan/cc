@@ -1,0 +1,214 @@
+@using System.Text
+@using cc.Components
+@inject WindowManager Wm
+@implements IDisposable
+
+@* Drag overlay — captures mouse events globally during drag *@
+@if (_dragging is not null)
+{
+    <div class="position-fixed top-0 start-0 w-100 h-100"
+         style="z-index:9999;cursor:grabbing;"
+         @onmousemove="OnDragMove"
+         @onmouseup="OnDragEnd"
+         @onmousemove:preventDefault="true"></div>
+}
+
+@* Floating windows *@
+@foreach (var win in Wm.Windows)
+{
+    <div class="app-window @(win.Maximized ? "maximized" : "") @(win.Minimized ? "minimized" : "")"
+         style="@(win.Maximized ? "" : $"left:{win.X}px;top:{win.Y}px;width:{win.Width}px;height:{win.Height}px;")">
+        <div class="app-window-titlebar" @onmousedown="(e) => OnDragStart(e, win)">
+            <span class="app-window-title">@win.Title — @(Wm.Relay.ConnectedAgentId ?? "")</span>
+            <button class="app-window-btn" @onclick="() => Wm.ToggleMinimize(win)" title="@(win.Minimized ? "Restore" : "Minimize")">@(win.Minimized ? "\u25a1" : "\u2014")</button>
+            <button class="app-window-btn" @onclick="() => Wm.ToggleMaximize(win)" title="@(win.Maximized ? "Restore" : "Maximize")">@(win.Maximized ? "\u25a1" : "\u29c9")</button>
+            <button class="app-window-btn close-btn" @onclick="() => Wm.CloseWindow(win)" title="Close">&times;</button>
+        </div>
+        <div class="app-window-body">
+            @if (win.Panel == "File Manager")
+            {
+                <FileManager @ref="fileManagerRef" Relay="Wm.Relay" />
+            }
+            else if (win.Panel == "Commands")
+            {
+                <div>
+                    <div class="mb-3">
+                        <button class="btn btn-outline-primary btn-sm me-2" @onclick="SendGetUUID" disabled="@Wm.Sending">GetUUID</button>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Path</label>
+                        <input class="form-control form-control-sm" @bind="Wm.CommandPath" placeholder="C:\" />
+                    </div>
+
+                    <div class="d-flex gap-2 flex-wrap mb-3">
+                        <button class="btn btn-outline-primary btn-sm" @onclick="SendGetDirectoryContent" disabled="@Wm.Sending">GetDirectoryContent</button>
+
+                        <div class="d-flex align-items-center gap-2">
+                            <button class="btn btn-outline-primary btn-sm" @onclick="SendGetFileContent" disabled="@Wm.Sending">GetFileContent</button>
+                            <input class="form-control form-control-sm" style="width:100px" @bind="Wm.ReadCount" placeholder="Size" type="number" />
+                            <input class="form-control form-control-sm" style="width:100px" @bind="Wm.FileOffset" placeholder="Offset" type="number" />
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2">
+                            <button class="btn btn-outline-primary btn-sm" @onclick="SendGetFileChunkHash" disabled="@Wm.Sending">GetFileChunkHash</button>
+                            <input class="form-control form-control-sm" style="width:100px" @bind="Wm.ChunkSize" placeholder="Chunk" type="number" />
+                            <input class="form-control form-control-sm" style="width:100px" @bind="Wm.HashOffset" placeholder="Offset" type="number" />
+                        </div>
+                    </div>
+
+                    <pre class="bg-dark text-light p-3 rounded" style="max-height:300px;overflow-y:auto;white-space:pre-wrap;font-size:0.85rem;">@Wm.Output</pre>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private FileManager? fileManagerRef;
+
+    // Drag state
+    private DragState? _dragging;
+
+    private class DragState
+    {
+        public WindowState Window { get; init; } = null!;
+        public double StartMouseX { get; init; }
+        public double StartMouseY { get; init; }
+        public double StartWinX { get; init; }
+        public double StartWinY { get; init; }
+    }
+
+    protected override void OnInitialized()
+    {
+        Wm.OnChanged += OnWmChanged;
+    }
+
+    private void OnWmChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnDragStart(MouseEventArgs e, WindowState win)
+    {
+        if (win.Maximized || win.Minimized) return;
+        _dragging = new DragState
+        {
+            Window = win,
+            StartMouseX = e.ClientX,
+            StartMouseY = e.ClientY,
+            StartWinX = win.X,
+            StartWinY = win.Y
+        };
+    }
+
+    private void OnDragMove(MouseEventArgs e)
+    {
+        if (_dragging is null) return;
+        _dragging.Window.X = Math.Max(0, _dragging.StartWinX + (e.ClientX - _dragging.StartMouseX));
+        _dragging.Window.Y = Math.Max(0, _dragging.StartWinY + (e.ClientY - _dragging.StartMouseY));
+    }
+
+    private void OnDragEnd(MouseEventArgs e) => _dragging = null;
+
+    // --- Raw commands ---
+
+    private async Task SendGetUUID()
+    {
+        var response = await SendCommand(new byte[] { 0x00 });
+        if (response is null) return;
+
+        if (response.Length >= 4)
+        {
+            var status = RelaySocket.ReadStatus(response);
+            if (status == 0 && response.Length >= 20)
+            {
+                Wm.Output += $"UUID: {RelaySocket.ReadUuid(response)}\n";
+            }
+            else
+            {
+                Wm.Output += $"Error: status={status}\n";
+            }
+        }
+    }
+
+    private async Task SendGetDirectoryContent()
+    {
+        var payload = RelaySocket.BuildPathCommand(0x01, Wm.CommandPath);
+        var response = await SendCommand(payload);
+        if (response is null) return;
+
+        var (entries, parseError) = DirEntry.ParseDirectoryResponse(response);
+        if (parseError is not null) { Wm.Output += $"{parseError}\n"; return; }
+
+        Wm.Output += $"Directory: {Wm.CommandPath} ({entries.Count} entries)\n";
+        foreach (var e in entries)
+        {
+            var prefix = e.IsDirectory ? "[DIR] " : e.IsDrive ? "[DRV] " : "";
+            var sizeStr = (!e.IsDirectory && !e.IsDrive) ? $" ({e.Size} bytes)" : "";
+            Wm.Output += $"  {prefix}{e.Name}{sizeStr}\n";
+        }
+    }
+
+    private async Task SendGetFileContent()
+    {
+        var payload = RelaySocket.BuildFileCommand(0x02, Wm.CommandPath, Wm.ReadCount, Wm.FileOffset);
+        var response = await SendCommand(payload);
+        if (response is null) return;
+
+        if (response.Length < 4) return;
+        var status = RelaySocket.ReadStatus(response);
+        if (status != 0) { Wm.Output += $"Error: status={status}\n"; return; }
+        if (response.Length < 12) return;
+
+        var (bytesRead, data) = RelaySocket.ReadFileContent(response);
+        try
+        {
+            Wm.Output += $"File: {Wm.CommandPath} ({bytesRead} bytes)\n{Encoding.UTF8.GetString(data)}\n";
+        }
+        catch
+        {
+            Wm.Output += $"File: {Wm.CommandPath} ({bytesRead} bytes)\n{Convert.ToHexString(data)}\n";
+        }
+    }
+
+    private async Task SendGetFileChunkHash()
+    {
+        var payload = RelaySocket.BuildFileCommand(0x03, Wm.CommandPath, Wm.ChunkSize, Wm.HashOffset);
+        var response = await SendCommand(payload);
+        if (response is null) return;
+
+        if (response.Length < 4) return;
+        var status = RelaySocket.ReadStatus(response);
+        if (status != 0) { Wm.Output += $"Error: status={status}\n"; return; }
+        if (response.Length < 36) return;
+
+        Wm.Output += $"SHA-256: {RelaySocket.ReadHash(response)}\n";
+    }
+
+    private async Task<byte[]?> SendCommand(byte[] payload)
+    {
+        if (!Wm.Relay.IsConnected) return null;
+
+        Wm.Sending = true;
+        StateHasChanged();
+
+        try
+        {
+            var response = await Wm.Relay.SendAndReceive(payload);
+            return response;
+        }
+        catch (Exception ex)
+        {
+            Wm.Output += $"Command failed: {ex.Message}\n";
+            return null;
+        }
+        finally
+        {
+            Wm.Sending = false;
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose()
+    {
+        Wm.OnChanged -= OnWmChanged;
+    }
+}

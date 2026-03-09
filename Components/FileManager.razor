@@ -1,9 +1,6 @@
 @using System.Net.WebSockets
 @using System.Text
 
-@* DirectoryEntry struct: 545 bytes packed *@
-@* Name(WCHAR[256]=512) + CreationTime(8) + LastModifiedTime(8) + Size(8) + Type(4) + IsDirectory(1) + IsDrive(1) + IsHidden(1) + IsSystem(1) + IsReadOnly(1) *@
-
 <div>
     @if (fmError is not null)
     {
@@ -80,7 +77,7 @@
                                 <span class="flex-grow-1 text-truncate">@e.Name</span>
                                 @if (!e.IsDirectory && !e.IsDrive)
                                 {
-                                    <small class="text-muted flex-shrink-0">@FormatSize(e.Size)</small>
+                                    <small class="text-muted flex-shrink-0">@Formatters.FormatSize(e.Size)</small>
                                 }
                                 <span class="d-flex gap-1 flex-shrink-0">
                                     @if (e.IsDirectory || e.IsDrive)
@@ -158,9 +155,8 @@
 
 @code {
     private const long PageSize = 8192;
-    private const int DirEntrySize = 545; // packed: Name(512) + CreationTime(8) + LastModifiedTime(8) + Size(8) + Type(4) + IsDir(1) + IsDrive(1) + IsHidden(1) + IsSystem(1) + IsReadOnly(1)
 
-    [Parameter] public ClientWebSocket? RelayWs { get; set; }
+    [Parameter] public RelaySocket? Relay { get; set; }
 
     private string? fmError;
     private string currentPath = @"C:\";
@@ -180,7 +176,7 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        if (RelayWs is not null && RelayWs.State == WebSocketState.Open && entries is null)
+        if (Relay is not null && Relay.IsConnected && entries is null)
         {
             await NavigateTo(currentPath);
         }
@@ -221,30 +217,13 @@
 
         try
         {
-            var pathBytes = Encoding.Unicode.GetBytes(currentPath + "\0");
-            var payload = new byte[1 + pathBytes.Length];
-            payload[0] = 0x01;
-            pathBytes.CopyTo(payload, 1);
-
-            var response = await SendAndReceive(payload);
+            var payload = RelaySocket.BuildPathCommand(0x01, currentPath);
+            var response = await SendCommand(payload);
             if (response is null) return;
 
-            if (response.Length < 4) { fmError = "Invalid response"; return; }
-            var status = BitConverter.ToUInt32(response, 0);
-            if (status != 0) { fmError = $"Error listing directory (status={status})"; return; }
-            if (response.Length < 12) { fmError = "Invalid response"; return; }
-
-            var entryCount = BitConverter.ToUInt64(response, 4);
-            var list = new List<DirEntry>();
-            var offset = 12;
-            for (ulong i = 0; i < entryCount && offset + DirEntrySize <= response.Length; i++)
-            {
-                var entry = ParseDirEntry(response, offset);
-                offset += DirEntrySize;
-                if (!string.IsNullOrEmpty(entry.Name))
-                    list.Add(entry);
-            }
-            entries = list;
+            var (parsed, parseError) = DirEntry.ParseDirectoryResponse(response);
+            if (parseError is not null) { fmError = parseError; return; }
+            entries = parsed;
         }
         catch (Exception ex)
         {
@@ -304,26 +283,20 @@
 
         try
         {
-            var pathBytes = Encoding.Unicode.GetBytes(viewingFilePath + "\0");
-            var payload = new byte[1 + 8 + 8 + pathBytes.Length];
-            payload[0] = 0x02;
-            BitConverter.TryWriteBytes(payload.AsSpan(1), (ulong)PageSize);
-            BitConverter.TryWriteBytes(payload.AsSpan(9), (ulong)fileViewOffset);
-            pathBytes.CopyTo(payload, 17);
-
-            var response = await SendAndReceive(payload);
+            var payload = RelaySocket.BuildFileCommand(0x02, viewingFilePath, PageSize, fileViewOffset);
+            var response = await SendCommand(payload);
             if (response is null) return;
 
             if (response.Length < 4) { fmError = "Invalid response"; return; }
-            var status = BitConverter.ToUInt32(response, 0);
+            var status = RelaySocket.ReadStatus(response);
             if (status != 0) { fmError = $"Error reading file (status={status})"; return; }
             if (response.Length < 12) { fmError = "Invalid response"; return; }
 
-            fileBytesRead = (long)BitConverter.ToUInt64(response, 4);
-            var data = response.AsSpan(12, (int)Math.Min(fileBytesRead, response.Length - 12));
+            var (bytesRead, data) = RelaySocket.ReadFileContent(response);
+            fileBytesRead = (long)bytesRead;
 
             try { fileContent = Encoding.UTF8.GetString(data); }
-            catch { fileContent = FormatHexDump(data.ToArray()); }
+            catch { fileContent = Formatters.FormatHexDump(data.ToArray()); }
         }
         catch (Exception ex)
         {
@@ -354,22 +327,16 @@
 
         try
         {
-            var pathBytes = Encoding.Unicode.GetBytes(viewingFilePath + "\0");
-            var payload = new byte[1 + 8 + 8 + pathBytes.Length];
-            payload[0] = 0x03;
-            BitConverter.TryWriteBytes(payload.AsSpan(1), (ulong)PageSize);
-            BitConverter.TryWriteBytes(payload.AsSpan(9), (ulong)fileViewOffset);
-            pathBytes.CopyTo(payload, 17);
-
-            var response = await SendAndReceive(payload);
+            var payload = RelaySocket.BuildFileCommand(0x03, viewingFilePath, PageSize, fileViewOffset);
+            var response = await SendCommand(payload);
             if (response is null) return;
 
             if (response.Length < 4) return;
-            var status = BitConverter.ToUInt32(response, 0);
+            var status = RelaySocket.ReadStatus(response);
             if (status != 0) { fmError = $"Hash error (status={status})"; return; }
             if (response.Length < 36) return;
 
-            fileHash = Convert.ToHexString(response.AsSpan(4, 32));
+            fileHash = RelaySocket.ReadHash(response);
         }
         catch (Exception ex)
         {
@@ -384,9 +351,9 @@
 
     // --- WebSocket ---
 
-    private async Task<byte[]?> SendAndReceive(byte[] payload)
+    private async Task<byte[]?> SendCommand(byte[] payload)
     {
-        if (RelayWs is null || RelayWs.State != WebSocketState.Open)
+        if (Relay is null || !Relay.IsConnected)
         {
             fmError = "Not connected to agent";
             return null;
@@ -394,18 +361,7 @@
 
         try
         {
-            await RelayWs.SendAsync(payload, WebSocketMessageType.Binary, true, CancellationToken.None);
-
-            var buffer = new byte[65536];
-            using var ms = new MemoryStream();
-            WebSocketReceiveResult result;
-            do
-            {
-                result = await RelayWs.ReceiveAsync(buffer, CancellationToken.None);
-                ms.Write(buffer, 0, result.Count);
-            } while (!result.EndOfMessage);
-
-            return ms.ToArray();
+            return await Relay.SendAndReceive(payload);
         }
         catch (Exception ex)
         {
@@ -414,77 +370,11 @@
         }
     }
 
-    // --- Entry helpers ---
-
-    private record DirEntry(string Name, ulong CreationTime, ulong LastModifiedTime, ulong Size, uint Type, bool IsDirectory, bool IsDrive, bool IsHidden, bool IsSystem, bool IsReadOnly);
-
-    private static DirEntry ParseDirEntry(byte[] data, int offset)
-    {
-        // Name: WCHAR[256] = 512 bytes (null-terminated wide string in fixed buffer)
-        var nameChars = new char[256];
-        int nameLen = 0;
-        for (int i = 0; i < 256; i++)
-        {
-            var ch = BitConverter.ToChar(data, offset + i * 2);
-            if (ch == '\0') break;
-            nameChars[nameLen++] = ch;
-        }
-        var name = new string(nameChars, 0, nameLen);
-
-        var creationTime = BitConverter.ToUInt64(data, offset + 512);
-        var lastModifiedTime = BitConverter.ToUInt64(data, offset + 520);
-        var size = BitConverter.ToUInt64(data, offset + 528);
-        var type = BitConverter.ToUInt32(data, offset + 536);
-        var isDirectory = data[offset + 540] != 0;
-        var isDrive = data[offset + 541] != 0;
-        var isHidden = data[offset + 542] != 0;
-        var isSystem = data[offset + 543] != 0;
-        var isReadOnly = data[offset + 544] != 0;
-
-        return new DirEntry(name, creationTime, lastModifiedTime, size, type, isDirectory, isDrive, isHidden, isSystem, isReadOnly);
-    }
-
     private async Task OnEntryDoubleClick(DirEntry entry)
     {
         if (entry.IsDirectory || entry.IsDrive)
             await OpenAsDirectory(entry.Name);
         else
             await ViewFile(entry.Name);
-    }
-
-    private static string FormatSize(ulong bytes)
-    {
-        if (bytes < 1024) return $"{bytes} B";
-        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
-        if (bytes < 1024 * 1024 * 1024) return $"{bytes / (1024.0 * 1024):F1} MB";
-        return $"{bytes / (1024.0 * 1024 * 1024):F1} GB";
-    }
-
-    private static string FormatHexDump(byte[] data)
-    {
-        var sb = new System.Text.StringBuilder();
-        for (int i = 0; i < data.Length; i += 16)
-        {
-            sb.Append($"{i:X8}  ");
-            var end = Math.Min(i + 16, data.Length);
-            for (int j = i; j < end; j++)
-            {
-                sb.Append($"{data[j]:X2} ");
-                if (j == i + 7) sb.Append(' ');
-            }
-            for (int j = end; j < i + 16; j++)
-            {
-                sb.Append("   ");
-                if (j == i + 7) sb.Append(' ');
-            }
-            sb.Append(" |");
-            for (int j = i; j < end; j++)
-            {
-                var c = (char)data[j];
-                sb.Append(c >= 32 && c < 127 ? c : '.');
-            }
-            sb.AppendLine("|");
-        }
-        return sb.ToString();
     }
 }

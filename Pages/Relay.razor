@@ -75,11 +75,11 @@ else
                         <tr>
                             <td><code>@agent.Id</code></td>
                             <td><code>@agent.Ip</code></td>
-                            <td title="@FormatCoords(agent)">@FormatLocation(agent)</td>
-                            <td>@FormatNetwork(agent)</td>
+                            <td title="@Formatters.FormatCoords(agent)">@Formatters.FormatLocation(agent)</td>
+                            <td>@Formatters.FormatNetwork(agent)</td>
                             <td><code>@agent.TlsVersion</code></td>
-                            <td>@FormatTimestamp(agent.ConnectedAt)</td>
-                            <td>@FormatTimestamp(agent.LastActiveAt)</td>
+                            <td>@Formatters.FormatTimestamp(agent.ConnectedAt)</td>
+                            <td>@Formatters.FormatTimestamp(agent.LastActiveAt)</td>
                             <td>@agent.MessageCount</td>
                             <td>
                                 @if (agent.Relayed)
@@ -119,7 +119,7 @@ else
                     <tr>
                         <td><code>@relay.Id</code></td>
                         <td><code>@relay.ClientId</code></td>
-                        <td>@FormatTimestamp(relay.ConnectedAt)</td>
+                        <td>@Formatters.FormatTimestamp(relay.ConnectedAt)</td>
                     </tr>
                 }
             </tbody>
@@ -150,9 +150,9 @@ else
                         <tr>
                             <td><code>@listener.Id</code></td>
                             <td><code>@listener.Ip</code></td>
-                            <td>@FormatListenerLocation(listener)</td>
+                            <td>@Formatters.FormatListenerLocation(listener)</td>
                             <td class="text-truncate" style="max-width:300px" title="@listener.UserAgent">@listener.UserAgent</td>
-                            <td>@FormatTimestamp(listener.ConnectedAt)</td>
+                            <td>@Formatters.FormatTimestamp(listener.ConnectedAt)</td>
                         </tr>
                     }
                 </tbody>
@@ -188,44 +188,4 @@ else
             loading = false;
         }
     }
-
-    private static string FormatTimestamp(double ms)
-    {
-        if (ms <= 0) return "-";
-        return DateTimeOffset.FromUnixTimeMilliseconds((long)ms).LocalDateTime.ToString("g");
-    }
-
-    private static string FormatLocation(AgentConnection c)
-    {
-        var parts = new List<string>();
-        if (!string.IsNullOrEmpty(c.City)) parts.Add(c.City);
-        if (!string.IsNullOrEmpty(c.Region) && c.Region != c.City) parts.Add(c.Region);
-        if (!string.IsNullOrEmpty(c.Country)) parts.Add(c.Country);
-        return parts.Count > 0 ? string.Join(", ", parts) : "-";
-    }
-
-    private static string FormatListenerLocation(EventListenerConnection c)
-    {
-        var parts = new List<string>();
-        if (!string.IsNullOrEmpty(c.City)) parts.Add(c.City);
-        if (!string.IsNullOrEmpty(c.Country)) parts.Add(c.Country);
-        return parts.Count > 0 ? string.Join(", ", parts) : "-";
-    }
-
-    private static string FormatNetwork(AgentConnection c)
-    {
-        if (c.Asn > 0 && !string.IsNullOrEmpty(c.AsOrganization))
-            return $"AS{c.Asn} ({c.AsOrganization})";
-        if (c.Asn > 0)
-            return $"AS{c.Asn}";
-        return "-";
-    }
-
-    private static string FormatCoords(AgentConnection c)
-    {
-        if (!string.IsNullOrEmpty(c.Latitude) && !string.IsNullOrEmpty(c.Longitude))
-            return $"{c.Latitude}, {c.Longitude}";
-        return "";
-    }
-
 }

