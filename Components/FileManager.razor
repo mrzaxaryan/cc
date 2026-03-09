@@ -40,8 +40,8 @@
     @* Path bar *@
     <div class="input-group input-group-sm mb-3">
         <input class="form-control font-monospace" @bind="currentPath" @onkeydown="OnPathKeyDown" />
-        <button class="btn btn-outline-primary" @onclick="() => NavigateTo(currentPath)" disabled="@(loading || !IsConnected)">Go</button>
-        <button class="btn btn-outline-secondary" @onclick="NavigateUp" disabled="@(loading || !IsConnected)">Up</button>
+        <button class="btn btn-outline-primary" @onclick="() => NavigateTo(currentPath)" disabled="@(loading || (!IsConnected && !HasCache))">Go</button>
+        <button class="btn btn-outline-secondary" @onclick="NavigateUp" disabled="@(loading || (!IsConnected && !HasCache))">Up</button>
     </div>
 
     <div class="row g-3">
@@ -60,7 +60,7 @@
                             <span class="text-muted ms-1">(@entries.Count)</span>
                         }
                     </small>
-                    <button class="btn btn-outline-secondary btn-sm py-0 px-1" @onclick="() => NavigateTo(currentPath)" disabled="@(loading || !IsConnected)">&#x21bb;</button>
+                    <button class="btn btn-outline-secondary btn-sm py-0 px-1" @onclick="() => NavigateTo(currentPath)" disabled="@(loading || (!IsConnected && !HasCache))">&#x21bb;</button>
                 </div>
                 <div class="list-group list-group-flush" style="max-height:50vh;overflow-y:auto;">
                     @if (entries is not null)
@@ -68,7 +68,7 @@
                         @if (pathSegments.Length > 0)
                         {
                             <button class="list-group-item list-group-item-action py-1 font-monospace small"
-                                    @onclick="NavigateUp" disabled="@(!IsConnected)">..</button>
+                                    @onclick="NavigateUp" disabled="@(!IsConnected && !HasCache)">..</button>
                         }
                         @foreach (var entry in entries)
                         {
@@ -86,7 +86,7 @@
                                     @if (e.IsDirectory || e.IsDrive)
                                     {
                                         <button class="btn btn-outline-primary btn-sm px-1 py-0" style="font-size:0.7rem"
-                                                @onclick:stopPropagation="true" @onclick="() => OpenAsDirectory(e.Name)" title="Open folder" disabled="@(!IsConnected)">OPEN</button>
+                                                @onclick:stopPropagation="true" @onclick="() => OpenAsDirectory(e.Name)" title="Open folder" disabled="@(!IsConnected && !HasCache)">OPEN</button>
                                     }
                                     else
                                     {
@@ -194,6 +194,7 @@
     [Parameter] public string? AgentUuid { get; set; }
 
     private bool IsConnected => Relay is not null && Relay.IsConnected;
+    private bool HasCache => Cache.HasDirectory && !string.IsNullOrEmpty(AgentUuid);
 
     private string currentPath = "";
     private string[] pathSegments = [];
@@ -215,10 +216,16 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        if (Relay is not null && Relay.IsConnected && entries is null)
+        if (entries is not null) return;
+        await Downloads.LoadAsync();
+
+        if (IsConnected)
         {
-            await Downloads.LoadAsync();
             await NavigateTo(currentPath);
+        }
+        else if (HasCache)
+        {
+            await NavigateFromCache(currentPath);
         }
     }
 
@@ -267,6 +274,13 @@
 
     private async Task NavigateTo(string path)
     {
+        if (!IsConnected)
+        {
+            if (HasCache)
+                await NavigateFromCache(path);
+            return;
+        }
+
         currentPath = path.TrimEnd('\\', '/');
         if (!string.IsNullOrEmpty(currentPath) && !currentPath.EndsWith(@"\"))
             currentPath += @"\";
@@ -290,6 +304,44 @@
         catch (Exception ex)
         {
             Msg.Error($"Failed: {ex.Message}");
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task NavigateFromCache(string path)
+    {
+        currentPath = path.TrimEnd('\\', '/');
+        if (!string.IsNullOrEmpty(currentPath) && !currentPath.EndsWith(@"\"))
+            currentPath += @"\";
+
+        UpdatePathSegments();
+        loading = true;
+        entries = null;
+        StateHasChanged();
+
+        try
+        {
+            var cacheEntries = await Cache.ListDirectoryAsync(CacheSubPath);
+            entries = cacheEntries.Select(ce => new DirEntry(
+                Name: ce.Name,
+                CreationTime: 0,
+                LastModifiedTime: (ulong)ce.LastModified,
+                Size: (ulong)ce.Size,
+                Type: 0,
+                IsDirectory: ce.IsDirectory,
+                IsDrive: false,
+                IsHidden: false,
+                IsSystem: false,
+                IsReadOnly: false
+            )).ToList();
+        }
+        catch (Exception ex)
+        {
+            Msg.Error($"Failed to read cache: {ex.Message}");
         }
         finally
         {
