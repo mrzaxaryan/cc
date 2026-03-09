@@ -1,11 +1,14 @@
 @page "/relay"
 @inject HttpClient Http
-@using System.Timers
-@implements IDisposable
 
 <PageTitle>Relay</PageTitle>
 
-<h1>Relay</h1>
+<div class="d-flex align-items-center gap-3 mb-3">
+    <h1 class="mb-0">Relay</h1>
+    <button class="btn btn-outline-primary btn-sm" @onclick="LoadStatus" disabled="@loading">
+        @(loading ? "Refreshing..." : "Refresh")
+    </button>
+</div>
 
 @if (error is not null)
 {
@@ -161,23 +164,16 @@ else
 @code {
     private HealthStatus? status;
     private string? error;
-    private Timer? timer;
+    private bool loading;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadStatus();
-
-        timer = new Timer(5000);
-        timer.Elapsed += async (_, _) =>
-        {
-            await LoadStatus();
-            await InvokeAsync(StateHasChanged);
-        };
-        timer.Start();
     }
 
     private async Task LoadStatus()
     {
+        loading = true;
         try
         {
             status = await Http.GetFromJsonAsync<HealthStatus>("https://relay.nostdlib.workers.dev/health");
@@ -186,6 +182,10 @@ else
         catch (Exception ex)
         {
             error = $"Failed to load: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
         }
     }
 
@@ -228,9 +228,4 @@ else
         return "";
     }
 
-    public void Dispose()
-    {
-        timer?.Stop();
-        timer?.Dispose();
-    }
 }

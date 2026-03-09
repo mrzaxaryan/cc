@@ -25,9 +25,23 @@ else
                 <h5 class="card-title mb-0">Connected</h5>
                 <p class="card-text display-6 mb-0">@agents.Count</p>
             </div>
-            <span class="badge @(eventsConnected ? "bg-success" : "bg-danger") ms-auto">
-                @(eventsConnected ? "Live" : "Disconnected")
-            </span>
+            <div class="ms-auto d-flex align-items-center gap-2">
+                @if (relayedAgentId is not null)
+                {
+                    <span class="badge bg-info">Relay: <code class="text-white">@relayedAgentId</code></span>
+                }
+                <span class="badge @(eventsConnected ? "bg-success" : "bg-danger")">
+                    @(eventsConnected ? "Live" : "Disconnected")
+                </span>
+                @if (eventsConnected)
+                {
+                    <button class="btn btn-outline-danger btn-sm" @onclick="DisconnectEvents">Disconnect</button>
+                }
+                else
+                {
+                    <button class="btn btn-outline-success btn-sm" @onclick="ReconnectEvents">Connect</button>
+                }
+            </div>
         </div>
     </div>
 
@@ -154,6 +168,17 @@ else
 
     protected override void OnInitialized()
     {
+        _ = ConnectToEvents();
+    }
+
+    private void DisconnectEvents()
+    {
+        eventsCts?.Cancel();
+    }
+
+    private void ReconnectEvents()
+    {
+        eventsCts?.Cancel();
         _ = ConnectToEvents();
     }
 
