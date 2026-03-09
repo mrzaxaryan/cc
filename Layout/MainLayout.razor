@@ -11,9 +11,9 @@
     <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Agents")'>Agents</button>
     <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Cache Manager")'>Cache</button>
     <div class="mdi-spacer"></div>
-    @if (Wm.Relay.ConnectedAgentId is not null)
+    @foreach (var agentId in Wm.ConnectedAgentIds)
     {
-        <span class="mdi-status connected" title="Connected agent">@Wm.Relay.ConnectedAgentId</span>
+        <span class="mdi-status connected" title="Connected agent">@agentId</span>
     }
 </div>
 

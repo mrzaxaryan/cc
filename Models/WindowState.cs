@@ -1,3 +1,5 @@
+using cc.Services;
+
 namespace cc.Models;
 
 public class WindowState
@@ -12,4 +14,6 @@ public class WindowState
     public bool Minimized { get; set; }
     public bool Maximized { get; set; }
     public int ZIndex { get; set; }
+    public string? AgentId { get; set; }
+    public RelaySocket? Relay { get; set; }
 }

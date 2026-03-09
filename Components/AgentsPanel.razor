@@ -26,9 +26,9 @@ else
                 <p class="card-text display-6 mb-0">@agents.Count</p>
             </div>
             <div class="ms-auto d-flex align-items-center gap-2">
-                @if (Wm.Relay.ConnectedAgentId is not null)
+                @foreach (var id in Wm.ConnectedAgentIds)
                 {
-                    <span class="badge bg-info">Relay: <code class="text-white">@Wm.Relay.ConnectedAgentId</code></span>
+                    <span class="badge bg-info">Relay: <code class="text-white">@id</code></span>
                 }
                 <span class="badge @(eventsConnected ? "bg-success" : "bg-danger")">
                     @(eventsConnected ? "Live" : "Disconnected")
@@ -68,7 +68,7 @@ else
                 <tbody>
                     @foreach (var agent in agents.Connections)
                     {
-                        <tr class="@(Wm.Relay.ConnectedAgentId == agent.Id ? "table-active" : "")"
+                        <tr class="@(Wm.ConnectedAgentIds.Contains(agent.Id) ? "table-active" : "")"
                             style="cursor:context-menu"
                             @oncontextmenu="(e) => ShowContextMenu(e, agent.Id)"
                             @oncontextmenu:preventDefault="true">
@@ -102,15 +102,11 @@ else
 {
     <div class="position-fixed top-0 start-0 w-100 h-100" style="z-index:1050;" @onclick="HideContextMenu" @oncontextmenu="HideContextMenu" @oncontextmenu:preventDefault="true"></div>
     <div class="dropdown-menu show shadow" style="position:fixed;left:@(ctxX)px;top:@(ctxY)px;z-index:1051;">
-        @if (Wm.Relay.ConnectedAgentId == ctxAgentId)
+        <button class="dropdown-item" @onclick="CtxOpenFiles">File Manager</button>
+        <button class="dropdown-item" @onclick="CtxOpenCommands">Commands</button>
+        @if (Wm.ConnectedAgentIds.Contains(ctxAgentId!))
         {
-            <button class="dropdown-item" @onclick="OpenPanelFiles">File Manager</button>
-            <button class="dropdown-item" @onclick="OpenPanelCommands">Commands</button>
-        }
-        else
-        {
-            <button class="dropdown-item" @onclick="CtxConnectFiles">File Manager</button>
-            <button class="dropdown-item" @onclick="CtxConnectCommands">Commands</button>
+            <button class="dropdown-item text-danger" @onclick="CtxDisconnect">Disconnect</button>
         }
     </div>
 }
@@ -152,38 +148,33 @@ else
 
     private void HideContextMenu() => ctxVisible = false;
 
-    private async Task CtxConnectFiles()
+    private async Task CtxOpenFiles()
     {
         HideContextMenu();
         if (ctxAgentId is not null)
-        {
-            if (Wm.Relay.ConnectedAgentId is not null)
-                await Wm.DisconnectRelay();
-            await ConnectToAgent(ctxAgentId);
-            Wm.OpenWindow("File Manager");
-        }
+            await OpenAgentWindow("File Manager", ctxAgentId);
     }
 
-    private async Task CtxConnectCommands()
+    private async Task CtxOpenCommands()
     {
         HideContextMenu();
         if (ctxAgentId is not null)
-        {
-            if (Wm.Relay.ConnectedAgentId is not null)
-                await Wm.DisconnectRelay();
-            await ConnectToAgent(ctxAgentId);
-            Wm.OpenWindow("Commands");
-        }
+            await OpenAgentWindow("Commands", ctxAgentId);
     }
 
     private async Task CtxDisconnect()
     {
         HideContextMenu();
-        await Wm.DisconnectRelay();
+        if (ctxAgentId is not null)
+            await Wm.DisconnectAgent(ctxAgentId);
     }
 
-    private void OpenPanelFiles() { HideContextMenu(); Wm.OpenWindow("File Manager"); }
-    private void OpenPanelCommands() { HideContextMenu(); Wm.OpenWindow("Commands"); }
+    private async Task OpenAgentWindow(string panel, string agentId)
+    {
+        var relay = await CreateRelay(agentId);
+        if (relay is not null)
+            Wm.OpenAgentWindow(panel, agentId, relay);
+    }
 
     // --- Events WebSocket ---
 
@@ -191,8 +182,7 @@ else
     {
         eventsCts?.Cancel();
         agents = null;
-        if (Wm.Relay.ConnectedAgentId is not null)
-            await Wm.DisconnectRelay();
+        await Wm.CloseAllWindows();
     }
 
     private void ReconnectEvents()
@@ -247,8 +237,6 @@ else
                 eventsWs = null;
                 eventsConnected = false;
                 agents = null;
-                if (!_disposing && Wm.Relay.ConnectedAgentId is not null)
-                    await Wm.DisconnectRelay();
                 if (!_disposing)
                     await InvokeAsync(StateHasChanged);
             }
@@ -282,9 +270,11 @@ else
                     Connections = agentArray
                 };
 
-                if (Wm.Relay.ConnectedAgentId is not null && !agentArray.Any(a => a.Id == Wm.Relay.ConnectedAgentId))
+                // Disconnect windows for agents no longer in the list
+                foreach (var id in Wm.ConnectedAgentIds.ToList())
                 {
-                    _ = Wm.DisconnectRelay();
+                    if (!agentArray.Any(a => a.Id == id))
+                        _ = Wm.DisconnectAgent(id);
                 }
 
                 error = null;
@@ -316,9 +306,9 @@ else
                         Connections = list.ToArray()
                     };
 
-                    if (Wm.Relay.ConnectedAgentId == agent.Id)
+                    if (Wm.ConnectedAgentIds.Contains(agent.Id))
                     {
-                        _ = Wm.DisconnectRelay();
+                        _ = Wm.DisconnectAgent(agent.Id);
                         error = "Agent disconnected.";
                     }
                 }
@@ -340,9 +330,9 @@ else
                         existing.RelayId = null;
                     }
 
-                    if (Wm.Relay.ConnectedAgentId == agent.Id)
+                    if (Wm.ConnectedAgentIds.Contains(agent.Id))
                     {
-                        _ = Wm.DisconnectRelay();
+                        _ = Wm.DisconnectAgent(agent.Id);
                         error = "Agent relay disconnected.";
                     }
                 }
@@ -356,19 +346,25 @@ else
 
     // --- Relay connection ---
 
-    private async Task ConnectToAgent(string agentId)
+    private async Task<RelaySocket?> CreateRelay(string agentId)
     {
+        // Reuse existing relay for this agent if one exists
+        var existingWin = Wm.Windows.FirstOrDefault(w => w.AgentId == agentId && w.Relay is { IsConnected: true });
+        if (existingWin?.Relay is not null)
+            return existingWin.Relay;
+
+        var relay = new RelaySocket { BaseUrl = Store.WsBaseUrl };
         try
         {
             error = null;
-            Wm.Relay.BaseUrl = Store.WsBaseUrl;
-            await Wm.Relay.Connect(agentId);
-            Wm.Output = "Connected. Ready to send commands.\n";
+            await relay.Connect(agentId);
+            return relay;
         }
         catch (Exception ex)
         {
             error = $"Connection failed: {ex.Message}";
-            await Wm.Relay.Disconnect();
+            await relay.Disconnect();
+            return null;
         }
     }
 

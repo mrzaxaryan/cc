@@ -8,20 +8,16 @@ public class WindowManager
     private int _topZ = 1040;
 
     public List<WindowState> Windows { get; } = new();
-    public RelaySocket Relay { get; } = new();
-
-    // Command panel state
-    public string CommandPath { get; set; } = "";
-    public long ReadCount { get; set; } = 4096;
-    public long FileOffset { get; set; }
-    public long ChunkSize { get; set; } = 4096;
-    public long HashOffset { get; set; }
-    public string Output { get; set; } = "";
-    public bool Sending { get; set; }
 
     public event Action? OnChanged;
 
     public void NotifyChanged() => OnChanged?.Invoke();
+
+    /// <summary>All agent IDs with active relay connections across windows.</summary>
+    public IEnumerable<string> ConnectedAgentIds =>
+        Windows.Where(w => w.Relay is { IsConnected: true } && w.AgentId is not null)
+               .Select(w => w.AgentId!)
+               .Distinct();
 
     public void BringToFront(WindowState win)
     {
@@ -32,7 +28,7 @@ public class WindowManager
 
     public void OpenWindow(string panel)
     {
-        var existing = Windows.FirstOrDefault(w => w.Panel == panel);
+        var existing = Windows.FirstOrDefault(w => w.Panel == panel && w.AgentId is null);
         if (existing is not null)
         {
             existing.Minimized = false;
@@ -56,25 +52,51 @@ public class WindowManager
         OnChanged?.Invoke();
     }
 
+    public void OpenAgentWindow(string panel, string agentId, RelaySocket relay)
+    {
+        // Reuse existing window for same panel + agent
+        var existing = Windows.FirstOrDefault(w => w.Panel == panel && w.AgentId == agentId);
+        if (existing is not null)
+        {
+            existing.Minimized = false;
+            BringToFront(existing);
+            return;
+        }
+
+        _topZ++;
+        var offset = Windows.Count * 30;
+        Windows.Add(new WindowState
+        {
+            Id = _nextId++,
+            Panel = panel,
+            Title = $"{panel} — {agentId}",
+            AgentId = agentId,
+            Relay = relay,
+            X = 100 + offset,
+            Y = 80 + offset,
+            Width = panel switch { "File Manager" => 800, _ => 700 },
+            Height = 500,
+            ZIndex = _topZ
+        });
+        OnChanged?.Invoke();
+    }
+
     public async Task CloseWindow(WindowState win)
     {
         Windows.Remove(win);
-        if (Windows.Count == 0 && Relay.IsConnected)
-        {
-            await Relay.Disconnect();
-            Output = "";
-        }
+        if (win.Relay is not null)
+            await win.Relay.Disconnect();
         OnChanged?.Invoke();
     }
 
     public async Task CloseAllWindows()
     {
-        Windows.Clear();
-        if (Relay.IsConnected)
+        foreach (var win in Windows)
         {
-            await Relay.Disconnect();
-            Output = "";
+            if (win.Relay is not null)
+                await win.Relay.Disconnect();
         }
+        Windows.Clear();
         OnChanged?.Invoke();
     }
 
@@ -92,12 +114,15 @@ public class WindowManager
         OnChanged?.Invoke();
     }
 
-    public async Task DisconnectRelay()
+    public async Task DisconnectAgent(string agentId)
     {
-        await Relay.Disconnect();
-        // Only close agent-dependent windows, not all windows
-        Windows.RemoveAll(w => w.Panel is "File Manager" or "Commands");
-        Output = "";
+        var agentWindows = Windows.Where(w => w.AgentId == agentId).ToList();
+        foreach (var win in agentWindows)
+        {
+            if (win.Relay is not null)
+                await win.Relay.Disconnect();
+            Windows.Remove(win);
+        }
         OnChanged?.Invoke();
     }
 }
