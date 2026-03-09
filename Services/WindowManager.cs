@@ -45,7 +45,7 @@ public class WindowManager
             Title = panel,
             X = 100 + offset,
             Y = 80 + offset,
-            Width = panel switch { "File Manager" => 800, "Cache Manager" => 600, "Relay" => 900, "Agents" => 950, _ => 700 },
+            Width = panel switch { "File Manager" => 800, "Cache Manager" => 600, "Relay" => 900, "Agents" => 950, "Downloads" => 600, _ => 700 },
             Height = 500,
             ZIndex = _topZ
         });
@@ -86,7 +86,8 @@ public class WindowManager
     public async Task CloseWindow(WindowState win)
     {
         Windows.Remove(win);
-        if (win.Relay is not null)
+        // Only disconnect relay if no other window still uses it
+        if (win.Relay is not null && !Windows.Any(w => w.Relay == win.Relay))
             await win.Relay.Disconnect();
         OnChanged?.Invoke();
     }

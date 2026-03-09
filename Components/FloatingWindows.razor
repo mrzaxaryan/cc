@@ -57,6 +57,10 @@
             {
                 <CommandsPanel Relay="win.Relay" />
             }
+            else if (win.Panel == "Downloads")
+            {
+                <DownloadManagerPanel />
+            }
         </div>
         @if (!win.Maximized)
         {

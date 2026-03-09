@@ -148,4 +148,8 @@ public class DownloadStore
 
     public List<DownloadRecord> GetByAgent(string agentUuid) =>
         _cache.Where(r => r.AgentUuid == agentUuid).ToList();
+
+    public List<DownloadRecord> GetActive() =>
+        _cache.Where(r => r.Status == DownloadStatus.Downloading || r.Status == DownloadStatus.Paused)
+              .ToList();
 }

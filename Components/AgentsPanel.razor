@@ -63,7 +63,7 @@ else
                     <col style="width:80px" />
                     <col style="width:14%" />
                     <col style="width:90px" />
-                    <col style="width:100px" />
+                    <col style="width:80px" />
                     <col style="width:120px" />
                     <col style="width:18%" />
                     <col />
@@ -74,7 +74,7 @@ else
                         <th>Status</th>
                         <th>Name</th>
                         <th>UUID</th>
-                        <th>Relay</th>
+                        <th>Relay Use</th>
                         <th>IP</th>
                         <th>Location</th>
                         <th>Network</th>
@@ -110,7 +110,20 @@ else
                                 }
                             </td>
                             <td><code title="@row.Uuid">@(row.Uuid is not null ? row.Uuid[..Math.Min(8, row.Uuid.Length)] : "...")</code></td>
-                            <td>@row.RelayName</td>
+                            <td>
+                                @if (row.IsOnline && row.RelayUsed)
+                                {
+                                    <span class="badge bg-success" style="font-size:0.65rem">Used</span>
+                                }
+                                else if (row.IsOnline)
+                                {
+                                    <span class="badge bg-secondary" style="font-size:0.65rem">Unused</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
                             <td><code>@row.Ip</code></td>
                             <td>@row.Location</td>
                             <td>@row.Network</td>
@@ -170,6 +183,7 @@ else
         await Store.LoadAsync();
         await AgentDb.LoadAsync();
         Store.OnChanged += OnRelayStoreChanged;
+        Wm.OnChanged += OnWmChanged;
         _countdownTimer = new Timer(_ => InvokeAsync(StateHasChanged), null, 1000, 1000);
         SyncRelays();
     }
@@ -182,6 +196,8 @@ else
             StateHasChanged();
         });
     }
+
+    private void OnWmChanged() => InvokeAsync(StateHasChanged);
 
     private void SyncRelays()
     {
@@ -235,6 +251,7 @@ else
         public string AgentId { get; set; } = "";
         public string RelayUrl { get; set; } = "";
         public string RelayName { get; set; } = "";
+        public bool RelayUsed { get; set; }
         public string Ip { get; set; } = "";
         public string Location { get; set; } = "";
         public string Network { get; set; } = "";
@@ -263,6 +280,7 @@ else
                 AgentId = agent.Id,
                 RelayUrl = relayUrl,
                 RelayName = relayName,
+                RelayUsed = Wm.ConnectedAgentIds.Contains(agent.Id),
                 Ip = agent.Ip,
                 Location = Formatters.FormatLocation(agent),
                 Network = Formatters.FormatNetwork(agent),
@@ -662,6 +680,7 @@ else
         _disposing = true;
         _countdownTimer?.Dispose();
         Store.OnChanged -= OnRelayStoreChanged;
+        Wm.OnChanged -= OnWmChanged;
         foreach (var rs in relayStates.Values)
         {
             rs.Cts?.Cancel();

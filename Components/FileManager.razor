@@ -261,6 +261,11 @@
 
     public void Dispose()
     {
+        // Pause active downloads before relay disconnects, so they stay as Paused (not Failed)
+        foreach (var cts in _downloadCts.Values)
+            cts.Cancel();
+        _downloadCts.Clear();
+
         Cache.OnChanged -= OnCacheChanged;
         Downloads.OnChanged -= OnDownloadsChanged;
     }
