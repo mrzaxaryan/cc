@@ -196,4 +196,34 @@ public class VfsStore
         await _js.InvokeVoidAsync("ccFileDb.remove", id);
         if (raiseEvent) OnChanged?.Invoke();
     }
+
+    // --- Stats ---
+
+    public async Task<(int dirCount, int fileCount, long totalSize)> GetAgentStatsAsync(string agentUuid)
+    {
+        var dirs = await _js.InvokeAsync<VfsDirectory[]?>("ccDirectoryDb.getByAgent", agentUuid);
+        var files = await _js.InvokeAsync<VfsFile[]?>("ccFileDb.getByAgent", agentUuid);
+        var dirCount = dirs?.Length ?? 0;
+        var fileCount = files?.Length ?? 0;
+        var totalSize = files?.Sum(f => f.Size) ?? 0;
+        return (dirCount, fileCount, totalSize);
+    }
+
+    public async Task<(int agentCount, int dirCount, int fileCount, long totalSize)> GetGlobalStatsAsync(IEnumerable<string> agentUuids)
+    {
+        int agents = 0, dirs = 0, files = 0;
+        long size = 0;
+        foreach (var uuid in agentUuids)
+        {
+            var (d, f, s) = await GetAgentStatsAsync(uuid);
+            if (d > 0 || f > 0)
+            {
+                agents++;
+                dirs += d;
+                files += f;
+                size += s;
+            }
+        }
+        return (agents, dirs, files, size);
+    }
 }

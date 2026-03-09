@@ -6,42 +6,80 @@
 @implements IDisposable
 
 <div>
-    @* Header info *@
+    @* Header *@
     <div class="d-flex align-items-center gap-2 mb-2">
         <span class="badge bg-primary">@(Cache.DirectoryName ?? "No folder")</span>
-        <small class="text-muted">@Formatters.FormatSize((ulong)cacheSize)</small>
         <button class="btn btn-outline-secondary btn-sm py-0 px-1 ms-auto" @onclick="Refresh" disabled="@loading" title="Refresh">&#x21bb;</button>
-        <button class="btn btn-outline-danger btn-sm py-0 px-1" @onclick="DeleteAllCache" disabled="@(loading || cacheSize == 0)" title="Delete all cache">DEL ALL</button>
+        @if (confirmPrune)
+        {
+            <button class="btn btn-danger btn-sm py-0 px-1" @onclick="ConfirmPrune" disabled="@loading">YES</button>
+            <button class="btn btn-outline-secondary btn-sm py-0 px-1" @onclick="() => confirmPrune = false">NO</button>
+        }
+        else
+        {
+            <button class="btn btn-outline-danger btn-sm py-0 px-1" @onclick="() => confirmPrune = true" disabled="@(loading || stats.fileCount == 0)" title="Prune file system">PRUNE</button>
+        }
         <button class="btn btn-outline-warning btn-sm py-0 px-1" @onclick="ChangeFolder" title="Change folder">&#x1f4c1;</button>
     </div>
 
-    @* Breadcrumb *@
-    <nav aria-label="breadcrumb" class="mb-2">
-        <ol class="breadcrumb mb-0 small">
-            <li class="breadcrumb-item">
-                <a href="javascript:void(0)" @onclick="NavigateToRoot" @onclick:preventDefault>Root</a>
-            </li>
-            @{ var lastCrumb = breadcrumbs.LastOrDefault(); }
-            @foreach (var crumb in breadcrumbs)
-            {
-                if (crumb == lastCrumb)
-                {
-                    <li class="breadcrumb-item active">@crumb.Name</li>
-                }
-                else
-                {
-                    <li class="breadcrumb-item">
-                        <a href="javascript:void(0)" @onclick="() => NavigateToDirectory(crumb.Id)" @onclick:preventDefault>@crumb.Name</a>
-                    </li>
-                }
-            }
-        </ol>
-    </nav>
+    @* Global stats *@
+    <div class="card mb-2">
+        <div class="card-body p-2">
+            <div class="row text-center small">
+                <div class="col">
+                    <div class="fw-bold">@stats.agentCount</div>
+                    <div class="text-muted" style="font-size:0.7rem">Agents</div>
+                </div>
+                <div class="col">
+                    <div class="fw-bold">@stats.dirCount</div>
+                    <div class="text-muted" style="font-size:0.7rem">Dirs</div>
+                </div>
+                <div class="col">
+                    <div class="fw-bold">@stats.fileCount</div>
+                    <div class="text-muted" style="font-size:0.7rem">Files</div>
+                </div>
+                <div class="col">
+                    <div class="fw-bold">@Formatters.FormatSize((ulong)stats.totalSize)</div>
+                    <div class="text-muted" style="font-size:0.7rem">Metadata</div>
+                </div>
+                <div class="col">
+                    <div class="fw-bold">@Formatters.FormatSize((ulong)blobSize)</div>
+                    <div class="text-muted" style="font-size:0.7rem">On Disk</div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    @* Agent selector at root level *@
-    @if (currentDirId == VfsStore.RootParentId && currentAgentUuid is null && agentList is not null)
+    @* Breadcrumb *@
+    @if (breadcrumbs.Count > 0)
     {
-        <div class="list-group list-group-flush" style="max-height:55vh;overflow-y:auto;">
+        <nav aria-label="breadcrumb" class="mb-2">
+            <ol class="breadcrumb mb-0 small">
+                <li class="breadcrumb-item">
+                    <a href="javascript:void(0)" @onclick="NavigateToRoot" @onclick:preventDefault>Root</a>
+                </li>
+                @{ var lastCrumb = breadcrumbs.LastOrDefault(); }
+                @foreach (var crumb in breadcrumbs)
+                {
+                    if (crumb == lastCrumb)
+                    {
+                        <li class="breadcrumb-item active">@crumb.Name</li>
+                    }
+                    else
+                    {
+                        <li class="breadcrumb-item">
+                            <a href="javascript:void(0)" @onclick="() => NavigateToDirectory(crumb.Id)" @onclick:preventDefault>@crumb.Name</a>
+                        </li>
+                    }
+                }
+            </ol>
+        </nav>
+    }
+
+    @* Agent list at root *@
+    @if (currentDirId == VfsStore.RootParentId && currentAgentUuid is null)
+    {
+        <div class="list-group list-group-flush" style="max-height:50vh;overflow-y:auto;">
             @if (loading)
             {
                 <div class="list-group-item text-center py-3">
@@ -50,16 +88,27 @@
             }
             else
             {
-                @foreach (var agent in agentList)
+                @foreach (var agent in agentStats)
                 {
-                    <div class="list-group-item py-1 font-monospace small d-flex align-items-center gap-1">
-                        <span class="flex-shrink-0 me-1" style="width:1.2em;text-align:center;">&#x1f4bb;</span>
-                        <a href="javascript:void(0)" class="flex-grow-1 text-truncate" @onclick="() => NavigateToAgent(agent.uuid)" @onclick:preventDefault>@agent.name</a>
+                    <div class="list-group-item py-1 small d-flex align-items-center gap-1">
+                        <a href="javascript:void(0)" class="flex-grow-1 text-truncate font-monospace" @onclick="() => NavigateToAgent(agent.uuid)" @onclick:preventDefault>@agent.name</a>
+                        <small class="text-muted flex-shrink-0" style="font-size:0.65rem">@agent.dirs d / @agent.files f</small>
+                        <small class="text-muted flex-shrink-0" style="font-size:0.65rem">@Formatters.FormatSize((ulong)agent.size)</small>
+                        @if (confirmDeleteId == agent.uuid)
+                        {
+                            <button class="btn btn-danger btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.6rem" @onclick="() => DeleteAgentCache(agent.uuid)">YES</button>
+                            <button class="btn btn-outline-secondary btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.6rem" @onclick="() => confirmDeleteId = null">NO</button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-outline-danger btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.6rem"
+                                    @onclick="() => confirmDeleteId = agent.uuid" title="Delete agent cache">DEL</button>
+                        }
                     </div>
                 }
-                @if (agentList.Count == 0)
+                @if (agentStats.Count == 0)
                 {
-                    <div class="list-group-item text-muted small"><em>No cached agents</em></div>
+                    <div class="list-group-item text-muted small"><em>No cached data</em></div>
                 }
             }
         </div>
@@ -67,7 +116,7 @@
     else
     {
         @* Directory/file listing *@
-        <div class="list-group list-group-flush" style="max-height:55vh;overflow-y:auto;">
+        <div class="list-group list-group-flush" style="max-height:50vh;overflow-y:auto;">
             @if (loading)
             {
                 <div class="list-group-item text-center py-3">
@@ -83,8 +132,16 @@
                     <div class="list-group-item py-1 font-monospace small d-flex align-items-center gap-1">
                         <span class="flex-shrink-0 me-1" style="width:1.2em;text-align:center;">&#x1f4c1;</span>
                         <a href="javascript:void(0)" class="flex-grow-1 text-truncate" @onclick="() => NavigateToDirectory(dir.Id)" @onclick:preventDefault>@dir.Name</a>
-                        <button class="btn btn-outline-danger btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.65rem"
-                                @onclick="() => DeleteDir(dir)" title="Delete">DEL</button>
+                        @if (confirmDeleteId == dir.Id)
+                        {
+                            <button class="btn btn-danger btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.6rem" @onclick="() => DeleteDir(dir)">YES</button>
+                            <button class="btn btn-outline-secondary btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.6rem" @onclick="() => confirmDeleteId = null">NO</button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-outline-danger btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.65rem"
+                                    @onclick="() => confirmDeleteId = dir.Id" title="Delete">DEL</button>
+                        }
                     </div>
                 }
                 @foreach (var file in childFiles)
@@ -93,8 +150,16 @@
                         <span class="flex-shrink-0 me-1" style="width:1.2em;text-align:center;">&#x1f4c4;</span>
                         <span class="flex-grow-1 text-truncate">@file.Name</span>
                         <small class="text-muted flex-shrink-0">@Formatters.FormatSize((ulong)file.Size)</small>
-                        <button class="btn btn-outline-danger btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.65rem"
-                                @onclick="() => DeleteFile(file)" title="Delete">DEL</button>
+                        @if (confirmDeleteId == file.Id)
+                        {
+                            <button class="btn btn-danger btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.6rem" @onclick="() => DeleteFile(file)">YES</button>
+                            <button class="btn btn-outline-secondary btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.6rem" @onclick="() => confirmDeleteId = null">NO</button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-outline-danger btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.65rem"
+                                    @onclick="() => confirmDeleteId = file.Id" title="Delete">DEL</button>
+                        }
                     </div>
                 }
                 @if (childDirs.Count == 0 && childFiles.Count == 0)
@@ -109,12 +174,15 @@
 @code {
     private string currentDirId = VfsStore.RootParentId;
     private string? currentAgentUuid;
-    private List<(string uuid, string name)>? agentList;
+    private List<(string uuid, string name, int dirs, int files, long size)> agentStats = new();
     private List<VfsDirectory> childDirs = new();
     private List<VfsFile> childFiles = new();
     private List<VfsDirectory> breadcrumbs = new();
-    private long cacheSize;
+    private (int agentCount, int dirCount, int fileCount, long totalSize) stats;
+    private long blobSize;
     private bool loading;
+    private bool confirmPrune;
+    private string? confirmDeleteId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -140,12 +208,19 @@
 
         try
         {
-            cacheSize = await Cache.GetCacheSizeAsync();
+            blobSize = await Cache.GetCacheSizeAsync();
+            var uuids = AgentDb.Agents.Values.Select(a => a.Uuid).ToList();
+            stats = await Vfs.GetGlobalStatsAsync(uuids);
 
             if (currentDirId == VfsStore.RootParentId && currentAgentUuid is null)
             {
-                // Show agents that have cached data
-                agentList = AgentDb.Agents.Values.Select(a => (uuid: a.Uuid, name: a.Name)).ToList();
+                agentStats = new();
+                foreach (var agent in AgentDb.Agents.Values)
+                {
+                    var (d, f, s) = await Vfs.GetAgentStatsAsync(agent.Uuid);
+                    if (d > 0 || f > 0)
+                        agentStats.Add((agent.Uuid, agent.Name, d, f, s));
+                }
                 childDirs = new();
                 childFiles = new();
             }
@@ -196,8 +271,6 @@
             await NavigateToRoot();
             return;
         }
-
-        // Go to parent: second-to-last breadcrumb
         var parent = breadcrumbs[^2];
         breadcrumbs.RemoveAt(breadcrumbs.Count - 1);
         currentDirId = parent.Id;
@@ -222,55 +295,57 @@
 
     private async Task DeleteDir(VfsDirectory dir)
     {
+        confirmDeleteId = null;
         try
         {
             await Vfs.RemoveDirectoryAsync(dir.Id);
             await Refresh();
         }
-        catch (Exception ex)
-        {
-            Msg.Error(ex.Message);
-        }
+        catch (Exception ex) { Msg.Error(ex.Message); }
     }
 
     private async Task DeleteFile(VfsFile file)
     {
+        confirmDeleteId = null;
         try
         {
             await Vfs.RemoveFileAsync(file.Id);
             await Refresh();
         }
-        catch (Exception ex)
-        {
-            Msg.Error(ex.Message);
-        }
+        catch (Exception ex) { Msg.Error(ex.Message); }
     }
 
-    private async Task DeleteAllCache()
+    private async Task DeleteAgentCache(string agentUuid)
     {
+        confirmDeleteId = null;
         try
         {
             loading = true;
             StateHasChanged();
+            await Vfs.ClearAgentAsync(agentUuid);
+            // Clear download records for this agent
+            foreach (var dl in Downloads.GetByAgent(agentUuid))
+                await Downloads.RemoveAsync(dl.Id);
+            await Refresh();
+        }
+        catch (Exception ex) { Msg.Error(ex.Message); }
+        finally { loading = false; StateHasChanged(); }
+    }
 
-            // Clear VFS + blobs for each agent
+    private async Task ConfirmPrune()
+    {
+        confirmPrune = false;
+        try
+        {
+            loading = true;
+            StateHasChanged();
             foreach (var agent in AgentDb.Agents.Values)
                 await Vfs.ClearAgentAsync(agent.Uuid);
-
-            // Clear download records
             await Downloads.ClearAsync();
-
             await NavigateToRoot();
         }
-        catch (Exception ex)
-        {
-            Msg.Error(ex.Message);
-        }
-        finally
-        {
-            loading = false;
-            StateHasChanged();
-        }
+        catch (Exception ex) { Msg.Error(ex.Message); }
+        finally { loading = false; StateHasChanged(); }
     }
 
     private async Task ChangeFolder()
@@ -280,10 +355,7 @@
             await Cache.PickDirectoryAsync();
             await NavigateToRoot();
         }
-        catch (Exception ex)
-        {
-            Msg.Error(ex.Message);
-        }
+        catch (Exception ex) { Msg.Error(ex.Message); }
     }
 
     private VfsDirectory MakeAgentCrumb()
