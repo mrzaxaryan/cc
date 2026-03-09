@@ -80,7 +80,7 @@ else
                     {
                         <tr class="@(row.IsOnline && Wm.ConnectedAgentIds.Contains(row.AgentId) ? "table-active" : "") @(!row.IsOnline ? "opacity-50" : "")"
                             style="cursor:context-menu"
-                            @oncontextmenu="(e) => ShowContextMenu(e, row.AgentId, row.RelayUrl)"
+                            @oncontextmenu="(e) => ShowContextMenu(e, row.AgentId, row.RelayUrl, row.IsOnline)"
                             @oncontextmenu:preventDefault="true">
                             <td>
                                 @if (row.IsOnline)
@@ -121,7 +121,7 @@ else
 {
     <div class="position-fixed top-0 start-0 w-100 h-100" style="z-index:1050;" @onclick="HideContextMenu" @oncontextmenu="HideContextMenu" @oncontextmenu:preventDefault="true"></div>
     <div class="dropdown-menu show shadow" style="position:fixed;left:@(ctxX)px;top:@(ctxY)px;z-index:1051;">
-        <button class="dropdown-item" @onclick="CtxOpenFiles">File Manager</button>
+        <button class="dropdown-item @(!ctxIsOnline ? "disabled" : "")" @onclick="CtxOpenFiles" disabled="@(!ctxIsOnline)">File Manager</button>
         <button class="dropdown-item" @onclick="CtxStartRename">Rename</button>
         @if (Wm.ConnectedAgentIds.Contains(ctxAgentId!))
         {
@@ -154,6 +154,7 @@ else
     private double ctxY;
     private string? ctxAgentId;
     private string? ctxRelayUrl;
+    private bool ctxIsOnline;
 
     // Rename
     private string? renamingUuid;
@@ -321,12 +322,13 @@ else
 
     // --- Context menu ---
 
-    private void ShowContextMenu(MouseEventArgs e, string agentId, string relayUrl)
+    private void ShowContextMenu(MouseEventArgs e, string agentId, string relayUrl, bool isOnline)
     {
         ctxX = e.ClientX;
         ctxY = e.ClientY;
         ctxAgentId = agentId;
         ctxRelayUrl = relayUrl;
+        ctxIsOnline = isOnline;
         ctxVisible = true;
     }
 

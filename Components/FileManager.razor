@@ -4,7 +4,14 @@
 @inject MessageService Msg
 @inject AgentStore AgentDb
 
-<div>
+<div style="position:relative">
+    @if (Relay is null || !Relay.IsConnected)
+    {
+        <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+             style="z-index:10;background:rgba(0,0,0,0.5);border-radius:inherit;">
+            <span class="badge bg-danger fs-6">Disconnected</span>
+        </div>
+    }
     @* Breadcrumb *@
     <nav aria-label="breadcrumb" class="mb-2">
         <ol class="breadcrumb mb-0 small">
@@ -366,6 +373,9 @@
 
     // --- Cache sync ---
 
+    private static string SanitizeDirName(string name) =>
+        name.Replace('\\', '_').Replace('/', '_').Replace(':', '_').Replace('.', '_');
+
     private string AgentCacheRoot
     {
         get
@@ -373,7 +383,8 @@
             if (string.IsNullOrEmpty(AgentId)) return "";
             var uuid = AgentDb.GetUuidByAgentId(AgentId);
             var record = uuid is not null ? AgentDb.GetByUuid(uuid) : null;
-            return record?.Name ?? AgentId;
+            if (record is null) return "";
+            return SanitizeDirName(record.Name);
         }
     }
     private string CacheSubPath
@@ -381,28 +392,32 @@
         get
         {
             var remotePath = currentPath.Replace('\\', '/').Trim('/').Replace(":", "");
-            return string.IsNullOrEmpty(AgentCacheRoot) ? remotePath : $"{AgentCacheRoot}/{remotePath}";
+            return string.IsNullOrEmpty(AgentCacheRoot) ? remotePath : $".fs/{AgentCacheRoot}/{remotePath}";
         }
     }
 
     private bool IsDownloading(string name) => downloading.Contains(name);
 
+    private static string CacheName(DirEntry entry) =>
+        entry.IsDrive ? entry.Name.Replace(":", "") : entry.Name;
+
     private async Task MirrorEntriesToCache()
     {
-        if (!Cache.HasDirectory || entries is null || string.IsNullOrEmpty(AgentId)) return;
+        if (!Cache.HasDirectory || entries is null || string.IsNullOrEmpty(AgentCacheRoot)) return;
 
         foreach (var entry in entries)
         {
             try
             {
+                var name = CacheName(entry);
                 if (entry.IsDirectory || entry.IsDrive)
                 {
-                    await Cache.CreateDirectoryAsync(CacheSubPath, entry.Name);
+                    await Cache.CreateDirectoryAsync(CacheSubPath, name);
                 }
                 else
                 {
-                    if (!await Cache.FileExistsAsync(CacheSubPath, entry.Name))
-                        await Cache.WriteFileAsync(CacheSubPath, entry.Name, Array.Empty<byte>());
+                    if (!await Cache.FileExistsAsync(CacheSubPath, name))
+                        await Cache.WriteFileAsync(CacheSubPath, name, Array.Empty<byte>());
                 }
             }
             catch { }
