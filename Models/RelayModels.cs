@@ -1,23 +1,10 @@
-using System.Text.Json;
-
 namespace cc.Models;
 
-public class RelayStatus
+public class HealthStatus
 {
-    public string Service { get; set; } = "";
-    public string Description { get; set; } = "";
-    public ServiceRepos Repos { get; set; } = new();
-    public JsonElement? Endpoints { get; set; }
     public GroupInfo<AgentConnection> Agents { get; set; } = new();
     public GroupInfo<RelayConnection> Relays { get; set; } = new();
     public GroupInfo<EventListenerConnection> EventListeners { get; set; } = new();
-}
-
-public class ServiceRepos
-{
-    public string Relay { get; set; } = "";
-    public string Agent { get; set; } = "";
-    public string Cc { get; set; } = "";
 }
 
 public class GroupInfo<T>
@@ -62,6 +49,10 @@ public class EventListenerConnection
 {
     public string Id { get; set; } = "";
     public double ConnectedAt { get; set; }
+    public string Ip { get; set; } = "";
+    public string Country { get; set; } = "";
+    public string City { get; set; } = "";
+    public string UserAgent { get; set; } = "";
 }
 
 // WebSocket event models
