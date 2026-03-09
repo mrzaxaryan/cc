@@ -92,7 +92,17 @@ else
                                     <span class="badge bg-secondary">Offline</span>
                                 }
                             </td>
-                            <td>@row.Name</td>
+                            <td>
+                                @if (renamingUuid == row.Uuid)
+                                {
+                                    <input class="form-control form-control-sm py-0" style="font-size:.8rem" @bind="renameValue"
+                                           @onkeydown="OnRenameKeyDown" @onblur="CancelRename" />
+                                }
+                                else
+                                {
+                                    @row.Name
+                                }
+                            </td>
                             <td><code title="@row.Uuid">@(row.Uuid is not null ? row.Uuid[..Math.Min(8, row.Uuid.Length)] : "...")</code></td>
                             <td><code>@row.Ip</code></td>
                             <td>@row.Location</td>
@@ -144,6 +154,10 @@ else
     private double ctxY;
     private string? ctxAgentId;
     private string? ctxRelayUrl;
+
+    // Rename
+    private string? renamingUuid;
+    private string renameValue = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -337,6 +351,47 @@ else
         var relay = await CreateRelay(agentId, relayUrl);
         if (relay is not null)
             Wm.OpenAgentWindow(panel, agentId, relay);
+    }
+
+    // --- Rename ---
+
+    private void CtxStartRename()
+    {
+        HideContextMenu();
+        if (ctxAgentId is null) return;
+        var uuid = AgentDb.GetUuidByAgentId(ctxAgentId);
+        if (uuid is null) return;
+        var record = AgentDb.GetByUuid(uuid);
+        if (record is null) return;
+        renamingUuid = uuid;
+        renameValue = record.Name;
+    }
+
+    private async Task OnRenameKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await CommitRename();
+        else if (e.Key == "Escape") CancelRename();
+    }
+
+    private void CancelRename() => renamingUuid = null;
+
+    private async Task CommitRename()
+    {
+        if (renamingUuid is null) return;
+        var newName = renameValue.Trim();
+        if (string.IsNullOrEmpty(newName)) { CancelRename(); return; }
+
+        var record = AgentDb.GetByUuid(renamingUuid);
+        if (record is not null && record.Name != newName)
+        {
+            var oldName = record.Name;
+            await AgentDb.RenameAsync(renamingUuid, newName);
+
+            // Rename cache directory under ./ prefix
+            if (Cache.HasDirectory)
+                await Cache.RenameDirectoryAsync(".", oldName, newName);
+        }
+        renamingUuid = null;
     }
 
     // --- UUID fetching ---
