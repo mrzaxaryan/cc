@@ -373,7 +373,7 @@
 
     // --- Cache sync ---
 
-    private string CacheSubPath => currentPath.Replace('\\', '/').Trim('/');
+    private string CacheSubPath => currentPath.Replace('\\', '/').Trim('/').Replace(":", "");
 
     private bool IsDownloading(string name) => downloading.Contains(name);
 

@@ -131,9 +131,9 @@ code {
 
 .app-window.maximized {
     left: 0 !important;
-    top: 0 !important;
+    top: 36px !important;
     width: 100vw !important;
-    height: 100vh !important;
+    height: calc(100vh - 36px) !important;
     border-radius: 0;
 }
 

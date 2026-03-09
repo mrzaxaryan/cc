@@ -1,23 +1,16 @@
-@inherits LayoutComponentBase
 @using cc.Components
 @inject CacheManager Cache
 @inject RelayStore Relay
+@inject WindowManager Wm
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
-
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
-
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
+<div class="mdi-menubar">
+    <span class="mdi-brand">cc</span>
+    <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Relay")'>Relay</button>
+    <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Agents")'>Agents</button>
+    <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Cache Manager")'>Cache</button>
 </div>
+
+<div class="mdi-workspace"></div>
 
 <FloatingWindows />
 
