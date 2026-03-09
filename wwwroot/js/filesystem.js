@@ -90,7 +90,7 @@ window.ccFileSystem = {
         return _rootHandle ? _rootHandle.name : null;
     },
 
-    // List files/folders in a sub-path (relative to root)
+    // List files/folders in a sub-path (relative to root) — sorting done in C#
     async listDirectory(subPath) {
         if (!_rootHandle) throw new Error('No directory selected');
         const dir = await navigateTo(subPath);
@@ -106,11 +106,6 @@ window.ccFileSystem = {
             }
             entries.push(entry);
         }
-        // Sort: directories first, then alphabetical
-        entries.sort((a, b) => {
-            if (a.kind !== b.kind) return a.kind === 'directory' ? -1 : 1;
-            return a.name.localeCompare(b.name);
-        });
         return entries;
     },
 

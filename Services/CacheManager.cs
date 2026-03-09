@@ -61,11 +61,15 @@ public class CacheManager
         return true;
     }
 
-    /// <summary>List entries in a sub-path relative to cache root.</summary>
+    /// <summary>List entries in a sub-path relative to cache root, sorted directories-first then alphabetical.</summary>
     public async Task<List<CacheEntry>> ListDirectoryAsync(string subPath = "")
     {
         var entries = await _js.InvokeAsync<CacheEntry[]>("ccFileSystem.listDirectory", subPath);
-        return entries?.ToList() ?? new();
+        if (entries is null) return new();
+        return entries
+            .OrderBy(e => e.IsDirectory ? 0 : 1)
+            .ThenBy(e => e.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     /// <summary>Write binary data to a file in cache.</summary>

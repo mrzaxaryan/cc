@@ -6,6 +6,7 @@ namespace cc.Services;
 public class RelaySocket
 {
     private ClientWebSocket? _ws;
+    private readonly SemaphoreSlim _sendLock = new(1, 1);
 
     public ClientWebSocket? WebSocket => _ws;
     public bool IsConnected => _ws is not null && _ws.State == WebSocketState.Open;
@@ -36,18 +37,28 @@ public class RelaySocket
     {
         if (!IsConnected) return null;
 
-        await _ws!.SendAsync(payload, WebSocketMessageType.Binary, true, CancellationToken.None);
-
-        var buffer = new byte[65536];
-        using var ms = new MemoryStream();
-        WebSocketReceiveResult result;
-        do
+        await _sendLock.WaitAsync();
+        try
         {
-            result = await _ws.ReceiveAsync(buffer, CancellationToken.None);
-            ms.Write(buffer, 0, result.Count);
-        } while (!result.EndOfMessage);
+            if (!IsConnected) return null;
 
-        return ms.ToArray();
+            await _ws!.SendAsync(payload, WebSocketMessageType.Binary, true, CancellationToken.None);
+
+            var buffer = new byte[65536];
+            using var ms = new MemoryStream();
+            WebSocketReceiveResult result;
+            do
+            {
+                result = await _ws.ReceiveAsync(buffer, CancellationToken.None);
+                ms.Write(buffer, 0, result.Count);
+            } while (!result.EndOfMessage);
+
+            return ms.ToArray();
+        }
+        finally
+        {
+            _sendLock.Release();
+        }
     }
 
     // --- Binary protocol command builders ---

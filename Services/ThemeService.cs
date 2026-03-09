@@ -7,20 +7,23 @@ public enum Theme { Dark, Light }
 public class ThemeService
 {
     private readonly IJSRuntime _js;
+    private readonly LocalStorageService _storage;
+    private const string StorageKey = "cc-theme";
     private Theme _current = Theme.Dark;
 
     public Theme Current => _current;
 
     public event Action? OnChanged;
 
-    public ThemeService(IJSRuntime js)
+    public ThemeService(IJSRuntime js, LocalStorageService storage)
     {
         _js = js;
+        _storage = storage;
     }
 
     public async Task InitializeAsync()
     {
-        var saved = await _js.InvokeAsync<string?>("localStorage.getItem", "cc-theme");
+        var saved = await _storage.GetAsync(StorageKey);
         _current = saved == "light" ? Theme.Light : Theme.Dark;
         await ApplyTheme();
     }
@@ -29,13 +32,13 @@ public class ThemeService
     {
         _current = _current == Theme.Dark ? Theme.Light : Theme.Dark;
         await ApplyTheme();
-        await _js.InvokeVoidAsync("localStorage.setItem", "cc-theme", _current == Theme.Light ? "light" : "dark");
+        await _storage.SetAsync(StorageKey, _current == Theme.Light ? "light" : "dark");
         OnChanged?.Invoke();
     }
 
     private async Task ApplyTheme()
     {
         var themeName = _current == Theme.Light ? "light" : "dark";
-        await _js.InvokeVoidAsync("eval", $"document.documentElement.setAttribute('data-theme', '{themeName}'); document.documentElement.setAttribute('data-bs-theme', '{themeName}')");
+        await _js.InvokeVoidAsync("ccInterop.setTheme", themeName);
     }
 }

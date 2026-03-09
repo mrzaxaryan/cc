@@ -2,6 +2,7 @@
 @inject WindowManager Wm
 @inject RelayStore Store
 @inject MessageService Msg
+@inject AgentStore AgentDb
 @using System.Net.WebSockets
 @using System.Text
 @using System.Text.Json
@@ -40,9 +41,10 @@ else
         }
     </div>
 
-    @if (GetAllAgents().Count == 0)
+    var rows = BuildAgentRows(GetAllAgents());
+    if (rows.Count == 0)
     {
-        <p><em>No agents connected.</em></p>
+        <p><em>No agents known.</em></p>
     }
     else
     {
@@ -50,43 +52,40 @@ else
             <table class="table table-striped mb-0">
                 <thead>
                     <tr>
-                        <th>ID</th>
+                        <th>Status</th>
+                        <th>Name</th>
+                        <th>UUID</th>
                         <th>Source</th>
                         <th>IP</th>
                         <th>Location</th>
                         <th>Network</th>
-                        <th>Connected At</th>
-                        <th>Messages</th>
-                        <th>Relayed</th>
-                        <th>Relay ID</th>
+                        <th>Last Seen</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var (agent, relayUrl) in GetAllAgents())
+                    @foreach (var row in rows)
                     {
-                        var relayName = relayStates.TryGetValue(relayUrl, out var s) ? s.Name : relayUrl;
-                        <tr class="@(Wm.ConnectedAgentIds.Contains(agent.Id) ? "table-active" : "")"
+                        <tr class="@(row.IsOnline && Wm.ConnectedAgentIds.Contains(row.AgentId) ? "table-active" : "") @(!row.IsOnline ? "opacity-50" : "")"
                             style="cursor:context-menu"
-                            @oncontextmenu="(e) => ShowContextMenu(e, agent.Id, relayUrl)"
+                            @oncontextmenu="(e) => ShowContextMenu(e, row.AgentId, row.RelayUrl)"
                             @oncontextmenu:preventDefault="true">
-                            <td><code>@agent.Id</code></td>
-                            <td><span class="badge bg-info">@relayName</span></td>
-                            <td><code>@agent.Ip</code></td>
-                            <td>@Formatters.FormatLocation(agent)</td>
-                            <td>@Formatters.FormatNetwork(agent)</td>
-                            <td>@Formatters.FormatTimestamp(agent.ConnectedAt)</td>
-                            <td>@agent.MessageCount</td>
                             <td>
-                                @if (agent.Relayed || Wm.ConnectedAgentIds.Contains(agent.Id))
+                                @if (row.IsOnline)
                                 {
-                                    <span class="badge bg-success">Yes</span>
+                                    <span class="badge bg-success">Online</span>
                                 }
                                 else
                                 {
-                                    <span class="badge bg-secondary">No</span>
+                                    <span class="badge bg-secondary">Offline</span>
                                 }
                             </td>
-                            <td><code>@(agent.RelayId ?? (Wm.ConnectedAgentIds.Contains(agent.Id) ? "local" : "—"))</code></td>
+                            <td>@row.Name</td>
+                            <td><code title="@row.Uuid">@(row.Uuid is not null ? row.Uuid[..Math.Min(8, row.Uuid.Length)] : "...")</code></td>
+                            <td><span class="badge bg-info">@row.RelayName</span></td>
+                            <td><code>@row.Ip</code></td>
+                            <td>@row.Location</td>
+                            <td>@row.Network</td>
+                            <td>@row.LastSeen</td>
                         </tr>
                     }
                 </tbody>
@@ -136,6 +135,7 @@ else
     protected override async Task OnInitializedAsync()
     {
         await Store.LoadAsync();
+        await AgentDb.LoadAsync();
         ConnectAllRelays();
     }
 
@@ -163,6 +163,92 @@ else
             }
         }
         return result;
+    }
+
+    // --- View model ---
+
+    private class AgentRow
+    {
+        public bool IsOnline { get; set; }
+        public string Name { get; set; } = "";
+        public string? Uuid { get; set; }
+        public string AgentId { get; set; } = "";
+        public string RelayUrl { get; set; } = "";
+        public string RelayName { get; set; } = "";
+        public string Ip { get; set; } = "";
+        public string Location { get; set; } = "";
+        public string Network { get; set; } = "";
+        public string LastSeen { get; set; } = "";
+    }
+
+    private List<AgentRow> BuildAgentRows(List<(AgentConnection Agent, string RelayUrl)> liveAgents)
+    {
+        var rows = new List<AgentRow>();
+        var seenUuids = new HashSet<string>();
+
+        // Online agents first
+        foreach (var (agent, relayUrl) in liveAgents)
+        {
+            var uuid = AgentDb.GetUuidByAgentId(agent.Id);
+            if (uuid is not null) seenUuids.Add(uuid);
+
+            var record = uuid is not null ? AgentDb.GetByUuid(uuid) : null;
+            var relayName = relayStates.TryGetValue(relayUrl, out var s) ? s.Name : relayUrl;
+
+            rows.Add(new AgentRow
+            {
+                IsOnline = true,
+                Name = record?.Name ?? "—",
+                Uuid = uuid,
+                AgentId = agent.Id,
+                RelayUrl = relayUrl,
+                RelayName = relayName,
+                Ip = agent.Ip,
+                Location = Formatters.FormatLocation(agent),
+                Network = Formatters.FormatNetwork(agent),
+                LastSeen = "Now"
+            });
+        }
+
+        // Offline agents from store
+        foreach (var record in AgentDb.Agents.Values)
+        {
+            if (seenUuids.Contains(record.Uuid)) continue;
+
+            var relayName = relayStates.TryGetValue(record.RelayUrl, out var s) ? s.Name : record.RelayUrl;
+
+            rows.Add(new AgentRow
+            {
+                IsOnline = false,
+                Name = record.Name,
+                Uuid = record.Uuid,
+                AgentId = record.AgentId,
+                RelayUrl = record.RelayUrl,
+                RelayName = relayName,
+                Ip = record.Ip,
+                Location = FormatStoredLocation(record),
+                Network = FormatStoredNetwork(record),
+                LastSeen = Formatters.FormatTimestamp(record.LastSeen)
+            });
+        }
+
+        return rows;
+    }
+
+    private static string FormatStoredLocation(AgentRecord r)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrEmpty(r.City)) parts.Add(r.City);
+        if (!string.IsNullOrEmpty(r.Region)) parts.Add(r.Region);
+        if (!string.IsNullOrEmpty(r.Country)) parts.Add(r.Country);
+        return parts.Count > 0 ? string.Join(", ", parts) : "—";
+    }
+
+    private static string FormatStoredNetwork(AgentRecord r)
+    {
+        if (r.Asn > 0 && !string.IsNullOrEmpty(r.AsOrganization))
+            return $"AS{r.Asn} {r.AsOrganization}";
+        return "—";
     }
 
     // --- Context menu ---
@@ -197,6 +283,42 @@ else
         var relay = await CreateRelay(agentId, relayUrl);
         if (relay is not null)
             Wm.OpenAgentWindow(panel, agentId, relay);
+    }
+
+    // --- UUID fetching ---
+
+    private async Task FetchUuid(AgentConnection agent, string relayUrl)
+    {
+        var relay = new RelaySocket { BaseUrl = relayUrl };
+        try
+        {
+            await relay.Connect(agent.Id);
+            var response = await relay.SendAndReceive(new byte[] { 0x00 });
+            if (response is not null && response.Length >= 20)
+            {
+                var status = RelaySocket.ReadStatus(response);
+                if (status == 0)
+                {
+                    var uuid = RelaySocket.ReadUuid(response).ToString();
+                    await AgentDb.UpsertAsync(uuid, agent, relayUrl);
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
+        }
+        catch { }
+        finally
+        {
+            await relay.Disconnect();
+        }
+    }
+
+    private void FetchUuidsForAgents(AgentConnection[] agents, string relayUrl)
+    {
+        foreach (var agent in agents)
+        {
+            if (AgentDb.GetUuidByAgentId(agent.Id) is null)
+                _ = FetchUuid(agent, relayUrl);
+        }
     }
 
     // --- Events WebSocket (per relay) ---
@@ -312,6 +434,8 @@ else
                     Connections = agentArray
                 };
 
+                FetchUuidsForAgents(agentArray, relayUrl);
+
                 // Disconnect windows for agents no longer in any relay
                 foreach (var id in Wm.ConnectedAgentIds.ToList())
                 {
@@ -336,6 +460,8 @@ else
                         Count = list.Count,
                         Connections = list.ToArray()
                     };
+
+                    _ = FetchUuid(agent, relayUrl);
                 }
                 else if (type == "agent_disconnected" && agent is not null)
                 {

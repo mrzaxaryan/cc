@@ -1,4 +1,3 @@
-using Microsoft.JSInterop;
 using System.Text.Json;
 
 namespace cc.Services;
@@ -16,12 +15,12 @@ public class RelayStore
     private const string DefaultUrl = "wss://relay.nostdlib.workers.dev";
     private const string DefaultName = "Default";
 
-    private readonly IJSRuntime _js;
+    private readonly LocalStorageService _storage;
     private List<RelayEntry>? _relays;
     private string? _activeUrl;
     private bool _loaded;
 
-    public RelayStore(IJSRuntime js) => _js = js;
+    public RelayStore(LocalStorageService storage) => _storage = storage;
 
     public IReadOnlyList<RelayEntry> Relays => _relays ?? [];
     public string ActiveUrl => _activeUrl ?? DefaultUrl;
@@ -47,12 +46,12 @@ public class RelayStore
 
         try
         {
-            var json = await _js.InvokeAsync<string?>("localStorage.getItem", StorageKey);
+            var json = await _storage.GetAsync(StorageKey);
             _relays = json is not null
                 ? JsonSerializer.Deserialize<List<RelayEntry>>(json) ?? new()
                 : new();
 
-            _activeUrl = await _js.InvokeAsync<string?>("localStorage.getItem", ActiveKey);
+            _activeUrl = await _storage.GetAsync(ActiveKey);
         }
         catch
         {
@@ -66,7 +65,7 @@ public class RelayStore
             _relays.Add(new RelayEntry { Url = DefaultUrl, Name = DefaultName });
             _activeUrl = DefaultUrl;
             await SaveAsync();
-            await _js.InvokeVoidAsync("localStorage.setItem", ActiveKey, _activeUrl);
+            await _storage.SetAsync(ActiveKey, _activeUrl);
         }
 
         _activeUrl ??= DefaultUrl;
@@ -86,7 +85,7 @@ public class RelayStore
         if (_activeUrl == url)
         {
             _activeUrl = _relays.FirstOrDefault()?.Url ?? DefaultUrl;
-            await _js.InvokeVoidAsync("localStorage.setItem", ActiveKey, _activeUrl);
+            await _storage.SetAsync(ActiveKey, _activeUrl);
         }
         await SaveAsync();
     }
@@ -94,7 +93,7 @@ public class RelayStore
     public async Task SetActive(string url)
     {
         _activeUrl = url;
-        await _js.InvokeVoidAsync("localStorage.setItem", ActiveKey, url);
+        await _storage.SetAsync(ActiveKey, url);
     }
 
     public async Task UpdateRelayName(string url, string name)
@@ -110,6 +109,6 @@ public class RelayStore
     private async Task SaveAsync()
     {
         var json = JsonSerializer.Serialize(_relays);
-        await _js.InvokeVoidAsync("localStorage.setItem", StorageKey, json);
+        await _storage.SetAsync(StorageKey, json);
     }
 }
