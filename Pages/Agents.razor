@@ -152,9 +152,9 @@ else
     private long hashOffset;
     private string output = "";
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        await ConnectToEvents();
+        _ = ConnectToEvents();
     }
 
     private async Task ConnectToEvents()
@@ -214,57 +214,67 @@ else
     {
         try
         {
-            // Try parsing as initial full agent list (array)
-            var agentArray = JsonSerializer.Deserialize<AgentConnection[]>(json, JsonOptions);
-            if (agentArray is not null)
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("type", out var typeProp))
             {
+                error = $"Unknown event: {json[..Math.Min(json.Length, 200)]}";
+                return;
+            }
+
+            var type = typeProp.GetString();
+
+            if (type == "agents" && root.TryGetProperty("agents", out var agentsProp))
+            {
+                var agentArray = JsonSerializer.Deserialize<AgentConnection[]>(agentsProp.GetRawText(), JsonOptions) ?? [];
                 agents = new GroupInfo<AgentConnection>
                 {
                     Count = agentArray.Length,
                     Connections = agentArray
                 };
                 error = null;
-                return;
             }
-        }
-        catch { }
-
-        try
-        {
-            var evt = JsonSerializer.Deserialize<AgentEvent>(json, JsonOptions);
-            if (evt is null || agents is null) return;
-
-            if (evt.Type == "agent_connected" && evt.Agent is not null)
+            else
             {
-                var list = agents.Connections.ToList();
-                list.Add(evt.Agent);
-                agents = new GroupInfo<AgentConnection>
-                {
-                    Count = list.Count,
-                    Connections = list.ToArray()
-                };
-            }
-            else if (evt.Type == "agent_disconnected" && evt.Agent is not null)
-            {
-                var list = agents.Connections.Where(a => a.Id != evt.Agent.Id).ToList();
-                agents = new GroupInfo<AgentConnection>
-                {
-                    Count = list.Count,
-                    Connections = list.ToArray()
-                };
+                var agent = root.TryGetProperty("agent", out var agentProp)
+                    ? JsonSerializer.Deserialize<AgentConnection>(agentProp.GetRawText(), JsonOptions)
+                    : null;
 
-                if (relayedAgentId == evt.Agent.Id)
+                if (agents is null) return;
+
+                if (type == "agent_connected" && agent is not null)
                 {
-                    _ = DisconnectRelay();
-                    output += "Agent disconnected.\n";
+                    var list = agents.Connections.ToList();
+                    list.Add(agent);
+                    agents = new GroupInfo<AgentConnection>
+                    {
+                        Count = list.Count,
+                        Connections = list.ToArray()
+                    };
                 }
-            }
+                else if (type == "agent_disconnected" && agent is not null)
+                {
+                    var list = agents.Connections.Where(a => a.Id != agent.Id).ToList();
+                    agents = new GroupInfo<AgentConnection>
+                    {
+                        Count = list.Count,
+                        Connections = list.ToArray()
+                    };
 
-            error = null;
+                    if (relayedAgentId == agent.Id)
+                    {
+                        _ = DisconnectRelay();
+                        output += "Agent disconnected.\n";
+                    }
+                }
+
+                error = null;
+            }
         }
         catch (Exception ex)
         {
-            error = $"Event parse error: {ex.Message}";
+            error = $"Event parse error: {ex.Message} | {json[..Math.Min(json.Length, 200)]}";
         }
     }
 
