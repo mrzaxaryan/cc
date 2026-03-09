@@ -1,16 +1,14 @@
-// Caution! Be sure you understand the caveats before publishing an application with
-// temporary caching enabled. See https://aka.ms/blazor-offline/pwas for details.
+// Blazor PWA service worker — uses the auto-generated asset manifest
+// so cache versioning is automatic on every publish.
+importScripts('service-worker-assets.js');
 
-// Incrementing CACHE_VERSION will force a cache refresh for all clients.
-const CACHE_VERSION = 1;
-const CACHE_NAME = `cc-cache-v${CACHE_VERSION}`;
-
-// List of URLs to cache during installation.
-const PRECACHE_URLS = [];
+const CACHE_NAME = `cc-cache-${self.assetsManifest.version}`;
 
 self.addEventListener('install', event => {
     event.waitUntil(
-        caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE_URLS))
+        caches.open(CACHE_NAME).then(cache =>
+            cache.addAll(self.assetsManifest.assets.map(a => a.url))
+        )
     );
     self.skipWaiting();
 });
@@ -28,24 +26,16 @@ self.addEventListener('fetch', event => {
     if (event.request.method !== 'GET') return;
 
     const url = new URL(event.request.url);
-
-    // Don't cache API calls or external resources
     if (url.origin !== self.location.origin) return;
 
     event.respondWith(
-        caches.open(CACHE_NAME).then(async cache => {
-            const cachedResponse = await cache.match(event.request);
-
-            // Network-first strategy: try network, fallback to cache
-            try {
-                const networkResponse = await fetch(event.request);
-                if (networkResponse.ok) {
-                    cache.put(event.request, networkResponse.clone());
-                }
-                return networkResponse;
-            } catch {
-                return cachedResponse || new Response('Offline', { status: 503 });
+        caches.match(event.request).then(cached => {
+            // For navigation requests, always try network first
+            if (event.request.mode === 'navigate') {
+                return fetch(event.request).catch(() => cached || caches.match('index.html'));
             }
+            // For assets, serve from cache (fast), fall back to network
+            return cached || fetch(event.request);
         })
     );
 });
