@@ -1,4 +1,6 @@
 @inject CacheManager Cache
+@inject VfsStore Vfs
+@inject AgentStore AgentDb
 @inject MessageService Msg
 @implements IDisposable
 
@@ -15,77 +17,110 @@
     <nav aria-label="breadcrumb" class="mb-2">
         <ol class="breadcrumb mb-0 small">
             <li class="breadcrumb-item">
-                <a href="javascript:void(0)" @onclick='() => NavigateTo("")' @onclick:preventDefault>Root</a>
+                <a href="javascript:void(0)" @onclick="NavigateToRoot" @onclick:preventDefault>Root</a>
             </li>
-            @for (int i = 0; i < segments.Length; i++)
+            @foreach (var crumb in breadcrumbs)
             {
-                var idx = i;
-                var seg = segments[idx];
-                if (idx == segments.Length - 1)
+                var c = crumb;
+                if (c == breadcrumbs.Last())
                 {
-                    <li class="breadcrumb-item active">@seg</li>
+                    <li class="breadcrumb-item active">@c.Name</li>
                 }
                 else
                 {
                     <li class="breadcrumb-item">
-                        <a href="javascript:void(0)" @onclick="() => NavigateToBreadcrumb(idx)" @onclick:preventDefault>@seg</a>
+                        <a href="javascript:void(0)" @onclick="() => NavigateToDirectory(c.Id)" @onclick:preventDefault>@c.Name</a>
                     </li>
                 }
             }
         </ol>
     </nav>
 
-    @* Entry list *@
-    <div class="list-group list-group-flush" style="max-height:55vh;overflow-y:auto;">
-        @if (loading)
-        {
-            <div class="list-group-item text-center py-3">
-                <span class="spinner-border spinner-border-sm"></span>
-            </div>
-        }
-        else if (entries is not null)
-        {
-            @if (segments.Length > 0)
+    @* Agent selector at root level *@
+    @if (currentDirId == VfsStore.RootParentId && agentList is not null)
+    {
+        <div class="list-group list-group-flush" style="max-height:55vh;overflow-y:auto;">
+            @if (loading)
+            {
+                <div class="list-group-item text-center py-3">
+                    <span class="spinner-border spinner-border-sm"></span>
+                </div>
+            }
+            else
+            {
+                @foreach (var agent in agentList)
+                {
+                    var a = agent;
+                    <div class="list-group-item py-1 font-monospace small d-flex align-items-center gap-1">
+                        <span class="flex-shrink-0 me-1" style="width:1.2em;text-align:center;">&#x1f4bb;</span>
+                        <a href="javascript:void(0)" class="flex-grow-1 text-truncate" @onclick="() => NavigateToAgent(a.uuid)" @onclick:preventDefault>@a.name</a>
+                    </div>
+                }
+                @if (agentList.Count == 0)
+                {
+                    <div class="list-group-item text-muted small"><em>No cached agents</em></div>
+                }
+            }
+        </div>
+    }
+    else
+    {
+        @* Directory/file listing *@
+        <div class="list-group list-group-flush" style="max-height:55vh;overflow-y:auto;">
+            @if (loading)
+            {
+                <div class="list-group-item text-center py-3">
+                    <span class="spinner-border spinner-border-sm"></span>
+                </div>
+            }
+            else
             {
                 <button class="list-group-item list-group-item-action py-1 font-monospace small"
                         @onclick="NavigateUp">..</button>
+                @foreach (var dir in childDirs)
+                {
+                    var d = dir;
+                    <div class="list-group-item py-1 font-monospace small d-flex align-items-center gap-1">
+                        <span class="flex-shrink-0 me-1" style="width:1.2em;text-align:center;">&#x1f4c1;</span>
+                        <a href="javascript:void(0)" class="flex-grow-1 text-truncate" @onclick="() => NavigateToDirectory(d.Id)" @onclick:preventDefault>@d.Name</a>
+                        <button class="btn btn-outline-danger btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.65rem"
+                                @onclick="() => DeleteDir(d)" title="Delete">DEL</button>
+                    </div>
+                }
+                @foreach (var file in childFiles)
+                {
+                    var f = file;
+                    <div class="list-group-item py-1 font-monospace small d-flex align-items-center gap-1">
+                        <span class="flex-shrink-0 me-1" style="width:1.2em;text-align:center;">&#x1f4c4;</span>
+                        <span class="flex-grow-1 text-truncate">@f.Name</span>
+                        <small class="text-muted flex-shrink-0">@Formatters.FormatSize((ulong)f.Size)</small>
+                        <button class="btn btn-outline-danger btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.65rem"
+                                @onclick="() => DeleteFile(f)" title="Delete">DEL</button>
+                    </div>
+                }
+                @if (childDirs.Count == 0 && childFiles.Count == 0)
+                {
+                    <div class="list-group-item text-muted small"><em>Empty</em></div>
+                }
             }
-            @foreach (var entry in entries)
-            {
-                var e = entry;
-                <div class="list-group-item py-1 font-monospace small d-flex align-items-center gap-1">
-                    <span class="flex-shrink-0 me-1" style="width:1.2em;text-align:center;">@(e.IsDirectory ? "\ud83d\udcc1" : "\ud83d\udcc4")</span>
-                    @if (e.IsDirectory)
-                    {
-                        <a href="javascript:void(0)" class="flex-grow-1 text-truncate" @onclick="() => NavigateTo(SubPath(e.Name))" @onclick:preventDefault>@e.Name</a>
-                    }
-                    else
-                    {
-                        <span class="flex-grow-1 text-truncate">@e.Name</span>
-                        <small class="text-muted flex-shrink-0">@Formatters.FormatSize((ulong)e.Size)</small>
-                    }
-                    <button class="btn btn-outline-danger btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.65rem"
-                            @onclick="() => DeleteEntry(e)" title="Delete">DEL</button>
-                </div>
-            }
-            @if (entries.Count == 0)
-            {
-                <div class="list-group-item text-muted small"><em>Empty</em></div>
-            }
-        }
-    </div>
+        </div>
+    }
 </div>
 
 @code {
-    private string currentPath = "";
-    private string[] segments = [];
-    private List<CacheEntry>? entries;
+    private string currentDirId = VfsStore.RootParentId;
+    private string? currentAgentUuid;
+    private List<(string uuid, string name)>? agentList;
+    private List<VfsDirectory> childDirs = new();
+    private List<VfsFile> childFiles = new();
+    private List<VfsDirectory> breadcrumbs = new();
     private long cacheSize;
     private bool loading;
 
     protected override async Task OnInitializedAsync()
     {
         Cache.OnChanged += OnCacheChanged;
+        Vfs.OnChanged += OnCacheChanged;
         await Refresh();
     }
 
@@ -106,8 +141,20 @@
 
         try
         {
-            entries = await Cache.ListDirectoryAsync(currentPath);
-            cacheSize = await Cache.GetCacheSizeAsync("");
+            cacheSize = await Cache.GetCacheSizeAsync();
+
+            if (currentDirId == VfsStore.RootParentId)
+            {
+                // Show agents that have cached data
+                agentList = AgentDb.Agents.Values.Select(a => (uuid: a.Uuid, name: a.Name)).ToList();
+                childDirs = new();
+                childFiles = new();
+            }
+            else if (currentAgentUuid is not null)
+            {
+                childDirs = await Vfs.GetChildDirectoriesAsync(currentAgentUuid, currentDirId);
+                childFiles = await Vfs.GetFilesInDirectoryAsync(currentAgentUuid, currentDirId);
+            }
         }
         catch (Exception ex)
         {
@@ -120,40 +167,89 @@
         }
     }
 
-    private async Task NavigateTo(string path)
+    private async Task NavigateToRoot()
     {
-        currentPath = path;
-        segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        currentDirId = VfsStore.RootParentId;
+        currentAgentUuid = null;
+        breadcrumbs = new();
+        await Refresh();
+    }
+
+    private async Task NavigateToAgent(string agentUuid)
+    {
+        currentAgentUuid = agentUuid;
+        currentDirId = VfsStore.RootParentId;
+        breadcrumbs = new();
+        var agent = AgentDb.Agents.Values.FirstOrDefault(a => a.Uuid == agentUuid);
+        // Use a synthetic breadcrumb for the agent
+        breadcrumbs.Add(new VfsDirectory { Id = VfsStore.RootParentId, Name = agent?.Name ?? agentUuid });
+        await Refresh();
+    }
+
+    private async Task NavigateToDirectory(string dirId)
+    {
+        currentDirId = dirId;
+        await RebuildBreadcrumbs();
         await Refresh();
     }
 
     private async Task NavigateUp()
     {
-        if (segments.Length <= 1)
+        if (breadcrumbs.Count <= 1)
         {
-            await NavigateTo("");
+            await NavigateToRoot();
             return;
         }
-        var parent = string.Join("/", segments.Take(segments.Length - 1));
-        await NavigateTo(parent);
+
+        // Go to parent: second-to-last breadcrumb
+        var parent = breadcrumbs[^2];
+        breadcrumbs.RemoveAt(breadcrumbs.Count - 1);
+        currentDirId = parent.Id;
+        await Refresh();
     }
 
-    private async Task NavigateToBreadcrumb(int index)
+    private async Task RebuildBreadcrumbs()
     {
-        var path = string.Join("/", segments.Take(index + 1));
-        await NavigateTo(path);
+        var crumbs = new List<VfsDirectory>();
+        var id = currentDirId;
+        while (id != VfsStore.RootParentId)
+        {
+            var dir = await Vfs.GetDirectoryAsync(id);
+            if (dir is null) break;
+            crumbs.Insert(0, dir);
+            id = dir.ParentId;
+        }
+        // Prepend agent name
+        if (currentAgentUuid is not null)
+        {
+            var agent = AgentDb.Agents.Values.FirstOrDefault(a => a.Uuid == currentAgentUuid);
+            crumbs.Insert(0, new VfsDirectory { Id = VfsStore.RootParentId, Name = agent?.Name ?? currentAgentUuid });
+        }
+        breadcrumbs = crumbs;
     }
 
-    private string SubPath(string name) => string.IsNullOrEmpty(currentPath) ? name : $"{currentPath}/{name}";
-
-    private async Task DeleteEntry(CacheEntry entry)
+    private async Task DeleteDir(VfsDirectory dir)
     {
         try
         {
-            if (entry.IsDirectory)
-                await Cache.DeleteDirectoryAsync(currentPath, entry.Name);
-            else
-                await Cache.DeleteFileAsync(currentPath, entry.Name);
+            await Vfs.RemoveDirectoryAsync(dir.Id);
+            await Refresh();
+        }
+        catch (Exception ex)
+        {
+            Msg.Error(ex.Message);
+        }
+    }
+
+    private async Task DeleteFile(VfsFile file)
+    {
+        try
+        {
+            // Delete blob from filesystem
+            if (await Cache.BlobExistsAsync(file.Id))
+                await Cache.DeleteBlobAsync(file.Id);
+            // Delete metadata from IndexedDB
+            await Vfs.RemoveFileAsync(file.Id);
             await Refresh();
         }
         catch (Exception ex)
@@ -167,9 +263,7 @@
         try
         {
             await Cache.PickDirectoryAsync();
-            currentPath = "";
-            segments = [];
-            await Refresh();
+            await NavigateToRoot();
         }
         catch (Exception ex)
         {
@@ -180,5 +274,6 @@
     public void Dispose()
     {
         Cache.OnChanged -= OnCacheChanged;
+        Vfs.OnChanged -= OnCacheChanged;
     }
 }

@@ -1,6 +1,7 @@
 @using System.Net.WebSockets
 @using System.Text
 @inject CacheManager Cache
+@inject VfsStore Vfs
 @inject DownloadStore Downloads
 @inject MessageService Msg
 @implements IDisposable
@@ -325,19 +326,27 @@
 
         try
         {
-            var cacheEntries = await Cache.ListDirectoryAsync(CacheSubPath);
-            entries = cacheEntries.Select(ce => new DirEntry(
-                Name: ce.Name,
-                CreationTime: 0,
-                LastModifiedTime: (ulong)ce.LastModified,
-                Size: (ulong)ce.Size,
-                Type: 0,
-                IsDirectory: ce.IsDirectory,
-                IsDrive: false,
-                IsHidden: false,
-                IsSystem: false,
-                IsReadOnly: false
-            )).ToList();
+            var remotePath = currentPath.TrimEnd('\\', '/');
+            var parentId = await ResolveDirectoryId(remotePath);
+
+            var dirs = await Vfs.GetChildDirectoriesAsync(AgentUuid!, parentId);
+            var files = await Vfs.GetFilesInDirectoryAsync(AgentUuid!, parentId);
+
+            entries = new List<DirEntry>();
+            foreach (var d in dirs)
+            {
+                entries.Add(new DirEntry(
+                    Name: d.Name, CreationTime: 0, LastModifiedTime: 0,
+                    Size: 0, Type: 0, IsDirectory: true, IsDrive: d.IsDrive,
+                    IsHidden: false, IsSystem: false, IsReadOnly: false));
+            }
+            foreach (var f in files)
+            {
+                entries.Add(new DirEntry(
+                    Name: f.Name, CreationTime: 0, LastModifiedTime: 0,
+                    Size: (ulong)f.Size, Type: 0, IsDirectory: false, IsDrive: false,
+                    IsHidden: false, IsSystem: false, IsReadOnly: false));
+            }
         }
         catch (Exception ex)
         {
@@ -348,6 +357,12 @@
             loading = false;
             StateHasChanged();
         }
+    }
+
+    private async Task<string> ResolveDirectoryId(string remotePath)
+    {
+        if (string.IsNullOrEmpty(remotePath)) return VfsStore.RootParentId;
+        return await Vfs.ResolveOrCreatePathAsync(AgentUuid!, remotePath);
     }
 
     private async Task NavigateUp()
@@ -463,35 +478,44 @@
         }
     }
 
-    // --- Cache sync ---
+    // --- Cache sync (VFS) ---
 
     private async Task SyncCacheAsync()
     {
         if (_syncing) return;
-        if (!Cache.HasDirectory || entries is null || string.IsNullOrEmpty(AgentCacheRoot)) return;
-        var subPath = CacheSubPath;
+        if (!Cache.HasDirectory || entries is null || string.IsNullOrEmpty(AgentUuid)) return;
         var snapshot = entries.ToList();
+        var remotePath = currentPath.TrimEnd('\\', '/');
 
         _syncing = true;
         try
         {
-            await MirrorEntriesToCache(subPath, snapshot);
+            var parentId = await Vfs.ResolveOrCreatePathAsync(AgentUuid, remotePath);
+
+            foreach (var entry in snapshot)
+            {
+                try
+                {
+                    var entryRemotePath = string.IsNullOrEmpty(remotePath)
+                        ? entry.Name : $"{remotePath}/{entry.Name}";
+
+                    if (entry.IsDirectory || entry.IsDrive)
+                    {
+                        await Vfs.PutDirectoryAsync(AgentUuid, parentId, entry.Name, entryRemotePath, entry.IsDrive);
+                    }
+                    else
+                    {
+                        await Vfs.PutFileAsync(AgentUuid, parentId, entry.Name, entryRemotePath, (long)entry.Size);
+                    }
+                }
+                catch { }
+            }
             await InvokeAsync(StateHasChanged);
         }
         catch { }
         finally
         {
             _syncing = false;
-        }
-    }
-
-    private string AgentCacheRoot => AgentUuid ?? "";
-    private string CacheSubPath
-    {
-        get
-        {
-            var remotePath = currentPath.Replace('\\', '/').Trim('/').Replace(":", "");
-            return string.IsNullOrEmpty(AgentCacheRoot) ? remotePath : $".fs/{AgentCacheRoot}/{remotePath}";
         }
     }
 
@@ -502,60 +526,27 @@
         return Downloads.Find(AgentUuid, remotePath);
     }
 
-    private static string CacheName(DirEntry entry) =>
-        entry.IsDrive ? entry.Name.Replace(":", "").Replace("\\", "").Replace("/", "") : entry.Name;
-
-    private async Task EnsureCachePathAsync(string subPath)
-    {
-        if (!Cache.HasDirectory) return;
-
-        var parts = subPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length > 1)
-        {
-            var parent = string.Join("/", parts.Take(parts.Length - 1));
-            await Cache.CreateDirectoryAsync(parent, parts.Last());
-        }
-    }
-
-    private async Task MirrorEntriesToCache(string subPath, List<DirEntry> snapshot)
-    {
-        await EnsureCachePathAsync(subPath);
-
-        foreach (var entry in snapshot)
-        {
-            try
-            {
-                var name = CacheName(entry);
-                if (entry.IsDirectory || entry.IsDrive)
-                {
-                    await Cache.CreateDirectoryAsync(subPath, name);
-                }
-                else
-                {
-                    // Don't create placeholder files – only directories are mirrored.
-                    // Actual files are written by DownloadToCache.
-                }
-            }
-            catch { }
-        }
-    }
-
     private async Task DownloadToCache(DirEntry entry)
     {
         if (Relay is null || !Relay.IsConnected || !Cache.HasDirectory || string.IsNullOrEmpty(AgentUuid)) return;
 
         var remotePath = currentPath + entry.Name;
+        var parentRemotePath = currentPath.TrimEnd('\\', '/');
         var totalSize = (long)entry.Size;
 
+        // Ensure file record exists in VFS and get its GUID
+        var parentId = await Vfs.ResolveOrCreatePathAsync(AgentUuid, parentRemotePath);
+        var vfsFile = await Vfs.PutFileAsync(AgentUuid, parentId, entry.Name, remotePath.Replace('\\', '/'), totalSize);
+
         var record = await Downloads.AddAsync(
-            AgentUuid, AgentName ?? "", remotePath, entry.Name, CacheSubPath, totalSize);
+            AgentUuid, AgentName ?? "", remotePath, entry.Name, vfsFile.Id, totalSize);
 
         StateHasChanged();
 
         try
         {
             var success = await Cache.DownloadFromAgentAsync(
-                Relay, remotePath, CacheSubPath, entry.Name,
+                Relay, remotePath, vfsFile.Id,
                 async (downloaded, _) =>
                 {
                     await Downloads.UpdateProgressAsync(record.Id, downloaded);

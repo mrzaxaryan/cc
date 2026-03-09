@@ -90,44 +90,49 @@ window.ccFileSystem = {
         return _rootHandle ? _rootHandle.name : null;
     },
 
-    // List files/folders in a sub-path (relative to root) — sorting done in C#
-    async listDirectory(subPath) {
+    // List blobs in .fs directory (for cache size / maintenance)
+    async listBlobs() {
         if (!_rootHandle) throw new Error('No directory selected');
-        const dir = await navigateTo(subPath);
-        const entries = [];
-        for await (const [name, handle] of dir) {
-            const entry = { name, kind: handle.kind };
-            if (handle.kind === 'file') {
-                try {
-                    const file = await handle.getFile();
-                    entry.size = file.size;
-                    entry.lastModified = file.lastModified;
-                } catch { }
+        try {
+            const fsDir = await _rootHandle.getDirectoryHandle('.fs', { create: false });
+            const entries = [];
+            for await (const [name, handle] of fsDir) {
+                if (handle.kind === 'file') {
+                    try {
+                        const file = await handle.getFile();
+                        entries.push({ name, size: file.size });
+                    } catch { }
+                }
             }
-            entries.push(entry);
+            return entries;
+        } catch {
+            return [];
         }
-        return entries;
     },
 
-    // Write a file to cache (data is Uint8Array)
-    async writeFile(subPath, fileName, data) {
+    // --- Flat blob storage: all files stored as .fs/{fileId} ---
+
+    // Write a blob by GUID into .fs/{fileId}
+    async writeBlobById(fileId, data) {
         if (!_rootHandle) throw new Error('No directory selected');
-        const dir = await navigateTo(subPath, true);
-        const fileHandle = await dir.getFileHandle(fileName, { create: true });
+        const fsDir = await _rootHandle.getDirectoryHandle('.fs', { create: true });
+        const fileHandle = await fsDir.getFileHandle(fileId, { create: true });
         const writable = await fileHandle.createWritable();
         await writable.write(data);
         await writable.close();
         return true;
     },
 
-    // Streaming write: open a writable stream for chunked downloads
+    // Streaming write to .fs/{fileId}
     _activeWritable: null,
+    _activeFileId: null,
 
-    async beginWrite(subPath, fileName) {
+    async beginWriteById(fileId) {
         if (!_rootHandle) throw new Error('No directory selected');
-        const dir = await navigateTo(subPath, true);
-        const fileHandle = await dir.getFileHandle(fileName, { create: true });
+        const fsDir = await _rootHandle.getDirectoryHandle('.fs', { create: true });
+        const fileHandle = await fsDir.getFileHandle(fileId, { create: true });
         this._activeWritable = await fileHandle.createWritable();
+        this._activeFileId = fileId;
         return true;
     },
 
@@ -141,82 +146,65 @@ window.ccFileSystem = {
         if (!this._activeWritable) return false;
         await this._activeWritable.close();
         this._activeWritable = null;
+        this._activeFileId = null;
         return true;
     },
 
     async abortWrite() {
         if (!this._activeWritable) return false;
         try { await this._activeWritable.abort(); } catch { }
+        const fileId = this._activeFileId;
         this._activeWritable = null;
+        this._activeFileId = null;
+        // Clean up partial file
+        if (fileId) {
+            try {
+                const fsDir = await _rootHandle.getDirectoryHandle('.fs', { create: false });
+                await fsDir.removeEntry(fileId);
+            } catch { }
+        }
         return true;
     },
 
-    // Read a file from cache (returns Uint8Array as base64)
-    async readFile(subPath, fileName) {
+    // Read a blob by GUID (returns base64)
+    async readBlobById(fileId) {
         if (!_rootHandle) throw new Error('No directory selected');
-        const dir = await navigateTo(subPath);
-        const fileHandle = await dir.getFileHandle(fileName);
+        const fsDir = await _rootHandle.getDirectoryHandle('.fs', { create: false });
+        const fileHandle = await fsDir.getFileHandle(fileId);
         const file = await fileHandle.getFile();
         const buffer = await file.arrayBuffer();
         return btoa(String.fromCharCode(...new Uint8Array(buffer)));
     },
 
-    // Check if file exists in cache
-    async fileExists(subPath, fileName) {
+    // Check if a blob exists by GUID
+    async blobExists(fileId) {
         if (!_rootHandle) return false;
         try {
-            const dir = await navigateTo(subPath);
-            await dir.getFileHandle(fileName);
+            const fsDir = await _rootHandle.getDirectoryHandle('.fs', { create: false });
+            await fsDir.getFileHandle(fileId);
             return true;
         } catch {
             return false;
         }
     },
 
-    // Delete a file from cache
-    async deleteFile(subPath, fileName) {
+    // Delete a blob by GUID
+    async deleteBlobById(fileId) {
         if (!_rootHandle) throw new Error('No directory selected');
-        const dir = await navigateTo(subPath);
-        await dir.removeEntry(fileName);
+        const fsDir = await _rootHandle.getDirectoryHandle('.fs', { create: false });
+        await fsDir.removeEntry(fileId);
         return true;
     },
 
-    // Delete a directory recursively
-    async deleteDirectory(subPath, dirName) {
-        if (!_rootHandle) throw new Error('No directory selected');
-        const dir = await navigateTo(subPath);
-        await dir.removeEntry(dirName, { recursive: true });
-        return true;
-    },
-
-    // Rename a directory (move contents from oldName to newName under subPath)
-    async renameDirectory(subPath, oldName, newName) {
-        if (!_rootHandle) throw new Error('No directory selected');
-        const parent = await navigateTo(subPath || '', false);
-
-        let oldDir;
-        try { oldDir = await parent.getDirectoryHandle(oldName); }
-        catch { return false; } // old dir doesn't exist, nothing to rename
-
-        const newDir = await parent.getDirectoryHandle(newName, { create: true });
-        await copyDir(oldDir, newDir);
-        await parent.removeEntry(oldName, { recursive: true });
-        return true;
-    },
-
-    // Create a subdirectory
-    async createDirectory(subPath, dirName) {
-        if (!_rootHandle) throw new Error('No directory selected');
-        const dir = await navigateTo(subPath, true);
-        await dir.getDirectoryHandle(dirName, { create: true });
-        return true;
-    },
-
-    // Get total cache size (recursive)
-    async getCacheSize(subPath) {
+    // Get total size of .fs directory
+    async getCacheSize() {
         if (!_rootHandle) return 0;
-        const dir = await navigateTo(subPath || '');
-        return await calcDirSize(dir);
+        try {
+            const fsDir = await _rootHandle.getDirectoryHandle('.fs', { create: false });
+            return await calcDirSize(fsDir);
+        } catch {
+            return 0;
+        }
     },
 
     // Clear the persisted handle (reset)
@@ -231,32 +219,6 @@ window.ccFileSystem = {
         });
     }
 };
-
-// Navigate to a sub-path from root, optionally creating dirs
-async function navigateTo(subPath, create = false) {
-    let dir = _rootHandle;
-    if (!subPath || subPath === '' || subPath === '/') return dir;
-    const parts = subPath.split('/').filter(p => p.length > 0);
-    for (const part of parts) {
-        dir = await dir.getDirectoryHandle(part, { create });
-    }
-    return dir;
-}
-
-async function copyDir(srcHandle, destHandle) {
-    for await (const [name, handle] of srcHandle) {
-        if (handle.kind === 'file') {
-            const file = await handle.getFile();
-            const newFile = await destHandle.getFileHandle(name, { create: true });
-            const writable = await newFile.createWritable();
-            await writable.write(file);
-            await writable.close();
-        } else {
-            const newSubDir = await destHandle.getDirectoryHandle(name, { create: true });
-            await copyDir(handle, newSubDir);
-        }
-    }
-}
 
 async function calcDirSize(dirHandle) {
     let total = 0;

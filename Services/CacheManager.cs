@@ -61,70 +61,40 @@ public class CacheManager
         return true;
     }
 
-    /// <summary>List entries in a sub-path relative to cache root, sorted directories-first then alphabetical.</summary>
-    public async Task<List<CacheEntry>> ListDirectoryAsync(string subPath = "")
+    /// <summary>Write a blob by file GUID into .fs/{fileId}.</summary>
+    public async Task WriteBlobAsync(string fileId, byte[] data)
     {
-        var entries = await _js.InvokeAsync<CacheEntry[]>("ccFileSystem.listDirectory", subPath);
-        if (entries is null) return new();
-        return entries
-            .OrderBy(e => e.IsDirectory ? 0 : 1)
-            .ThenBy(e => e.Name, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
-
-    /// <summary>Write binary data to a file in cache.</summary>
-    public async Task WriteFileAsync(string subPath, string fileName, byte[] data)
-    {
-        await _js.InvokeVoidAsync("ccFileSystem.writeFile", subPath, fileName, data);
+        await _js.InvokeVoidAsync("ccFileSystem.writeBlobById", fileId, data);
         OnChanged?.Invoke();
     }
 
-    /// <summary>Check if a file exists in cache.</summary>
-    public async Task<bool> FileExistsAsync(string subPath, string fileName)
+    /// <summary>Read a blob by file GUID (returns base64 string).</summary>
+    public async Task<string?> ReadBlobAsync(string fileId)
     {
-        return await _js.InvokeAsync<bool>("ccFileSystem.fileExists", subPath, fileName);
+        return await _js.InvokeAsync<string?>("ccFileSystem.readBlobById", fileId);
     }
 
-    /// <summary>Delete a file from cache.</summary>
-    public async Task DeleteFileAsync(string subPath, string fileName)
+    /// <summary>Check if a blob exists by file GUID.</summary>
+    public async Task<bool> BlobExistsAsync(string fileId)
     {
-        await _js.InvokeVoidAsync("ccFileSystem.deleteFile", subPath, fileName);
+        return await _js.InvokeAsync<bool>("ccFileSystem.blobExists", fileId);
+    }
+
+    /// <summary>Delete a blob by file GUID.</summary>
+    public async Task DeleteBlobAsync(string fileId)
+    {
+        await _js.InvokeVoidAsync("ccFileSystem.deleteBlobById", fileId);
         OnChanged?.Invoke();
     }
 
-    /// <summary>Delete a directory recursively.</summary>
-    public async Task DeleteDirectoryAsync(string subPath, string dirName)
+    /// <summary>Get total cache size in bytes (all blobs in .fs/).</summary>
+    public async Task<long> GetCacheSizeAsync()
     {
-        await _js.InvokeVoidAsync("ccFileSystem.deleteDirectory", subPath, dirName);
-        OnChanged?.Invoke();
+        return await _js.InvokeAsync<long>("ccFileSystem.getCacheSize");
     }
 
-    /// <summary>Create a subdirectory.</summary>
-    public async Task CreateDirectoryAsync(string subPath, string dirName)
-    {
-        await _js.InvokeVoidAsync("ccFileSystem.createDirectory", subPath, dirName);
-        OnChanged?.Invoke();
-    }
-
-    /// <summary>Rename a directory in cache (move contents from oldName to newName).</summary>
-    public async Task<bool> RenameDirectoryAsync(string subPath, string oldName, string newName)
-    {
-        if (!HasDirectory) return false;
-        try
-        {
-            return await _js.InvokeAsync<bool>("ccFileSystem.renameDirectory", subPath, oldName, newName);
-        }
-        catch { return false; }
-    }
-
-    /// <summary>Get total cache size in bytes.</summary>
-    public async Task<long> GetCacheSizeAsync(string subPath = "")
-    {
-        return await _js.InvokeAsync<long>("ccFileSystem.getCacheSize", subPath);
-    }
-
-    /// <summary>Download a file from an agent via relay and stream directly to cache.</summary>
-    public async Task<bool> DownloadFromAgentAsync(RelaySocket relay, string remotePath, string cacheSubPath, string fileName, Func<long, long, Task>? onProgress = null)
+    /// <summary>Download a file from an agent via relay and stream directly to .fs/{fileId}.</summary>
+    public async Task<bool> DownloadFromAgentAsync(RelaySocket relay, string remotePath, string fileId, Func<long, long, Task>? onProgress = null)
     {
         if (!relay.IsConnected || !HasDirectory) return false;
 
@@ -133,8 +103,8 @@ public class CacheManager
         var probeResp = await relay.SendAndReceive(probe);
         if (probeResp is null || probeResp.Length < 12) return false;
 
-        // Open a streaming writable to avoid holding entire file in memory
-        await _js.InvokeVoidAsync("ccFileSystem.beginWrite", cacheSubPath, fileName);
+        // Open a streaming writable to .fs/{fileId}
+        await _js.InvokeVoidAsync("ccFileSystem.beginWriteById", fileId);
 
         const long chunkSize = 65536;
         long offset = 0;
@@ -184,14 +154,4 @@ public class CacheManager
         DirectoryName = null;
         OnChanged?.Invoke();
     }
-}
-
-public class CacheEntry
-{
-    public string Name { get; set; } = "";
-    public string Kind { get; set; } = "file";
-    public long Size { get; set; }
-    public long LastModified { get; set; }
-
-    public bool IsDirectory => Kind == "directory";
 }

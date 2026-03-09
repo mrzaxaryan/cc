@@ -3,7 +3,6 @@
 @inject RelayStore Store
 @inject MessageService Msg
 @inject AgentStore AgentDb
-@inject CacheManager Cache
 @using System.Net.WebSockets
 @using System.Text
 @using System.Text.Json
@@ -391,12 +390,7 @@ else
         var record = AgentDb.GetByUuid(renamingUuid);
         if (record is not null && record.Name != newName)
         {
-            var oldName = record.Name;
             await AgentDb.RenameAsync(renamingUuid, newName);
-
-            // Rename cache directory under ./ prefix
-            if (Cache.HasDirectory)
-                await Cache.RenameDirectoryAsync(".", oldName, newName);
         }
         renamingUuid = null;
     }

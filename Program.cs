@@ -15,5 +15,6 @@ builder.Services.AddSingleton<cc.Services.MessageService>();
 builder.Services.AddScoped<cc.Services.ThemeService>();
 builder.Services.AddScoped<cc.Services.AgentStore>();
 builder.Services.AddScoped<cc.Services.DownloadStore>();
+builder.Services.AddScoped<cc.Services.VfsStore>();
 
 await builder.Build().RunAsync();
