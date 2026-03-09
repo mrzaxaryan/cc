@@ -1,29 +1,28 @@
-using System.Text.Json;
+using System.Text.Json.Serialization;
+using Microsoft.JSInterop;
 
 namespace cc.Services;
 
 public class RelayEntry
 {
-    public string Url { get; set; } = "";
-    public string Name { get; set; } = "";
+    [JsonPropertyName("url")] public string Url { get; set; } = "";
+    [JsonPropertyName("name")] public string Name { get; set; } = "";
+    [JsonPropertyName("active")] public bool Active { get; set; }
 }
 
 public class RelayStore
 {
-    private const string StorageKey = "relay_list";
-    private const string ActiveKey = "relay_active";
     private const string DefaultUrl = "wss://relay.nostdlib.workers.dev";
     private const string DefaultName = "Default";
 
-    private readonly LocalStorageService _storage;
+    private readonly IJSRuntime _js;
     private List<RelayEntry>? _relays;
-    private string? _activeUrl;
     private bool _loaded;
 
-    public RelayStore(LocalStorageService storage) => _storage = storage;
+    public RelayStore(IJSRuntime js) => _js = js;
 
     public IReadOnlyList<RelayEntry> Relays => _relays ?? [];
-    public string ActiveUrl => _activeUrl ?? DefaultUrl;
+    public string ActiveUrl => _relays?.FirstOrDefault(r => r.Active)?.Url ?? DefaultUrl;
     public bool SetupRequired { get; private set; }
 
     public string HttpBaseUrl
@@ -46,54 +45,60 @@ public class RelayStore
 
         try
         {
-            var json = await _storage.GetAsync(StorageKey);
-            _relays = json is not null
-                ? JsonSerializer.Deserialize<List<RelayEntry>>(json) ?? new()
-                : new();
-
-            _activeUrl = await _storage.GetAsync(ActiveKey);
+            var entries = await _js.InvokeAsync<RelayEntry[]>("ccRelayDb.getAll");
+            _relays = entries?.ToList() ?? new();
         }
         catch
         {
             _relays = new();
-            _activeUrl = null;
         }
 
         if (_relays.Count == 0)
         {
             SetupRequired = true;
-            _relays.Add(new RelayEntry { Url = DefaultUrl, Name = DefaultName });
-            _activeUrl = DefaultUrl;
-            await SaveAsync();
-            await _storage.SetAsync(ActiveKey, _activeUrl);
+            var entry = new RelayEntry { Url = DefaultUrl, Name = DefaultName, Active = true };
+            _relays.Add(entry);
+            await _js.InvokeVoidAsync("ccRelayDb.put", entry);
         }
 
-        _activeUrl ??= DefaultUrl;
+        if (!_relays.Any(r => r.Active) && _relays.Count > 0)
+        {
+            _relays[0].Active = true;
+            await _js.InvokeVoidAsync("ccRelayDb.put", _relays[0]);
+        }
     }
 
     public async Task AddRelay(string name, string url)
     {
         url = url.TrimEnd('/');
         if (_relays!.Any(r => r.Url == url)) return;
-        _relays!.Add(new RelayEntry { Url = url, Name = name });
-        await SaveAsync();
+        var entry = new RelayEntry { Url = url, Name = name };
+        _relays!.Add(entry);
+        await _js.InvokeVoidAsync("ccRelayDb.put", entry);
     }
 
     public async Task RemoveRelay(string url)
     {
+        var wasActive = _relays!.FirstOrDefault(r => r.Url == url)?.Active ?? false;
         _relays!.RemoveAll(r => r.Url == url);
-        if (_activeUrl == url)
+        await _js.InvokeVoidAsync("ccRelayDb.remove", url);
+
+        if (wasActive && _relays.Count > 0)
         {
-            _activeUrl = _relays.FirstOrDefault()?.Url ?? DefaultUrl;
-            await _storage.SetAsync(ActiveKey, _activeUrl);
+            _relays[0].Active = true;
+            await _js.InvokeVoidAsync("ccRelayDb.put", _relays[0]);
         }
-        await SaveAsync();
     }
 
     public async Task SetActive(string url)
     {
-        _activeUrl = url;
-        await _storage.SetAsync(ActiveKey, url);
+        foreach (var r in _relays!)
+        {
+            var wasActive = r.Active;
+            r.Active = r.Url == url;
+            if (r.Active != wasActive)
+                await _js.InvokeVoidAsync("ccRelayDb.put", r);
+        }
     }
 
     public async Task UpdateRelayName(string url, string name)
@@ -102,13 +107,7 @@ public class RelayStore
         if (entry is not null)
         {
             entry.Name = name;
-            await SaveAsync();
+            await _js.InvokeVoidAsync("ccRelayDb.put", entry);
         }
-    }
-
-    private async Task SaveAsync()
-    {
-        var json = JsonSerializer.Serialize(_relays);
-        await _storage.SetAsync(StorageKey, json);
     }
 }

@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using cc.Models;
 using Microsoft.JSInterop;
 
@@ -5,23 +6,24 @@ namespace cc.Services;
 
 public class AgentRecord
 {
-    public string Uuid { get; set; } = "";
-    public string Name { get; set; } = "";
-    public string AgentId { get; set; } = "";
-    public string RelayUrl { get; set; } = "";
-    public string Ip { get; set; } = "";
-    public string Country { get; set; } = "";
-    public string City { get; set; } = "";
-    public string Region { get; set; } = "";
-    public string Continent { get; set; } = "";
-    public string Timezone { get; set; } = "";
-    public int Asn { get; set; }
-    public string AsOrganization { get; set; } = "";
-    public string UserAgent { get; set; } = "";
-    public string Protocol { get; set; } = "";
-    public string TlsVersion { get; set; } = "";
-    public double FirstSeen { get; set; }
-    public double LastSeen { get; set; }
+    [JsonPropertyName("uuid")] public string Uuid { get; set; } = "";
+    [JsonPropertyName("name")] public string Name { get; set; } = "";
+    [JsonPropertyName("agentId")] public string AgentId { get; set; } = "";
+    [JsonPropertyName("relayUrl")] public string RelayUrl { get; set; } = "";
+    [JsonPropertyName("ip")] public string Ip { get; set; } = "";
+    [JsonPropertyName("country")] public string Country { get; set; } = "";
+    [JsonPropertyName("city")] public string City { get; set; } = "";
+    [JsonPropertyName("region")] public string Region { get; set; } = "";
+    [JsonPropertyName("continent")] public string Continent { get; set; } = "";
+    [JsonPropertyName("timezone")] public string Timezone { get; set; } = "";
+    [JsonPropertyName("asn")] public int Asn { get; set; }
+    [JsonPropertyName("asOrganization")] public string AsOrganization { get; set; } = "";
+    [JsonPropertyName("userAgent")] public string UserAgent { get; set; } = "";
+    [JsonPropertyName("protocol")] public string Protocol { get; set; } = "";
+    [JsonPropertyName("tlsVersion")] public string TlsVersion { get; set; } = "";
+    [JsonPropertyName("relayId")] public string? RelayId { get; set; }
+    [JsonPropertyName("firstSeen")] public double FirstSeen { get; set; }
+    [JsonPropertyName("lastSeen")] public double LastSeen { get; set; }
 }
 
 public class AgentStore
@@ -71,6 +73,7 @@ public class AgentStore
             UserAgent = agent.UserAgent,
             Protocol = agent.Protocol,
             TlsVersion = agent.TlsVersion,
+            RelayId = agent.RelayId,
             FirstSeen = now,
             LastSeen = now
         };
