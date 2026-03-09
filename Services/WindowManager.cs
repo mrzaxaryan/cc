@@ -52,7 +52,7 @@ public class WindowManager
         OnChanged?.Invoke();
     }
 
-    public void OpenAgentWindow(string panel, string agentId, RelaySocket? relay = null)
+    public void OpenAgentWindow(string panel, string agentId, RelaySocket? relay = null, string? agentName = null, string? agentUuid = null)
     {
         // Reuse existing window for same panel + agent
         var existing = Windows.FirstOrDefault(w => w.Panel == panel && w.AgentId == agentId);
@@ -69,8 +69,10 @@ public class WindowManager
         {
             Id = _nextId++,
             Panel = panel,
-            Title = $"{panel} — {agentId}",
+            Title = $"{panel} — {agentName ?? agentId}",
             AgentId = agentId,
+            AgentName = agentName,
+            AgentUuid = agentUuid,
             Relay = relay,
             X = 100 + offset,
             Y = 80 + offset,

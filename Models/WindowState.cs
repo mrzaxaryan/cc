@@ -15,5 +15,7 @@ public class WindowState
     public bool Maximized { get; set; }
     public int ZIndex { get; set; }
     public string? AgentId { get; set; }
+    public string? AgentName { get; set; }
+    public string? AgentUuid { get; set; }
     public RelaySocket? Relay { get; set; }
 }

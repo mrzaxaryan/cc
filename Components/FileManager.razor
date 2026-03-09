@@ -176,6 +176,7 @@
 
     [Parameter] public RelaySocket? Relay { get; set; }
     [Parameter] public string? AgentId { get; set; }
+    [Parameter] public string? AgentName { get; set; }
 
     private bool IsConnected => Relay is not null && Relay.IsConnected;
 
@@ -375,18 +376,12 @@
 
     // --- Cache sync ---
 
-    private static string SanitizeDirName(string name) =>
-        name.Replace('\\', '_').Replace('/', '_').Replace(':', '_').Replace('.', '_');
-
     private string AgentCacheRoot
     {
         get
         {
             if (string.IsNullOrEmpty(AgentId)) return "";
-            var uuid = AgentDb.GetUuidByAgentId(AgentId);
-            var record = uuid is not null ? AgentDb.GetByUuid(uuid) : null;
-            if (record is null) return "";
-            return SanitizeDirName(record.Name);
+            return AgentDb.GetUuidByAgentId(AgentId) ?? "";
         }
     }
     private string CacheSubPath
@@ -403,9 +398,27 @@
     private static string CacheName(DirEntry entry) =>
         entry.IsDrive ? entry.Name.Replace(":", "") : entry.Name;
 
-    private async Task MirrorEntriesToCache()
+    private async Task EnsureCachePathAsync()
     {
         await AgentDb.LoadAsync();
+        if (!Cache.HasDirectory || string.IsNullOrEmpty(AgentCacheRoot)) return;
+
+        // Ensure the current directory path exists in cache
+        var sub = CacheSubPath;
+        if (!string.IsNullOrEmpty(sub))
+        {
+            var parts = sub.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length > 1)
+            {
+                var parent = string.Join("/", parts.Take(parts.Length - 1));
+                await Cache.CreateDirectoryAsync(parent, parts.Last());
+            }
+        }
+    }
+
+    private async Task MirrorEntriesToCache()
+    {
+        await EnsureCachePathAsync();
         if (!Cache.HasDirectory || entries is null || string.IsNullOrEmpty(AgentCacheRoot)) return;
 
         foreach (var entry in entries)

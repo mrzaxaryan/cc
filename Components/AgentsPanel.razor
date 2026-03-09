@@ -351,7 +351,9 @@ else
     private async Task OpenAgentWindow(string panel, string agentId, string relayUrl)
     {
         var relay = await CreateRelay(agentId, relayUrl);
-        Wm.OpenAgentWindow(panel, agentId, relay);
+        var uuid = AgentDb.GetUuidByAgentId(agentId);
+        var name = uuid is not null ? AgentDb.GetByUuid(uuid)?.Name : null;
+        Wm.OpenAgentWindow(panel, agentId, relay, name);
     }
 
     // --- Rename ---
