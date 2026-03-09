@@ -1,5 +1,6 @@
 @page "/relay"
 @inject HttpClient Http
+@inject RelayStore Store
 
 <PageTitle>Relay</PageTitle>
 
@@ -8,6 +9,79 @@
     <button class="btn btn-outline-primary btn-sm" @onclick="LoadStatus" disabled="@loading">
         @(loading ? "Refreshing..." : "Refresh")
     </button>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header d-flex align-items-center justify-content-between">
+        <h5 class="mb-0">Relay Servers</h5>
+        <button class="btn btn-sm btn-outline-success" @onclick="() => showAdd = !showAdd">
+            @(showAdd ? "Cancel" : "+ Add")
+        </button>
+    </div>
+    <div class="card-body p-0">
+        @if (showAdd)
+        {
+            <div class="p-3 border-bottom bg-light">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label small mb-1">Name</label>
+                        <input class="form-control form-control-sm" @bind="newName" placeholder="My Relay" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small mb-1">URL</label>
+                        <input class="form-control form-control-sm" @bind="newUrl" placeholder="wss://relay.example.com" />
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-success btn-sm w-100" @onclick="AddRelay"
+                                disabled="@(string.IsNullOrWhiteSpace(newName) || string.IsNullOrWhiteSpace(newUrl))">
+                            Add
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th style="width:30px"></th>
+                    <th>Name</th>
+                    <th>URL</th>
+                    <th style="width:120px"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var relay in Store.Relays)
+                {
+                    var isActive = relay.Url == Store.ActiveUrl;
+                    <tr class="@(isActive ? "table-active" : "")">
+                        <td class="text-center">
+                            @if (isActive)
+                            {
+                                <span class="text-success" title="Active">&#9679;</span>
+                            }
+                        </td>
+                        <td>@relay.Name</td>
+                        <td><code class="small">@relay.Url</code></td>
+                        <td class="text-end">
+                            @if (!isActive)
+                            {
+                                <button class="btn btn-outline-primary btn-sm me-1" @onclick="() => SelectRelay(relay.Url)" title="Set as active">
+                                    Use
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm" @onclick="() => RemoveRelay(relay.Url)" title="Remove">
+                                    &times;
+                                </button>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success">Active</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 </div>
 
 @if (error is not null)
@@ -166,8 +240,13 @@ else
     private string? error;
     private bool loading;
 
+    private bool showAdd;
+    private string newName = "";
+    private string newUrl = "";
+
     protected override async Task OnInitializedAsync()
     {
+        await Store.LoadAsync();
         await LoadStatus();
     }
 
@@ -176,7 +255,7 @@ else
         loading = true;
         try
         {
-            status = await Http.GetFromJsonAsync<HealthStatus>("https://relay.nostdlib.workers.dev/health");
+            status = await Http.GetFromJsonAsync<HealthStatus>($"{Store.HttpBaseUrl}/health");
             error = null;
         }
         catch (Exception ex)
@@ -187,5 +266,25 @@ else
         {
             loading = false;
         }
+    }
+
+    private async Task AddRelay()
+    {
+        if (string.IsNullOrWhiteSpace(newName) || string.IsNullOrWhiteSpace(newUrl)) return;
+        await Store.AddRelay(newName.Trim(), newUrl.Trim());
+        newName = "";
+        newUrl = "";
+        showAdd = false;
+    }
+
+    private async Task RemoveRelay(string url)
+    {
+        await Store.RemoveRelay(url);
+    }
+
+    private async Task SelectRelay(string url)
+    {
+        await Store.SetActive(url);
+        await LoadStatus();
     }
 }

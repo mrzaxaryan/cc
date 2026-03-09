@@ -1,6 +1,7 @@
 @page "/agents"
 @inject HttpClient Http
 @inject WindowManager Wm
+@inject RelayStore Store
 @using System.Net.WebSockets
 @using System.Text
 @using System.Text.Json
@@ -144,8 +145,9 @@ else
     private double ctxY;
     private string? ctxAgentId;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        await Store.LoadAsync();
         _ = ConnectToEvents();
     }
 
@@ -221,7 +223,7 @@ else
             try
             {
                 eventsWs = new ClientWebSocket();
-                await eventsWs.ConnectAsync(new Uri("wss://relay.nostdlib.workers.dev/events"), token);
+                await eventsWs.ConnectAsync(new Uri($"{Store.WsBaseUrl}/events"), token);
                 eventsConnected = true;
                 await InvokeAsync(StateHasChanged);
 
@@ -351,6 +353,7 @@ else
         try
         {
             error = null;
+            Wm.Relay.BaseUrl = Store.WsBaseUrl;
             await Wm.Relay.Connect(agentId);
             Wm.Output = "Connected. Ready to send commands.\n";
         }

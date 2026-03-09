@@ -11,10 +11,13 @@ public class RelaySocket
     public bool IsConnected => _ws is not null && _ws.State == WebSocketState.Open;
     public string? ConnectedAgentId { get; private set; }
 
+    public string? BaseUrl { get; set; }
+
     public async Task Connect(string agentId, CancellationToken ct = default)
     {
+        var baseUrl = (BaseUrl ?? "wss://relay.nostdlib.workers.dev").TrimEnd('/');
         _ws = new ClientWebSocket();
-        await _ws.ConnectAsync(new Uri($"wss://relay.nostdlib.workers.dev/relay/{agentId}"), ct);
+        await _ws.ConnectAsync(new Uri($"{baseUrl}/relay/{agentId}"), ct);
         ConnectedAgentId = agentId;
     }
 
