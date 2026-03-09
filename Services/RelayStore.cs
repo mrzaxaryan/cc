@@ -19,6 +19,8 @@ public class RelayStore
     private List<RelayEntry>? _relays;
     private bool _loaded;
 
+    public event Action? OnChanged;
+
     public RelayStore(IJSRuntime js) => _js = js;
 
     public IReadOnlyList<RelayEntry> Relays => _relays ?? [];
@@ -75,6 +77,7 @@ public class RelayStore
         var entry = new RelayEntry { Url = url, Name = name };
         _relays!.Add(entry);
         await _js.InvokeVoidAsync("ccRelayDb.put", entry);
+        OnChanged?.Invoke();
     }
 
     public async Task RemoveRelay(string url)
@@ -88,6 +91,7 @@ public class RelayStore
             _relays[0].Active = true;
             await _js.InvokeVoidAsync("ccRelayDb.put", _relays[0]);
         }
+        OnChanged?.Invoke();
     }
 
     public async Task SetActive(string url)

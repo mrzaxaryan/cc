@@ -15,25 +15,29 @@
 else
 {
     <div class="d-flex flex-wrap gap-3 mb-3">
-        @foreach (var rs in relayStates.Values)
+        @foreach (RelayState rs in relayStates.Values)
         {
-            <div class="card flex-fill" style="min-width:220px">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div>
-                        <h6 class="card-title mb-0">@rs.Name</h6>
-                        <p class="card-text display-6 mb-0">@(rs.Agents?.Count ?? 0)</p>
+            <div class="card flex-fill" style="min-width:200px">
+                <div class="card-body py-2 px-3 d-flex align-items-center gap-2">
+                    <div class="d-flex flex-column lh-sm" style="min-width:0">
+                        <div class="d-flex align-items-center gap-1 flex-wrap">
+                            <span class="fw-semibold text-truncate">@rs.Name</span>
+                            <span class="badge @(rs.Connected ? "bg-success" : "bg-danger") badge-sm">@(rs.Connected ? "Live" : "Off")</span>
+                            <span class="badge bg-dark badge-sm">@GetProtocolShort(rs.Url)</span>
+                        </div>
+                        <code class="small text-muted text-truncate" title="@rs.Url" style="font-size:.7rem">@GetHostFromUrl(rs.Url)</code>
+                        <small class="text-muted" style="font-size:.65rem">
+                            @(rs.Agents?.Count ?? 0) agent@(rs.Agents?.Count != 1 ? "s" : "") connected
+                        </small>
                     </div>
-                    <div class="ms-auto d-flex align-items-center gap-2">
-                        <span class="badge @(rs.Connected ? "bg-success" : "bg-danger")">
-                            @(rs.Connected ? "Live" : "Disconnected")
-                        </span>
+                    <div class="ms-auto">
                         @if (rs.Connected)
                         {
-                            <button class="btn btn-outline-danger btn-sm" @onclick="() => DisconnectRelay(rs.Url)">Disconnect</button>
+                            <button class="btn btn-outline-danger btn-sm py-0 px-1" style="font-size:.75rem" @onclick="() => DisconnectRelay(rs.Url)">Disconnect</button>
                         }
                         else
                         {
-                            <button class="btn btn-outline-success btn-sm" @onclick="() => ReconnectRelay(rs.Url)">Connect</button>
+                            <button class="btn btn-outline-success btn-sm py-0 px-1" style="font-size:.75rem" @onclick="() => ReconnectRelay(rs.Url)">Connect</button>
                         }
                     </div>
                 </div>
@@ -55,7 +59,6 @@ else
                         <th>Status</th>
                         <th>Name</th>
                         <th>UUID</th>
-                        <th>Source</th>
                         <th>IP</th>
                         <th>Location</th>
                         <th>Network</th>
@@ -81,7 +84,6 @@ else
                             </td>
                             <td>@row.Name</td>
                             <td><code title="@row.Uuid">@(row.Uuid is not null ? row.Uuid[..Math.Min(8, row.Uuid.Length)] : "...")</code></td>
-                            <td><span class="badge bg-info">@row.RelayName</span></td>
                             <td><code>@row.Ip</code></td>
                             <td>@row.Location</td>
                             <td>@row.Network</td>
@@ -136,11 +138,24 @@ else
     {
         await Store.LoadAsync();
         await AgentDb.LoadAsync();
-        ConnectAllRelays();
+        Store.OnChanged += OnRelayStoreChanged;
+        SyncRelays();
     }
 
-    private void ConnectAllRelays()
+    private void OnRelayStoreChanged()
     {
+        InvokeAsync(() =>
+        {
+            SyncRelays();
+            StateHasChanged();
+        });
+    }
+
+    private void SyncRelays()
+    {
+        var currentUrls = Store.Relays.Select(r => r.Url).ToHashSet();
+
+        // Connect to newly added relays
         foreach (var relay in Store.Relays)
         {
             if (!relayStates.ContainsKey(relay.Url))
@@ -148,6 +163,19 @@ else
                 relayStates[relay.Url] = new RelayState { Url = relay.Url, Name = relay.Name };
                 _ = ConnectToEvents(relay.Url);
             }
+            else
+            {
+                // Update relay name if changed
+                relayStates[relay.Url].Name = relay.Name;
+            }
+        }
+
+        // Disconnect removed relays
+        var removedUrls = relayStates.Keys.Where(url => !currentUrls.Contains(url)).ToList();
+        foreach (var url in removedUrls)
+        {
+            _ = DisconnectRelay(url);
+            relayStates.Remove(url);
         }
     }
 
@@ -233,6 +261,21 @@ else
         }
 
         return rows;
+    }
+
+    private static string GetProtocolShort(string url)
+    {
+        if (url.StartsWith("wss://")) return "WSS";
+        if (url.StartsWith("ws://")) return "WS";
+        if (url.StartsWith("https://")) return "HTTPS";
+        if (url.StartsWith("http://")) return "HTTP";
+        return "?";
+    }
+
+    private static string GetHostFromUrl(string url)
+    {
+        try { return new Uri(url).Host; }
+        catch { return url; }
     }
 
     private static string FormatStoredLocation(AgentRecord r)
@@ -546,6 +589,7 @@ else
     public async ValueTask DisposeAsync()
     {
         _disposing = true;
+        Store.OnChanged -= OnRelayStoreChanged;
         foreach (var rs in relayStates.Values)
         {
             rs.Cts?.Cancel();
