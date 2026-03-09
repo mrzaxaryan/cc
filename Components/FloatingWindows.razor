@@ -18,7 +18,7 @@
 {
     if (win.Minimized) continue;
     var w = win;
-    <div class="app-window @(win.Maximized ? "maximized" : "")"
+    <div @key="win.Id" class="app-window @(win.Maximized ? "maximized" : "")"
          style="@(win.Maximized ? "" : $"left:{win.X}px;top:{win.Y}px;width:{win.Width}px;height:{win.Height}px;z-index:{win.ZIndex};")"
          @onmousedown="() => Wm.BringToFront(w)">
         <div class="app-window-titlebar" @onmousedown="(e) => OnDragStart(e, win)">
@@ -87,7 +87,7 @@
         @foreach (var win in minimized)
         {
             var w = win;
-            <button class="mdi-taskbar-item" @onclick="() => RestoreWindow(w)">@win.Title</button>
+            <button @key="win.Id" class="mdi-taskbar-item" @onclick="() => RestoreWindow(w)">@win.Title</button>
         }
     </div>
 }

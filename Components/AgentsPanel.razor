@@ -126,6 +126,8 @@ else
     private ClientWebSocket? eventsWs;
     private CancellationTokenSource? eventsCts;
 
+    private bool _disposing;
+
     // Context menu
     private bool ctxVisible;
     private double ctxX;
@@ -245,9 +247,10 @@ else
                 eventsWs = null;
                 eventsConnected = false;
                 agents = null;
-                if (Wm.Relay.ConnectedAgentId is not null)
+                if (!_disposing && Wm.Relay.ConnectedAgentId is not null)
                     await Wm.DisconnectRelay();
-                await InvokeAsync(StateHasChanged);
+                if (!_disposing)
+                    await InvokeAsync(StateHasChanged);
             }
 
             if (!token.IsCancellationRequested)
@@ -371,6 +374,7 @@ else
 
     public async ValueTask DisposeAsync()
     {
+        _disposing = true;
         eventsCts?.Cancel();
         if (eventsWs is not null)
         {

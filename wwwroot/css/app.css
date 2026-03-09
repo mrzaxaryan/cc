@@ -166,7 +166,7 @@ h1:focus {
 /* Resize handle */
 .app-window:not(.maximized):not(.minimized) {
     resize: both;
-    overflow: auto;
+    overflow: hidden;
 }
 
 /* ===== Taskbar ===== */

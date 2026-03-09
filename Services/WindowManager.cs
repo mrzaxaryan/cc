@@ -95,7 +95,8 @@ public class WindowManager
     public async Task DisconnectRelay()
     {
         await Relay.Disconnect();
-        Windows.Clear();
+        // Only close agent-dependent windows, not all windows
+        Windows.RemoveAll(w => w.Panel is "File Manager" or "Commands");
         Output = "";
         OnChanged?.Invoke();
     }
