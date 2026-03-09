@@ -30,6 +30,7 @@ public class AgentStore
 {
     private readonly IJSRuntime _js;
     private Dictionary<string, AgentRecord> _cache = new();
+    private readonly Dictionary<string, string> _agentIdToUuid = new();
     private bool _loaded;
 
     public AgentStore(IJSRuntime js) => _js = js;
@@ -45,6 +46,8 @@ public class AgentStore
         {
             var records = await _js.InvokeAsync<AgentRecord[]>("ccAgentDb.getAll");
             _cache = records.ToDictionary(r => r.Uuid);
+            foreach (var r in _cache.Values)
+                _agentIdToUuid[r.AgentId] = r.Uuid;
         }
         catch
         {
@@ -85,17 +88,13 @@ public class AgentStore
         }
 
         _cache[uuid] = record;
+        _agentIdToUuid[agent.Id] = uuid;
         await _js.InvokeVoidAsync("ccAgentDb.put", record);
     }
 
     public string? GetUuidByAgentId(string agentId)
     {
-        foreach (var record in _cache.Values)
-        {
-            if (record.AgentId == agentId)
-                return record.Uuid;
-        }
-        return null;
+        return _agentIdToUuid.TryGetValue(agentId, out var uuid) ? uuid : null;
     }
 
     public AgentRecord? GetByUuid(string uuid)
@@ -112,6 +111,13 @@ public class AgentStore
 
     public async Task RemoveAsync(string uuid)
     {
+        if (_cache.TryGetValue(uuid, out var record))
+        {
+            // Remove all agentId mappings pointing to this uuid
+            var keysToRemove = _agentIdToUuid.Where(kv => kv.Value == uuid).Select(kv => kv.Key).ToList();
+            foreach (var key in keysToRemove)
+                _agentIdToUuid.Remove(key);
+        }
         _cache.Remove(uuid);
         await _js.InvokeVoidAsync("ccAgentDb.remove", uuid);
     }
@@ -119,6 +125,7 @@ public class AgentStore
     public async Task ClearAsync()
     {
         _cache.Clear();
+        _agentIdToUuid.Clear();
         await _js.InvokeVoidAsync("ccAgentDb.clear");
     }
 }
