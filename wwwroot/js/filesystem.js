@@ -120,6 +120,37 @@ window.ccFileSystem = {
         return true;
     },
 
+    // Streaming write: open a writable stream for chunked downloads
+    _activeWritable: null,
+
+    async beginWrite(subPath, fileName) {
+        if (!_rootHandle) throw new Error('No directory selected');
+        const dir = await navigateTo(subPath, true);
+        const fileHandle = await dir.getFileHandle(fileName, { create: true });
+        this._activeWritable = await fileHandle.createWritable();
+        return true;
+    },
+
+    async writeChunk(data) {
+        if (!this._activeWritable) throw new Error('No active writable stream');
+        await this._activeWritable.write(data);
+        return true;
+    },
+
+    async endWrite() {
+        if (!this._activeWritable) return false;
+        await this._activeWritable.close();
+        this._activeWritable = null;
+        return true;
+    },
+
+    async abortWrite() {
+        if (!this._activeWritable) return false;
+        try { await this._activeWritable.abort(); } catch { }
+        this._activeWritable = null;
+        return true;
+    },
+
     // Read a file from cache (returns Uint8Array as base64)
     async readFile(subPath, fileName) {
         if (!_rootHandle) throw new Error('No directory selected');
@@ -155,6 +186,21 @@ window.ccFileSystem = {
         if (!_rootHandle) throw new Error('No directory selected');
         const dir = await navigateTo(subPath);
         await dir.removeEntry(dirName, { recursive: true });
+        return true;
+    },
+
+    // Rename a directory (move contents from oldName to newName under subPath)
+    async renameDirectory(subPath, oldName, newName) {
+        if (!_rootHandle) throw new Error('No directory selected');
+        const parent = await navigateTo(subPath || '', false);
+
+        let oldDir;
+        try { oldDir = await parent.getDirectoryHandle(oldName); }
+        catch { return false; } // old dir doesn't exist, nothing to rename
+
+        const newDir = await parent.getDirectoryHandle(newName, { create: true });
+        await copyDir(oldDir, newDir);
+        await parent.removeEntry(oldName, { recursive: true });
         return true;
     },
 
@@ -195,6 +241,21 @@ async function navigateTo(subPath, create = false) {
         dir = await dir.getDirectoryHandle(part, { create });
     }
     return dir;
+}
+
+async function copyDir(srcHandle, destHandle) {
+    for await (const [name, handle] of srcHandle) {
+        if (handle.kind === 'file') {
+            const file = await handle.getFile();
+            const newFile = await destHandle.getFileHandle(name, { create: true });
+            const writable = await newFile.createWritable();
+            await writable.write(file);
+            await writable.close();
+        } else {
+            const newSubDir = await destHandle.getDirectoryHandle(name, { create: true });
+            await copyDir(handle, newSubDir);
+        }
+    }
 }
 
 async function calcDirSize(dirHandle) {

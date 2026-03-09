@@ -2,6 +2,7 @@
 @using System.Text
 @inject CacheManager Cache
 @inject MessageService Msg
+@inject AgentStore AgentDb
 
 <div>
     @* Breadcrumb *@
@@ -365,7 +366,16 @@
 
     // --- Cache sync ---
 
-    private string AgentCacheRoot => string.IsNullOrEmpty(AgentId) ? "" : AgentId;
+    private string AgentCacheRoot
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(AgentId)) return "";
+            var uuid = AgentDb.GetUuidByAgentId(AgentId);
+            var record = uuid is not null ? AgentDb.GetByUuid(uuid) : null;
+            return record?.Name ?? AgentId;
+        }
+    }
     private string CacheSubPath
     {
         get

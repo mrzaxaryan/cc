@@ -106,13 +106,24 @@ public class CacheManager
         OnChanged?.Invoke();
     }
 
+    /// <summary>Rename a directory in cache (move contents from oldName to newName).</summary>
+    public async Task<bool> RenameDirectoryAsync(string subPath, string oldName, string newName)
+    {
+        if (!HasDirectory) return false;
+        try
+        {
+            return await _js.InvokeAsync<bool>("ccFileSystem.renameDirectory", subPath, oldName, newName);
+        }
+        catch { return false; }
+    }
+
     /// <summary>Get total cache size in bytes.</summary>
     public async Task<long> GetCacheSizeAsync(string subPath = "")
     {
         return await _js.InvokeAsync<long>("ccFileSystem.getCacheSize", subPath);
     }
 
-    /// <summary>Download a file from an agent via relay and save to cache.</summary>
+    /// <summary>Download a file from an agent via relay and stream directly to cache.</summary>
     public async Task<bool> DownloadFromAgentAsync(RelaySocket relay, string remotePath, string cacheSubPath, string fileName, Action<long, long>? onProgress = null)
     {
         if (!relay.IsConnected || !HasDirectory) return false;
@@ -122,33 +133,46 @@ public class CacheManager
         var probeResp = await relay.SendAndReceive(probe);
         if (probeResp is null || probeResp.Length < 12) return false;
 
-        // Read the full file in chunks
+        // Open a streaming writable to avoid holding entire file in memory
+        await _js.InvokeVoidAsync("ccFileSystem.beginWrite", cacheSubPath, fileName);
+
         const long chunkSize = 65536;
-        using var ms = new MemoryStream();
         long offset = 0;
+        bool success = false;
 
-        while (true)
+        try
         {
-            var payload = RelaySocket.BuildFileCommand(0x02, remotePath, chunkSize, offset);
-            var response = await relay.SendAndReceive(payload);
-            if (response is null || response.Length < 4) return false;
+            while (true)
+            {
+                var payload = RelaySocket.BuildFileCommand(0x02, remotePath, chunkSize, offset);
+                var response = await relay.SendAndReceive(payload);
+                if (response is null || response.Length < 4) return false;
 
-            var status = RelaySocket.ReadStatus(response);
-            if (status != 0) return false;
-            if (response.Length < 12) return false;
+                var status = RelaySocket.ReadStatus(response);
+                if (status != 0) return false;
+                if (response.Length < 12) return false;
 
-            var (bytesRead, data) = RelaySocket.ReadFileContent(response);
-            if (bytesRead == 0) break;
+                var (bytesRead, data) = RelaySocket.ReadFileContent(response);
+                if (bytesRead == 0) break;
 
-            ms.Write(data, 0, data.Length);
-            offset += (long)bytesRead;
-            onProgress?.Invoke(offset, -1); // total unknown
+                // Stream chunk directly to disk
+                await _js.InvokeVoidAsync("ccFileSystem.writeChunk", data);
+                offset += (long)bytesRead;
+                onProgress?.Invoke(offset, -1);
 
-            if ((long)bytesRead < chunkSize) break;
+                if ((long)bytesRead < chunkSize) break;
+            }
+
+            await _js.InvokeVoidAsync("ccFileSystem.endWrite");
+            success = true;
+            OnChanged?.Invoke();
+            return true;
         }
-
-        await WriteFileAsync(cacheSubPath, fileName, ms.ToArray());
-        return true;
+        finally
+        {
+            if (!success)
+                await _js.InvokeVoidAsync("ccFileSystem.abortWrite");
+        }
     }
 
     /// <summary>Reset: clear persisted handle.</summary>

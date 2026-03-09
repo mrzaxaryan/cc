@@ -3,6 +3,7 @@
 @inject RelayStore Store
 @inject MessageService Msg
 @inject AgentStore AgentDb
+@inject CacheManager Cache
 @using System.Net.WebSockets
 @using System.Text
 @using System.Text.Json
@@ -111,6 +112,7 @@ else
     <div class="position-fixed top-0 start-0 w-100 h-100" style="z-index:1050;" @onclick="HideContextMenu" @oncontextmenu="HideContextMenu" @oncontextmenu:preventDefault="true"></div>
     <div class="dropdown-menu show shadow" style="position:fixed;left:@(ctxX)px;top:@(ctxY)px;z-index:1051;">
         <button class="dropdown-item" @onclick="CtxOpenFiles">File Manager</button>
+        <button class="dropdown-item" @onclick="CtxStartRename">Rename</button>
         @if (Wm.ConnectedAgentIds.Contains(ctxAgentId!))
         {
             <button class="dropdown-item text-danger" @onclick="CtxDisconnect">Disconnect</button>
