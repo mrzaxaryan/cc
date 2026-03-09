@@ -336,6 +336,24 @@ else
                         error = "Agent disconnected.";
                     }
                 }
+                else if (type == "agent_relayed" && agent is not null)
+                {
+                    var existing = agents.Connections.FirstOrDefault(a => a.Id == agent.Id);
+                    if (existing is not null)
+                    {
+                        existing.Relayed = true;
+                        existing.RelayId = agent.RelayId;
+                    }
+                }
+                else if (type == "agent_unrelayed" && agent is not null)
+                {
+                    var existing = agents.Connections.FirstOrDefault(a => a.Id == agent.Id);
+                    if (existing is not null)
+                    {
+                        existing.Relayed = false;
+                        existing.RelayId = null;
+                    }
+                }
 
                 error = null;
             }
