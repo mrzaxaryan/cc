@@ -353,7 +353,7 @@ else
         var relay = await CreateRelay(agentId, relayUrl);
         var uuid = AgentDb.GetUuidByAgentId(agentId);
         var name = uuid is not null ? AgentDb.GetByUuid(uuid)?.Name : null;
-        Wm.OpenAgentWindow(panel, agentId, relay, name);
+        Wm.OpenAgentWindow(panel, agentId, relay, name, uuid);
     }
 
     // --- Rename ---

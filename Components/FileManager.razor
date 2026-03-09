@@ -2,7 +2,6 @@
 @using System.Text
 @inject CacheManager Cache
 @inject MessageService Msg
-@inject AgentStore AgentDb
 
 <div>
     @if (!IsConnected)
@@ -177,6 +176,7 @@
     [Parameter] public RelaySocket? Relay { get; set; }
     [Parameter] public string? AgentId { get; set; }
     [Parameter] public string? AgentName { get; set; }
+    [Parameter] public string? AgentUuid { get; set; }
 
     private bool IsConnected => Relay is not null && Relay.IsConnected;
 
@@ -376,14 +376,7 @@
 
     // --- Cache sync ---
 
-    private string AgentCacheRoot
-    {
-        get
-        {
-            if (string.IsNullOrEmpty(AgentId)) return "";
-            return AgentDb.GetUuidByAgentId(AgentId) ?? "";
-        }
-    }
+    private string AgentCacheRoot => AgentName ?? "";
     private string CacheSubPath
     {
         get
@@ -400,7 +393,6 @@
 
     private async Task EnsureCachePathAsync()
     {
-        await AgentDb.LoadAsync();
         if (!Cache.HasDirectory || string.IsNullOrEmpty(AgentCacheRoot)) return;
 
         // Ensure the current directory path exists in cache
