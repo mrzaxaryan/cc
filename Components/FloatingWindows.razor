@@ -39,7 +39,7 @@
         <div class="app-window-body">
             @if (win.Panel == "File Manager")
             {
-                <FileManager Relay="win.Relay" AgentId="win.AgentId" AgentName="win.AgentName" AgentUuid="win.AgentUuid" />
+                <FileManager Relay="win.Relay" AgentId="@win.AgentId" AgentName="@win.AgentName" AgentUuid="@win.AgentUuid" />
             }
             else if (win.Panel == "Cache Manager")
             {
