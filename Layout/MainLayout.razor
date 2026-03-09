@@ -1,6 +1,7 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 @using cc.Components
 @inject CacheManager Cache
+@inject RelayStore Relay
 
 <div class="page">
     <div class="sidebar">
@@ -35,7 +36,8 @@
         {
             initialized = true;
             await Cache.InitializeAsync();
-            if (Cache.SetupRequired || Cache.NeedsPermission)
+            await Relay.LoadAsync();
+            if (Cache.SetupRequired || Cache.NeedsPermission || Relay.SetupRequired)
             {
                 showWelcome = true;
                 StateHasChanged();

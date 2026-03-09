@@ -24,6 +24,7 @@ public class RelayStore
 
     public IReadOnlyList<RelayEntry> Relays => _relays ?? [];
     public string ActiveUrl => _activeUrl ?? DefaultUrl;
+    public bool SetupRequired { get; private set; }
 
     public string HttpBaseUrl
     {
@@ -57,6 +58,7 @@ public class RelayStore
 
         if (_relays.Count == 0)
         {
+            SetupRequired = true;
             _relays.Add(new RelayEntry { Url = DefaultUrl, Name = DefaultName });
             _activeUrl = DefaultUrl;
             await SaveAsync();
