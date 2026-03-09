@@ -52,6 +52,7 @@
                 @foreach (var relay in Store.Relays)
                 {
                     var isActive = relay.Url == Store.ActiveUrl;
+                    var isEditing = editingUrl == relay.Url;
                     <tr class="@(isActive ? "table-active" : "")">
                         <td class="text-center">
                             @if (isActive)
@@ -60,23 +61,43 @@
                             }
                         </td>
                         <td><code class="small">@relay.Id</code></td>
-                        <td>@relay.Name</td>
-                        <td><code class="small">@relay.Url</code></td>
-                        <td class="text-end">
-                            @if (!isActive)
-                            {
-                                <button class="btn btn-outline-primary btn-sm me-1" @onclick="() => SelectRelay(relay.Url)" title="Set as active">
-                                    Use
+                        @if (isEditing)
+                        {
+                            <td><input class="form-control form-control-sm" @bind="editName" /></td>
+                            <td><input class="form-control form-control-sm font-monospace" @bind="editUrl" /></td>
+                            <td class="text-end text-nowrap">
+                                <button class="btn btn-outline-success btn-sm me-1" @onclick="SaveEdit"
+                                        disabled="@(string.IsNullOrWhiteSpace(editName) || string.IsNullOrWhiteSpace(editUrl))" title="Save">
+                                    &#10003;
                                 </button>
-                                <button class="btn btn-outline-danger btn-sm" @onclick="() => RemoveRelay(relay.Url)" title="Remove">
-                                    &times;
+                                <button class="btn btn-outline-secondary btn-sm" @onclick="CancelEdit" title="Cancel">
+                                    &#10007;
                                 </button>
-                            }
-                            else
-                            {
-                                <span class="badge bg-success">Active</span>
-                            }
-                        </td>
+                            </td>
+                        }
+                        else
+                        {
+                            <td>@relay.Name</td>
+                            <td><code class="small">@relay.Url</code></td>
+                            <td class="text-end text-nowrap">
+                                <button class="btn btn-outline-secondary btn-sm me-1" @onclick="() => StartEdit(relay)" title="Edit">
+                                    &#9998;
+                                </button>
+                                @if (!isActive)
+                                {
+                                    <button class="btn btn-outline-primary btn-sm me-1" @onclick="() => SelectRelay(relay.Url)" title="Set as active">
+                                        Use
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-sm" @onclick="() => RemoveRelay(relay.Url)" title="Remove">
+                                        &times;
+                                    </button>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success">Active</span>
+                                }
+                            </td>
+                        }
                     </tr>
                 }
             </tbody>
@@ -239,6 +260,10 @@ else
     private string newName = "";
     private string newUrl = "";
 
+    private string? editingUrl;
+    private string editName = "";
+    private string editUrl = "";
+
     protected override async Task OnInitializedAsync()
     {
         await Store.LoadAsync();
@@ -280,5 +305,21 @@ else
     {
         await Store.SetActive(url);
         await LoadStatus();
+    }
+
+    private void StartEdit(RelayEntry relay)
+    {
+        editingUrl = relay.Url;
+        editName = relay.Name;
+        editUrl = relay.Url;
+    }
+
+    private void CancelEdit() => editingUrl = null;
+
+    private async Task SaveEdit()
+    {
+        if (editingUrl is null || string.IsNullOrWhiteSpace(editName) || string.IsNullOrWhiteSpace(editUrl)) return;
+        await Store.UpdateRelay(editingUrl, editName.Trim(), editUrl.Trim());
+        editingUrl = null;
     }
 }

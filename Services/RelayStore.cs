@@ -125,4 +125,22 @@ public class RelayStore
             await _js.InvokeVoidAsync("ccRelayDb.put", entry);
         }
     }
+
+    public async Task UpdateRelay(string oldUrl, string newName, string newUrl)
+    {
+        newUrl = newUrl.TrimEnd('/');
+        var entry = _relays?.FirstOrDefault(r => r.Url == oldUrl);
+        if (entry is null) return;
+
+        if (oldUrl != newUrl)
+        {
+            if (_relays!.Any(r => r.Url == newUrl)) return; // duplicate check
+            await _js.InvokeVoidAsync("ccRelayDb.remove", oldUrl);
+            entry.Url = newUrl;
+        }
+
+        entry.Name = newName;
+        await _js.InvokeVoidAsync("ccRelayDb.put", entry);
+        OnChanged?.Invoke();
+    }
 }

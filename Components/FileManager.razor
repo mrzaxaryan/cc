@@ -1,6 +1,7 @@
 @using System.Net.WebSockets
 @using System.Text
 @inject CacheManager Cache
+@inject DownloadStore Downloads
 @inject MessageService Msg
 @implements IDisposable
 
@@ -93,13 +94,26 @@
                                                 @onclick:stopPropagation="true" @onclick="() => ViewFile(e.Name)" title="View file" disabled="@(!IsConnected)">VIEW</button>
                                         @if (Cache.HasDirectory)
                                         {
-                                            @if (IsDownloading(e.Name))
+                                            var dl = GetDownloadRecord(e.Name);
+                                            @if (dl?.Status == DownloadStatus.Downloading)
                                             {
-                                                <span class="spinner-border spinner-border-sm" style="width:0.8rem;height:0.8rem;"></span>
+                                                var pct = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
+                                                <span class="d-flex align-items-center gap-1" style="font-size:0.6rem;">
+                                                    <span class="spinner-border spinner-border-sm" style="width:0.8rem;height:0.8rem;"></span>
+                                                    <span class="text-muted">@pct%</span>
+                                                </span>
                                             }
-                                            else if (cachedFiles.Contains(e.Name))
+                                            else if (dl?.Status == DownloadStatus.Completed)
                                             {
-                                                <span class="badge bg-success py-0" style="font-size:0.6rem" title="Cached">&#x2713;</span>
+                                                <span class="badge bg-success py-0" style="font-size:0.6rem" title="@Formatters.FormatSize((ulong)dl.TotalSize) cached">&#x2713;</span>
+                                            }
+                                            else if (dl?.Status == DownloadStatus.Failed)
+                                            {
+                                                <span class="d-flex align-items-center gap-1">
+                                                    <span class="badge bg-danger py-0" style="font-size:0.6rem" title="@dl.Error">&#x2717;</span>
+                                                    <button class="btn btn-outline-warning btn-sm px-1 py-0" style="font-size:0.6rem"
+                                                            @onclick:stopPropagation="true" @onclick="() => RetryDownload(e)" title="Retry" disabled="@(!IsConnected)">&#x21bb;</button>
+                                                </span>
                                             }
                                             else
                                             {
@@ -188,9 +202,7 @@
     private bool loading;
 
     // Cache tracking
-    private HashSet<string> cachedFiles = new();
     private bool _syncing;
-    private HashSet<string> downloading = new();
 
     private bool viewingFile;
     private string viewingFileName = "";
@@ -205,6 +217,7 @@
     {
         if (Relay is not null && Relay.IsConnected && entries is null)
         {
+            await Downloads.LoadAsync();
             await NavigateTo(currentPath);
         }
     }
@@ -212,6 +225,7 @@
     protected override void OnInitialized()
     {
         Cache.OnChanged += OnCacheChanged;
+        Downloads.OnChanged += OnDownloadsChanged;
     }
 
     private void OnCacheChanged()
@@ -220,9 +234,15 @@
             _ = SyncCacheAsync();
     }
 
+    private void OnDownloadsChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
     public void Dispose()
     {
         Cache.OnChanged -= OnCacheChanged;
+        Downloads.OnChanged -= OnDownloadsChanged;
     }
 
     public void Reset()
@@ -404,7 +424,6 @@
         try
         {
             await MirrorEntriesToCache(subPath, snapshot);
-            await CheckCachedFiles(subPath, snapshot);
             await InvokeAsync(StateHasChanged);
         }
         catch { }
@@ -424,7 +443,12 @@
         }
     }
 
-    private bool IsDownloading(string name) => downloading.Contains(name);
+    private DownloadRecord? GetDownloadRecord(string fileName)
+    {
+        if (string.IsNullOrEmpty(AgentUuid)) return null;
+        var remotePath = currentPath + fileName;
+        return Downloads.Find(AgentUuid, remotePath);
+    }
 
     private static string CacheName(DirEntry entry) =>
         entry.IsDrive ? entry.Name.Replace(":", "").Replace("\\", "").Replace("/", "") : entry.Name;
@@ -456,25 +480,9 @@
                 }
                 else
                 {
-                    if (!await Cache.FileExistsAsync(subPath, name))
-                        await Cache.WriteFileAsync(subPath, name, Array.Empty<byte>());
+                    // Don't create placeholder files – only directories are mirrored.
+                    // Actual files are written by DownloadToCache.
                 }
-            }
-            catch { }
-        }
-    }
-
-    private async Task CheckCachedFiles(string subPath, List<DirEntry> snapshot)
-    {
-        cachedFiles.Clear();
-        if (!Cache.HasDirectory) return;
-
-        foreach (var entry in snapshot.Where(e => !e.IsDirectory && !e.IsDrive))
-        {
-            try
-            {
-                if (await Cache.FileExistsAsync(subPath, entry.Name))
-                    cachedFiles.Add(entry.Name);
             }
             catch { }
         }
@@ -482,35 +490,49 @@
 
     private async Task DownloadToCache(DirEntry entry)
     {
-        if (Relay is null || !Relay.IsConnected || !Cache.HasDirectory) return;
+        if (Relay is null || !Relay.IsConnected || !Cache.HasDirectory || string.IsNullOrEmpty(AgentUuid)) return;
 
-        downloading.Add(entry.Name);
+        var remotePath = currentPath + entry.Name;
+        var totalSize = (long)entry.Size;
+
+        var record = await Downloads.AddAsync(
+            AgentUuid, AgentName ?? "", remotePath, entry.Name, CacheSubPath, totalSize);
+
         StateHasChanged();
 
         try
         {
-            var remotePath = currentPath + entry.Name;
             var success = await Cache.DownloadFromAgentAsync(
                 Relay, remotePath, CacheSubPath, entry.Name,
-                (downloaded, _) =>
+                async (downloaded, _) =>
                 {
-                    InvokeAsync(StateHasChanged);
+                    await Downloads.UpdateProgressAsync(record.Id, downloaded);
                 });
 
             if (success)
-                cachedFiles.Add(entry.Name);
+                await Downloads.CompleteAsync(record.Id);
             else
-                Msg.Error($"Failed to download {entry.Name}");
+                await Downloads.FailAsync(record.Id, "Download returned failure");
         }
         catch (Exception ex)
         {
+            await Downloads.FailAsync(record.Id, ex.Message);
             Msg.Error($"Download failed: {ex.Message}");
         }
         finally
         {
-            downloading.Remove(entry.Name);
             StateHasChanged();
         }
+    }
+
+    private async Task RetryDownload(DirEntry entry)
+    {
+        if (string.IsNullOrEmpty(AgentUuid)) return;
+        var remotePath = currentPath + entry.Name;
+        var existing = Downloads.Find(AgentUuid, remotePath);
+        if (existing is not null)
+            await Downloads.RemoveAsync(existing.Id);
+        await DownloadToCache(entry);
     }
 
     // --- WebSocket ---

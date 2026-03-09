@@ -14,5 +14,6 @@ builder.Services.AddScoped<cc.Services.CacheManager>();
 builder.Services.AddSingleton<cc.Services.MessageService>();
 builder.Services.AddScoped<cc.Services.ThemeService>();
 builder.Services.AddScoped<cc.Services.AgentStore>();
+builder.Services.AddScoped<cc.Services.DownloadStore>();
 
 await builder.Build().RunAsync();

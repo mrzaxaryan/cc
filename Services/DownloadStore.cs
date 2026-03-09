@@ -1,0 +1,138 @@
+using System.Text.Json.Serialization;
+using Microsoft.JSInterop;
+
+namespace cc.Services;
+
+public class DownloadRecord
+{
+    [JsonPropertyName("id")] public int Id { get; set; }
+    [JsonPropertyName("agentUuid")] public string AgentUuid { get; set; } = "";
+    [JsonPropertyName("agentName")] public string AgentName { get; set; } = "";
+    [JsonPropertyName("remotePath")] public string RemotePath { get; set; } = "";
+    [JsonPropertyName("fileName")] public string FileName { get; set; } = "";
+    [JsonPropertyName("cacheSubPath")] public string CacheSubPath { get; set; } = "";
+    [JsonPropertyName("totalSize")] public long TotalSize { get; set; }
+    [JsonPropertyName("downloadedSize")] public long DownloadedSize { get; set; }
+    [JsonPropertyName("status")] public string Status { get; set; } = DownloadStatus.Pending;
+    [JsonPropertyName("error")] public string? Error { get; set; }
+    [JsonPropertyName("createdAt")] public double CreatedAt { get; set; }
+    [JsonPropertyName("completedAt")] public double? CompletedAt { get; set; }
+}
+
+public static class DownloadStatus
+{
+    public const string Pending = "pending";
+    public const string Downloading = "downloading";
+    public const string Completed = "completed";
+    public const string Failed = "failed";
+}
+
+public class DownloadStore
+{
+    private readonly IJSRuntime _js;
+    private List<DownloadRecord> _cache = new();
+    private bool _loaded;
+
+    public event Action? OnChanged;
+
+    public DownloadStore(IJSRuntime js) => _js = js;
+
+    public IReadOnlyList<DownloadRecord> Downloads => _cache;
+
+    public async Task LoadAsync()
+    {
+        if (_loaded) return;
+        _loaded = true;
+
+        try
+        {
+            var records = await _js.InvokeAsync<DownloadRecord[]>("ccDownloadDb.getAll");
+            _cache = records.ToList();
+        }
+        catch
+        {
+            _cache = new();
+        }
+    }
+
+    public async Task<DownloadRecord> AddAsync(string agentUuid, string agentName, string remotePath, string fileName, string cacheSubPath, long totalSize)
+    {
+        var record = new DownloadRecord
+        {
+            AgentUuid = agentUuid,
+            AgentName = agentName,
+            RemotePath = remotePath,
+            FileName = fileName,
+            CacheSubPath = cacheSubPath,
+            TotalSize = totalSize,
+            Status = DownloadStatus.Pending,
+            CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+        };
+
+        var id = await _js.InvokeAsync<int>("ccDownloadDb.put", record);
+        record.Id = id;
+        _cache.Add(record);
+        OnChanged?.Invoke();
+        return record;
+    }
+
+    public async Task UpdateProgressAsync(int id, long downloadedSize)
+    {
+        var record = _cache.FirstOrDefault(r => r.Id == id);
+        if (record is null) return;
+
+        record.DownloadedSize = downloadedSize;
+        record.Status = DownloadStatus.Downloading;
+        await _js.InvokeVoidAsync("ccDownloadDb.put", record);
+        OnChanged?.Invoke();
+    }
+
+    public async Task CompleteAsync(int id)
+    {
+        var record = _cache.FirstOrDefault(r => r.Id == id);
+        if (record is null) return;
+
+        record.Status = DownloadStatus.Completed;
+        record.DownloadedSize = record.TotalSize;
+        record.CompletedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        await _js.InvokeVoidAsync("ccDownloadDb.put", record);
+        OnChanged?.Invoke();
+    }
+
+    public async Task FailAsync(int id, string error)
+    {
+        var record = _cache.FirstOrDefault(r => r.Id == id);
+        if (record is null) return;
+
+        record.Status = DownloadStatus.Failed;
+        record.Error = error;
+        await _js.InvokeVoidAsync("ccDownloadDb.put", record);
+        OnChanged?.Invoke();
+    }
+
+    public async Task RemoveAsync(int id)
+    {
+        _cache.RemoveAll(r => r.Id == id);
+        await _js.InvokeVoidAsync("ccDownloadDb.remove", id);
+        OnChanged?.Invoke();
+    }
+
+    public async Task ClearAsync()
+    {
+        _cache.Clear();
+        await _js.InvokeVoidAsync("ccDownloadDb.clear");
+        OnChanged?.Invoke();
+    }
+
+    public bool IsCompleted(string agentUuid, string remotePath) =>
+        _cache.Any(r => r.AgentUuid == agentUuid && r.RemotePath == remotePath && r.Status == DownloadStatus.Completed);
+
+    public bool IsDownloading(string agentUuid, string remotePath) =>
+        _cache.Any(r => r.AgentUuid == agentUuid && r.RemotePath == remotePath && r.Status == DownloadStatus.Downloading);
+
+    public DownloadRecord? Find(string agentUuid, string remotePath) =>
+        _cache.FirstOrDefault(r => r.AgentUuid == agentUuid && r.RemotePath == remotePath);
+
+    public List<DownloadRecord> GetByAgent(string agentUuid) =>
+        _cache.Where(r => r.AgentUuid == agentUuid).ToList();
+}

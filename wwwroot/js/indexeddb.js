@@ -1,9 +1,10 @@
 // IndexedDB CRUD for agents and relays
 (function () {
     const DB_NAME = 'cc-agents';
-    const DB_VERSION = 2;
+    const DB_VERSION = 3;
     const AGENTS_STORE = 'agents';
     const RELAYS_STORE = 'relays';
+    const DOWNLOADS_STORE = 'downloads';
 
     function openDb() {
         return new Promise((resolve, reject) => {
@@ -17,6 +18,11 @@
                 }
                 if (!db.objectStoreNames.contains(RELAYS_STORE)) {
                     db.createObjectStore(RELAYS_STORE, { keyPath: 'url' });
+                }
+                if (!db.objectStoreNames.contains(DOWNLOADS_STORE)) {
+                    const dlStore = db.createObjectStore(DOWNLOADS_STORE, { keyPath: 'id', autoIncrement: true });
+                    dlStore.createIndex('agentUuid', 'agentUuid', { unique: false });
+                    dlStore.createIndex('status', 'status', { unique: false });
                 }
             };
             req.onsuccess = () => resolve(req.result);
@@ -50,5 +56,25 @@
         put: record => run(RELAYS_STORE, 'readwrite', s => s.put(record)),
         remove: url => run(RELAYS_STORE, 'readwrite', s => s.delete(url)),
         clear: () => run(RELAYS_STORE, 'readwrite', s => s.clear())
+    };
+
+    window.ccDownloadDb = {
+        getAll: () => run(DOWNLOADS_STORE, 'readonly', s => s.getAll()),
+        get: id => run(DOWNLOADS_STORE, 'readonly', s => s.get(id)),
+        put: record => run(DOWNLOADS_STORE, 'readwrite', s => s.put(record)),
+        remove: id => run(DOWNLOADS_STORE, 'readwrite', s => s.delete(id)),
+        clear: () => run(DOWNLOADS_STORE, 'readwrite', s => s.clear()),
+        getByAgent: agentUuid => {
+            return openDb().then(db => {
+                const t = db.transaction(DOWNLOADS_STORE, 'readonly');
+                const store = t.objectStore(DOWNLOADS_STORE);
+                const idx = store.index('agentUuid');
+                const req = idx.getAll(agentUuid);
+                return new Promise((resolve, reject) => {
+                    t.oncomplete = () => resolve(req.result);
+                    t.onerror = () => reject(t.error);
+                });
+            });
+        }
     };
 })();

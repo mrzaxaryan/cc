@@ -124,7 +124,7 @@ public class CacheManager
     }
 
     /// <summary>Download a file from an agent via relay and stream directly to cache.</summary>
-    public async Task<bool> DownloadFromAgentAsync(RelaySocket relay, string remotePath, string cacheSubPath, string fileName, Action<long, long>? onProgress = null)
+    public async Task<bool> DownloadFromAgentAsync(RelaySocket relay, string remotePath, string cacheSubPath, string fileName, Func<long, long, Task>? onProgress = null)
     {
         if (!relay.IsConnected || !HasDirectory) return false;
 
@@ -158,7 +158,8 @@ public class CacheManager
                 // Stream chunk directly to disk
                 await _js.InvokeVoidAsync("ccFileSystem.writeChunk", data);
                 offset += (long)bytesRead;
-                onProgress?.Invoke(offset, -1);
+                if (onProgress is not null)
+                    await onProgress(offset, -1);
 
                 if ((long)bytesRead < chunkSize) break;
             }
