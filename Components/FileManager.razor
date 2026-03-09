@@ -216,7 +216,7 @@
 
     // Cache tracking
     private bool _syncing;
-    private readonly Dictionary<string, CancellationTokenSource> _downloadCts = new();
+    private readonly HashSet<int> _ownedDownloads = new();
 
     private bool viewingFile;
     private string viewingFileName = "";
@@ -262,9 +262,9 @@
     public void Dispose()
     {
         // Pause active downloads before relay disconnects, so they stay as Paused (not Failed)
-        foreach (var cts in _downloadCts.Values)
-            cts.Cancel();
-        _downloadCts.Clear();
+        foreach (var id in _ownedDownloads)
+            Downloads.CancelCts(id);
+        _ownedDownloads.Clear();
 
         Cache.OnChanged -= OnCacheChanged;
         Downloads.OnChanged -= OnDownloadsChanged;
@@ -563,9 +563,9 @@
                 AgentUuid, AgentName ?? "", remotePath, entry.Name, vfsFile.Id, totalSize);
         }
 
-        // Set up cancellation
-        var cts = new CancellationTokenSource();
-        _downloadCts[remotePath] = cts;
+        // Set up cancellation via shared store
+        var cts = Downloads.RegisterCts(record.Id);
+        _ownedDownloads.Add(record.Id);
 
         StateHasChanged();
 
@@ -590,22 +590,30 @@
         }
         catch (Exception ex)
         {
-            await Downloads.FailAsync(record.Id, ex.Message);
-            Msg.Error($"Download failed: {ex.Message}");
+            // If CTS was cancelled (e.g. panel closed), treat as pause not failure
+            if (cts.IsCancellationRequested)
+                await Downloads.PauseAsync(record.Id);
+            else
+            {
+                await Downloads.FailAsync(record.Id, ex.Message);
+                Msg.Error($"Download failed: {ex.Message}");
+            }
         }
         finally
         {
-            _downloadCts.Remove(remotePath);
-            cts.Dispose();
+            _ownedDownloads.Remove(record.Id);
+            Downloads.RemoveCts(record.Id);
             StateHasChanged();
         }
     }
 
     private void PauseDownload(DirEntry entry)
     {
+        if (string.IsNullOrEmpty(AgentUuid)) return;
         var remotePath = currentPath + entry.Name;
-        if (_downloadCts.TryGetValue(remotePath, out var cts))
-            cts.Cancel();
+        var record = Downloads.Find(AgentUuid, remotePath);
+        if (record is not null)
+            Downloads.CancelCts(record.Id);
     }
 
     private async Task ResumeDownload(DirEntry entry)

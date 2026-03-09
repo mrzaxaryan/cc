@@ -177,6 +177,7 @@ else
     // Rename
     private string? renamingUuid;
     private string renameValue = "";
+    private bool _renameCommitting;
 
     protected override async Task OnInitializedAsync()
     {
@@ -394,20 +395,31 @@ else
         else if (e.Key == "Escape") CancelRename();
     }
 
-    private void CancelRename() => renamingUuid = null;
+    private void CancelRename()
+    {
+        if (!_renameCommitting) renamingUuid = null;
+    }
 
     private async Task CommitRename()
     {
         if (renamingUuid is null) return;
-        var newName = renameValue.Trim();
-        if (string.IsNullOrEmpty(newName)) { CancelRename(); return; }
-
-        var record = AgentDb.GetByUuid(renamingUuid);
-        if (record is not null && record.Name != newName)
+        _renameCommitting = true;
+        try
         {
-            await AgentDb.RenameAsync(renamingUuid, newName);
+            var newName = renameValue.Trim();
+            if (string.IsNullOrEmpty(newName)) { renamingUuid = null; return; }
+
+            var record = AgentDb.GetByUuid(renamingUuid);
+            if (record is not null && record.Name != newName)
+            {
+                await AgentDb.RenameAsync(renamingUuid, newName);
+            }
+            renamingUuid = null;
         }
-        renamingUuid = null;
+        finally
+        {
+            _renameCommitting = false;
+        }
     }
 
     // --- UUID fetching ---
