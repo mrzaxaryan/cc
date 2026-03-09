@@ -1,15 +1,8 @@
 @inject CacheManager Cache
+@inject MessageService Msg
 @implements IDisposable
 
 <div>
-    @if (panelError is not null)
-    {
-        <div class="alert alert-danger alert-dismissible py-2 mb-2">
-            <small>@panelError</small>
-            <button type="button" class="btn-close btn-close-sm" @onclick="() => panelError = null"></button>
-        </div>
-    }
-
     @* Header info *@
     <div class="d-flex align-items-center gap-2 mb-2">
         <span class="badge bg-primary">@(Cache.DirectoryName ?? "No folder")</span>
@@ -89,7 +82,6 @@
     private List<CacheEntry>? entries;
     private long cacheSize;
     private bool loading;
-    private string? panelError;
 
     protected override async Task OnInitializedAsync()
     {
@@ -119,7 +111,7 @@
         }
         catch (Exception ex)
         {
-            panelError = ex.Message;
+            Msg.Error(ex.Message);
         }
         finally
         {
@@ -166,7 +158,7 @@
         }
         catch (Exception ex)
         {
-            panelError = ex.Message;
+            Msg.Error(ex.Message);
         }
     }
 
@@ -181,7 +173,7 @@
         }
         catch (Exception ex)
         {
-            panelError = ex.Message;
+            Msg.Error(ex.Message);
         }
     }
 

@@ -1,16 +1,9 @@
 @using System.Net.WebSockets
 @using System.Text
 @inject CacheManager Cache
+@inject MessageService Msg
 
 <div>
-    @if (fmError is not null)
-    {
-        <div class="alert alert-danger alert-dismissible py-2 mb-2">
-            <small>@fmError</small>
-            <button type="button" class="btn-close btn-close-sm" @onclick="() => fmError = null"></button>
-        </div>
-    }
-
     @* Breadcrumb *@
     <nav aria-label="breadcrumb" class="mb-2">
         <ol class="breadcrumb mb-0 small">
@@ -175,7 +168,6 @@
 
     [Parameter] public RelaySocket? Relay { get; set; }
 
-    private string? fmError;
     private string currentPath = "";
     private string[] pathSegments = [];
     private List<DirEntry>? entries;
@@ -212,7 +204,6 @@
         viewingFile = false;
         fileContent = "";
         fileHash = null;
-        fmError = null;
     }
 
     // --- Navigation ---
@@ -233,7 +224,6 @@
         UpdatePathSegments();
         loading = true;
         entries = null;
-        fmError = null;
         StateHasChanged();
 
         try
@@ -243,13 +233,13 @@
             if (response is null) return;
 
             var (parsed, parseError) = DirEntry.ParseDirectoryResponse(response);
-            if (parseError is not null) { fmError = parseError; return; }
+            if (parseError is not null) { Msg.Error(parseError); return; }
             entries = parsed;
             await CheckCachedFiles();
         }
         catch (Exception ex)
         {
-            fmError = $"Failed: {ex.Message}";
+            Msg.Error($"Failed: {ex.Message}");
         }
         finally
         {
@@ -309,10 +299,10 @@
             var response = await SendCommand(payload);
             if (response is null) return;
 
-            if (response.Length < 4) { fmError = "Invalid response"; return; }
+            if (response.Length < 4) { Msg.Error("Invalid response"); return; }
             var status = RelaySocket.ReadStatus(response);
-            if (status != 0) { fmError = $"Error reading file (status={status})"; return; }
-            if (response.Length < 12) { fmError = "Invalid response"; return; }
+            if (status != 0) { Msg.Error($"Error reading file (status={status})"); return; }
+            if (response.Length < 12) { Msg.Error("Invalid response"); return; }
 
             var (bytesRead, data) = RelaySocket.ReadFileContent(response);
             fileBytesRead = (long)bytesRead;
@@ -322,7 +312,7 @@
         }
         catch (Exception ex)
         {
-            fmError = $"Failed to read file: {ex.Message}";
+            Msg.Error($"Failed to read file: {ex.Message}");
         }
         finally
         {
@@ -355,14 +345,14 @@
 
             if (response.Length < 4) return;
             var status = RelaySocket.ReadStatus(response);
-            if (status != 0) { fmError = $"Hash error (status={status})"; return; }
+            if (status != 0) { Msg.Error($"Hash error (status={status})"); return; }
             if (response.Length < 36) return;
 
             fileHash = RelaySocket.ReadHash(response);
         }
         catch (Exception ex)
         {
-            fmError = $"Hash failed: {ex.Message}";
+            Msg.Error($"Hash failed: {ex.Message}");
         }
         finally
         {
@@ -413,11 +403,11 @@
             if (success)
                 cachedFiles.Add(entry.Name);
             else
-                fmError = $"Failed to download {entry.Name}";
+                Msg.Error($"Failed to download {entry.Name}");
         }
         catch (Exception ex)
         {
-            fmError = $"Download failed: {ex.Message}";
+            Msg.Error($"Download failed: {ex.Message}");
         }
         finally
         {
@@ -432,7 +422,7 @@
     {
         if (Relay is null || !Relay.IsConnected)
         {
-            fmError = "Not connected to agent";
+            Msg.Error("Not connected to agent");
             return null;
         }
 
@@ -442,7 +432,7 @@
         }
         catch (Exception ex)
         {
-            fmError = $"Command failed: {ex.Message}";
+            Msg.Error($"Command failed: {ex.Message}");
             return null;
         }
     }

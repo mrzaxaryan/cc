@@ -1,5 +1,6 @@
 @inject HttpClient Http
 @inject RelayStore Store
+@inject MessageService Msg
 
 <div class="d-flex align-items-center gap-3 mb-3">
     <h5 class="mb-0">Relay</h5>
@@ -81,11 +82,7 @@
     </div>
 </div>
 
-@if (error is not null)
-{
-    <div class="alert alert-danger">@error</div>
-}
-else if (status is null)
+@if (status is null)
 {
     <p><em>Loading...</em></p>
 }
@@ -234,7 +231,6 @@ else
 
 @code {
     private HealthStatus? status;
-    private string? error;
     private bool loading;
 
     private bool showAdd;
@@ -253,11 +249,10 @@ else
         try
         {
             status = await Http.GetFromJsonAsync<HealthStatus>($"{Store.HttpBaseUrl}/health");
-            error = null;
         }
         catch (Exception ex)
         {
-            error = $"Failed to load: {ex.Message}";
+            Msg.Error($"Failed to load relay status: {ex.Message}");
         }
         finally
         {

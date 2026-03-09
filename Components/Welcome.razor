@@ -1,5 +1,6 @@
 @inject CacheManager Cache
 @inject RelayStore Relay
+@inject MessageService Msg
 
 <div class="welcome-overlay">
     <div class="welcome-card">
@@ -16,11 +17,6 @@
             {
                 <p class="text-muted">Your previously selected cache folder needs permission to be re-granted. Click below to allow access.</p>
 
-                @if (pickError is not null)
-                {
-                    <div class="alert alert-danger py-2 mb-3"><small>@pickError</small></div>
-                }
-
                 <button class="btn btn-primary btn-lg me-2" @onclick="ReGrantPermission" disabled="@picking">
                     @if (picking)
                     {
@@ -33,11 +29,6 @@
             else
             {
                 <p class="text-muted">Select a folder on your device to use as the local file cache. Files downloaded from agents will be stored here.</p>
-
-                @if (pickError is not null)
-                {
-                    <div class="alert alert-danger py-2 mb-3"><small>@pickError</small></div>
-                }
 
                 <button class="btn btn-primary btn-lg" @onclick="PickFolder" disabled="@picking">
                     @if (picking)
@@ -53,11 +44,6 @@
         else if (step == Step.Relay)
         {
             <p class="text-muted">Configure the default relay server for agent connections.</p>
-
-            @if (relayError is not null)
-            {
-                <div class="alert alert-danger py-2 mb-3"><small>@relayError</small></div>
-            }
 
             <div class="mb-3 text-start">
                 <label class="form-label fw-semibold">Relay Name</label>
@@ -122,9 +108,7 @@
 
     private Step step;
     private bool picking;
-    private string? pickError;
     private bool saving;
-    private string? relayError;
     private string relayName = "";
     private string relayUrl = "";
 
@@ -163,7 +147,6 @@
     private async Task ReGrantPermission()
     {
         picking = true;
-        pickError = null;
         StateHasChanged();
 
         try
@@ -172,11 +155,11 @@
             if (success)
                 AdvanceFromCache();
             else
-                pickError = "Permission denied. Try again or pick a different folder.";
+                Msg.Error("Permission denied. Try again or pick a different folder.");
         }
         catch (Exception ex)
         {
-            pickError = $"Error: {ex.Message}";
+            Msg.Error(ex.Message);
         }
         finally
         {
@@ -187,7 +170,6 @@
     private async Task PickFolder()
     {
         picking = true;
-        pickError = null;
         StateHasChanged();
 
         try
@@ -199,12 +181,12 @@
             }
             else
             {
-                pickError = "No folder selected. Please try again.";
+                Msg.Warn("No folder selected. Please try again.");
             }
         }
         catch (Exception ex)
         {
-            pickError = $"Error: {ex.Message}";
+            Msg.Error(ex.Message);
         }
         finally
         {
@@ -224,13 +206,13 @@
 
         if (string.IsNullOrEmpty(url))
         {
-            relayError = "Relay URL is required.";
+            Msg.Error("Relay URL is required.");
             return;
         }
 
         if (!url.StartsWith("wss://") && !url.StartsWith("ws://"))
         {
-            relayError = "URL must start with wss:// or ws://";
+            Msg.Error("URL must start with wss:// or ws://");
             return;
         }
 
@@ -238,7 +220,6 @@
             name = "Default";
 
         saving = true;
-        relayError = null;
         StateHasChanged();
 
         try
@@ -261,7 +242,7 @@
         }
         catch (Exception ex)
         {
-            relayError = $"Error: {ex.Message}";
+            Msg.Error(ex.Message);
         }
         finally
         {

@@ -1,19 +1,13 @@
 @inject HttpClient Http
 @inject WindowManager Wm
 @inject RelayStore Store
+@inject MessageService Msg
 @using System.Net.WebSockets
 @using System.Text
 @using System.Text.Json
 @implements IAsyncDisposable
 
-@if (error is not null)
-{
-    <div class="alert alert-danger alert-dismissible">
-        @error
-        <button type="button" class="btn-close" @onclick="() => error = null"></button>
-    </div>
-}
-else if (agents is null)
+@if (agents is null)
 {
     <p><em>Connecting to events...</em></p>
 }
@@ -115,7 +109,6 @@ else
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
     private GroupInfo<AgentConnection>? agents;
-    private string? error;
     private bool eventsConnected;
 
     // Events WebSocket
@@ -255,7 +248,7 @@ else
 
             if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("type", out var typeProp))
             {
-                error = $"Unknown event: {json[..Math.Min(json.Length, 200)]}";
+                Msg.Warn($"Unknown event: {json[..Math.Min(json.Length, 200)]}");
                 return;
             }
 
@@ -277,7 +270,6 @@ else
                         _ = Wm.DisconnectAgent(id);
                 }
 
-                error = null;
             }
             else
             {
@@ -309,7 +301,7 @@ else
                     if (Wm.ConnectedAgentIds.Contains(agent.Id))
                     {
                         _ = Wm.DisconnectAgent(agent.Id);
-                        error = "Agent disconnected.";
+                        Msg.Warn("Agent disconnected.");
                     }
                 }
                 else if (type == "agent_relayed" && agent is not null)
@@ -333,14 +325,14 @@ else
                     if (Wm.ConnectedAgentIds.Contains(agent.Id))
                     {
                         _ = Wm.DisconnectAgent(agent.Id);
-                        error = "Agent relay disconnected.";
+                        Msg.Warn("Agent relay disconnected.");
                     }
                 }
             }
         }
         catch (Exception ex)
         {
-            error = $"Event parse error: {ex.Message} | {json[..Math.Min(json.Length, 200)]}";
+            Msg.Error($"Event parse error: {ex.Message}");
         }
     }
 
@@ -356,13 +348,12 @@ else
         var relay = new RelaySocket { BaseUrl = Store.WsBaseUrl };
         try
         {
-            error = null;
             await relay.Connect(agentId);
             return relay;
         }
         catch (Exception ex)
         {
-            error = $"Connection failed: {ex.Message}";
+            Msg.Error($"Connection failed: {ex.Message}");
             await relay.Disconnect();
             return null;
         }
