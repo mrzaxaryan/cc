@@ -7,35 +7,40 @@
 @using System.Text.Json
 @implements IAsyncDisposable
 
-@if (agents is null)
+@if (relayStates.Count == 0)
 {
     <p><em>Connecting to events...</em></p>
 }
 else
 {
-    <div class="card mb-3">
-        <div class="card-body d-flex align-items-center gap-3">
-            <div>
-                <h6 class="card-title mb-0">Connected</h6>
-                <p class="card-text display-6 mb-0">@agents.Count</p>
+    <div class="d-flex flex-wrap gap-3 mb-3">
+        @foreach (var rs in relayStates.Values)
+        {
+            <div class="card flex-fill" style="min-width:220px">
+                <div class="card-body d-flex align-items-center gap-3">
+                    <div>
+                        <h6 class="card-title mb-0">@rs.Name</h6>
+                        <p class="card-text display-6 mb-0">@(rs.Agents?.Count ?? 0)</p>
+                    </div>
+                    <div class="ms-auto d-flex align-items-center gap-2">
+                        <span class="badge @(rs.Connected ? "bg-success" : "bg-danger")">
+                            @(rs.Connected ? "Live" : "Disconnected")
+                        </span>
+                        @if (rs.Connected)
+                        {
+                            <button class="btn btn-outline-danger btn-sm" @onclick="() => DisconnectRelay(rs.Url)">Disconnect</button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-outline-success btn-sm" @onclick="() => ReconnectRelay(rs.Url)">Connect</button>
+                        }
+                    </div>
+                </div>
             </div>
-            <div class="ms-auto d-flex align-items-center gap-2">
-                <span class="badge @(eventsConnected ? "bg-success" : "bg-danger")">
-                    @(eventsConnected ? "Live" : "Disconnected")
-                </span>
-                @if (eventsConnected)
-                {
-                    <button class="btn btn-outline-danger btn-sm" @onclick="DisconnectEvents">Disconnect</button>
-                }
-                else
-                {
-                    <button class="btn btn-outline-success btn-sm" @onclick="ReconnectEvents">Connect</button>
-                }
-            </div>
-        </div>
+        }
     </div>
 
-    @if (agents.Connections.Length == 0)
+    @if (GetAllAgents().Count == 0)
     {
         <p><em>No agents connected.</em></p>
     }
@@ -46,6 +51,7 @@ else
                 <thead>
                     <tr>
                         <th>ID</th>
+                        <th>Source</th>
                         <th>IP</th>
                         <th>Location</th>
                         <th>Network</th>
@@ -56,13 +62,15 @@ else
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var agent in agents.Connections)
+                    @foreach (var (agent, relayUrl) in GetAllAgents())
                     {
+                        var relayName = relayStates.TryGetValue(relayUrl, out var s) ? s.Name : relayUrl;
                         <tr class="@(Wm.ConnectedAgentIds.Contains(agent.Id) ? "table-active" : "")"
                             style="cursor:context-menu"
-                            @oncontextmenu="(e) => ShowContextMenu(e, agent.Id)"
+                            @oncontextmenu="(e) => ShowContextMenu(e, agent.Id, relayUrl)"
                             @oncontextmenu:preventDefault="true">
                             <td><code>@agent.Id</code></td>
+                            <td><span class="badge bg-info">@relayName</span></td>
                             <td><code>@agent.Ip</code></td>
                             <td>@Formatters.FormatLocation(agent)</td>
                             <td>@Formatters.FormatNetwork(agent)</td>
@@ -103,12 +111,18 @@ else
 @code {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
-    private GroupInfo<AgentConnection>? agents;
-    private bool eventsConnected;
+    // Per-relay state
+    private class RelayState
+    {
+        public string Url { get; set; } = "";
+        public string Name { get; set; } = "";
+        public bool Connected { get; set; }
+        public GroupInfo<AgentConnection>? Agents { get; set; }
+        public ClientWebSocket? Ws { get; set; }
+        public CancellationTokenSource? Cts { get; set; }
+    }
 
-    // Events WebSocket
-    private ClientWebSocket? eventsWs;
-    private CancellationTokenSource? eventsCts;
+    private readonly Dictionary<string, RelayState> relayStates = new();
 
     private bool _disposing;
 
@@ -117,20 +131,48 @@ else
     private double ctxX;
     private double ctxY;
     private string? ctxAgentId;
+    private string? ctxRelayUrl;
 
     protected override async Task OnInitializedAsync()
     {
         await Store.LoadAsync();
-        _ = ConnectToEvents();
+        ConnectAllRelays();
+    }
+
+    private void ConnectAllRelays()
+    {
+        foreach (var relay in Store.Relays)
+        {
+            if (!relayStates.ContainsKey(relay.Url))
+            {
+                relayStates[relay.Url] = new RelayState { Url = relay.Url, Name = relay.Name };
+                _ = ConnectToEvents(relay.Url);
+            }
+        }
+    }
+
+    private List<(AgentConnection Agent, string RelayUrl)> GetAllAgents()
+    {
+        var result = new List<(AgentConnection, string)>();
+        foreach (var rs in relayStates.Values)
+        {
+            if (rs.Agents?.Connections is not null)
+            {
+                foreach (var agent in rs.Agents.Connections)
+                    result.Add((agent, rs.Url));
+            }
+        }
+        return result;
     }
 
     // --- Context menu ---
 
-    private void ShowContextMenu(MouseEventArgs e, string agentId)
+    private void ShowContextMenu(MouseEventArgs e, string agentId, string relayUrl)
     {
         ctxX = e.ClientX;
         ctxY = e.ClientY;
         ctxAgentId = agentId;
+        ctxRelayUrl = relayUrl;
         ctxVisible = true;
     }
 
@@ -139,8 +181,8 @@ else
     private async Task CtxOpenFiles()
     {
         HideContextMenu();
-        if (ctxAgentId is not null)
-            await OpenAgentWindow("File Manager", ctxAgentId);
+        if (ctxAgentId is not null && ctxRelayUrl is not null)
+            await OpenAgentWindow("File Manager", ctxAgentId, ctxRelayUrl);
     }
 
     private async Task CtxDisconnect()
@@ -150,57 +192,74 @@ else
             await Wm.DisconnectAgent(ctxAgentId);
     }
 
-    private async Task OpenAgentWindow(string panel, string agentId)
+    private async Task OpenAgentWindow(string panel, string agentId, string relayUrl)
     {
-        var relay = await CreateRelay(agentId);
+        var relay = await CreateRelay(agentId, relayUrl);
         if (relay is not null)
             Wm.OpenAgentWindow(panel, agentId, relay);
     }
 
-    // --- Events WebSocket ---
+    // --- Events WebSocket (per relay) ---
 
-    private async Task DisconnectEvents()
+    private async Task DisconnectRelay(string url)
     {
-        eventsCts?.Cancel();
-        agents = null;
-        await Wm.CloseAllWindows();
+        if (relayStates.TryGetValue(url, out var rs))
+        {
+            rs.Cts?.Cancel();
+
+            // Disconnect all agents from this relay
+            if (rs.Agents?.Connections is not null)
+            {
+                foreach (var agent in rs.Agents.Connections)
+                {
+                    if (Wm.ConnectedAgentIds.Contains(agent.Id))
+                        await Wm.DisconnectAgent(agent.Id);
+                }
+            }
+            rs.Agents = null;
+        }
     }
 
-    private void ReconnectEvents()
+    private void ReconnectRelay(string url)
     {
-        eventsCts?.Cancel();
-        _ = ConnectToEvents();
+        if (relayStates.TryGetValue(url, out var rs))
+        {
+            rs.Cts?.Cancel();
+            _ = ConnectToEvents(url);
+        }
     }
 
-    private async Task ConnectToEvents()
+    private async Task ConnectToEvents(string relayUrl)
     {
-        eventsCts = new CancellationTokenSource();
-        var token = eventsCts.Token;
+        if (!relayStates.TryGetValue(relayUrl, out var rs)) return;
+
+        rs.Cts = new CancellationTokenSource();
+        var token = rs.Cts.Token;
 
         while (!token.IsCancellationRequested)
         {
             try
             {
-                eventsWs = new ClientWebSocket();
-                await eventsWs.ConnectAsync(new Uri($"{Store.WsBaseUrl}/events"), token);
-                eventsConnected = true;
+                rs.Ws = new ClientWebSocket();
+                await rs.Ws.ConnectAsync(new Uri($"{relayUrl}/events"), token);
+                rs.Connected = true;
                 await InvokeAsync(StateHasChanged);
 
                 var buffer = new byte[65536];
-                while (eventsWs.State == WebSocketState.Open && !token.IsCancellationRequested)
+                while (rs.Ws.State == WebSocketState.Open && !token.IsCancellationRequested)
                 {
                     using var ms = new MemoryStream();
                     WebSocketReceiveResult result;
                     do
                     {
-                        result = await eventsWs.ReceiveAsync(buffer, token);
+                        result = await rs.Ws.ReceiveAsync(buffer, token);
                         ms.Write(buffer, 0, result.Count);
                     } while (!result.EndOfMessage);
 
                     if (result.MessageType == WebSocketMessageType.Close) break;
 
                     var json = Encoding.UTF8.GetString(ms.ToArray());
-                    HandleEventMessage(json);
+                    HandleEventMessage(json, relayUrl);
                     await InvokeAsync(StateHasChanged);
                 }
             }
@@ -214,10 +273,10 @@ else
             }
             finally
             {
-                eventsWs?.Dispose();
-                eventsWs = null;
-                eventsConnected = false;
-                agents = null;
+                rs.Ws?.Dispose();
+                rs.Ws = null;
+                rs.Connected = false;
+                rs.Agents = null;
                 if (!_disposing)
                     await InvokeAsync(StateHasChanged);
             }
@@ -227,8 +286,10 @@ else
         }
     }
 
-    private void HandleEventMessage(string json)
+    private void HandleEventMessage(string json, string relayUrl)
     {
+        if (!relayStates.TryGetValue(relayUrl, out var rs)) return;
+
         try
         {
             using var doc = JsonDocument.Parse(json);
@@ -245,19 +306,18 @@ else
             if (type == "agents" && root.TryGetProperty("agents", out var agentsProp))
             {
                 var agentArray = JsonSerializer.Deserialize<AgentConnection[]>(agentsProp.GetRawText(), JsonOptions) ?? [];
-                agents = new GroupInfo<AgentConnection>
+                rs.Agents = new GroupInfo<AgentConnection>
                 {
                     Count = agentArray.Length,
                     Connections = agentArray
                 };
 
-                // Disconnect windows for agents no longer in the list
+                // Disconnect windows for agents no longer in any relay
                 foreach (var id in Wm.ConnectedAgentIds.ToList())
                 {
-                    if (!agentArray.Any(a => a.Id == id))
+                    if (!GetAllAgents().Any(a => a.Agent.Id == id))
                         _ = Wm.DisconnectAgent(id);
                 }
-
             }
             else
             {
@@ -265,13 +325,13 @@ else
                     ? JsonSerializer.Deserialize<AgentConnection>(agentProp.GetRawText(), JsonOptions)
                     : null;
 
-                if (agents is null) return;
+                if (rs.Agents is null) return;
 
                 if (type == "agent_connected" && agent is not null)
                 {
-                    var list = agents.Connections.ToList();
+                    var list = rs.Agents.Connections.ToList();
                     list.Add(agent);
-                    agents = new GroupInfo<AgentConnection>
+                    rs.Agents = new GroupInfo<AgentConnection>
                     {
                         Count = list.Count,
                         Connections = list.ToArray()
@@ -279,8 +339,8 @@ else
                 }
                 else if (type == "agent_disconnected" && agent is not null)
                 {
-                    var list = agents.Connections.Where(a => a.Id != agent.Id).ToList();
-                    agents = new GroupInfo<AgentConnection>
+                    var list = rs.Agents.Connections.Where(a => a.Id != agent.Id).ToList();
+                    rs.Agents = new GroupInfo<AgentConnection>
                     {
                         Count = list.Count,
                         Connections = list.ToArray()
@@ -294,29 +354,29 @@ else
                 }
                 else if (type == "agent_relayed" && agent is not null)
                 {
-                    var existing = agents.Connections.FirstOrDefault(a => a.Id == agent.Id);
+                    var existing = rs.Agents.Connections.FirstOrDefault(a => a.Id == agent.Id);
                     if (existing is not null)
                     {
                         existing.Relayed = true;
                         existing.RelayId = agent.RelayId;
-                        agents = new GroupInfo<AgentConnection>
+                        rs.Agents = new GroupInfo<AgentConnection>
                         {
-                            Count = agents.Count,
-                            Connections = agents.Connections.ToArray()
+                            Count = rs.Agents.Count,
+                            Connections = rs.Agents.Connections.ToArray()
                         };
                     }
                 }
                 else if (type == "agent_unrelayed" && agent is not null)
                 {
-                    var existing = agents.Connections.FirstOrDefault(a => a.Id == agent.Id);
+                    var existing = rs.Agents.Connections.FirstOrDefault(a => a.Id == agent.Id);
                     if (existing is not null)
                     {
                         existing.Relayed = false;
                         existing.RelayId = null;
-                        agents = new GroupInfo<AgentConnection>
+                        rs.Agents = new GroupInfo<AgentConnection>
                         {
-                            Count = agents.Count,
-                            Connections = agents.Connections.ToArray()
+                            Count = rs.Agents.Count,
+                            Connections = rs.Agents.Connections.ToArray()
                         };
                     }
 
@@ -336,14 +396,14 @@ else
 
     // --- Relay connection ---
 
-    private async Task<RelaySocket?> CreateRelay(string agentId)
+    private async Task<RelaySocket?> CreateRelay(string agentId, string relayUrl)
     {
         // Reuse existing relay for this agent if one exists
         var existingWin = Wm.Windows.FirstOrDefault(w => w.AgentId == agentId && w.Relay is { IsConnected: true });
         if (existingWin?.Relay is not null)
             return existingWin.Relay;
 
-        var relay = new RelaySocket { BaseUrl = Store.WsBaseUrl };
+        var relay = new RelaySocket { BaseUrl = relayUrl };
         try
         {
             await relay.Connect(agentId);
@@ -360,12 +420,16 @@ else
     public async ValueTask DisposeAsync()
     {
         _disposing = true;
-        eventsCts?.Cancel();
-        if (eventsWs is not null)
+        foreach (var rs in relayStates.Values)
         {
-            eventsWs.Dispose();
-            eventsWs = null;
+            rs.Cts?.Cancel();
+            if (rs.Ws is not null)
+            {
+                rs.Ws.Dispose();
+                rs.Ws = null;
+            }
+            rs.Cts?.Dispose();
         }
-        eventsCts?.Dispose();
+        relayStates.Clear();
     }
 }
