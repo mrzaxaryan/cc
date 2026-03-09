@@ -11,5 +11,6 @@ builder.Services.AddSingleton<cc.Services.WindowManager>();
 builder.Services.AddScoped<cc.Services.RelayStore>();
 builder.Services.AddScoped<cc.Services.CacheManager>();
 builder.Services.AddSingleton<cc.Services.MessageService>();
+builder.Services.AddScoped<cc.Services.ThemeService>();
 
 await builder.Build().RunAsync();

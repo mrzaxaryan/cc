@@ -73,7 +73,7 @@ else
                             <td>@Formatters.FormatTimestamp(agent.ConnectedAt)</td>
                             <td>@agent.MessageCount</td>
                             <td>
-                                @if (agent.Relayed)
+                                @if (agent.Relayed || Wm.ConnectedAgentIds.Contains(agent.Id))
                                 {
                                     <span class="badge bg-success">Yes</span>
                                 }
@@ -82,7 +82,7 @@ else
                                     <span class="badge bg-secondary">No</span>
                                 }
                             </td>
-                            <td><code>@(agent.RelayId ?? "—")</code></td>
+                            <td><code>@(agent.RelayId ?? (Wm.ConnectedAgentIds.Contains(agent.Id) ? "local" : "—"))</code></td>
                         </tr>
                     }
                 </tbody>

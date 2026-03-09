@@ -2,6 +2,7 @@
 @inject CacheManager Cache
 @inject RelayStore Relay
 @inject WindowManager Wm
+@inject ThemeService Theme
 @implements IDisposable
 
 <div class="mdi-menubar">
@@ -15,6 +16,16 @@
     {
         <span class="mdi-status connected" title="Connected agent">@agentId</span>
     }
+    <button class="theme-toggle" @onclick="ToggleTheme" title="Toggle theme">
+        @if (Theme.Current == cc.Services.Theme.Dark)
+        {
+            <span>&#9788;</span>
+        }
+        else
+        {
+            <span>&#9790;</span>
+        }
+    </button>
 </div>
 
 <div class="mdi-workspace"></div>
@@ -34,6 +45,7 @@
     protected override void OnInitialized()
     {
         Wm.OnChanged += OnWmChanged;
+        Theme.OnChanged += OnThemeChanged;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -41,6 +53,7 @@
         if (firstRender && !initialized)
         {
             initialized = true;
+            await Theme.InitializeAsync();
             await Cache.InitializeAsync();
             await Relay.LoadAsync();
             if (Cache.SetupRequired || Cache.NeedsPermission || Relay.SetupRequired)
@@ -50,6 +63,10 @@
             }
         }
     }
+
+    private async Task ToggleTheme() => await Theme.Toggle();
+
+    private void OnThemeChanged() => InvokeAsync(StateHasChanged);
 
     private void OnWmChanged() => InvokeAsync(StateHasChanged);
 
@@ -62,5 +79,6 @@
     public void Dispose()
     {
         Wm.OnChanged -= OnWmChanged;
+        Theme.OnChanged -= OnThemeChanged;
     }
 }
