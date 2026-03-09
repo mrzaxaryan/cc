@@ -41,6 +41,9 @@ public class VfsStore
 
     public async Task<VfsDirectory> PutDirectoryAsync(string agentUuid, string parentId, string name, string remotePath, bool isDrive = false)
     {
+        // Normalize drive names: "C:\" → "C:"
+        name = name.TrimEnd('\\', '/');
+
         // Check if it already exists
         var existing = await FindDirectoryAsync(agentUuid, parentId, name);
         if (existing is not null) return existing;
@@ -74,7 +77,7 @@ public class VfsStore
     public async Task<VfsDirectory?> FindDirectoryAsync(string agentUuid, string parentId, string name)
     {
         var dirs = await _js.InvokeAsync<VfsDirectory[]>("ccDirectoryDb.getByParent", agentUuid, parentId);
-        return dirs?.FirstOrDefault(d => string.Equals(d.Name, name, StringComparison.OrdinalIgnoreCase));
+        return dirs?.FirstOrDefault(d => string.Equals(d.Name.TrimEnd('\\', '/'), name.TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>Resolve a remote path like "C:\Users\foo" to the directory ID, creating parents as needed.</summary>

@@ -19,17 +19,17 @@
             <li class="breadcrumb-item">
                 <a href="javascript:void(0)" @onclick="NavigateToRoot" @onclick:preventDefault>Root</a>
             </li>
+            @{ var lastCrumb = breadcrumbs.LastOrDefault(); }
             @foreach (var crumb in breadcrumbs)
             {
-                var c = crumb;
-                if (c == breadcrumbs.Last())
+                if (crumb == lastCrumb)
                 {
-                    <li class="breadcrumb-item active">@c.Name</li>
+                    <li class="breadcrumb-item active">@crumb.Name</li>
                 }
                 else
                 {
                     <li class="breadcrumb-item">
-                        <a href="javascript:void(0)" @onclick="() => NavigateToDirectory(c.Id)" @onclick:preventDefault>@c.Name</a>
+                        <a href="javascript:void(0)" @onclick="() => NavigateToDirectory(crumb.Id)" @onclick:preventDefault>@crumb.Name</a>
                     </li>
                 }
             }
@@ -37,7 +37,7 @@
     </nav>
 
     @* Agent selector at root level *@
-    @if (currentDirId == VfsStore.RootParentId && agentList is not null)
+    @if (currentDirId == VfsStore.RootParentId && currentAgentUuid is null && agentList is not null)
     {
         <div class="list-group list-group-flush" style="max-height:55vh;overflow-y:auto;">
             @if (loading)
@@ -50,10 +50,9 @@
             {
                 @foreach (var agent in agentList)
                 {
-                    var a = agent;
                     <div class="list-group-item py-1 font-monospace small d-flex align-items-center gap-1">
                         <span class="flex-shrink-0 me-1" style="width:1.2em;text-align:center;">&#x1f4bb;</span>
-                        <a href="javascript:void(0)" class="flex-grow-1 text-truncate" @onclick="() => NavigateToAgent(a.uuid)" @onclick:preventDefault>@a.name</a>
+                        <a href="javascript:void(0)" class="flex-grow-1 text-truncate" @onclick="() => NavigateToAgent(agent.uuid)" @onclick:preventDefault>@agent.name</a>
                     </div>
                 }
                 @if (agentList.Count == 0)
@@ -79,23 +78,21 @@
                         @onclick="NavigateUp">..</button>
                 @foreach (var dir in childDirs)
                 {
-                    var d = dir;
                     <div class="list-group-item py-1 font-monospace small d-flex align-items-center gap-1">
                         <span class="flex-shrink-0 me-1" style="width:1.2em;text-align:center;">&#x1f4c1;</span>
-                        <a href="javascript:void(0)" class="flex-grow-1 text-truncate" @onclick="() => NavigateToDirectory(d.Id)" @onclick:preventDefault>@d.Name</a>
+                        <a href="javascript:void(0)" class="flex-grow-1 text-truncate" @onclick="() => NavigateToDirectory(dir.Id)" @onclick:preventDefault>@dir.Name</a>
                         <button class="btn btn-outline-danger btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.65rem"
-                                @onclick="() => DeleteDir(d)" title="Delete">DEL</button>
+                                @onclick="() => DeleteDir(dir)" title="Delete">DEL</button>
                     </div>
                 }
                 @foreach (var file in childFiles)
                 {
-                    var f = file;
                     <div class="list-group-item py-1 font-monospace small d-flex align-items-center gap-1">
                         <span class="flex-shrink-0 me-1" style="width:1.2em;text-align:center;">&#x1f4c4;</span>
-                        <span class="flex-grow-1 text-truncate">@f.Name</span>
-                        <small class="text-muted flex-shrink-0">@Formatters.FormatSize((ulong)f.Size)</small>
+                        <span class="flex-grow-1 text-truncate">@file.Name</span>
+                        <small class="text-muted flex-shrink-0">@Formatters.FormatSize((ulong)file.Size)</small>
                         <button class="btn btn-outline-danger btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.65rem"
-                                @onclick="() => DeleteFile(f)" title="Delete">DEL</button>
+                                @onclick="() => DeleteFile(file)" title="Delete">DEL</button>
                     </div>
                 }
                 @if (childDirs.Count == 0 && childFiles.Count == 0)
@@ -143,7 +140,7 @@
         {
             cacheSize = await Cache.GetCacheSizeAsync();
 
-            if (currentDirId == VfsStore.RootParentId)
+            if (currentDirId == VfsStore.RootParentId && currentAgentUuid is null)
             {
                 // Show agents that have cached data
                 agentList = AgentDb.Agents.Values.Select(a => (uuid: a.Uuid, name: a.Name)).ToList();
@@ -179,10 +176,7 @@
     {
         currentAgentUuid = agentUuid;
         currentDirId = VfsStore.RootParentId;
-        breadcrumbs = new();
-        var agent = AgentDb.Agents.Values.FirstOrDefault(a => a.Uuid == agentUuid);
-        // Use a synthetic breadcrumb for the agent
-        breadcrumbs.Add(new VfsDirectory { Id = VfsStore.RootParentId, Name = agent?.Name ?? agentUuid });
+        breadcrumbs = new() { MakeAgentCrumb() };
         await Refresh();
     }
 
@@ -219,12 +213,8 @@
             crumbs.Insert(0, dir);
             id = dir.ParentId;
         }
-        // Prepend agent name
         if (currentAgentUuid is not null)
-        {
-            var agent = AgentDb.Agents.Values.FirstOrDefault(a => a.Uuid == currentAgentUuid);
-            crumbs.Insert(0, new VfsDirectory { Id = VfsStore.RootParentId, Name = agent?.Name ?? currentAgentUuid });
-        }
+            crumbs.Insert(0, MakeAgentCrumb());
         breadcrumbs = crumbs;
     }
 
@@ -269,6 +259,12 @@
         {
             Msg.Error(ex.Message);
         }
+    }
+
+    private VfsDirectory MakeAgentCrumb()
+    {
+        var name = AgentDb.Agents.Values.FirstOrDefault(a => a.Uuid == currentAgentUuid)?.Name ?? currentAgentUuid!;
+        return new VfsDirectory { Id = VfsStore.RootParentId, Name = name };
     }
 
     public void Dispose()
