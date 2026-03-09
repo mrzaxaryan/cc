@@ -76,8 +76,7 @@ Starts on `http://localhost:5057` / `https://localhost:7104`.
 ├── App.razor               # Root router component
 ├── Pages/
 │   ├── Home.razor          # Welcome page
-│   ├── Agents.razor        # Agent monitoring dashboard
-│   ├── Command.razor       # Connect to agent via relay, send commands
+│   ├── Agents.razor        # Agent monitoring + relay command interface
 │   └── NotFound.razor      # 404 page
 ├── Layout/
 │   ├── MainLayout.razor    # Sidebar + content layout
