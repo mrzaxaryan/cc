@@ -37,7 +37,7 @@
 
     @* Path bar *@
     <div class="input-group input-group-sm mb-3">
-        <input class="form-control font-monospace" @bind="currentPath" @onkeydown="OnPathKeyDown" placeholder="C:\" />
+        <input class="form-control font-monospace" @bind="currentPath" @onkeydown="OnPathKeyDown" />
         <button class="btn btn-outline-primary" @onclick="() => NavigateTo(currentPath)" disabled="@loading">Go</button>
         <button class="btn btn-outline-secondary" @onclick="NavigateUp" disabled="@loading">Up</button>
     </div>
@@ -176,7 +176,7 @@
     [Parameter] public RelaySocket? Relay { get; set; }
 
     private string? fmError;
-    private string currentPath = @"C:\";
+    private string currentPath = "";
     private string[] pathSegments = [];
     private List<DirEntry>? entries;
     private DirEntry? selectedEntry;
@@ -205,7 +205,7 @@
 
     public void Reset()
     {
-        currentPath = @"C:\";
+        currentPath = "";
         pathSegments = [];
         entries = null;
         selectedEntry = null;

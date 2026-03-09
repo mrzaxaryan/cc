@@ -10,7 +10,7 @@ public class WindowManager
     public RelaySocket Relay { get; } = new();
 
     // Command panel state
-    public string CommandPath { get; set; } = @"C:\";
+    public string CommandPath { get; set; } = "";
     public long ReadCount { get; set; } = 4096;
     public long FileOffset { get; set; }
     public long ChunkSize { get; set; } = 4096;
