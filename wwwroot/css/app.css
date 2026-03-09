@@ -113,3 +113,94 @@ code {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+/* Floating window */
+.app-window {
+    position: fixed;
+    z-index: 1040;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #495057;
+    border-radius: 6px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.35);
+    background: var(--bs-body-bg, #fff);
+    overflow: hidden;
+    min-width: 320px;
+    min-height: 48px;
+}
+
+.app-window.maximized {
+    left: 0 !important;
+    top: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    border-radius: 0;
+}
+
+.app-window.minimized {
+    height: auto !important;
+    min-height: 0;
+    resize: none;
+}
+
+.app-window.minimized .app-window-body {
+    display: none;
+}
+
+.app-window-titlebar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3rem 0.5rem;
+    background: #343a40;
+    color: #fff;
+    cursor: grab;
+    user-select: none;
+    flex-shrink: 0;
+    font-size: 0.85rem;
+}
+
+.app-window-titlebar:active {
+    cursor: grabbing;
+}
+
+.app-window-title {
+    flex: 1;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-window-btn {
+    background: none;
+    border: none;
+    color: #adb5bd;
+    font-size: 0.9rem;
+    line-height: 1;
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.app-window-btn:hover {
+    background: rgba(255,255,255,.15);
+    color: #fff;
+}
+
+.app-window-btn.close-btn:hover {
+    background: #dc3545;
+    color: #fff;
+}
+
+.app-window-body {
+    flex: 1;
+    overflow: auto;
+    padding: 0.75rem;
+}
+
+/* Resize handle */
+.app-window:not(.maximized):not(.minimized) {
+    resize: both;
+    overflow: auto;
+}
