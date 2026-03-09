@@ -16,11 +16,14 @@
 @* Floating windows *@
 @foreach (var win in Wm.Windows)
 {
-    <div class="app-window @(win.Maximized ? "maximized" : "") @(win.Minimized ? "minimized" : "")"
-         style="@(win.Maximized ? "" : $"left:{win.X}px;top:{win.Y}px;width:{win.Width}px;height:{win.Height}px;")">
+    if (win.Minimized) continue;
+    var w = win;
+    <div class="app-window @(win.Maximized ? "maximized" : "")"
+         style="@(win.Maximized ? "" : $"left:{win.X}px;top:{win.Y}px;width:{win.Width}px;height:{win.Height}px;z-index:{win.ZIndex};")"
+         @onmousedown="() => Wm.BringToFront(w)">
         <div class="app-window-titlebar" @onmousedown="(e) => OnDragStart(e, win)">
-            <span class="app-window-title">@win.Title — @(Wm.Relay.ConnectedAgentId ?? "")</span>
-            <button class="app-window-btn" @onclick="() => Wm.ToggleMinimize(win)" @onmousedown:stopPropagation="true" title="@(win.Minimized ? "Restore" : "Minimize")">@(win.Minimized ? "\u25a1" : "\u2014")</button>
+            <span class="app-window-title">@WindowTitle(win)</span>
+            <button class="app-window-btn" @onclick="() => Wm.ToggleMinimize(win)" @onmousedown:stopPropagation="true" title="Minimize">&minus;</button>
             <button class="app-window-btn" @onclick="() => Wm.ToggleMaximize(win)" @onmousedown:stopPropagation="true" title="@(win.Maximized ? "Restore" : "Maximize")">@(win.Maximized ? "\u25a1" : "\u29c9")</button>
             <button class="app-window-btn close-btn" @onclick="async () => await Wm.CloseWindow(win)" @onmousedown:stopPropagation="true" title="Close">&times;</button>
         </div>
@@ -69,10 +72,23 @@
                         </div>
                     </div>
 
-                    <pre class="bg-dark text-light p-3 rounded" style="max-height:300px;overflow-y:auto;white-space:pre-wrap;font-size:0.85rem;">@Wm.Output</pre>
+                    <pre class="p-3 rounded" style="max-height:300px;overflow-y:auto;white-space:pre-wrap;font-size:0.8rem;">@Wm.Output</pre>
                 </div>
             }
         </div>
+    </div>
+}
+
+@* Taskbar for minimized windows *@
+@{ var minimized = Wm.Windows.Where(w => w.Minimized).ToList(); }
+@if (minimized.Count > 0)
+{
+    <div class="mdi-taskbar">
+        @foreach (var win in minimized)
+        {
+            var w = win;
+            <button class="mdi-taskbar-item" @onclick="() => RestoreWindow(w)">@win.Title</button>
+        }
     </div>
 }
 
@@ -98,9 +114,26 @@
 
     private void OnWmChanged() => InvokeAsync(StateHasChanged);
 
+    private string WindowTitle(WindowState win)
+    {
+        var agentId = Wm.Relay.ConnectedAgentId;
+        return win.Panel switch
+        {
+            "File Manager" or "Commands" when agentId is not null => $"{win.Title} — {agentId}",
+            _ => win.Title
+        };
+    }
+
+    private void RestoreWindow(WindowState win)
+    {
+        win.Minimized = false;
+        Wm.BringToFront(win);
+    }
+
     private void OnDragStart(MouseEventArgs e, WindowState win)
     {
-        if (win.Maximized || win.Minimized) return;
+        if (win.Maximized) return;
+        Wm.BringToFront(win);
         _dragging = new DragState
         {
             Window = win,
@@ -115,7 +148,7 @@
     {
         if (_dragging is null) return;
         _dragging.Window.X = Math.Max(0, _dragging.StartWinX + (e.ClientX - _dragging.StartMouseX));
-        _dragging.Window.Y = Math.Max(0, _dragging.StartWinY + (e.ClientY - _dragging.StartMouseY));
+        _dragging.Window.Y = Math.Max(36, _dragging.StartWinY + (e.ClientY - _dragging.StartMouseY));
     }
 
     private void OnDragEnd(MouseEventArgs e) => _dragging = null;

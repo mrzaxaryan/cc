@@ -11,4 +11,5 @@ public class WindowState
     public double Height { get; set; }
     public bool Minimized { get; set; }
     public bool Maximized { get; set; }
+    public int ZIndex { get; set; }
 }

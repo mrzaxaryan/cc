@@ -5,6 +5,7 @@ namespace cc.Services;
 public class WindowManager
 {
     private int _nextId;
+    private int _topZ = 1040;
 
     public List<WindowState> Windows { get; } = new();
     public RelaySocket Relay { get; } = new();
@@ -22,16 +23,24 @@ public class WindowManager
 
     public void NotifyChanged() => OnChanged?.Invoke();
 
+    public void BringToFront(WindowState win)
+    {
+        _topZ++;
+        win.ZIndex = _topZ;
+        OnChanged?.Invoke();
+    }
+
     public void OpenWindow(string panel)
     {
         var existing = Windows.FirstOrDefault(w => w.Panel == panel);
         if (existing is not null)
         {
             existing.Minimized = false;
-            OnChanged?.Invoke();
+            BringToFront(existing);
             return;
         }
 
+        _topZ++;
         var offset = Windows.Count * 30;
         Windows.Add(new WindowState
         {
@@ -41,7 +50,8 @@ public class WindowManager
             X = 100 + offset,
             Y = 80 + offset,
             Width = panel switch { "File Manager" => 800, "Cache Manager" => 600, "Relay" => 900, "Agents" => 950, _ => 700 },
-            Height = 500
+            Height = 500,
+            ZIndex = _topZ
         });
         OnChanged?.Invoke();
     }

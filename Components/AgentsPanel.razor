@@ -107,18 +107,10 @@ else
             <button class="dropdown-item" @onclick="OpenPanelFiles">File Manager</button>
             <button class="dropdown-item" @onclick="OpenPanelCommands">Commands</button>
         }
-        else if (IsCtxAgentRelayed())
-        {
-            <span class="dropdown-item-text text-muted small">Relay already in use</span>
-        }
-        else if (Wm.Relay.ConnectedAgentId is null)
+        else
         {
             <button class="dropdown-item" @onclick="CtxConnectFiles">File Manager</button>
             <button class="dropdown-item" @onclick="CtxConnectCommands">Commands</button>
-        }
-        else
-        {
-            <span class="dropdown-item-text text-muted small">Already connected to another agent</span>
         }
     </div>
 }
@@ -158,16 +150,13 @@ else
 
     private void HideContextMenu() => ctxVisible = false;
 
-    private bool IsCtxAgentRelayed()
-    {
-        return agents?.Connections.Any(a => a.Id == ctxAgentId && a.Relayed) == true;
-    }
-
     private async Task CtxConnectFiles()
     {
         HideContextMenu();
         if (ctxAgentId is not null)
         {
+            if (Wm.Relay.ConnectedAgentId is not null)
+                await Wm.DisconnectRelay();
             await ConnectToAgent(ctxAgentId);
             Wm.OpenWindow("File Manager");
         }
@@ -178,6 +167,8 @@ else
         HideContextMenu();
         if (ctxAgentId is not null)
         {
+            if (Wm.Relay.ConnectedAgentId is not null)
+                await Wm.DisconnectRelay();
             await ConnectToAgent(ctxAgentId);
             Wm.OpenWindow("Commands");
         }
