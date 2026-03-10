@@ -52,28 +52,13 @@
         }
         else
         {
-            <CcTable Striped Fixed>
-                <colgroup>
-                    <col style="width:80px" />
-                    <col style="width:14%" />
-                    <col style="width:90px" />
-                    <col style="width:80px" />
-                    <col style="width:120px" />
-                    <col style="width:90px" />
-                    <col style="width:80px" />
-                    <col style="width:16%" />
-                    <col />
-                    <col style="width:110px" />
-                </colgroup>
+            <CcTable Striped Hover>
                 <thead>
                     <tr>
-                        <th>Status</th>
+                        <th class="ap-col-status"></th>
                         <th>Name</th>
-                        <th>UUID</th>
-                        <th>Relay Use</th>
                         <th>IP</th>
-                        <th>OS</th>
-                        <th>Arch</th>
+                        <th>System</th>
                         <th>Location</th>
                         <th>Network</th>
                         <th>Last Seen</th>
@@ -84,51 +69,37 @@
                     {
                         <CcTr Active="@(row.IsOnline && Wm.ConnectedAgentIds.Contains(row.AgentId))"
                               Dim="@(!row.IsOnline)"
-                              CssClass="ap-agent-row"
+                              CssClass="ap-row"
                               OnContextMenu="(e) => ShowContextMenu(e, row.AgentId, row.RelayUrl, row.IsOnline)"
                               PreventDefault>
-                            <td>
-                                @if (row.IsOnline)
-                                {
-                                    <CcBadge Variant="BadgeVariant.Success">Online</CcBadge>
-                                }
-                                else
-                                {
-                                    <CcBadge Variant="BadgeVariant.Muted">Offline</CcBadge>
-                                }
+                            <td class="ap-col-status">
+                                <span class="ap-dot @(row.IsOnline ? "ap-dot--on" : "ap-dot--off")"></span>
                             </td>
                             <td>
-                                @if (renamingUuid == row.Uuid)
-                                {
-                                    <CcInput @bind-Value="renameValue" Size="Size.Xs"
-                                             OnKeyDown="OnRenameKeyDown" OnBlur="CancelRename" />
-                                }
-                                else
-                                {
-                                    @row.Name
-                                }
-                            </td>
-                            <td><code title="@row.Uuid">@(row.Uuid is not null ? row.Uuid[..Math.Min(8, row.Uuid.Length)] : "...")</code></td>
-                            <td>
-                                @if (row.IsOnline && row.RelayUsed)
-                                {
-                                    <CcBadge Variant="BadgeVariant.Success" Size="Size.Xs">Used</CcBadge>
-                                }
-                                else if (row.IsOnline)
-                                {
-                                    <CcBadge Variant="BadgeVariant.Muted" Size="Size.Xs">Unused</CcBadge>
-                                }
-                                else
-                                {
-                                    <span class="ap-dim">—</span>
-                                }
+                                <div class="ap-name-cell">
+                                    @if (renamingUuid == row.Uuid)
+                                    {
+                                        <CcInput @bind-Value="renameValue" Size="Size.Xs"
+                                                 OnKeyDown="OnRenameKeyDown" OnBlur="CancelRename" />
+                                    }
+                                    else
+                                    {
+                                        <span class="ap-name">@row.Name</span>
+                                    }
+                                    <code class="ap-uuid" title="@row.Uuid">@(row.Uuid is not null ? row.Uuid[..Math.Min(8, row.Uuid.Length)] : "...")</code>
+                                </div>
                             </td>
                             <td><code>@row.Ip</code></td>
-                            <td>@row.Os</td>
-                            <td>@row.Arch</td>
+                            <td>
+                                <span class="ap-sys">@row.Os</span>
+                                @if (row.Arch != "—")
+                                {
+                                    <span class="ap-arch">@row.Arch</span>
+                                }
+                            </td>
                             <td>@row.Location</td>
-                            <td>@row.Network</td>
-                            <td>@row.LastSeen</td>
+                            <td class="ap-net-cell">@row.Network</td>
+                            <td class="ap-seen-cell">@row.LastSeen</td>
                         </CcTr>
                     }
                 </tbody>

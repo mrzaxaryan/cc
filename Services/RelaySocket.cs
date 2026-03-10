@@ -63,9 +63,20 @@ public class RelaySocket
 
     // --- Binary protocol command builders ---
 
+    /// <summary>Normalize path for the agent: if no drive letter, treat as Unix and ensure leading /.</summary>
+    private static string NormalizePath(string path)
+    {
+        if (string.IsNullOrEmpty(path)) return path;
+        var p = path.Replace('\\', '/');
+        // If path has no drive letter (e.g. "C:"), it's Unix — ensure leading /
+        if (p.Length > 0 && !p.Contains(':') && p[0] != '/')
+            p = "/" + p;
+        return p;
+    }
+
     public static byte[] BuildPathCommand(byte cmd, string path)
     {
-        var pathBytes = Encoding.Unicode.GetBytes(path + "\0");
+        var pathBytes = Encoding.Unicode.GetBytes(NormalizePath(path) + "\0");
         var payload = new byte[1 + pathBytes.Length];
         payload[0] = cmd;
         pathBytes.CopyTo(payload, 1);
@@ -74,7 +85,7 @@ public class RelaySocket
 
     public static byte[] BuildFileCommand(byte cmd, string path, long size, long offset)
     {
-        var pathBytes = Encoding.Unicode.GetBytes(path + "\0");
+        var pathBytes = Encoding.Unicode.GetBytes(NormalizePath(path) + "\0");
         var payload = new byte[1 + 8 + 8 + pathBytes.Length];
         payload[0] = cmd;
         BitConverter.TryWriteBytes(payload.AsSpan(1), (ulong)size);

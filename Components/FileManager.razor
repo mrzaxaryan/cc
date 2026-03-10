@@ -175,17 +175,6 @@
 
     private string currentPath = "";
     private string[] pathSegments = [];
-    private bool _isUnix;
-
-    /// <summary>Convert internal path (e.g. "mnt\" or "mnt\file.txt") to remote format ("/mnt/" or "/mnt/file.txt") for Unix agents.</summary>
-    private string ToRemotePath(string p)
-    {
-        if (!_isUnix) return p;
-        var hadTrailingSep = p.EndsWith('\\') || p.EndsWith('/');
-        var r = p.Replace('\\', '/').TrimEnd('/');
-        if (string.IsNullOrEmpty(r)) return "/";
-        return hadTrailingSep ? $"/{r}/" : $"/{r}";
-    }
     private List<DirEntry>? entries;
     private DirEntry? selectedEntry;
     private bool loading;
@@ -206,12 +195,6 @@
     {
         if (entries is not null) return;
         await Downloads.LoadAsync();
-
-        _isUnix = AgentId is not null
-            && RelaySvc.GetAllAgents().FirstOrDefault(a => a.Agent.Id == AgentId).Agent is { } agent
-            && !string.IsNullOrEmpty(agent.Os)
-            && !agent.Os.Contains("windows", StringComparison.OrdinalIgnoreCase)
-            && !agent.Os.Contains("uefi", StringComparison.OrdinalIgnoreCase);
 
         if (IsConnected)
             await NavigateTo(currentPath);
@@ -246,7 +229,6 @@
     {
         currentPath = "";
         pathSegments = [];
-        _isUnix = false;
         entries = null;
         selectedEntry = null;
         viewingFile = false;
@@ -327,7 +309,7 @@
 
         try
         {
-            var payload = RelaySocket.BuildPathCommand(0x01, ToRemotePath(currentPath));
+            var payload = RelaySocket.BuildPathCommand(0x01, currentPath);
             var response = await SendCommand(payload);
             if (response is null) return;
 
@@ -397,7 +379,7 @@
         fileLoading = true; fileContent = ""; fileBytesRead = 0; StateHasChanged();
         try
         {
-            var payload = RelaySocket.BuildFileCommand(0x02, ToRemotePath(viewingFilePath), PageSize, fileViewOffset);
+            var payload = RelaySocket.BuildFileCommand(0x02, viewingFilePath, PageSize, fileViewOffset);
             var response = await SendCommand(payload);
             if (response is null) return;
             if (response.Length < 4) { Msg.Error("Invalid response"); return; }
@@ -422,7 +404,7 @@
         fileLoading = true; fileHash = null; StateHasChanged();
         try
         {
-            var payload = RelaySocket.BuildFileCommand(0x03, ToRemotePath(viewingFilePath), PageSize, fileViewOffset);
+            var payload = RelaySocket.BuildFileCommand(0x03, viewingFilePath, PageSize, fileViewOffset);
             var response = await SendCommand(payload);
             if (response is null) return;
             if (response.Length < 4) return;
@@ -500,7 +482,7 @@
         StateHasChanged();
         try
         {
-            var success = await Cache.DownloadFromAgentAsync(Relay, ToRemotePath(record.RemotePath), record.CacheSubPath, record.DownloadedSize, cts.Token,
+            var success = await Cache.DownloadFromAgentAsync(Relay, record.RemotePath, record.CacheSubPath, record.DownloadedSize, cts.Token,
                 async (downloaded, _) => { await Downloads.UpdateProgressAsync(record.Id, downloaded); });
             if (success) await Downloads.CompleteAsync(record.Id);
             else await Downloads.FailAsync(record.Id, "Sync returned failure");

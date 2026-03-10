@@ -66,11 +66,72 @@
     color: var(--cc-accent-red);
 }
 
-/* Agent table */
-.ap-agent-row {
+/* Agent table rows */
+.ap-row {
     cursor: context-menu;
 }
 
-.ap-dim {
+.ap-col-status {
+    width: 28px;
+    text-align: center;
+}
+
+/* Status dot */
+.ap-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.ap-dot--on {
+    background: var(--cc-accent-green);
+    box-shadow: 0 0 4px var(--cc-accent-green);
+}
+
+.ap-dot--off {
+    background: var(--cc-text-dim);
+}
+
+/* Name + UUID stacked cell */
+.ap-name-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.ap-name {
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: var(--cc-text);
+}
+
+.ap-uuid {
+    font-size: 0.62rem;
     color: var(--cc-text-dim);
+}
+
+/* System column */
+.ap-sys {
+    font-weight: 500;
+}
+
+.ap-arch {
+    font-size: 0.68rem;
+    color: var(--cc-text-dim);
+    margin-left: 0.25rem;
+}
+
+/* Network & last seen */
+.ap-net-cell {
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ap-seen-cell {
+    white-space: nowrap;
+    color: var(--cc-text-muted);
+    font-size: 0.74rem;
 }
