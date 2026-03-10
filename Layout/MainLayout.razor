@@ -185,7 +185,16 @@
         if (dropdownOpen) Notif.MarkAllRead();
     }
 
-    private void OnFocusOut() => dropdownOpen = false;
+    private async void OnFocusOut()
+    {
+        // Delay so that button clicks inside the dropdown fire before it closes
+        await Task.Delay(200);
+        await InvokeAsync(() =>
+        {
+            dropdownOpen = false;
+            StateHasChanged();
+        });
+    }
     private async Task RemoveOne(int id) => await Notif.RemoveAsync(id);
     private async Task CopyText(string text) => await JS.InvokeVoidAsync("navigator.clipboard.writeText", text);
 
@@ -201,7 +210,7 @@
         return count > 99 ? "99+" : count.ToString();
     }
 
-    private void ReloadApp() => _ = JS.InvokeVoidAsync("location.reload");
+    private void ReloadApp() => _ = JS.InvokeVoidAsync("eval", "location.reload()");
 
     private static string FormatTime(double epochMs)
     {
