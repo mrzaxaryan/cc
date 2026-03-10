@@ -51,6 +51,14 @@ public static class Formatters
         return $"{bytes / (1024.0 * 1024 * 1024):F1} GB";
     }
 
+    public static string FormatSpeed(double bytesPerSec)
+    {
+        if (bytesPerSec < 1024) return $"{bytesPerSec:F0} B/s";
+        if (bytesPerSec < 1024 * 1024) return $"{bytesPerSec / 1024.0:F1} KB/s";
+        if (bytesPerSec < 1024 * 1024 * 1024) return $"{bytesPerSec / (1024.0 * 1024):F1} MB/s";
+        return $"{bytesPerSec / (1024.0 * 1024 * 1024):F1} GB/s";
+    }
+
     public static string FormatHexDump(byte[] data)
     {
         var sb = new System.Text.StringBuilder();

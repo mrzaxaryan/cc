@@ -19,6 +19,11 @@ public class DownloadRecord
     [JsonPropertyName("error")] public string? Error { get; set; }
     [JsonPropertyName("createdAt")] public double CreatedAt { get; set; }
     [JsonPropertyName("completedAt")] public double? CompletedAt { get; set; }
+
+    // Transient speed tracking (not persisted)
+    [JsonIgnore] public double SpeedBytesPerSec { get; set; }
+    [JsonIgnore] public long LastSpeedBytes { get; set; }
+    [JsonIgnore] public DateTime LastSpeedTime { get; set; }
 }
 
 public static class DownloadStatus
@@ -89,6 +94,26 @@ public class DownloadStore
 
         record.DownloadedSize = downloadedSize;
         record.Status = DownloadStatus.Downloading;
+
+        // Calculate speed
+        var now = DateTime.UtcNow;
+        if (record.LastSpeedTime == default)
+        {
+            record.LastSpeedTime = now;
+            record.LastSpeedBytes = downloadedSize;
+        }
+        else
+        {
+            var elapsed = (now - record.LastSpeedTime).TotalSeconds;
+            if (elapsed >= 0.5)
+            {
+                var bytesDelta = downloadedSize - record.LastSpeedBytes;
+                record.SpeedBytesPerSec = bytesDelta / elapsed;
+                record.LastSpeedBytes = downloadedSize;
+                record.LastSpeedTime = now;
+            }
+        }
+
         await _js.InvokeVoidAsync("ccDownloadDb.put", record);
         OnChanged?.Invoke();
     }

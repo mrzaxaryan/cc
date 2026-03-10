@@ -16,5 +16,6 @@ builder.Services.AddScoped<cc.Services.ThemeService>();
 builder.Services.AddScoped<cc.Services.AgentStore>();
 builder.Services.AddScoped<cc.Services.DownloadStore>();
 builder.Services.AddScoped<cc.Services.VfsStore>();
+builder.Services.AddScoped<cc.Services.RelayConnectionService>();
 
 await builder.Build().RunAsync();

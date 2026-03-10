@@ -1,21 +1,17 @@
-@inject HttpClient Http
 @inject WindowManager Wm
 @inject RelayStore Store
-@inject MessageService Msg
 @inject AgentStore AgentDb
-@using System.Net.WebSockets
-@using System.Text
-@using System.Text.Json
-@implements IAsyncDisposable
+@inject RelayConnectionService Relay
+@implements IDisposable
 
-@if (relayStates.Count == 0)
+@if (Relay.RelayStates.Count == 0)
 {
     <p><em>Connecting to events...</em></p>
 }
 else
 {
     <div class="d-flex flex-wrap gap-3 mb-3">
-        @foreach (RelayState rs in relayStates.Values)
+        @foreach (var rs in Relay.RelayStates.Values)
         {
             <div class="card flex-fill" style="min-width:200px">
                 <div class="card-body py-2 px-3 d-flex align-items-center gap-2">
@@ -37,7 +33,7 @@ else
                             var secs = Math.Max(0, (int)Math.Ceiling((rs.ReconnectAt.Value - DateTime.UtcNow).TotalSeconds));
                             <small class="text-warning" style="font-size:.65rem">
                                 Reconnecting in @(secs)s...
-                                <button class="btn btn-link btn-sm p-0 text-success" style="font-size:.65rem;vertical-align:baseline" @onclick="() => ForceReconnect(rs.Url)">Connect now</button>
+                                <button class="btn btn-link btn-sm p-0 text-success" style="font-size:.65rem;vertical-align:baseline" @onclick="() => Relay.ForceReconnect(rs.Url)">Connect now</button>
                             </small>
                         }
                         else
@@ -50,7 +46,7 @@ else
         }
     </div>
 
-    var rows = BuildAgentRows(GetAllAgents());
+    var rows = BuildAgentRows(Relay.GetAllAgents());
     if (rows.Count == 0)
     {
         <p><em>No agents known.</em></p>
@@ -147,23 +143,6 @@ else
 }
 
 @code {
-    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
-
-    // Per-relay state
-    private class RelayState
-    {
-        public string Url { get; set; } = "";
-        public string Name { get; set; } = "";
-        public bool Connected { get; set; }
-        public GroupInfo<AgentConnection>? Agents { get; set; }
-        public ClientWebSocket? Ws { get; set; }
-        public CancellationTokenSource? Cts { get; set; }
-        public DateTime? ReconnectAt { get; set; }
-    }
-
-    private readonly Dictionary<string, RelayState> relayStates = new();
-
-    private bool _disposing;
     private Timer? _countdownTimer;
 
     // Context menu
@@ -179,68 +158,14 @@ else
     private string renameValue = "";
     private bool _renameCommitting;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        await Store.LoadAsync();
-        await AgentDb.LoadAsync();
-        Store.OnChanged += OnRelayStoreChanged;
-        Wm.OnChanged += OnWmChanged;
+        Relay.OnChanged += OnServiceChanged;
+        Wm.OnChanged += OnServiceChanged;
         _countdownTimer = new Timer(_ => InvokeAsync(StateHasChanged), null, 1000, 1000);
-        SyncRelays();
     }
 
-    private void OnRelayStoreChanged()
-    {
-        InvokeAsync(() =>
-        {
-            SyncRelays();
-            StateHasChanged();
-        });
-    }
-
-    private void OnWmChanged() => InvokeAsync(StateHasChanged);
-
-    private void SyncRelays()
-    {
-        var currentUrls = Store.Relays.Select(r => r.Url).ToHashSet();
-
-        // Connect to newly added relays
-        foreach (var relay in Store.Relays)
-        {
-            if (!relayStates.ContainsKey(relay.Url))
-            {
-                relayStates[relay.Url] = new RelayState { Url = relay.Url, Name = relay.Name };
-                _ = ConnectToEvents(relay.Url);
-            }
-            else
-            {
-                // Update relay name if changed
-                relayStates[relay.Url].Name = relay.Name;
-            }
-        }
-
-        // Disconnect removed relays
-        var removedUrls = relayStates.Keys.Where(url => !currentUrls.Contains(url)).ToList();
-        foreach (var url in removedUrls)
-        {
-            _ = DisconnectRelay(url);
-            relayStates.Remove(url);
-        }
-    }
-
-    private List<(AgentConnection Agent, string RelayUrl)> GetAllAgents()
-    {
-        var result = new List<(AgentConnection, string)>();
-        foreach (var rs in relayStates.Values)
-        {
-            if (rs.Agents?.Connections is not null)
-            {
-                foreach (var agent in rs.Agents.Connections)
-                    result.Add((agent, rs.Url));
-            }
-        }
-        return result;
-    }
+    private void OnServiceChanged() => InvokeAsync(StateHasChanged);
 
     // --- View model ---
 
@@ -264,14 +189,13 @@ else
         var rows = new List<AgentRow>();
         var seenUuids = new HashSet<string>();
 
-        // Online agents first
         foreach (var (agent, relayUrl) in liveAgents)
         {
             var uuid = AgentDb.GetUuidByAgentId(agent.Id);
             if (uuid is not null) seenUuids.Add(uuid);
 
             var record = uuid is not null ? AgentDb.GetByUuid(uuid) : null;
-            var relayName = relayStates.TryGetValue(relayUrl, out var s) ? s.Name : relayUrl;
+            var relayName = Relay.RelayStates.TryGetValue(relayUrl, out var s) ? s.Name : relayUrl;
 
             rows.Add(new AgentRow
             {
@@ -289,7 +213,6 @@ else
             });
         }
 
-        // Offline agents from store
         foreach (var record in AgentDb.Agents.Values)
         {
             if (seenUuids.Contains(record.Uuid)) continue;
@@ -369,7 +292,7 @@ else
 
     private async Task OpenAgentWindow(string panel, string agentId, string relayUrl)
     {
-        var relay = await CreateRelay(agentId, relayUrl);
+        var relay = await Relay.CreateRelay(agentId, relayUrl);
         var uuid = AgentDb.GetUuidByAgentId(agentId);
         var name = uuid is not null ? AgentDb.GetByUuid(uuid)?.Name : null;
         Wm.OpenAgentWindow(panel, agentId, relay, name, uuid);
@@ -422,287 +345,10 @@ else
         }
     }
 
-    // --- UUID fetching ---
-
-    private async Task FetchUuid(AgentConnection agent, string relayUrl)
+    public void Dispose()
     {
-        var relay = new RelaySocket { BaseUrl = relayUrl };
-        try
-        {
-            await relay.Connect(agent.Id);
-            var response = await relay.SendAndReceive(new byte[] { 0x00 });
-            if (response is not null && response.Length >= 20)
-            {
-                var status = RelaySocket.ReadStatus(response);
-                if (status == 0)
-                {
-                    var uuid = RelaySocket.ReadUuid(response).ToString();
-                    var relayEntry = Store.GetByUrl(relayUrl);
-                    await AgentDb.UpsertAsync(uuid, agent, relayEntry?.Id ?? "");
-                    await InvokeAsync(StateHasChanged);
-                }
-            }
-        }
-        catch { }
-        finally
-        {
-            await relay.Disconnect();
-        }
-    }
-
-    private void FetchUuidsForAgents(AgentConnection[] agents, string relayUrl)
-    {
-        foreach (var agent in agents)
-        {
-            if (AgentDb.GetUuidByAgentId(agent.Id) is null)
-                _ = FetchUuid(agent, relayUrl);
-        }
-    }
-
-    // --- Events WebSocket (per relay) ---
-
-    private async Task DisconnectRelay(string url)
-    {
-        if (relayStates.TryGetValue(url, out var rs))
-        {
-            rs.Cts?.Cancel();
-
-            // Disconnect all agents from this relay
-            if (rs.Agents?.Connections is not null)
-            {
-                foreach (var agent in rs.Agents.Connections)
-                {
-                    if (Wm.ConnectedAgentIds.Contains(agent.Id))
-                        await Wm.DisconnectAgent(agent.Id);
-                }
-            }
-            rs.Agents = null;
-        }
-    }
-
-    private void ForceReconnect(string url)
-    {
-        if (relayStates.TryGetValue(url, out var rs))
-        {
-            rs.ReconnectAt = null;
-            rs.Cts?.Cancel();
-            _ = ConnectToEvents(url);
-        }
-    }
-
-    private async Task ConnectToEvents(string relayUrl)
-    {
-        if (!relayStates.TryGetValue(relayUrl, out var rs)) return;
-
-        rs.Cts = new CancellationTokenSource();
-        var token = rs.Cts.Token;
-
-        while (!token.IsCancellationRequested)
-        {
-            try
-            {
-                rs.Ws = new ClientWebSocket();
-                await rs.Ws.ConnectAsync(new Uri($"{relayUrl}/events"), token);
-                rs.Connected = true;
-                await InvokeAsync(StateHasChanged);
-
-                var buffer = new byte[65536];
-                while (rs.Ws.State == WebSocketState.Open && !token.IsCancellationRequested)
-                {
-                    using var ms = new MemoryStream();
-                    WebSocketReceiveResult result;
-                    do
-                    {
-                        result = await rs.Ws.ReceiveAsync(buffer, token);
-                        ms.Write(buffer, 0, result.Count);
-                    } while (!result.EndOfMessage);
-
-                    if (result.MessageType == WebSocketMessageType.Close) break;
-
-                    var json = Encoding.UTF8.GetString(ms.ToArray());
-                    HandleEventMessage(json, relayUrl);
-                    await InvokeAsync(StateHasChanged);
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                break;
-            }
-            catch (Exception) when (!token.IsCancellationRequested)
-            {
-                // Connection error — cleanup happens in finally
-            }
-            finally
-            {
-                rs.Ws?.Dispose();
-                rs.Ws = null;
-                rs.Connected = false;
-                rs.Agents = null;
-                if (!_disposing)
-                    await InvokeAsync(StateHasChanged);
-            }
-
-            if (!token.IsCancellationRequested)
-            {
-                rs.ReconnectAt = DateTime.UtcNow.AddSeconds(30);
-                if (!_disposing) await InvokeAsync(StateHasChanged);
-                await Task.Delay(30000, token).ContinueWith(_ => { });
-                rs.ReconnectAt = null;
-            }
-        }
-    }
-
-    private void HandleEventMessage(string json, string relayUrl)
-    {
-        if (!relayStates.TryGetValue(relayUrl, out var rs)) return;
-
-        try
-        {
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-
-            if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("type", out var typeProp))
-            {
-                Msg.Warn($"Unknown event: {json[..Math.Min(json.Length, 200)]}");
-                return;
-            }
-
-            var type = typeProp.GetString();
-
-            if (type == "agents" && root.TryGetProperty("agents", out var agentsProp))
-            {
-                var agentArray = JsonSerializer.Deserialize<AgentConnection[]>(agentsProp.GetRawText(), JsonOptions) ?? [];
-                rs.Agents = new GroupInfo<AgentConnection>
-                {
-                    Count = agentArray.Length,
-                    Connections = agentArray
-                };
-
-                FetchUuidsForAgents(agentArray, relayUrl);
-
-                // Disconnect windows for agents no longer in any relay
-                foreach (var id in Wm.ConnectedAgentIds.ToList())
-                {
-                    if (!GetAllAgents().Any(a => a.Agent.Id == id))
-                        _ = Wm.DisconnectAgent(id);
-                }
-            }
-            else
-            {
-                var agent = root.TryGetProperty("agent", out var agentProp)
-                    ? JsonSerializer.Deserialize<AgentConnection>(agentProp.GetRawText(), JsonOptions)
-                    : null;
-
-                if (rs.Agents is null) return;
-
-                if (type == "agent_connected" && agent is not null)
-                {
-                    var list = rs.Agents.Connections.ToList();
-                    list.Add(agent);
-                    rs.Agents = new GroupInfo<AgentConnection>
-                    {
-                        Count = list.Count,
-                        Connections = list.ToArray()
-                    };
-
-                    _ = FetchUuid(agent, relayUrl);
-                }
-                else if (type == "agent_disconnected" && agent is not null)
-                {
-                    var list = rs.Agents.Connections.Where(a => a.Id != agent.Id).ToList();
-                    rs.Agents = new GroupInfo<AgentConnection>
-                    {
-                        Count = list.Count,
-                        Connections = list.ToArray()
-                    };
-
-                    if (Wm.ConnectedAgentIds.Contains(agent.Id))
-                    {
-                        _ = Wm.DisconnectAgent(agent.Id);
-                        Msg.Warn("Agent disconnected.");
-                    }
-                }
-                else if (type == "agent_relayed" && agent is not null)
-                {
-                    var existing = rs.Agents.Connections.FirstOrDefault(a => a.Id == agent.Id);
-                    if (existing is not null)
-                    {
-                        existing.Relayed = true;
-                        existing.RelayId = agent.RelayId;
-                        rs.Agents = new GroupInfo<AgentConnection>
-                        {
-                            Count = rs.Agents.Count,
-                            Connections = rs.Agents.Connections.ToArray()
-                        };
-                    }
-                }
-                else if (type == "agent_unrelayed" && agent is not null)
-                {
-                    var existing = rs.Agents.Connections.FirstOrDefault(a => a.Id == agent.Id);
-                    if (existing is not null)
-                    {
-                        existing.Relayed = false;
-                        existing.RelayId = null;
-                        rs.Agents = new GroupInfo<AgentConnection>
-                        {
-                            Count = rs.Agents.Count,
-                            Connections = rs.Agents.Connections.ToArray()
-                        };
-                    }
-
-                    if (Wm.ConnectedAgentIds.Contains(agent.Id))
-                    {
-                        _ = Wm.DisconnectAgent(agent.Id);
-                        Msg.Warn("Agent relay disconnected.");
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Msg.Error($"Event parse error: {ex.Message}");
-        }
-    }
-
-    // --- Relay connection ---
-
-    private async Task<RelaySocket?> CreateRelay(string agentId, string relayUrl)
-    {
-        // Reuse existing relay for this agent if one exists
-        var existingWin = Wm.Windows.FirstOrDefault(w => w.AgentId == agentId && w.Relay is { IsConnected: true });
-        if (existingWin?.Relay is not null)
-            return existingWin.Relay;
-
-        var relay = new RelaySocket { BaseUrl = relayUrl };
-        try
-        {
-            await relay.Connect(agentId);
-            return relay;
-        }
-        catch (Exception ex)
-        {
-            Msg.Error($"Connection failed: {ex.Message}");
-            await relay.Disconnect();
-            return null;
-        }
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        _disposing = true;
         _countdownTimer?.Dispose();
-        Store.OnChanged -= OnRelayStoreChanged;
-        Wm.OnChanged -= OnWmChanged;
-        foreach (var rs in relayStates.Values)
-        {
-            rs.Cts?.Cancel();
-            if (rs.Ws is not null)
-            {
-                rs.Ws.Dispose();
-                rs.Ws = null;
-            }
-            rs.Cts?.Dispose();
-        }
-        relayStates.Clear();
+        Relay.OnChanged -= OnServiceChanged;
+        Wm.OnChanged -= OnServiceChanged;
     }
 }

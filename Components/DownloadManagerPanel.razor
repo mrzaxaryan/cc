@@ -1,6 +1,7 @@
 @inject DownloadStore Downloads
 @inject AgentStore AgentDb
 @inject RelayStore RelayDb
+@inject RelayConnectionService RelaySvc
 @inject CacheManager Cache
 @inject VfsStore Vfs
 @inject MessageService Msg
@@ -55,6 +56,10 @@
                                     {
                                         <span class="spinner-border spinner-border-sm flex-shrink-0" style="width:0.8rem;height:0.8rem;"></span>
                                         <span class="badge bg-info text-dark py-0 flex-shrink-0" style="font-size:0.6rem">@pct%</span>
+                                        @if (dl.SpeedBytesPerSec > 0)
+                                        {
+                                            <span class="text-muted flex-shrink-0" style="font-size:0.6rem">@Formatters.FormatSpeed(dl.SpeedBytesPerSec)</span>
+                                        }
                                         <button class="btn btn-outline-warning btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.6rem"
                                                 @onclick="() => PauseDownload(rec)" title="Pause">&#x23F8;</button>
                                     }
@@ -160,17 +165,8 @@
             var relayUrl = relayEntry?.Url;
             if (string.IsNullOrEmpty(relayUrl)) { Msg.Error("No relay URL for agent"); return; }
 
-            // Reuse existing relay from any open window for this agent
-            var existingWin = Wm.Windows.FirstOrDefault(w => w.AgentId == agent.AgentId && w.Relay is { IsConnected: true });
-            if (existingWin?.Relay is not null)
-            {
-                relay = existingWin.Relay;
-            }
-            else
-            {
-                relay = new RelaySocket { BaseUrl = relayUrl };
-                await relay.Connect(agent.AgentId);
-            }
+            relay = await RelaySvc.CreateRelay(agent.AgentId, relayUrl);
+            if (relay is null) return;
 
             // Set up cancellation via shared store
             var cts = Downloads.RegisterCts(dl.Id);

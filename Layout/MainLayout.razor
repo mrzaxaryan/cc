@@ -1,6 +1,7 @@
 @using cc.Components
 @inject CacheManager Cache
 @inject RelayStore Relay
+@inject RelayConnectionService RelaySvc
 @inject WindowManager Wm
 @inject ThemeService Theme
 @implements IDisposable
@@ -57,6 +58,7 @@
             await Theme.InitializeAsync();
             await Cache.InitializeAsync();
             await Relay.LoadAsync();
+            await RelaySvc.StartAsync();
             if (Cache.SetupRequired || Cache.NeedsPermission || Relay.SetupRequired)
             {
                 showWelcome = true;

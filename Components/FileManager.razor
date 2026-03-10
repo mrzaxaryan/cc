@@ -3,6 +3,9 @@
 @inject CacheManager Cache
 @inject VfsStore Vfs
 @inject DownloadStore Downloads
+@inject RelayConnectionService RelaySvc
+@inject AgentStore AgentDb
+@inject RelayStore RelayDb
 @inject MessageService Msg
 @implements IDisposable
 
@@ -102,6 +105,10 @@
                                                 <span class="d-flex align-items-center gap-1" style="font-size:0.6rem;">
                                                     <span class="spinner-border spinner-border-sm" style="width:0.8rem;height:0.8rem;"></span>
                                                     <span class="text-muted">@pct%</span>
+                                                    @if (dl.SpeedBytesPerSec > 0)
+                                                    {
+                                                        <span class="text-muted">@Formatters.FormatSpeed(dl.SpeedBytesPerSec)</span>
+                                                    }
                                                     <button class="btn btn-outline-warning btn-sm px-1 py-0" style="font-size:0.6rem"
                                                             @onclick:stopPropagation="true" @onclick="() => PauseDownload(e)" title="Pause">&#x23F8;</button>
                                                 </span>
@@ -112,7 +119,7 @@
                                                 <span class="d-flex align-items-center gap-1" style="font-size:0.6rem;">
                                                     <span class="badge bg-warning text-dark py-0" style="font-size:0.55rem;">@pctPaused%</span>
                                                     <button class="btn btn-outline-success btn-sm px-1 py-0" style="font-size:0.6rem"
-                                                            @onclick:stopPropagation="true" @onclick="() => ResumeDownload(e)" title="Resume" disabled="@(!IsConnected)">&#x25B6;</button>
+                                                            @onclick:stopPropagation="true" @onclick="() => ResumeDownload(e)" title="Resume" disabled="@(!IsConnected && !IsAgentOnline)">&#x25B6;</button>
                                                 </span>
                                             }
                                             else if (dl?.Status == DownloadStatus.Completed)
@@ -206,6 +213,7 @@
     [Parameter] public string? AgentUuid { get; set; }
 
     private bool IsConnected => Relay is not null && Relay.IsConnected;
+    private bool IsAgentOnline => AgentId is not null && RelaySvc.GetAllAgents().Any(a => a.Agent.Id == AgentId);
     private bool HasCache => Cache.HasDirectory && !string.IsNullOrEmpty(AgentUuid);
 
     private string currentPath = "";
@@ -622,7 +630,64 @@
         var remotePath = currentPath + entry.Name;
         var record = Downloads.Find(AgentUuid, remotePath);
         if (record is null) return;
-        await DownloadToCache(entry, record.DownloadedSize);
+
+        // If component relay is connected, use the normal path
+        if (IsConnected)
+        {
+            await DownloadToCache(entry, record.DownloadedSize);
+            return;
+        }
+
+        // Otherwise, create a relay via the service
+        if (string.IsNullOrEmpty(AgentId)) return;
+        var agentRecord = AgentDb.GetByUuid(AgentUuid);
+        if (agentRecord is null) return;
+        var relayEntry = !string.IsNullOrEmpty(agentRecord.RelayStoreId) ? RelayDb.GetById(agentRecord.RelayStoreId) : null;
+        var relayUrl = relayEntry?.Url;
+        if (string.IsNullOrEmpty(relayUrl)) return;
+
+        var relay = await RelaySvc.CreateRelay(AgentId, relayUrl);
+        if (relay is null) return;
+
+        var cts = Downloads.RegisterCts(record.Id);
+        _ownedDownloads.Add(record.Id);
+        StateHasChanged();
+
+        try
+        {
+            var success = await Cache.DownloadFromAgentAsync(
+                relay, record.RemotePath, record.CacheSubPath,
+                record.DownloadedSize, cts.Token,
+                async (downloaded, _) =>
+                {
+                    await Downloads.UpdateProgressAsync(record.Id, downloaded);
+                });
+
+            if (success)
+                await Downloads.CompleteAsync(record.Id);
+            else
+                await Downloads.FailAsync(record.Id, "Download returned failure");
+        }
+        catch (OperationCanceledException)
+        {
+            await Downloads.PauseAsync(record.Id);
+        }
+        catch (Exception ex)
+        {
+            if (cts.IsCancellationRequested)
+                await Downloads.PauseAsync(record.Id);
+            else
+            {
+                await Downloads.FailAsync(record.Id, ex.Message);
+                Msg.Error($"Download failed: {ex.Message}");
+            }
+        }
+        finally
+        {
+            _ownedDownloads.Remove(record.Id);
+            Downloads.RemoveCts(record.Id);
+            StateHasChanged();
+        }
     }
 
     private async Task RetryDownload(DirEntry entry)
