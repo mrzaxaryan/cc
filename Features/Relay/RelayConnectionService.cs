@@ -82,7 +82,20 @@ public class RelayConnectionService : IAsyncDisposable
         var removedUrls = _relayStates.Keys.Where(url => !enabledUrls.Contains(url)).ToList();
         foreach (var url in removedUrls)
         {
-            _ = DisconnectRelay(url);
+            // Capture state before removing so DisconnectRelay can still use it
+            if (_relayStates.TryGetValue(url, out var removedState))
+            {
+                removedState.Cts?.Cancel();
+                if (removedState.Agents?.Connections is not null)
+                {
+                    foreach (var agent in removedState.Agents.Connections)
+                    {
+                        if (_wm.ConnectedAgentIds.Contains(agent.Id))
+                            _ = _wm.DisconnectAgent(agent.Id);
+                    }
+                }
+                removedState.Agents = null;
+            }
             _relayStates.Remove(url);
         }
     }
@@ -251,21 +264,25 @@ public class RelayConnectionService : IAsyncDisposable
 
         while (!token.IsCancellationRequested)
         {
+            // Use a local variable so that if ForceReconnect starts a new
+            // ConnectToEvents, the old finally block won't dispose the new websocket.
+            ClientWebSocket? ws = null;
             try
             {
-                rs.Ws = new ClientWebSocket();
-                await rs.Ws.ConnectAsync(new Uri($"{relayUrl}/events"), token);
+                ws = new ClientWebSocket();
+                rs.Ws = ws;
+                await ws.ConnectAsync(new Uri($"{relayUrl}/events"), token);
                 rs.Connected = true;
                 _bus.Publish(new RelayConnectionChangedEvent(relayUrl, true));
 
                 var buffer = new byte[65536];
-                while (rs.Ws.State == WebSocketState.Open && !token.IsCancellationRequested)
+                while (ws.State == WebSocketState.Open && !token.IsCancellationRequested)
                 {
                     using var ms = new MemoryStream();
                     WebSocketReceiveResult result;
                     do
                     {
-                        result = await rs.Ws.ReceiveAsync(buffer, token);
+                        result = await ws.ReceiveAsync(buffer, token);
                         ms.Write(buffer, 0, result.Count);
                     } while (!result.EndOfMessage);
 
@@ -285,12 +302,16 @@ public class RelayConnectionService : IAsyncDisposable
             }
             finally
             {
-                rs.Ws?.Dispose();
-                rs.Ws = null;
-                rs.Connected = false;
-                rs.Agents = null;
-                if (!_disposing)
-                    _bus.Publish(new RelayConnectionChangedEvent(relayUrl, false));
+                ws?.Dispose();
+                // Only clear shared state if we're still the active connection
+                if (rs.Ws == ws)
+                {
+                    rs.Ws = null;
+                    rs.Connected = false;
+                    rs.Agents = null;
+                    if (!_disposing)
+                        _bus.Publish(new RelayConnectionChangedEvent(relayUrl, false));
+                }
             }
 
             if (!token.IsCancellationRequested)

@@ -47,7 +47,7 @@ public class SearchService : IDisposable
 
         _subscriptions.Add(_bus.Subscribe<SearchItemQueuedEvent>(e => OnSearchItemQueued(e.AgentUuid)));
         _subscriptions.Add(_bus.Subscribe<ServiceStateChangedEvent>(_ => OnServiceStateChanged()));
-        _subscriptions.Add(_bus.Subscribe<AgentOnlineEvent>(e => OnAgentOnline(e.Uuid, e.AgentId, e.RelayUrl)));
+        _subscriptions.Add(_bus.Subscribe<AgentOnlineEvent>(e => AutoResumeAsync(e.Uuid, e.AgentId, e.RelayUrl)));
     }
 
     private async Task ResetStaleSearches()
@@ -66,11 +66,6 @@ public class SearchService : IDisposable
             if (_serviceState.IsEffectivelyPaused(ServiceName.Search, uuid))
                 _store.Cts.CancelAll();
         }
-    }
-
-    private async void OnAgentOnline(string uuid, string agentId, string relayUrl)
-    {
-        await AutoResumeAsync(uuid, agentId, relayUrl);
     }
 
     private async Task AutoResumeAsync(string uuid, string agentId, string relayUrl)
