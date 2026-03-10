@@ -11,34 +11,22 @@
         var filtered = selectedRelay is null ? rows : rows.Where(r => r.RelayUrl == selectedRelay).ToList();
     }
 
-    @if (relays.Count > 1)
-    {
-        <div class="ap-relay-bar">
-            <button class="ap-relay-tab @(selectedRelay is null ? "ap-relay-tab--active" : "")"
-                    @onclick="() => selectedRelay = null">
-                All <span class="ap-relay-count">@rows.Count</span>
+    <div class="ap-relay-bar">
+        <button class="ap-relay-tab @(selectedRelay is null ? "ap-relay-tab--active" : "")"
+                @onclick="() => selectedRelay = null">
+            All <span class="ap-relay-count">@rows.Count</span>
+        </button>
+        @foreach (var relay in relays)
+        {
+            var url = relay.Url;
+            <button class="ap-relay-tab @(selectedRelay == url ? "ap-relay-tab--active" : "")"
+                    @onclick="() => selectedRelay = url">
+                <span class="ap-dot @(relay.Connected ? "ap-dot--on" : "ap-dot--off")"></span>
+                @relay.Name
+                <span class="ap-relay-count">@relay.AgentCount</span>
             </button>
-            @foreach (var relay in relays)
-            {
-                var url = relay.Url;
-                <button class="ap-relay-tab @(selectedRelay == url ? "ap-relay-tab--active" : "")"
-                        @onclick="() => selectedRelay = url">
-                    <span class="ap-dot @(relay.Connected ? "ap-dot--on" : "ap-dot--off")"></span>
-                    @relay.Name
-                    <span class="ap-relay-count">@rows.Count(r => r.RelayUrl == url)</span>
-                </button>
-            }
-        </div>
-    }
-    else if (relays.Count == 1)
-    {
-        <div class="ap-relay-bar">
-            <span class="ap-relay-single">
-                <span class="ap-dot @(relays[0].Connected ? "ap-dot--on" : "ap-dot--off")"></span>
-                @relays[0].Name
-            </span>
-        </div>
-    }
+        }
+    </div>
 
     @if (filtered.Count == 0)
     {
@@ -133,6 +121,7 @@
         public string Url { get; set; } = "";
         public string Name { get; set; } = "";
         public bool Connected { get; set; }
+        public int AgentCount { get; set; }
     }
 
     private class AgentRow
@@ -155,7 +144,13 @@
         var tabs = new List<RelayTab>();
         foreach (var (url, rs) in Relay.RelayStates)
         {
-            tabs.Add(new RelayTab { Url = url, Name = rs.Name, Connected = rs.Connected });
+            tabs.Add(new RelayTab
+            {
+                Url = url,
+                Name = rs.Name,
+                Connected = rs.Connected,
+                AgentCount = rs.Agents?.Connections?.Length ?? 0
+            });
         }
         return tabs;
     }
