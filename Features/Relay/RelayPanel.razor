@@ -242,6 +242,8 @@
                                         <th>ID</th>
                                         <th>IP</th>
                                         <th>Location</th>
+                                        <th>Network</th>
+                                        <th>TLS</th>
                                         <th>User Agent</th>
                                         <th>Connected At</th>
                                     </tr>
@@ -253,6 +255,8 @@
                                             <td><code>@listener.Id</code></td>
                                             <td><code>@listener.Ip</code></td>
                                             <td>@Formatters.FormatListenerLocation(listener)</td>
+                                            <td>@Formatters.FormatNetwork(listener)</td>
+                                            <td><code>@listener.TlsVersion</code></td>
                                             <td class="rp-ua-cell" title="@listener.UserAgent">@listener.UserAgent</td>
                                             <td>@Formatters.FormatTimestamp(listener.ConnectedAt)</td>
                                         </tr>

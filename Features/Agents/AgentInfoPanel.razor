@@ -90,13 +90,13 @@
 
         // Network
         var ip = live?.Ip ?? stored?.Ip;
-        if (HasValue(ip)) rows.Add(new("IP", $"<code>{ip}</code>"));
+        if (HasValue(ip)) rows.Add(new("IP Address", $"<code>{ip}</code>"));
 
         // System
         var os = Pick(live?.Os, stored?.Os);
-        if (HasValue(os)) rows.Add(new("OS", os!));
+        if (HasValue(os)) rows.Add(new("Operating System", os!));
         var arch = Pick(live?.Arch, stored?.Arch);
-        if (HasValue(arch)) rows.Add(new("Arch", arch!));
+        if (HasValue(arch)) rows.Add(new("Architecture", arch!));
 
         // Geo
         var country = Pick(live?.Country, stored?.Country);
@@ -119,7 +119,7 @@
         // ASN
         var asn = live?.Asn ?? 0;
         var asOrg = live?.AsOrganization;
-        if (asn > 0) rows.Add(new("ASN", asn.ToString()));
+        if (asn > 0) rows.Add(new("Autonomous System Number", asn.ToString()));
         if (HasValue(asOrg)) rows.Add(new("AS Organization", asOrg!));
 
         // Connection details
@@ -127,10 +127,10 @@
         rows.Add(new("User Agent", HasValue(ua) ? ua! : "\u2014", "ai-ua"));
 
         var tls = live?.TlsVersion;
-        if (HasValue(tls)) rows.Add(new("TLS", tls!));
+        if (HasValue(tls)) rows.Add(new("TLS Version", tls!));
 
         if (live is not null && HasValue(live.HttpVersion))
-            rows.Add(new("HTTP", live.HttpVersion));
+            rows.Add(new("HTTP Version", live.HttpVersion));
 
         var reqPri = live?.RequestPriority;
         if (HasValue(reqPri)) rows.Add(new("Request Priority", reqPri!));

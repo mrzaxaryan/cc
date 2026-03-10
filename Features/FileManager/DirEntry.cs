@@ -1,10 +1,25 @@
 namespace cc.Features.FileManager;
 
+/// <summary>
+/// A single directory entry parsed from the agent's binary directory-listing response.
+/// Each entry is a fixed-size 545-byte block laid out as:
+///   Bytes 0–511   : Name (up to 256 UTF-16 chars)
+///   Bytes 512–519 : CreationTime (uint64, Windows FILETIME)
+///   Bytes 520–527 : LastModifiedTime (uint64, Windows FILETIME)
+///   Bytes 528–535 : Size in bytes (uint64)
+///   Bytes 536–539 : Type (uint32, file-system type attribute)
+///   Byte  540     : IsDirectory flag
+///   Byte  541     : IsDrive flag
+///   Byte  542     : IsHidden flag
+///   Byte  543     : IsSystem flag
+///   Byte  544     : IsReadOnly flag
+/// </summary>
 public record DirEntry(
     string Name,
     ulong CreationTime,
     ulong LastModifiedTime,
     ulong Size,
+    /// <summary>File-system type attribute (e.g. FILE_ATTRIBUTE_* flags).</summary>
     uint Type,
     bool IsDirectory,
     bool IsDrive,
@@ -12,6 +27,7 @@ public record DirEntry(
     bool IsSystem,
     bool IsReadOnly)
 {
+    /// <summary>Fixed byte size of one serialized directory entry.</summary>
     private const int EntrySize = 545;
 
     public static (List<DirEntry> entries, string? error) ParseDirectoryResponse(byte[] response)

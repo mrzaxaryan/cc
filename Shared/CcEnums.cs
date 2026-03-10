@@ -33,9 +33,14 @@ public enum ProgressVariant
 
 public enum Size
 {
+    /// <summary>Small</summary>
     Sm,
+    /// <summary>Extra-small</summary>
     Xs,
+    /// <summary>Medium (default)</summary>
     Md,
+    /// <summary>Large</summary>
     Lg,
+    /// <summary>Icon-only (compact square)</summary>
     Icon
 }

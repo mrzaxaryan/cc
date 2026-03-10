@@ -20,7 +20,8 @@ public class SearchRecord
     [JsonPropertyName("filesFound")] public int FilesFound { get; set; }
     [JsonPropertyName("filesQueued")] public int FilesQueued { get; set; }
     [JsonPropertyName("autoDownload")] public bool AutoDownload { get; set; }
-    [JsonPropertyName("pendingDirs")] public string PendingDirsJson { get; set; } = "[]"; // JSON array of dirs still to scan
+    /// <summary>JSON-serialized array of directory paths still to be scanned (e.g. ["C:/Users","C:/Temp"]).</summary>
+    [JsonPropertyName("pendingDirs")] public string PendingDirsJson { get; set; } = "[]";
     [JsonPropertyName("createdAt")] public double CreatedAt { get; set; }
     [JsonPropertyName("completedAt")] public double? CompletedAt { get; set; }
 
@@ -32,12 +33,21 @@ public class SearchRecord
     }
 }
 
+/// <summary>
+/// Search lifecycle states: Pending → Scanning → Completed/Failed.
+/// A search can be Paused from Scanning and resumed back.
+/// </summary>
 public static class SearchStatus
 {
+    /// <summary>Newly created, not yet started.</summary>
     public const string Pending = "pending";
+    /// <summary>Actively scanning directories on the agent.</summary>
     public const string Scanning = "scanning";
+    /// <summary>Temporarily suspended by the user; can be resumed.</summary>
     public const string Paused = "paused";
+    /// <summary>All directories scanned successfully.</summary>
     public const string Completed = "completed";
+    /// <summary>Scan terminated due to an error.</summary>
     public const string Failed = "failed";
 }
 
@@ -48,6 +58,7 @@ public class SearchStore
     private List<SearchRecord> _cache = new();
     private bool _loaded;
 
+    /// <summary>CTS (CancellationTokenSource) manager for cancelling in-flight scan operations.</summary>
     public readonly CtsManager Cts = new();
 
     public SearchStore(IJSRuntime js, IEventBus bus)

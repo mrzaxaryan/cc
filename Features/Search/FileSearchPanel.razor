@@ -133,7 +133,7 @@
                     var pct = s.DirsTotal > 0 ? (int)(s.DirsScanned * 100 / s.DirsTotal) : 0;
                     <div class="scan-item @StatusClass(s.Status)">
                         <div class="scan-item-row">
-                            <span class="scan-item-icon">@StatusIcon(s.Status)</span>
+                            <span class="scan-item-icon" title="@StatusLabel(s.Status)">@StatusIcon(s.Status)</span>
                             <div class="scan-item-info">
                                 <span class="scan-item-path" title="@(string.IsNullOrEmpty(s.RootPath) ? "Full filesystem" : s.RootPath)">@(string.IsNullOrEmpty(s.RootPath) ? "Full filesystem" : s.RootPath)</span>
                                 <span class="scan-item-meta">
@@ -407,11 +407,20 @@
 
     private static string StatusIcon(string s) => s switch
     {
-        SearchStatus.Scanning => "\u25CF",
-        SearchStatus.Paused => "\u25A0",
-        SearchStatus.Completed => "\u2713",
-        SearchStatus.Failed => "\u2717",
-        _ => "\u25CB"
+        SearchStatus.Scanning => "\u25CF",  // filled circle
+        SearchStatus.Paused => "\u25A0",    // filled square
+        SearchStatus.Completed => "\u2713", // check mark
+        SearchStatus.Failed => "\u2717",    // X mark
+        _ => "\u25CB"                       // empty circle
+    };
+
+    private static string StatusLabel(string s) => s switch
+    {
+        SearchStatus.Scanning => "Scanning",
+        SearchStatus.Paused => "Paused",
+        SearchStatus.Completed => "Completed",
+        SearchStatus.Failed => "Failed",
+        _ => ""
     };
 
     private static string StatusClass(string s) => s switch

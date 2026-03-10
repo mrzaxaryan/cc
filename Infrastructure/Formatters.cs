@@ -26,13 +26,11 @@ public static class Formatters
     public static string FormatLocation(AgentRecord r) =>
         FormatLocation(r.City, r.Region, r.Country, "\u2014");
 
-    public static string FormatListenerLocation(EventListenerConnection c)
-    {
-        var parts = new List<string>();
-        if (!string.IsNullOrEmpty(c.City)) parts.Add(c.City);
-        if (!string.IsNullOrEmpty(c.Country)) parts.Add(c.Country);
-        return parts.Count > 0 ? string.Join(", ", parts) : "-";
-    }
+    public static string FormatListenerLocation(EventListenerConnection c) =>
+        FormatLocation(c.City, c.Region, c.Country);
+
+    public static string FormatNetwork(EventListenerConnection c) =>
+        FormatNetwork(c.Asn, c.AsOrganization);
 
     public static string FormatNetwork(int asn, string? asOrganization, string fallback = "-")
     {

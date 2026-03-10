@@ -28,13 +28,23 @@ public class DownloadRecord
     [JsonIgnore] public DateTime LastSpeedTime { get; set; }
 }
 
+/// <summary>
+/// Download lifecycle states: Pending → Queued → Downloading → Completed/Failed.
+/// A download can be Paused from Downloading and resumed back to Queued.
+/// </summary>
 public static class DownloadStatus
 {
+    /// <summary>Newly created, not yet queued for processing.</summary>
     public const string Pending = "pending";
+    /// <summary>Waiting in the download queue for an available slot.</summary>
     public const string Queued = "queued";
+    /// <summary>Actively transferring data from the agent.</summary>
     public const string Downloading = "downloading";
+    /// <summary>Temporarily suspended by the user; can be resumed.</summary>
     public const string Paused = "paused";
+    /// <summary>Transfer finished successfully.</summary>
     public const string Completed = "completed";
+    /// <summary>Transfer terminated due to an error.</summary>
     public const string Failed = "failed";
 }
 
@@ -45,6 +55,7 @@ public class DownloadStore
     private List<DownloadRecord> _cache = new();
     private bool _loaded;
 
+    /// <summary>CTS (CancellationTokenSource) manager for cancelling in-flight download operations.</summary>
     public readonly CtsManager Cts = new();
 
     public DownloadStore(IJSRuntime js, IEventBus bus)

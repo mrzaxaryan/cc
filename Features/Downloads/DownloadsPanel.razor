@@ -81,7 +81,7 @@
                     var pct = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
                     <div class="sm-item @StatusClass(dl.Status)">
                         <div class="sm-item-row">
-                            <span class="sm-item-icon">@StatusIcon(dl.Status)</span>
+                            <span class="sm-item-icon" title="@StatusLabel(dl.Status)">@StatusIcon(dl.Status)</span>
                             <div class="sm-item-info">
                                 <span class="sm-item-name" title="@dl.RemotePath">@dl.FileName</span>
                                 <span class="sm-item-meta">
@@ -186,12 +186,22 @@
 
     private static string StatusIcon(string s) => s switch
     {
-        DownloadStatus.Downloading => "\u25CF",
-        DownloadStatus.Queued => "\u25CB",
-        DownloadStatus.Paused => "\u25A0",
-        DownloadStatus.Completed => "\u2713",
-        DownloadStatus.Failed => "\u2717",
+        DownloadStatus.Downloading => "\u25CF", // filled circle
+        DownloadStatus.Queued => "\u25CB",      // empty circle
+        DownloadStatus.Paused => "\u25A0",      // filled square
+        DownloadStatus.Completed => "\u2713",   // check mark
+        DownloadStatus.Failed => "\u2717",      // X mark
         _ => "\u25CB"
+    };
+
+    private static string StatusLabel(string s) => s switch
+    {
+        DownloadStatus.Downloading => "Downloading",
+        DownloadStatus.Queued => "Queued",
+        DownloadStatus.Paused => "Paused",
+        DownloadStatus.Completed => "Completed",
+        DownloadStatus.Failed => "Failed",
+        _ => ""
     };
 
     private static string StatusClass(string s) => s switch

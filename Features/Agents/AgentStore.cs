@@ -4,20 +4,27 @@ using Microsoft.JSInterop;
 
 namespace cc.Features.Agents;
 
+/// <summary>Persisted agent metadata stored in IndexedDB.</summary>
 public class AgentRecord
 {
     [JsonPropertyName("uuid")] public string Uuid { get; set; } = "";
     [JsonPropertyName("name")] public string Name { get; set; } = "";
+    /// <summary>Key into the relay store identifying which relay this agent connects through.</summary>
     [JsonPropertyName("relayStoreId")] public string RelayStoreId { get; set; } = "";
+    /// <summary>IP (Internet Protocol) address of the agent.</summary>
     [JsonPropertyName("ip")] public string Ip { get; set; } = "";
     [JsonPropertyName("country")] public string Country { get; set; } = "";
     [JsonPropertyName("city")] public string City { get; set; } = "";
     [JsonPropertyName("region")] public string Region { get; set; } = "";
     [JsonPropertyName("continent")] public string Continent { get; set; } = "";
     [JsonPropertyName("timezone")] public string Timezone { get; set; } = "";
+    /// <summary>Operating system of the agent (e.g. "Windows", "Linux").</summary>
     [JsonPropertyName("os")] public string Os { get; set; } = "";
+    /// <summary>CPU architecture of the agent (e.g. "x64", "arm64").</summary>
     [JsonPropertyName("arch")] public string Arch { get; set; } = "";
+    /// <summary>Unix timestamp (ms) when this agent was first observed.</summary>
     [JsonPropertyName("firstSeen")] public double FirstSeen { get; set; }
+    /// <summary>Unix timestamp (ms) when this agent was last observed.</summary>
     [JsonPropertyName("lastSeen")] public double LastSeen { get; set; }
 }
 

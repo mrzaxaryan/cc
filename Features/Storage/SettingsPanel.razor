@@ -46,7 +46,7 @@
                     </div>
                     <div class="cm-stat">
                         <span class="cm-stat-value">@stats.dirCount</span>
-                        <span class="cm-stat-label">Dirs</span>
+                        <span class="cm-stat-label">Directories</span>
                     </div>
                     <div class="cm-stat">
                         <span class="cm-stat-value">@stats.fileCount</span>
@@ -103,7 +103,7 @@
                         {
                             <div class="cm-item">
                                 <a href="javascript:void(0)" class="cm-item-name" @onclick="() => NavigateToAgent(agent.uuid)" @onclick:preventDefault>@agent.name</a>
-                                <span class="cm-item-meta">@agent.dirs d / @agent.files f</span>
+                                <span class="cm-item-meta">@agent.dirs directories / @agent.files files</span>
                                 <span class="cm-item-meta">@Formatters.FormatSize((ulong)agent.size)</span>
                                 <CcConfirmBtn OnConfirm="() => DeleteAgentCache(agent.uuid)" Title="Delete agent cache">DEL</CcConfirmBtn>
                             </div>

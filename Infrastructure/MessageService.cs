@@ -1,6 +1,17 @@
 namespace cc.Infrastructure;
 
-public enum MessageType { Info, Success, Warning, Error }
+/// <summary>Severity level for toast/notification messages.</summary>
+public enum MessageType
+{
+    /// <summary>Informational notice (neutral).</summary>
+    Info,
+    /// <summary>Operation completed successfully.</summary>
+    Success,
+    /// <summary>Non-critical issue that may need attention.</summary>
+    Warning,
+    /// <summary>Operation failed or a critical problem occurred.</summary>
+    Error
+}
 
 public class MessageService
 {

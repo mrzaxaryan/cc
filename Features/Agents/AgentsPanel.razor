@@ -55,7 +55,7 @@
                 var url = relay.Url;
                 <button class="ap-relay-tab @(selectedRelay == url ? "ap-relay-tab--active" : "")"
                         @onclick="() => selectedRelay = url">
-                    <span class="status-dot @(relay.Connected ? "dot-on" : "dot-off")"></span>
+                    <span class="status-dot @(relay.Connected ? "dot-on" : "dot-off")" title="@(relay.Connected ? "Connected" : "Disconnected")"></span>
                     @relay.Name
                     <span class="ap-relay-count">@relay.AgentCount</span>
                 </button>
@@ -72,13 +72,13 @@
                 <CcTable Striped Hover>
                     <thead>
                         <tr>
-                            <th class="ap-col-status"></th>
+                            <th class="ap-col-status" title="Connection status">Status</th>
                             <th>Name</th>
-                            <th class="ap-col-ip">IP</th>
-                            <th class="ap-col-sys">System</th>
+                            <th class="ap-col-ip" title="IP Address">IP Address</th>
+                            <th class="ap-col-sys" title="Operating System / Architecture">System</th>
                             <th class="ap-col-loc">Location</th>
-                            <th class="ap-col-net">Network</th>
-                            <th class="ap-col-paired">Paired</th>
+                            <th class="ap-col-net" title="Network / ISP">Network</th>
+                            <th class="ap-col-paired" title="Paired with relay">Paired</th>
                             <th class="ap-col-seen">Last Seen</th>
                         </tr>
                     </thead>
@@ -91,7 +91,7 @@
                                   OnContextMenu="(e) => ShowContextMenu(e, row)"
                                   PreventDefault>
                                 <td class="ap-col-status">
-                                    <span class="status-dot @(row.IsOnline ? "dot-on" : "dot-off")"></span>
+                                    <span class="status-dot @(row.IsOnline ? "dot-on" : "dot-off")" title="@(row.IsOnline ? "Online" : "Offline")"></span>
                                 </td>
                                 <td>
                                     <div class="ap-name-cell">
@@ -112,7 +112,7 @@
                                 <td class="ap-col-paired">
                                     @if (row.Paired)
                                     {
-                                        <span class="status-dot dot-on"></span>
+                                        <span class="status-dot dot-on" title="Paired with relay"></span>
                                     }
                                 </td>
                                 <td class="ap-col-seen ap-seen-cell">@row.LastSeen</td>
@@ -130,11 +130,11 @@
                          @oncontextmenu="(e) => ShowContextMenu(e, row)"
                          @oncontextmenu:preventDefault>
                         <div class="ap-card-top">
-                            <span class="status-dot @(row.IsOnline ? "dot-on" : "dot-off")"></span>
+                            <span class="status-dot @(row.IsOnline ? "dot-on" : "dot-off")" title="@(row.IsOnline ? "Online" : "Offline")"></span>
                             <span class="ap-card-name">@row.Name</span>
                             @if (row.Paired)
                             {
-                                <span class="status-dot dot-on ap-card-paired"></span>
+                                <span class="status-dot dot-on ap-card-paired" title="Paired with relay"></span>
                             }
                             <span class="ap-card-seen">@row.LastSeen</span>
                         </div>
