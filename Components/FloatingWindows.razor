@@ -123,7 +123,9 @@
             var w = win;
             <button @key="win.Id"
                     class="mdi-taskbar-item @(IsTopWindow(w) ? "active" : "") @(w.Minimized ? "minimized" : "")"
-                    @onclick="() => OnTaskbarClick(w)">
+                    @onclick="() => OnTaskbarClick(w)"
+                    @ondblclick:preventDefault="true"
+                    @ondblclick:stopPropagation="true">
                 <CcIcon Name="@PanelIcon(win.Panel)" Size="Size.Xs" />
                 <span class="mdi-taskbar-label">@win.Title</span>
             </button>

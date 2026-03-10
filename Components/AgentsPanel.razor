@@ -5,14 +5,15 @@
 @implements IDisposable
 
 <div class="ap">
-    {
+    @{
         var rows = BuildAgentRows(Relay.GetAllAgents());
-        @if (rows.Count == 0)
-        {
-            <p class="ap-empty"><em>No agents known.</em></p>
-        }
-        else
-        {
+    }
+    @if (rows.Count == 0)
+    {
+        <p class="ap-empty"><em>No agents known.</em></p>
+    }
+    else
+    {
             <CcTable Striped Hover>
                 <thead>
                     <tr>
@@ -66,7 +67,6 @@
                 </tbody>
             </CcTable>
         }
-    }
 </div>
 
 <CcDropdown Visible="@ctxVisible" X="@ctxX" Y="@ctxY" OnClose="HideContextMenu">
@@ -170,21 +170,6 @@
         }
 
         return rows;
-    }
-
-    private static string GetProtocolShort(string url)
-    {
-        if (url.StartsWith("wss://")) return "WSS";
-        if (url.StartsWith("ws://")) return "WS";
-        if (url.StartsWith("https://")) return "HTTPS";
-        if (url.StartsWith("http://")) return "HTTP";
-        return "?";
-    }
-
-    private static string GetHostFromUrl(string url)
-    {
-        try { return new Uri(url).Host; }
-        catch { return url; }
     }
 
     private static string FormatStoredLocation(AgentRecord r)
