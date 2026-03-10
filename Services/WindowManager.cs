@@ -43,7 +43,7 @@ public class WindowManager
         {
             Id = _nextId++,
             Panel = panel,
-            Title = panel,
+            Title = DisplayTitle(panel),
             X = 100 + offset,
             Y = 80 + offset,
             Width = panel switch { "File Manager" => 800, "Settings" => 650, "Relay" => 900, "Agents" => 950, "Sync Manager" => 600, "Scan" => 700, _ => 700 },
@@ -73,7 +73,7 @@ public class WindowManager
         {
             Id = _nextId++,
             Panel = panel,
-            Title = $"{panel} — {agentName ?? agentId}",
+            Title = $"{DisplayTitle(panel)} — {agentName ?? agentId}",
             AgentId = agentId,
             AgentName = agentName,
             AgentUuid = agentUuid,
@@ -120,6 +120,15 @@ public class WindowManager
         if (win.Maximized) win.Minimized = false;
         OnChanged?.Invoke();
     }
+
+    private static string DisplayTitle(string panel) => panel switch
+    {
+        "Sync" => "File Uploads",
+        "Sync Manager" => "Upload Manager",
+        "Scanner" => "File Search",
+        "Scan" => "File Search",
+        _ => panel
+    };
 
     public async Task DisconnectAgent(string agentId)
     {

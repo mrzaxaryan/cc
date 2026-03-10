@@ -8,7 +8,7 @@
     @* Global status header *@
     <div class="sp-header">
         <div class="sp-header-left">
-            <span class="sp-title">Background Sync</span>
+            <span class="sp-title">File Uploads</span>
             @if (IsGloballyRunning)
             {
                 <CcBadge Variant="BadgeVariant.Success" Size="Size.Xs">
@@ -27,7 +27,7 @@
         <div class="sp-header-right">
             @if (SyncDownloading > 0 || SyncQueued > 0)
             {
-                <CcBtn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="StopAll" Title="Stop all active syncs">STOP ALL</CcBtn>
+                <CcBtn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="StopAll" Title="Stop all active uploads">STOP ALL</CcBtn>
             }
             @if (SyncPaused > 0)
             {
@@ -40,7 +40,7 @@
     <div class="sp-stats">
         <div class="sp-stat">
             <span class="sp-stat-value sp-stat-active">@SyncDownloading</span>
-            <span class="sp-stat-label">Syncing</span>
+            <span class="sp-stat-label">Uploading</span>
         </div>
         <div class="sp-stat">
             <span class="sp-stat-value">@SyncQueued</span>
@@ -73,7 +73,7 @@
                     @if (isProcessing)
                     {
                         <CcBadge Variant="BadgeVariant.Info" Size="Size.Xs">
-                            <CcIcon Name="sync" Size="Size.Xs" CssClass="sp-spinning" /> Syncing
+                            <CcIcon Name="sync" Size="Size.Xs" CssClass="sp-spinning" /> Uploading
                         </CcBadge>
                     }
                     else if (group.Queued > 0 && !isOnline)
@@ -189,7 +189,7 @@
 
         @if (Downloads.Downloads.Count == 0)
         {
-            <div class="sp-empty">No sync activity. Add files from the File Manager to start syncing.</div>
+            <div class="sp-empty">No upload activity. Add files from the File Manager to start uploading.</div>
         }
     </div>
 </div>

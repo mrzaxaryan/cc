@@ -32,8 +32,8 @@
         <CcBtn Variant="BtnVariant.Primary" OnClick="OpenFullSearchWindow" Disabled="@(!IsConnected)" Title="Search entire filesystem">
             <span class="fm-icon">&#x1F50D;</span> SEARCH
         </CcBtn>
-        <CcBtn Variant="BtnVariant.Primary" OnClick="OpenSyncManagerWindow" Title="Sync Manager">
-            <span class="fm-icon">&#x21C5;</span> SYNC
+        <CcBtn Variant="BtnVariant.Primary" OnClick="OpenSyncManagerWindow" Title="Upload Manager">
+            <span class="fm-icon">&#x21C5;</span> UPLOADS
         </CcBtn>
     </div>
 
@@ -242,7 +242,7 @@
         if (dl is null || (dl.Status != DownloadStatus.Downloading && dl.Status != DownloadStatus.Paused
             && dl.Status != DownloadStatus.Queued && dl.Status != DownloadStatus.Completed && dl.Status != DownloadStatus.Failed))
         {
-            <CcBtn Size="Size.Xs" Variant="BtnVariant.Primary" OnClick="() => EnqueueSync(e)" Title="Sync to cache" Disabled="@(!IsConnected)">SYNC</CcBtn>
+            <CcBtn Size="Size.Xs" Variant="BtnVariant.Primary" OnClick="() => EnqueueSync(e)" Title="Upload to cache" Disabled="@(!IsConnected)">UPLOAD</CcBtn>
             return;
         }
 
