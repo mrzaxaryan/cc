@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using Microsoft.JSInterop;
 
 namespace cc.Services;
@@ -89,4 +90,17 @@ public class ExtensionGroupStore
     }
 
     public List<ExtensionGroup> GetEnabled() => _cache.Where(g => g.Enabled).ToList();
+
+    // --- Shared extension validation utilities ---
+
+    private static readonly Regex ValidExtRegex = new(@"^\.[a-zA-Z0-9]{1,15}$");
+
+    public static string NormalizeExtensions(string raw) =>
+        string.Join(",", raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(e => e.StartsWith('.') ? e.ToLowerInvariant() : $".{e.ToLowerInvariant()}"));
+
+    public static List<string> GetInvalidExtensions(string normalized) =>
+        normalized.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Where(e => !ValidExtRegex.IsMatch(e))
+            .ToList();
 }

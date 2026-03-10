@@ -43,8 +43,7 @@ public class DownloadStore
     private List<DownloadRecord> _cache = new();
     private bool _loaded;
 
-    // Shared CTS tracking — keyed by record ID
-    private readonly Dictionary<int, CancellationTokenSource> _activeCts = new();
+    public readonly CtsManager Cts = new();
 
     public event Action? OnChanged;
     public event Action<string>? OnItemQueued; // fires with agentUuid
@@ -218,35 +217,4 @@ public class DownloadStore
               .ThenBy(r => r.CreatedAt)
               .FirstOrDefault();
 
-    // --- Shared CTS management ---
-
-    public CancellationTokenSource RegisterCts(int recordId)
-    {
-        var cts = new CancellationTokenSource();
-        _activeCts[recordId] = cts;
-        return cts;
-    }
-
-    public void CancelCts(int recordId)
-    {
-        if (_activeCts.TryGetValue(recordId, out var cts))
-            cts.Cancel();
-    }
-
-    public void RemoveCts(int recordId)
-    {
-        if (_activeCts.Remove(recordId, out var cts))
-            cts.Dispose();
-    }
-
-    public bool IsCancelled(int recordId) =>
-        _activeCts.TryGetValue(recordId, out var cts) && cts.IsCancellationRequested;
-
-    public bool HasActiveCts(int recordId) => _activeCts.ContainsKey(recordId);
-
-    public void CancelAll()
-    {
-        foreach (var cts in _activeCts.Values)
-            cts.Cancel();
-    }
 }

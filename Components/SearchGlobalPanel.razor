@@ -234,10 +234,8 @@
             .Select(g =>
             {
                 var uuid = g.Key;
-                var agent = AgentDb.GetByUuid(uuid);
-                var name = agent?.Name ?? uuid[..Math.Min(8, uuid.Length)];
                 return new AgentGroup(
-                    uuid, name,
+                    uuid, AgentDb.GetDisplayName(uuid),
                     g.Count(r => r.Status == SearchStatus.Scanning),
                     g.Count(r => r.Status == SearchStatus.Paused),
                     g.Count(r => r.Status == SearchStatus.Completed),
@@ -270,7 +268,7 @@
     private async Task PauseService()
     {
         await SvcState.PauseAsync(ServiceName.Search, "global");
-        Scans.CancelAll();
+        Scans.Cts.CancelAll();
     }
 
     private async Task ResumeService()
@@ -284,7 +282,7 @@
         await SvcState.PauseAsync(ServiceName.Search, uuid);
         var scanning = Scans.Searches.Where(r => r.AgentUuid == uuid && r.Status == SearchStatus.Scanning).ToList();
         foreach (var s in scanning)
-            Scans.CancelCts(s.Id);
+            Scans.Cts.Cancel(s.Id);
     }
 
     private async Task ResumeAgentService(string uuid)
@@ -294,11 +292,11 @@
 
     // --- Item-level controls ---
 
-    private void PauseScan(SearchRecord scan) => Scans.CancelCts(scan.Id);
+    private void PauseScan(SearchRecord scan) => Scans.Cts.Cancel(scan.Id);
 
     private async Task ResumeScan(SearchRecord scan)
     {
-        if (Scans.HasActiveCts(scan.Id)) return;
+        if (Scans.Cts.HasActive(scan.Id)) return;
         await Scans.ResumeAsync(scan.Id);
     }
 
@@ -306,7 +304,7 @@
 
     private async Task StopAll()
     {
-        Scans.CancelAll();
+        Scans.Cts.CancelAll();
         var scanning = Scans.Searches.Where(r => r.Status == SearchStatus.Scanning).ToList();
         foreach (var s in scanning)
             await Scans.PauseAsync(s.Id);

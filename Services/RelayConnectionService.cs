@@ -89,12 +89,12 @@ public class RelayConnectionService : IAsyncDisposable
         foreach (var uuid in _searchingAgents.ToList())
         {
             if (_serviceState.IsEffectivelyPaused(ServiceName.Search, uuid))
-                _scans.CancelAll(); // CTS cancellation triggers pause in the processing loop
+                _scans.Cts.CancelAll(); // CTS cancellation triggers pause in the processing loop
         }
         foreach (var uuid in _processingAgents.ToList())
         {
             if (_serviceState.IsEffectivelyPaused(ServiceName.Upload, uuid))
-                _downloads.CancelAll();
+                _downloads.Cts.CancelAll();
         }
         NotifyChanged();
     }
@@ -174,7 +174,7 @@ public class RelayConnectionService : IAsyncDisposable
     private async Task ResetStaleDownloads()
     {
         var stale = _downloads.Downloads
-            .Where(r => (r.Status == DownloadStatus.Downloading || r.Status == DownloadStatus.Queued) && !_downloads.HasActiveCts(r.Id))
+            .Where(r => (r.Status == DownloadStatus.Downloading || r.Status == DownloadStatus.Queued) && !_downloads.Cts.HasActive(r.Id))
             .ToList();
         foreach (var dl in stale)
             await _downloads.PauseAsync(dl.Id);
@@ -245,22 +245,28 @@ public class RelayConnectionService : IAsyncDisposable
         await TryProcessQueue(uuid, agentId, relayUrl);
     }
 
-    private void OnItemQueued(string agentUuid)
+    private (AgentRecord Agent, string RelayUrl)? ResolveOnlineAgent(string agentUuid, string serviceName)
     {
-        if (_disposing || !_cache.HasDirectory) return;
-        if (_serviceState.IsEffectivelyPaused(ServiceName.Upload, agentUuid)) return;
+        if (_disposing) return null;
+        if (_serviceState.IsEffectivelyPaused(serviceName, agentUuid)) return null;
 
         var agent = _agentDb.GetByUuid(agentUuid);
-        if (agent is null) return;
+        if (agent is null) return null;
 
         var relayEntry = !string.IsNullOrEmpty(agent.RelayStoreId) ? _relayStore.GetById(agent.RelayStoreId) : null;
-        if (relayEntry is null) return;
+        if (relayEntry is null) return null;
 
-        // Check the agent is actually online
-        var online = GetAllAgents().Any(a => a.Agent.Id == agent.AgentId);
-        if (!online) return;
+        if (!GetAllAgents().Any(a => a.Agent.Id == agent.AgentId)) return null;
 
-        _ = TryProcessQueue(agentUuid, agent.AgentId, relayEntry.Url);
+        return (agent, relayEntry.Url);
+    }
+
+    private void OnItemQueued(string agentUuid)
+    {
+        if (!_cache.HasDirectory) return;
+        var resolved = ResolveOnlineAgent(agentUuid, ServiceName.Upload);
+        if (resolved is null) return;
+        _ = TryProcessQueue(agentUuid, resolved.Value.Agent.AgentId, resolved.Value.RelayUrl);
     }
 
     private async Task TryProcessQueue(string uuid, string agentId, string relayUrl)
@@ -283,7 +289,7 @@ public class RelayConnectionService : IAsyncDisposable
                 var next = _downloads.GetNextQueued(uuid);
                 if (next is null) break;
 
-                var cts = _downloads.RegisterCts(next.Id);
+                var cts = _downloads.Cts.Register(next.Id);
                 try
                 {
                     var success = await _cache.DownloadFromAgentAsync(
@@ -312,7 +318,7 @@ public class RelayConnectionService : IAsyncDisposable
                 }
                 finally
                 {
-                    _downloads.RemoveCts(next.Id);
+                    _downloads.Cts.Remove(next.Id);
                 }
             }
         }
@@ -330,7 +336,7 @@ public class RelayConnectionService : IAsyncDisposable
     private async Task ResetStaleSearches()
     {
         var stale = _scans.Searches
-            .Where(r => r.Status == SearchStatus.Scanning && !_scans.HasActiveCts(r.Id))
+            .Where(r => r.Status == SearchStatus.Scanning && !_scans.Cts.HasActive(r.Id))
             .ToList();
         foreach (var s in stale)
             await _scans.PauseAsync(s.Id);
@@ -338,19 +344,9 @@ public class RelayConnectionService : IAsyncDisposable
 
     private void OnSearchItemQueued(string agentUuid)
     {
-        if (_disposing) return;
-        if (_serviceState.IsEffectivelyPaused(ServiceName.Search, agentUuid)) return;
-
-        var agent = _agentDb.GetByUuid(agentUuid);
-        if (agent is null) return;
-
-        var relayEntry = !string.IsNullOrEmpty(agent.RelayStoreId) ? _relayStore.GetById(agent.RelayStoreId) : null;
-        if (relayEntry is null) return;
-
-        var online = GetAllAgents().Any(a => a.Agent.Id == agent.AgentId);
-        if (!online) return;
-
-        _ = TryProcessSearchQueue(agentUuid, agent.AgentId, relayEntry.Url);
+        var resolved = ResolveOnlineAgent(agentUuid, ServiceName.Search);
+        if (resolved is null) return;
+        _ = TryProcessSearchQueue(agentUuid, resolved.Value.Agent.AgentId, resolved.Value.RelayUrl);
     }
 
     private async Task AutoResumeSearches(string uuid, string agentId, string relayUrl)
@@ -383,7 +379,7 @@ public class RelayConnectionService : IAsyncDisposable
                 var scan = _scans.GetNextPending(uuid);
                 if (scan is null) break;
 
-                var cts = _scans.RegisterCts(scan.Id);
+                var cts = _scans.Cts.Register(scan.Id);
                 var label = string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath;
                 var agent = scan.AgentName;
                 _msg.Info($"Search started: {label} ({scan.Extensions}) on {agent}");
@@ -412,7 +408,7 @@ public class RelayConnectionService : IAsyncDisposable
                 }
                 finally
                 {
-                    _scans.RemoveCts(scan.Id);
+                    _scans.Cts.Remove(scan.Id);
                 }
             }
         }
@@ -670,28 +666,15 @@ public class RelayConnectionService : IAsyncDisposable
                         _msg.Warn("Agent disconnected.");
                     }
                 }
-                else if (type == "agent_paired" && !string.IsNullOrEmpty(eventAgentId))
+                else if (type is "agent_paired" or "agent_unpaired" && !string.IsNullOrEmpty(eventAgentId))
                 {
+                    var paired = type == "agent_paired";
                     var existing = rs.Agents.Connections.FirstOrDefault(a => a.Id == eventAgentId);
                     if (existing is not null)
                     {
-                        existing.Paired = true;
-                        var relayId = root.TryGetProperty("relayId", out var relayIdProp) ? relayIdProp.GetString() : null;
-                        existing.PairedRelayId = relayId;
-                        rs.Agents = new GroupInfo<AgentConnection>
-                        {
-                            Count = rs.Agents.Count,
-                            Connections = rs.Agents.Connections.ToArray()
-                        };
-                    }
-                }
-                else if (type == "agent_unpaired" && !string.IsNullOrEmpty(eventAgentId))
-                {
-                    var existing = rs.Agents.Connections.FirstOrDefault(a => a.Id == eventAgentId);
-                    if (existing is not null)
-                    {
-                        existing.Paired = false;
-                        existing.PairedRelayId = null;
+                        existing.Paired = paired;
+                        existing.PairedRelayId = paired && root.TryGetProperty("relayId", out var relayIdProp)
+                            ? relayIdProp.GetString() : null;
                         rs.Agents = new GroupInfo<AgentConnection>
                         {
                             Count = rs.Agents.Count,
@@ -699,7 +682,7 @@ public class RelayConnectionService : IAsyncDisposable
                         };
                     }
 
-                    if (_wm.ConnectedAgentIds.Contains(eventAgentId))
+                    if (!paired && _wm.ConnectedAgentIds.Contains(eventAgentId))
                     {
                         _ = _wm.DisconnectAgent(eventAgentId);
                         _msg.Warn("Agent relay disconnected.");

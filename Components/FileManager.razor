@@ -239,8 +239,7 @@
     private RenderFragment RenderFileActions(DirEntry e) => __builder =>
     {
         var dl = GetDownloadRecord(e.Name);
-        if (dl is null || (dl.Status != DownloadStatus.Downloading && dl.Status != DownloadStatus.Paused
-            && dl.Status != DownloadStatus.Queued && dl.Status != DownloadStatus.Completed && dl.Status != DownloadStatus.Failed))
+        if (dl is null || dl.Status == DownloadStatus.Pending)
         {
             <CcBtn Size="Size.Xs" Variant="BtnVariant.Primary" OnClick="() => EnqueueSync(e)" Title="Upload to cache" Disabled="@(!IsConnected)">UPLOAD</CcBtn>
             return;
@@ -465,14 +464,14 @@
     {
         if (string.IsNullOrEmpty(AgentUuid)) return;
         var record = Downloads.Find(AgentUuid, currentPath + entry.Name);
-        if (record is not null) Downloads.CancelCts(record.Id);
+        if (record is not null) Downloads.Cts.Cancel(record.Id);
     }
 
     private async Task ResumeDownload(DirEntry entry)
     {
         if (string.IsNullOrEmpty(AgentUuid)) return;
         var record = Downloads.Find(AgentUuid, currentPath + entry.Name);
-        if (record is null || Downloads.HasActiveCts(record.Id)) return;
+        if (record is null || Downloads.Cts.HasActive(record.Id)) return;
         await Downloads.QueueAsync(record.Id);
     }
 

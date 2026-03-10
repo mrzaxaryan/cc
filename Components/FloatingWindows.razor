@@ -58,62 +58,27 @@
             </div>
         </div>
         <div class="app-window-body">
-            @if (win.Panel == "File Manager")
+            @switch (win.Panel)
             {
-                <FileManager Relay="win.Relay" AgentId="@win.AgentId" AgentName="@win.AgentName" AgentUuid="@win.AgentUuid" />
-            }
-            else if (win.Panel == "Settings")
-            {
-                <CacheManagerPanel />
-            }
-            else if (win.Panel == "Relay")
-            {
-                <RelayPanel />
-            }
-            else if (win.Panel == "Agents")
-            {
-                <AgentsPanel />
-            }
-            else if (win.Panel == "Sync Manager")
-            {
-                <DownloadManagerPanel AgentUuid="@win.AgentUuid" AgentName="@win.AgentName" />
-            }
-            else if (win.Panel == "Sync")
-            {
-                <SyncPanel />
-            }
-            else if (win.Panel == "Scanner")
-            {
-                <SearchConfigPanel AgentUuid="@win.AgentUuid" AgentName="@win.AgentName" InitialPath="@win.ScanPath" />
-            }
-            else if (win.Panel == "Scan")
-            {
-                <SearchGlobalPanel />
-            }
-            else if (win.Panel == "Extensions")
-            {
-                <ExtensionGroupPanel />
+                case "File Manager":    <FileManager Relay="win.Relay" AgentId="@win.AgentId" AgentName="@win.AgentName" AgentUuid="@win.AgentUuid" /> break;
+                case "Settings":        <CacheManagerPanel /> break;
+                case "Relay":           <RelayPanel /> break;
+                case "Agents":          <AgentsPanel /> break;
+                case "Sync Manager":    <DownloadManagerPanel AgentUuid="@win.AgentUuid" AgentName="@win.AgentName" /> break;
+                case "Sync":            <SyncPanel /> break;
+                case "Scanner":         <SearchConfigPanel AgentUuid="@win.AgentUuid" AgentName="@win.AgentName" InitialPath="@win.ScanPath" /> break;
+                case "Scan":            <SearchGlobalPanel /> break;
+                case "Extensions":      <ExtensionGroupPanel /> break;
             }
         </div>
         @if (!win.Maximized)
         {
-            @* Edge resize handles *@
-            <div class="app-window-resize-n" style="touch-action:none;"
-                 @onpointerdown="(e) => OnEdgeResizeStart(e, win, Edge.N)" @onpointerdown:stopPropagation="true"></div>
-            <div class="app-window-resize-s" style="touch-action:none;"
-                 @onpointerdown="(e) => OnEdgeResizeStart(e, win, Edge.S)" @onpointerdown:stopPropagation="true"></div>
-            <div class="app-window-resize-e" style="touch-action:none;"
-                 @onpointerdown="(e) => OnEdgeResizeStart(e, win, Edge.E)" @onpointerdown:stopPropagation="true"></div>
-            <div class="app-window-resize-w" style="touch-action:none;"
-                 @onpointerdown="(e) => OnEdgeResizeStart(e, win, Edge.W)" @onpointerdown:stopPropagation="true"></div>
-            <div class="app-window-resize-nw" style="touch-action:none;"
-                 @onpointerdown="(e) => OnEdgeResizeStart(e, win, Edge.NW)" @onpointerdown:stopPropagation="true"></div>
-            <div class="app-window-resize-ne" style="touch-action:none;"
-                 @onpointerdown="(e) => OnEdgeResizeStart(e, win, Edge.NE)" @onpointerdown:stopPropagation="true"></div>
-            <div class="app-window-resize-sw" style="touch-action:none;"
-                 @onpointerdown="(e) => OnEdgeResizeStart(e, win, Edge.SW)" @onpointerdown:stopPropagation="true"></div>
-            <div class="app-window-resize-se" style="touch-action:none;"
-                 @onpointerdown="(e) => OnEdgeResizeStart(e, win, Edge.SE)" @onpointerdown:stopPropagation="true"></div>
+            @foreach (var edge in Edges)
+            {
+                var e = edge;
+                <div class="app-window-resize-@e.ToString().ToLower()" style="touch-action:none;"
+                     @onpointerdown="(ev) => OnEdgeResizeStart(ev, win, e)" @onpointerdown:stopPropagation="true"></div>
+            }
         }
     </div>
 }
@@ -163,6 +128,8 @@
         public double StartWidth { get; init; }
         public double StartHeight { get; init; }
     }
+
+    private static readonly Edge[] Edges = [Edge.N, Edge.S, Edge.E, Edge.W, Edge.NW, Edge.NE, Edge.SW, Edge.SE];
 
     protected override void OnInitialized() => Wm.OnChanged += OnWmChanged;
     private void OnWmChanged() => InvokeAsync(StateHasChanged);
@@ -270,14 +237,10 @@
 
     private static string EdgeCursor(Edge edge) => edge switch
     {
-        Edge.N => "ns-resize",
-        Edge.S => "ns-resize",
-        Edge.E => "ew-resize",
-        Edge.W => "ew-resize",
-        Edge.NW => "nwse-resize",
-        Edge.SE => "nwse-resize",
-        Edge.NE => "nesw-resize",
-        Edge.SW => "nesw-resize",
+        Edge.N or Edge.S => "ns-resize",
+        Edge.E or Edge.W => "ew-resize",
+        Edge.NW or Edge.SE => "nwse-resize",
+        Edge.NE or Edge.SW => "nesw-resize",
         _ => "default"
     };
 

@@ -64,8 +64,6 @@
 </div>
 
 @code {
-    private static readonly System.Text.RegularExpressions.Regex ValidExtRegex = new(@"^\.[a-zA-Z0-9]{1,15}$");
-
     private bool showForm;
     private bool saving;
     private string formName = "";
@@ -121,9 +119,8 @@
             return;
         }
 
-        var normalized = NormalizeExtensions(formExtensions);
-        var parts = normalized.Split(',', StringSplitOptions.RemoveEmptyEntries);
-        var invalid = parts.Where(e => !ValidExtRegex.IsMatch(e)).ToList();
+        var normalized = ExtensionGroupStore.NormalizeExtensions(formExtensions);
+        var invalid = ExtensionGroupStore.GetInvalidExtensions(normalized);
         if (invalid.Count > 0)
         {
             formError = $"Invalid: {string.Join(", ", invalid)} — must be a dot followed by 1-15 alphanumeric characters.";
@@ -177,10 +174,6 @@
         catch (Exception ex) { Msg.Error(ex.Message); }
         finally { saving = false; }
     }
-
-    private static string NormalizeExtensions(string raw) =>
-        string.Join(",", raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(e => e.StartsWith(".") ? e.ToLowerInvariant() : $".{e.ToLowerInvariant()}"));
 
     public void Dispose() => Store.OnChanged -= OnStoreChanged;
 }

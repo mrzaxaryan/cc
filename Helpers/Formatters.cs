@@ -1,4 +1,5 @@
 using cc.Models;
+using cc.Services;
 
 namespace cc.Helpers;
 
@@ -10,14 +11,20 @@ public static class Formatters
         return DateTimeOffset.FromUnixTimeMilliseconds((long)ms).LocalDateTime.ToString("g");
     }
 
-    public static string FormatLocation(AgentConnection c)
+    public static string FormatLocation(string? city, string? region, string? country, string fallback = "-")
     {
         var parts = new List<string>();
-        if (!string.IsNullOrEmpty(c.City)) parts.Add(c.City);
-        if (!string.IsNullOrEmpty(c.Region) && c.Region != c.City) parts.Add(c.Region);
-        if (!string.IsNullOrEmpty(c.Country)) parts.Add(c.Country);
-        return parts.Count > 0 ? string.Join(", ", parts) : "-";
+        if (!string.IsNullOrEmpty(city)) parts.Add(city);
+        if (!string.IsNullOrEmpty(region) && region != city) parts.Add(region);
+        if (!string.IsNullOrEmpty(country)) parts.Add(country);
+        return parts.Count > 0 ? string.Join(", ", parts) : fallback;
     }
+
+    public static string FormatLocation(AgentConnection c) =>
+        FormatLocation(c.City, c.Region, c.Country);
+
+    public static string FormatLocation(AgentRecord r) =>
+        FormatLocation(r.City, r.Region, r.Country, "\u2014");
 
     public static string FormatListenerLocation(EventListenerConnection c)
     {
@@ -27,14 +34,20 @@ public static class Formatters
         return parts.Count > 0 ? string.Join(", ", parts) : "-";
     }
 
-    public static string FormatNetwork(AgentConnection c)
+    public static string FormatNetwork(int asn, string? asOrganization, string fallback = "-")
     {
-        if (c.Asn > 0 && !string.IsNullOrEmpty(c.AsOrganization))
-            return $"AS{c.Asn} ({c.AsOrganization})";
-        if (c.Asn > 0)
-            return $"AS{c.Asn}";
-        return "-";
+        if (asn > 0 && !string.IsNullOrEmpty(asOrganization))
+            return $"AS{asn} ({asOrganization})";
+        if (asn > 0)
+            return $"AS{asn}";
+        return fallback;
     }
+
+    public static string FormatNetwork(AgentConnection c) =>
+        FormatNetwork(c.Asn, c.AsOrganization);
+
+    public static string FormatNetwork(AgentRecord r) =>
+        FormatNetwork(r.Asn, r.AsOrganization, "\u2014");
 
     public static string FormatCoords(AgentConnection c)
     {

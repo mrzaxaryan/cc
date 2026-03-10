@@ -7,9 +7,23 @@
 @implements IDisposable
 
 <div class="cm">
+    @* Reset Application *@
+    <div class="cm-reset-bar">
+        @if (confirmReset)
+        {
+            <span class="cm-reset-warning">This will delete all settings, cached files, and application data. Are you sure?</span>
+            <CcBtn Variant="BtnVariant.DangerSolid" OnClick="ResetApplication" Disabled="@resetting" Loading="@resetting">YES, RESET</CcBtn>
+            <CcBtn OnClick="() => confirmReset = false">CANCEL</CcBtn>
+        }
+        else
+        {
+            <CcBtn Variant="BtnVariant.Danger" OnClick="() => confirmReset = true">RESET APPLICATION</CcBtn>
+        }
+    </div>
+
     @* Tabs *@
     <div class="cm-tabs">
-        <button class="cm-tab @(tab == Tab.Cache ? "active" : "")" @onclick="() => tab = Tab.Cache">Cache</button>
+        <button class="cm-tab @(tab == Tab.Cache ? "active" : "")" @onclick="() => tab = Tab.Cache">Storage</button>
         <button class="cm-tab @(tab == Tab.IndexedDB ? "active" : "")" @onclick="() => { tab = Tab.IndexedDB; _ = LoadDbStats(); }">IndexedDB</button>
     </div>
 
@@ -20,15 +34,6 @@
             <CcBadge Variant="BadgeVariant.Info">@(Cache.DirectoryName ?? "No folder")</CcBadge>
             <div class="cm-toolbar-actions">
                 <CcBtn OnClick="Refresh" Disabled="@loading" Title="Refresh">&#x21bb;</CcBtn>
-                @if (confirmPrune)
-                {
-                    <CcBtn Variant="BtnVariant.DangerSolid" OnClick="ConfirmPrune" Disabled="@loading">YES</CcBtn>
-                    <CcBtn OnClick="() => confirmPrune = false">NO</CcBtn>
-                }
-                else
-                {
-                    <CcBtn Variant="BtnVariant.Danger" OnClick="() => confirmPrune = true" Disabled="@(loading || stats.fileCount == 0)" Title="Prune">PRUNE</CcBtn>
-                }
                 <CcBtn Variant="BtnVariant.Warning" OnClick="ChangeFolder" Title="Change folder">&#x1f4c1;</CcBtn>
             </div>
         </div>
@@ -152,15 +157,6 @@
                 <span class="cm-db-version">v4</span>
                 <div class="cm-toolbar-actions">
                     <CcBtn OnClick="LoadDbStats" Disabled="@dbLoading" Title="Refresh">&#x21bb;</CcBtn>
-                    @if (confirmClearAll)
-                    {
-                        <CcBtn Variant="BtnVariant.DangerSolid" OnClick="ClearAllData" Disabled="@clearingAll" Loading="@clearingAll">YES, DELETE ALL</CcBtn>
-                        <CcBtn OnClick="() => confirmClearAll = false">NO</CcBtn>
-                    }
-                    else
-                    {
-                        <CcBtn Variant="BtnVariant.Danger" OnClick="() => confirmClearAll = true" Disabled="@dbLoading">CLEAR ALL</CcBtn>
-                    }
                 </div>
             </div>
             @if (dbLoading)
@@ -212,9 +208,8 @@
     private (int agentCount, int dirCount, int fileCount, long totalSize) stats;
     private long blobSize;
     private bool loading;
-    private bool confirmPrune;
-    private bool confirmClearAll;
-    private bool clearingAll;
+    private bool confirmReset;
+    private bool resetting;
 
     // IndexedDB tab
     private record DbTable(string Name, int Count);
@@ -372,20 +367,26 @@
         finally { loading = false; StateHasChanged(); }
     }
 
-    private async Task ConfirmPrune()
+    private async Task ResetApplication()
     {
-        confirmPrune = false;
+        confirmReset = false;
+        resetting = true;
+        StateHasChanged();
         try
         {
-            loading = true;
-            StateHasChanged();
             foreach (var agent in AgentDb.Agents.Values)
                 await Vfs.ClearAgentAsync(agent.Uuid);
             await Downloads.ClearAsync();
+            await Cache.ClearAllDataAsync();
+            dbTables = new();
+            agentStats = new();
+            stats = default;
+            blobSize = 0;
+            Msg.Success("Application has been reset. All settings and files deleted.");
             await NavigateToRoot();
         }
         catch (Exception ex) { Msg.Error(ex.Message); }
-        finally { loading = false; StateHasChanged(); }
+        finally { resetting = false; StateHasChanged(); }
     }
 
     private async Task ChangeFolder()
@@ -405,24 +406,6 @@
     }
 
     // IndexedDB
-
-    private async Task ClearAllData()
-    {
-        clearingAll = true;
-        confirmClearAll = false;
-        StateHasChanged();
-        try
-        {
-            await Cache.ClearAllDataAsync();
-            dbTables = new();
-            agentStats = new();
-            stats = default;
-            blobSize = 0;
-            Msg.Success("All application data cleared.");
-        }
-        catch (Exception ex) { Msg.Error(ex.Message); }
-        finally { clearingAll = false; StateHasChanged(); }
-    }
 
     private async Task LoadDbStats()
     {

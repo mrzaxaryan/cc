@@ -191,8 +191,6 @@
 
     private enum Filter { All, Active, Done }
 
-    private static readonly System.Text.RegularExpressions.Regex ValidExtRegex = new(@"^\.[a-zA-Z0-9]{1,15}$");
-
     private List<SearchRecord> allRecords = new();
     private List<SearchRecord> filteredRecords = new();
     private Filter filter = Filter.All;
@@ -272,7 +270,7 @@
 
         if (!ValidateExtensions()) return;
 
-        var extensions = NormalizeExtensions(newScanExtensions);
+        var extensions = ExtensionGroupStore.NormalizeExtensions(newScanExtensions);
 
         var path = newScanPath.TrimEnd('\\', '/');
         if (!string.IsNullOrEmpty(path) && !path.EndsWith(@"\"))
@@ -292,7 +290,7 @@
 
         if (!ValidateExtensions()) return;
 
-        var extensions = NormalizeExtensions(newScanExtensions);
+        var extensions = ExtensionGroupStore.NormalizeExtensions(newScanExtensions);
         await Scans.AddAsync(AgentUuid, AgentName ?? "", "", extensions, newScanAutoDownload);
         showNewScan = false;
         fullScanMode = false;
@@ -307,9 +305,7 @@
 
     private void ToggleGroup(string groupName)
     {
-        if (activeGroups.Contains(groupName))
-            activeGroups.Remove(groupName);
-        else
+        if (!activeGroups.Remove(groupName))
             activeGroups.Add(groupName);
         RebuildExtensions();
     }
@@ -342,10 +338,6 @@
         extensionError = "";
     }
 
-    private static string NormalizeExtensions(string raw) =>
-        string.Join(",", raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(e => e.StartsWith(".") ? e.ToLowerInvariant() : $".{e.ToLowerInvariant()}"));
-
     private bool ValidateExtensions()
     {
         if (string.IsNullOrWhiteSpace(newScanExtensions))
@@ -354,9 +346,8 @@
             return false;
         }
 
-        var normalized = NormalizeExtensions(newScanExtensions);
-        var parts = normalized.Split(',', StringSplitOptions.RemoveEmptyEntries);
-        var invalid = parts.Where(e => !ValidExtRegex.IsMatch(e)).ToList();
+        var normalized = ExtensionGroupStore.NormalizeExtensions(newScanExtensions);
+        var invalid = ExtensionGroupStore.GetInvalidExtensions(normalized);
 
         if (invalid.Count > 0)
         {
@@ -377,7 +368,7 @@
         await SvcState.PauseAsync(ServiceName.Search, AgentUuid);
         var scanning = allRecords.Where(r => r.Status == SearchStatus.Scanning).ToList();
         foreach (var s in scanning)
-            Scans.CancelCts(s.Id);
+            Scans.Cts.Cancel(s.Id);
     }
 
     private async Task ResumeAgentService()
@@ -386,13 +377,10 @@
         await SvcState.ResumeAsync(ServiceName.Search, AgentUuid);
     }
 
-    private async Task PauseAllAgent()
+    private void PauseAllAgent()
     {
-        var scanning = allRecords.Where(r => r.Status == SearchStatus.Scanning).ToList();
-        foreach (var s in scanning)
-        {
-            Scans.CancelCts(s.Id);
-        }
+        foreach (var s in allRecords.Where(r => r.Status == SearchStatus.Scanning))
+            Scans.Cts.Cancel(s.Id);
     }
 
     private async Task ResumeAllAgent()
@@ -400,22 +388,22 @@
         var paused = allRecords.Where(r => r.Status == SearchStatus.Paused).ToList();
         foreach (var s in paused)
         {
-            if (!Scans.HasActiveCts(s.Id))
+            if (!Scans.Cts.HasActive(s.Id))
                 await Scans.ResumeAsync(s.Id);
         }
     }
 
-    private void PauseScan(SearchRecord scan) => Scans.CancelCts(scan.Id);
+    private void PauseScan(SearchRecord scan) => Scans.Cts.Cancel(scan.Id);
 
     private async Task ResumeScan(SearchRecord scan)
     {
-        if (Scans.HasActiveCts(scan.Id)) return;
+        if (Scans.Cts.HasActive(scan.Id)) return;
         await Scans.ResumeAsync(scan.Id);
     }
 
     private async Task RemoveScan(SearchRecord scan)
     {
-        Scans.CancelCts(scan.Id);
+        Scans.Cts.Cancel(scan.Id);
         await Scans.RemoveAsync(scan.Id);
     }
 

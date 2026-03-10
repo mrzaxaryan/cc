@@ -210,30 +210,14 @@
                 Ip = record.Ip,
                 Os = !string.IsNullOrEmpty(record.Os) ? record.Os : "—",
                 Arch = !string.IsNullOrEmpty(record.Arch) ? record.Arch : "—",
-                Location = FormatStoredLocation(record),
-                Network = FormatStoredNetwork(record),
+                Location = Formatters.FormatLocation(record),
+                Network = Formatters.FormatNetwork(record),
                 Paired = !string.IsNullOrEmpty(record.PairedRelayId),
                 LastSeen = Formatters.FormatTimestamp(record.LastSeen)
             });
         }
 
         return rows;
-    }
-
-    private static string FormatStoredLocation(AgentRecord r)
-    {
-        var parts = new List<string>();
-        if (!string.IsNullOrEmpty(r.City)) parts.Add(r.City);
-        if (!string.IsNullOrEmpty(r.Region)) parts.Add(r.Region);
-        if (!string.IsNullOrEmpty(r.Country)) parts.Add(r.Country);
-        return parts.Count > 0 ? string.Join(", ", parts) : "—";
-    }
-
-    private static string FormatStoredNetwork(AgentRecord r)
-    {
-        if (r.Asn > 0 && !string.IsNullOrEmpty(r.AsOrganization))
-            return $"AS{r.Asn} {r.AsOrganization}";
-        return "—";
     }
 
     private void ShowContextMenu(MouseEventArgs e, string agentId, string relayUrl, bool isOnline)

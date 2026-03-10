@@ -117,7 +117,7 @@
 
                                 case DownloadStatus.Paused:
                                     <CcBadge Variant="BadgeVariant.Warning" Size="Size.Xs">PAUSED @pct%</CcBadge>
-                                    <CcBtn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeDownload(rec)" Disabled="@(Downloads.HasActiveCts(rec.Id))" Title="Resume">&#x25B6;</CcBtn>
+                                    <CcBtn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeDownload(rec)" Disabled="@(Downloads.Cts.HasActive(rec.Id))" Title="Resume">&#x25B6;</CcBtn>
                                     break;
 
                                 case DownloadStatus.Completed:
@@ -228,7 +228,7 @@
         await SvcState.PauseAsync(ServiceName.Upload, AgentUuid);
         var active = activeRecords.Where(r => r.Status == DownloadStatus.Downloading).ToList();
         foreach (var dl in active)
-            Downloads.CancelCts(dl.Id);
+            Downloads.Cts.Cancel(dl.Id);
         var queued = activeRecords.Where(r => r.Status == DownloadStatus.Queued).ToList();
         foreach (var dl in queued)
             await Downloads.PauseAsync(dl.Id);
@@ -243,7 +243,7 @@
     private async Task StopAllSyncs()
     {
         var active = activeRecords.FirstOrDefault(r => r.Status == DownloadStatus.Downloading);
-        if (active is not null) Downloads.CancelCts(active.Id);
+        if (active is not null) Downloads.Cts.Cancel(active.Id);
         var queued = activeRecords.Where(r => r.Status == DownloadStatus.Queued).ToList();
         foreach (var dl in queued) await Downloads.PauseAsync(dl.Id);
     }
@@ -261,15 +261,15 @@
     }
 
     private async Task BumpPriority(DownloadRecord dl, int delta) => await Downloads.SetPriorityAsync(dl.Id, dl.Priority + delta);
-    private void PauseDownload(DownloadRecord dl) => Downloads.CancelCts(dl.Id);
+    private void PauseDownload(DownloadRecord dl) => Downloads.Cts.Cancel(dl.Id);
 
     private async Task ResumeDownload(DownloadRecord dl)
     {
-        if (Downloads.HasActiveCts(dl.Id)) return;
+        if (Downloads.Cts.HasActive(dl.Id)) return;
         await Downloads.QueueAsync(dl.Id);
     }
 
-    private async Task RemoveDownload(DownloadRecord dl) { Downloads.CancelCts(dl.Id); await Downloads.RemoveAsync(dl.Id); }
+    private async Task RemoveDownload(DownloadRecord dl) { Downloads.Cts.Cancel(dl.Id); await Downloads.RemoveAsync(dl.Id); }
 
     private async Task ClearPaused()
     {

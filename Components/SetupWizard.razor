@@ -12,37 +12,14 @@
         </div>
 
         <nav class="su-nav">
-            <button class="su-nav-item @(step == Step.Welcome ? "active" : "") @(IsStepDone(Step.Welcome) ? "done" : "") @(!CanNavigateTo(Step.Welcome) ? "locked" : "")"
-                    @onclick="() => GoToStep(Step.Welcome)" disabled="@(!CanNavigateTo(Step.Welcome))">
-                <span class="su-nav-num">1</span>
-                <span class="su-nav-label">Welcome</span>
-                @if (IsStepDone(Step.Welcome)) { <span class="su-nav-check">&#x2713;</span> }
-            </button>
-            @if (needsCache)
+            @foreach (var s in orderedSteps)
             {
-                <button class="su-nav-item @(step == Step.Cache ? "active" : "") @(IsStepDone(Step.Cache) ? "done" : "") @(!CanNavigateTo(Step.Cache) ? "locked" : "")"
-                        @onclick="() => GoToStep(Step.Cache)" disabled="@(!CanNavigateTo(Step.Cache))">
-                    <span class="su-nav-num">@StepNumber(Step.Cache)</span>
-                    <span class="su-nav-label">Cache Storage</span>
-                    @if (IsStepDone(Step.Cache)) { <span class="su-nav-check">&#x2713;</span> }
-                </button>
-            }
-            @if (needsRelay)
-            {
-                <button class="su-nav-item @(step == Step.Relay ? "active" : "") @(IsStepDone(Step.Relay) ? "done" : "") @(!CanNavigateTo(Step.Relay) ? "locked" : "")"
-                        @onclick="() => GoToStep(Step.Relay)" disabled="@(!CanNavigateTo(Step.Relay))">
-                    <span class="su-nav-num">@StepNumber(Step.Relay)</span>
-                    <span class="su-nav-label">Relay Server</span>
-                    @if (IsStepDone(Step.Relay)) { <span class="su-nav-check">&#x2713;</span> }
-                </button>
-            }
-            @if (needsExtensions)
-            {
-                <button class="su-nav-item @(step == Step.Extensions ? "active" : "") @(IsStepDone(Step.Extensions) ? "done" : "") @(!CanNavigateTo(Step.Extensions) ? "locked" : "")"
-                        @onclick="() => GoToStep(Step.Extensions)" disabled="@(!CanNavigateTo(Step.Extensions))">
-                    <span class="su-nav-num">@StepNumber(Step.Extensions)</span>
-                    <span class="su-nav-label">File Extensions</span>
-                    @if (IsStepDone(Step.Extensions)) { <span class="su-nav-check">&#x2713;</span> }
+                var navStep = s;
+                <button class="su-nav-item @(step == navStep ? "active" : "") @(IsStepDone(navStep) ? "done" : "") @(!CanNavigateTo(navStep) ? "locked" : "")"
+                        @onclick="() => GoToStep(navStep)" disabled="@(!CanNavigateTo(navStep))">
+                    <span class="su-nav-num">@StepNumber(navStep)</span>
+                    <span class="su-nav-label">@StepLabel(navStep)</span>
+                    @if (IsStepDone(navStep)) { <span class="su-nav-check">&#x2713;</span> }
                 </button>
             }
         </nav>
@@ -62,72 +39,44 @@
 
                 <div class="su-section-label">How it works</div>
                 <div class="su-features">
-                    <div class="su-feature">
-                        <span class="su-feature-icon">&#x1f4bb;</span>
-                        <div class="su-feature-text">
-                            <strong>Agent</strong>
-                            <span>Cross-platform remote agent built on PIR (Position-Independent Runtime) &mdash; a zero-dependency C++23 shellcode runtime with cryptography, networking, and TLS 1.3. Communicates via a binary command protocol over WebSocket.</span>
+                    @foreach (var item in HowItWorks)
+                    {
+                        <div class="su-feature">
+                            <span class="su-feature-icon">@item.Icon</span>
+                            <div class="su-feature-text">
+                                <strong>@item.Title</strong>
+                                <span>@item.Desc</span>
+                            </div>
                         </div>
-                    </div>
-                    <div class="su-feature">
-                        <span class="su-feature-icon">&#x1f310;</span>
-                        <div class="su-feature-text">
-                            <strong>Relay</strong>
-                            <span>WebSocket relay running on Cloudflare Workers with Durable Objects. Pairs agents with dashboard connections 1:1 &mdash; no direct inbound connections to agents needed.</span>
-                        </div>
-                    </div>
-                    <div class="su-feature">
-                        <span class="su-feature-icon">&#x1f5a5;</span>
-                        <div class="su-feature-text">
-                            <strong>CC (this dashboard)</strong>
-                            <span>Blazor WebAssembly app that runs entirely in your browser. Connects to the relay, sends commands to agents, and caches downloaded files locally using the File System Access API and IndexedDB.</span>
-                        </div>
-                    </div>
+                    }
                 </div>
 
                 <div class="su-section-label">Features</div>
                 <div class="su-features">
-                    <div class="su-feature">
-                        <span class="su-feature-icon">&#x1f4c1;</span>
-                        <div class="su-feature-text">
-                            <strong>Remote File Browser</strong>
-                            <span>Navigate agent filesystems, view file contents, and upload files to the local cache.</span>
+                    @foreach (var item in Features)
+                    {
+                        <div class="su-feature">
+                            <span class="su-feature-icon">@item.Icon</span>
+                            <div class="su-feature-text">
+                                <strong>@item.Title</strong>
+                                <span>@item.Desc</span>
+                            </div>
                         </div>
-                    </div>
-                    <div class="su-feature">
-                        <span class="su-feature-icon">&#x1f50d;</span>
-                        <div class="su-feature-text">
-                            <strong>File Search</strong>
-                            <span>Recursively search entire filesystems by file extension with configurable extension groups and auto-download.</span>
-                        </div>
-                    </div>
-                    <div class="su-feature">
-                        <span class="su-feature-icon">&#x1f4be;</span>
-                        <div class="su-feature-text">
-                            <strong>Local-only Storage</strong>
-                            <span>All data stays on your machine. Files are cached to a local folder, metadata is stored in IndexedDB. Nothing is sent to external servers.</span>
-                        </div>
-                    </div>
+                    }
                 </div>
 
                 <div class="su-section-label">Repositories</div>
                 <div class="su-links">
-                    <a class="su-link" href="https://github.com/mrzaxaryan/cc" target="_blank" rel="noopener">
-                        <span class="su-link-icon">&#x1f5a5;</span> CC Dashboard
-                    </a>
-                    <a class="su-link" href="https://github.com/mrzaxaryan/relay" target="_blank" rel="noopener">
-                        <span class="su-link-icon">&#x1f310;</span> Relay Server
-                    </a>
-                    <a class="su-link" href="https://github.com/mrzaxaryan/Position-Independent-Agent" target="_blank" rel="noopener">
-                        <span class="su-link-icon">&#x1f4bb;</span> Agent
-                    </a>
-                    <a class="su-link" href="https://github.com/mrzaxaryan/Position-Independent-Runtime" target="_blank" rel="noopener">
-                        <span class="su-link-icon">&#x2699;</span> PIR Runtime
-                    </a>
+                    @foreach (var link in RepoLinks)
+                    {
+                        <a class="su-link" href="@link.Url" target="_blank" rel="noopener">
+                            <span class="su-link-icon">@link.Icon</span> @link.Label
+                        </a>
+                    }
                 </div>
 
                 <div class="su-actions">
-                    <CcBtn Variant="BtnVariant.Primary" Size="Size.Lg" OnClick="AdvanceFromWelcome">Get Started</CcBtn>
+                    <CcBtn Variant="BtnVariant.Primary" Size="Size.Lg" OnClick="Advance">Get Started</CcBtn>
                 </div>
             }
             else if (step == Step.Cache)
@@ -165,7 +114,6 @@
                         <CcBtn Variant="BtnVariant.Primary" Size="Size.Lg" OnClick="PickFolder" Disabled="@picking" Loading="@picking">Select Cache Folder</CcBtn>
                     </div>
                 }
-
             }
             else if (step == Step.Relay)
             {
@@ -186,14 +134,12 @@
                                 </div>
                                 <div class="su-relay-actions">
                                     <CcBtn Size="Size.Xs" OnClick="() => EditRelay(relay)" Title="Edit">EDIT</CcBtn>
-                                    @if (relay.Enabled)
-                                    {
-                                        <CcBtn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => ToggleRelay(relay)" Title="Disable">OFF</CcBtn>
-                                    }
-                                    else
-                                    {
-                                        <CcBtn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ToggleRelay(relay)" Title="Enable">ON</CcBtn>
-                                    }
+                                    <CcBtn Size="Size.Xs"
+                                           Variant="@(relay.Enabled ? BtnVariant.Warning : BtnVariant.Success)"
+                                           OnClick="() => ToggleRelay(relay)"
+                                           Title="@(relay.Enabled ? "Disable" : "Enable")">
+                                        @(relay.Enabled ? "OFF" : "ON")
+                                    </CcBtn>
                                     @if (Relay.Relays.Count > 1)
                                     {
                                         <button class="su-ext-remove" @onclick="() => RemoveRelay(relay)" title="Remove">&#x2715;</button>
@@ -232,7 +178,7 @@
                 @if (Relay.EnabledRelays.Count > 0)
                 {
                     <div class="su-actions" style="margin-top: 1rem;">
-                        <CcBtn Variant="BtnVariant.Primary" Size="Size.Lg" OnClick="() => AdvanceFromRelay()">Continue</CcBtn>
+                        <CcBtn Variant="BtnVariant.Primary" Size="Size.Lg" OnClick="Advance">Continue</CcBtn>
                     </div>
                 }
                 else
@@ -321,17 +267,51 @@
     private string customGroupName = "";
     private string customGroupExts = "";
     private string customGroupError = "";
-    private static readonly System.Text.RegularExpressions.Regex ValidExtRegex = new(@"^\.[a-zA-Z0-9]{1,15}$");
+    private List<Step> orderedSteps = [];
 
-    private bool needsCache;
-    private bool needsRelay;
-    private bool needsExtensions;
+    private record InfoItem(string Icon, string Title, string Desc);
+    private record LinkItem(string Icon, string Label, string Url);
+
+    private static readonly InfoItem[] HowItWorks =
+    [
+        new("\U0001f4bb", "Agent", "Cross-platform remote agent built on PIR (Position-Independent Runtime) \u2014 a zero-dependency C++23 shellcode runtime with cryptography, networking, and TLS 1.3. Communicates via a binary command protocol over WebSocket."),
+        new("\U0001f310", "Relay", "WebSocket relay running on Cloudflare Workers with Durable Objects. Pairs agents with dashboard connections 1:1 \u2014 no direct inbound connections to agents needed."),
+        new("\U0001f5a5", "CC (this dashboard)", "Blazor WebAssembly app that runs entirely in your browser. Connects to the relay, sends commands to agents, and caches downloaded files locally using the File System Access API and IndexedDB."),
+    ];
+
+    private static readonly InfoItem[] Features =
+    [
+        new("\U0001f4c1", "Remote File Browser", "Navigate agent filesystems, view file contents, and upload files to the local cache."),
+        new("\U0001f50d", "File Search", "Recursively search entire filesystems by file extension with configurable extension groups and auto-download."),
+        new("\U0001f4be", "Local-only Storage", "All data stays on your machine. Files are cached to a local folder, metadata is stored in IndexedDB. Nothing is sent to external servers."),
+    ];
+
+    private static readonly LinkItem[] RepoLinks =
+    [
+        new("\U0001f5a5", "CC Dashboard", "https://github.com/mrzaxaryan/cc"),
+        new("\U0001f310", "Relay Server", "https://github.com/mrzaxaryan/relay"),
+        new("\U0001f4bb", "Agent", "https://github.com/mrzaxaryan/Position-Independent-Agent"),
+        new("\u2699", "PIR Runtime", "https://github.com/mrzaxaryan/Position-Independent-Runtime"),
+    ];
+
+    private static readonly Dictionary<Step, string> StepLabels = new()
+    {
+        [Step.Welcome] = "Welcome",
+        [Step.Cache] = "Cache Storage",
+        [Step.Relay] = "Relay Server",
+        [Step.Extensions] = "File Extensions",
+    };
 
     protected override void OnInitialized()
     {
-        needsCache = Cache.SetupRequired || Cache.NeedsPermission;
-        needsRelay = Relay.SetupRequired;
-        needsExtensions = ExtGroups.SetupRequired;
+        var needsCache = Cache.SetupRequired || Cache.NeedsPermission;
+        var needsRelay = Relay.SetupRequired;
+        var needsExtensions = ExtGroups.SetupRequired;
+
+        orderedSteps = [Step.Welcome];
+        if (needsCache) orderedSteps.Add(Step.Cache);
+        if (needsRelay) orderedSteps.Add(Step.Relay);
+        if (needsExtensions) orderedSteps.Add(Step.Extensions);
 
         step = Step.Welcome;
 
@@ -340,24 +320,16 @@
         relayUrl = enabled?.Url ?? "";
     }
 
-    private int StepNumber(Step s)
-    {
-        var n = 1; // Welcome is always 1
-        if (s == Step.Welcome) return n;
-        if (needsCache) { n++; if (s == Step.Cache) return n; }
-        if (needsRelay) { n++; if (s == Step.Relay) return n; }
-        if (needsExtensions) { n++; if (s == Step.Extensions) return n; }
-        return n;
-    }
+    private static string StepLabel(Step s) => StepLabels.GetValueOrDefault(s, s.ToString());
+
+    private int StepNumber(Step s) => orderedSteps.IndexOf(s) + 1;
 
     private bool IsStepDone(Step s) => completedSteps.Contains(s);
 
     private bool CanNavigateTo(Step s)
     {
-        if (s == step) return true;
-        if (IsStepDone(s)) return true;
-        // Can navigate to the next uncompleted step only if all previous are done
-        foreach (var prev in GetOrderedSteps())
+        if (s == step || IsStepDone(s)) return true;
+        foreach (var prev in orderedSteps)
         {
             if (prev == s) return true;
             if (!IsStepDone(prev)) return false;
@@ -365,42 +337,24 @@
         return false;
     }
 
-    private List<Step> GetOrderedSteps()
-    {
-        var steps = new List<Step> { Step.Welcome };
-        if (needsCache) steps.Add(Step.Cache);
-        if (needsRelay) steps.Add(Step.Relay);
-        if (needsExtensions) steps.Add(Step.Extensions);
-        return steps;
-    }
-
     private void GoToStep(Step s)
     {
         if (CanNavigateTo(s)) step = s;
     }
 
-    private void AdvanceFromWelcome()
+    private void Advance()
     {
-        completedSteps.Add(Step.Welcome);
-        if (needsCache) { step = Step.Cache; StateHasChanged(); }
-        else if (needsRelay) { step = Step.Relay; StateHasChanged(); }
-        else if (needsExtensions) { step = Step.Extensions; StateHasChanged(); }
-        else OnComplete.InvokeAsync();
-    }
-
-    private void AdvanceFromCache()
-    {
-        completedSteps.Add(Step.Cache);
-        if (needsRelay) { step = Step.Relay; StateHasChanged(); }
-        else if (needsExtensions) { step = Step.Extensions; StateHasChanged(); }
-        else OnComplete.InvokeAsync();
-    }
-
-    private void AdvanceFromRelay()
-    {
-        completedSteps.Add(Step.Relay);
-        if (needsExtensions) { step = Step.Extensions; StateHasChanged(); }
-        else OnComplete.InvokeAsync();
+        completedSteps.Add(step);
+        var idx = orderedSteps.IndexOf(step);
+        if (idx + 1 < orderedSteps.Count)
+        {
+            step = orderedSteps[idx + 1];
+            StateHasChanged();
+        }
+        else
+        {
+            OnComplete.InvokeAsync();
+        }
     }
 
     private async Task ReGrantPermission()
@@ -410,7 +364,7 @@
         try
         {
             var success = await Cache.ReRequestPermissionAsync();
-            if (success) AdvanceFromCache();
+            if (success) Advance();
             else Msg.Error("Permission denied. Try again or pick a different folder.");
         }
         catch (Exception ex) { Msg.Error(ex.Message); }
@@ -424,7 +378,7 @@
         try
         {
             var success = await Cache.PickDirectoryAsync();
-            if (success) AdvanceFromCache();
+            if (success) Advance();
             else Msg.Warn("No folder selected. Please try again.");
         }
         catch (Exception ex) { Msg.Error(ex.Message); }
@@ -439,7 +393,6 @@
         if (string.IsNullOrEmpty(url)) { Msg.Error("Relay URL is required."); return; }
         if (!url.StartsWith("wss://") && !url.StartsWith("ws://")) { Msg.Error("URL must start with wss:// or ws://"); return; }
         if (string.IsNullOrEmpty(name)) name = url;
-
         if (Relay.Relays.Any(r => r.Url == url)) { Msg.Error("A relay with this URL already exists."); return; }
 
         saving = true;
@@ -473,9 +426,7 @@
         try
         {
             await Relay.UpdateRelayName(editingRelay.Url, name);
-            editingRelay = null;
-            relayName = "";
-            relayUrl = "";
+            CancelEditRelay();
         }
         catch (Exception ex) { Msg.Error(ex.Message); }
         finally { saving = false; }
@@ -515,23 +466,19 @@
         if (string.IsNullOrEmpty(name)) { customGroupError = "Group name is required."; return; }
         if (string.IsNullOrWhiteSpace(exts)) { customGroupError = "At least one extension is required."; return; }
 
-        // Check duplicates against defaults and existing custom groups
         if (ExtensionGroupStore.DefaultGroups.ContainsKey(name) || customGroups.Any(g => g.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
         {
             customGroupError = $"A group named '{name}' already exists.";
             return;
         }
 
-        var normalized = string.Join(",", exts.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(e => e.StartsWith(".") ? e.ToLowerInvariant() : $".{e.ToLowerInvariant()}"));
-        var parts = normalized.Split(',', StringSplitOptions.RemoveEmptyEntries);
-        var invalid = parts.Where(e => !ValidExtRegex.IsMatch(e)).ToList();
+        var normalized = ExtensionGroupStore.NormalizeExtensions(exts);
+        var invalid = ExtensionGroupStore.GetInvalidExtensions(normalized);
         if (invalid.Count > 0)
         {
             customGroupError = $"Invalid: {string.Join(", ", invalid)} — must be dot + 1-15 alphanumeric characters.";
             return;
         }
-
         customGroups.Add((name, normalized));
         customGroupName = "";
         customGroupExts = "";
@@ -550,14 +497,9 @@
         try
         {
             foreach (var (name, exts) in ExtensionGroupStore.DefaultGroups)
-            {
-                var enabled = selectedExtGroups.Contains(name);
-                await ExtGroups.AddAsync(name, string.Join(",", exts), enabled);
-            }
+                await ExtGroups.AddAsync(name, string.Join(",", exts), selectedExtGroups.Contains(name));
             foreach (var (name, exts) in customGroups)
-            {
                 await ExtGroups.AddAsync(name, exts, true);
-            }
             completedSteps.Add(Step.Extensions);
             await OnComplete.InvokeAsync();
         }

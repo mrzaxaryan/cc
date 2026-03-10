@@ -252,10 +252,8 @@
             .Select(g =>
             {
                 var uuid = g.Key;
-                var agent = AgentDb.GetByUuid(uuid);
-                var name = agent?.Name ?? uuid[..Math.Min(8, uuid.Length)];
                 return new AgentGroup(
-                    uuid, name,
+                    uuid, AgentDb.GetDisplayName(uuid),
                     g.Count(r => r.Status == DownloadStatus.Downloading),
                     g.Count(r => r.Status == DownloadStatus.Queued),
                     g.Count(r => r.Status == DownloadStatus.Paused),
@@ -291,7 +289,7 @@
     private async Task PauseService()
     {
         await SvcState.PauseAsync(ServiceName.Upload, "global");
-        Downloads.CancelAll();
+        Downloads.Cts.CancelAll();
         var queued = Downloads.Downloads.Where(r => r.Status == DownloadStatus.Queued).ToList();
         foreach (var dl in queued)
             await Downloads.PauseAsync(dl.Id);
@@ -307,7 +305,7 @@
         await SvcState.PauseAsync(ServiceName.Upload, uuid);
         var active = Downloads.Downloads.Where(r => r.AgentUuid == uuid && r.Status == DownloadStatus.Downloading).ToList();
         foreach (var dl in active)
-            Downloads.CancelCts(dl.Id);
+            Downloads.Cts.Cancel(dl.Id);
         var queued = Downloads.Downloads.Where(r => r.AgentUuid == uuid && r.Status == DownloadStatus.Queued).ToList();
         foreach (var dl in queued)
             await Downloads.PauseAsync(dl.Id);
@@ -320,17 +318,17 @@
 
     // --- Item-level controls ---
 
-    private void PauseDownload(DownloadRecord dl) => Downloads.CancelCts(dl.Id);
+    private void PauseDownload(DownloadRecord dl) => Downloads.Cts.Cancel(dl.Id);
 
     private async Task ResumeDownload(DownloadRecord dl)
     {
-        if (Downloads.HasActiveCts(dl.Id)) return;
+        if (Downloads.Cts.HasActive(dl.Id)) return;
         await Downloads.QueueAsync(dl.Id);
     }
 
     private async Task StopAll()
     {
-        Downloads.CancelAll();
+        Downloads.Cts.CancelAll();
         var queued = Downloads.Downloads.Where(r => r.Status == DownloadStatus.Queued).ToList();
         foreach (var dl in queued)
             await Downloads.PauseAsync(dl.Id);

@@ -106,6 +106,9 @@ public class AgentStore
         return _cache.TryGetValue(uuid, out var record) ? record : null;
     }
 
+    public string GetDisplayName(string uuid) =>
+        _cache.TryGetValue(uuid, out var r) ? r.Name : uuid[..Math.Min(8, uuid.Length)];
+
     public async Task MarkOfflineAsync(string uuid)
     {
         if (!_cache.TryGetValue(uuid, out var record)) return;

@@ -20,24 +20,13 @@ else if (initialized)
         <span class="mdi-brand">cc</span>
         <span class="mdi-sep"></span>
 
-        <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Agents")'>
-            <CcIcon Name="agents" Size="Size.Xs" /> Agents
-        </button>
-        <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Relay")'>
-            <CcIcon Name="server" Size="Size.Xs" /> Relay
-        </button>
-        <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Settings")'>
-            <CcIcon Name="database" Size="Size.Xs" /> Cache
-        </button>
-        <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Sync")'>
-            <CcIcon Name="sync" Size="Size.Xs" /> Uploads
-        </button>
-        <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Scan")'>
-            <CcIcon Name="search" Size="Size.Xs" /> Search
-        </button>
-        <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Extensions")'>
-            <CcIcon Name="database" Size="Size.Xs" /> Extensions
-        </button>
+        @foreach (var item in MenuItems)
+        {
+            var panel = item.Panel;
+            <button class="mdi-menu-item" @onclick="() => Wm.OpenWindow(panel)">
+                <CcIcon Name="@item.Icon" Size="Size.Xs" /> @item.Label
+            </button>
+        }
 
         <div class="mdi-spacer"></div>
 
@@ -114,6 +103,17 @@ else if (initialized)
 }
 
 @code {
+    private record MenuItem(string Panel, string Icon, string Label);
+    private static readonly MenuItem[] MenuItems =
+    [
+        new("Agents", "agents", "Agents"),
+        new("Relay", "server", "Relay"),
+        new("Settings", "database", "Storage"),
+        new("Sync", "sync", "Uploads"),
+        new("Scan", "search", "Search"),
+        new("Extensions", "database", "Extensions"),
+    ];
+
     private bool showSetup;
     private bool initialized;
     private bool dropdownOpen;

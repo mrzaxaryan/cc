@@ -7,6 +7,25 @@
     min-height: 0;
 }
 
+/* Reset bar */
+.cm-reset-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.5rem;
+    border: 1px solid var(--cc-border);
+    border-radius: 6px;
+    background: var(--cc-bg-surface);
+    flex-shrink: 0;
+}
+
+.cm-reset-warning {
+    flex: 1;
+    font-size: 0.72rem;
+    color: var(--cc-accent-red, #e53935);
+    font-weight: 500;
+}
+
 /* Tabs */
 .cm-tabs {
     display: flex;

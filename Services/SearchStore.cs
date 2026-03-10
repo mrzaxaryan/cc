@@ -46,7 +46,7 @@ public class SearchStore
     private List<SearchRecord> _cache = new();
     private bool _loaded;
 
-    private readonly Dictionary<int, CancellationTokenSource> _activeCts = new();
+    public readonly CtsManager Cts = new();
 
     public event Action? OnChanged;
     public event Action<string>? OnItemQueued; // fires with agentUuid
@@ -158,32 +158,4 @@ public class SearchStore
     public SearchRecord? GetNextPending(string agentUuid) =>
         _cache.FirstOrDefault(r => r.AgentUuid == agentUuid && r.Status == SearchStatus.Scanning && r.PendingDirs.Count > 0);
 
-    // --- CTS management ---
-
-    public CancellationTokenSource RegisterCts(int recordId)
-    {
-        var cts = new CancellationTokenSource();
-        _activeCts[recordId] = cts;
-        return cts;
-    }
-
-    public void CancelCts(int recordId)
-    {
-        if (_activeCts.TryGetValue(recordId, out var cts))
-            cts.Cancel();
-    }
-
-    public void RemoveCts(int recordId)
-    {
-        if (_activeCts.Remove(recordId, out var cts))
-            cts.Dispose();
-    }
-
-    public bool HasActiveCts(int recordId) => _activeCts.ContainsKey(recordId);
-
-    public void CancelAll()
-    {
-        foreach (var cts in _activeCts.Values)
-            cts.Cancel();
-    }
 }
