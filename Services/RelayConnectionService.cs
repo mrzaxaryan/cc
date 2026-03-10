@@ -359,20 +359,31 @@ public class RelayConnectionService : IAsyncDisposable
                 if (scan is null) break;
 
                 var cts = _scans.RegisterCts(scan.Id);
+                var label = string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath;
+                var agent = scan.AgentName;
+                _msg.Info($"Search started: {label} ({scan.Extensions}) on {agent}");
                 try
                 {
                     await ProcessScan(relay, scan, cts.Token);
+                    _msg.Success($"Search completed: {label} on {agent} — {scan.FilesFound} files found in {scan.DirsScanned} dirs");
                 }
                 catch (OperationCanceledException)
                 {
                     await _scans.PauseAsync(scan.Id);
+                    _msg.Warn($"Search paused: {label} on {agent} — {scan.DirsScanned}/{scan.DirsTotal} dirs, {scan.FilesFound} files found");
                 }
                 catch (Exception ex)
                 {
                     if (cts.IsCancellationRequested)
+                    {
                         await _scans.PauseAsync(scan.Id);
+                        _msg.Warn($"Search paused: {label} on {agent} — {scan.DirsScanned}/{scan.DirsTotal} dirs, {scan.FilesFound} files found");
+                    }
                     else
+                    {
                         await _scans.FailAsync(scan.Id, ex.Message);
+                        _msg.Error($"Search failed: {label} on {agent} — {ex.Message}");
+                    }
                 }
                 finally
                 {
