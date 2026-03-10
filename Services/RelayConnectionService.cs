@@ -54,6 +54,8 @@ public class RelayConnectionService : IAsyncDisposable
 
         await _relayStore.LoadAsync();
         await _agentDb.LoadAsync();
+        await _downloads.LoadAsync();
+        await ResetStaleDownloads();
         _relayStore.OnChanged += OnRelayStoreChanged;
         SyncRelays();
     }
@@ -133,6 +135,16 @@ public class RelayConnectionService : IAsyncDisposable
             await relay.Disconnect();
             return null;
         }
+    }
+
+    // Reset downloads stuck in "Downloading" from a previous session (page refresh)
+    private async Task ResetStaleDownloads()
+    {
+        var stale = _downloads.Downloads
+            .Where(r => r.Status == DownloadStatus.Downloading && !_downloads.HasActiveCts(r.Id))
+            .ToList();
+        foreach (var dl in stale)
+            await _downloads.PauseAsync(dl.Id);
     }
 
     // --- UUID fetching ---

@@ -630,6 +630,7 @@
         var remotePath = currentPath + entry.Name;
         var record = Downloads.Find(AgentUuid, remotePath);
         if (record is null) return;
+        if (Downloads.HasActiveCts(record.Id)) return; // already being auto-resumed
 
         // If component relay is connected, use the normal path
         if (IsConnected)
@@ -640,6 +641,8 @@
 
         // Otherwise, create a relay via the service
         if (string.IsNullOrEmpty(AgentId)) return;
+        await AgentDb.LoadAsync();
+        await RelayDb.LoadAsync();
         var agentRecord = AgentDb.GetByUuid(AgentUuid);
         if (agentRecord is null) return;
         var relayEntry = !string.IsNullOrEmpty(agentRecord.RelayStoreId) ? RelayDb.GetById(agentRecord.RelayStoreId) : null;

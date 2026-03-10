@@ -107,6 +107,8 @@
     protected override async Task OnInitializedAsync()
     {
         Downloads.OnChanged += OnDownloadsChanged;
+        await AgentDb.LoadAsync();
+        await RelayDb.LoadAsync();
         await Downloads.LoadAsync();
         Refresh();
     }
@@ -151,12 +153,17 @@
     private async Task ResumeDownload(DownloadRecord dl)
     {
         if (_resuming.Contains(dl.Id)) return;
+        if (Downloads.HasActiveCts(dl.Id)) return; // already being auto-resumed
         _resuming.Add(dl.Id);
         StateHasChanged();
 
         RelaySocket? relay = null;
         try
         {
+            // Ensure stores are loaded
+            await AgentDb.LoadAsync();
+            await RelayDb.LoadAsync();
+
             // Find agent info to get relay URL
             var agent = AgentDb.GetByUuid(dl.AgentUuid);
             if (agent is null) { Msg.Error("Agent not found"); return; }
