@@ -1,0 +1,37 @@
+<div class="panel">
+    @if (!string.IsNullOrEmpty(Title) || HeaderLeft is not null || HeaderRight is not null)
+    {
+        <div class="panel-header">
+            <div class="panel-header-left">
+                @if (!string.IsNullOrEmpty(Title))
+                {
+                    <span class="panel-title">@Title</span>
+                }
+                @HeaderLeft
+            </div>
+            @if (HeaderRight is not null)
+            {
+                <div class="panel-header-right">
+                    @HeaderRight
+                </div>
+            }
+        </div>
+    }
+    @if (Toolbar is not null)
+    {
+        <div class="panel-toolbar">
+            @Toolbar
+        </div>
+    }
+    <div class="panel-body">
+        @Body
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public RenderFragment? HeaderLeft { get; set; }
+    [Parameter] public RenderFragment? HeaderRight { get; set; }
+    [Parameter] public RenderFragment? Toolbar { get; set; }
+    [Parameter] public RenderFragment? Body { get; set; }
+}

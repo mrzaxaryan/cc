@@ -8,7 +8,7 @@
     @{
         var relays = BuildRelayTabs();
         var rows = BuildAgentRows(Relay.GetAllAgents());
-        var filtered = selectedRelay is null ? rows : rows.Where(r => r.RelayUrl == selectedRelay).ToList();
+        var filtered = selectedRelay is null ? rows : rows.Where(r => r.RelayUrl == selectedRelay && r.IsOnline).ToList();
     }
 
     <div class="ap-relay-bar">
