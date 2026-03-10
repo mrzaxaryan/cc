@@ -27,12 +27,15 @@ public static class ServiceName
 public class ServiceStateStore
 {
     private readonly IJSRuntime _js;
+    private readonly IEventBus _bus;
     private readonly Dictionary<string, ServiceStateRecord> _cache = new();
     private bool _loaded;
 
-    public event Action? OnChanged;
-
-    public ServiceStateStore(IJSRuntime js) => _js = js;
+    public ServiceStateStore(IJSRuntime js, IEventBus bus)
+    {
+        _js = js;
+        _bus = bus;
+    }
 
     public async Task LoadAsync()
     {
@@ -85,7 +88,7 @@ public class ServiceStateStore
 
         _cache[key] = record;
         await _js.InvokeVoidAsync("ccServiceDb.put", record);
-        OnChanged?.Invoke();
+        _bus.Publish(new ServiceStateChangedEvent());
     }
 
     public async Task PauseAsync(string service, string scope)

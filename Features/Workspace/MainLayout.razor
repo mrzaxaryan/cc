@@ -1,4 +1,5 @@
 
+@inherits EventSubscriber
 @inject CacheManager Cache
 @inject RelayStore Relay
 @inject RelayConnectionService RelaySvc
@@ -10,7 +11,6 @@
 @inject NotificationStore Notif
 @inject ExtensionGroupStore ExtGroups
 @inject IJSRuntime JS
-@implements IDisposable
 
 @if (!initialized)
 {
@@ -132,10 +132,13 @@ else
 
     protected override void OnInitialized()
     {
-        Wm.OnChanged += OnWmChanged;
-        Theme.OnChanged += OnThemeChanged;
-        Msg.OnNotification += OnNotification;
-        Notif.OnChanged += OnNotifChanged;
+        On<WindowChangedEvent>();
+        On<ThemeChangedEvent>();
+        On<NotificationStoreChangedEvent>();
+        OnAsync<NotificationEvent>(async e =>
+        {
+            await Notif.AddAsync(e.Text, e.Type);
+        });
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -170,15 +173,6 @@ else
         }
     }
 
-    private async void OnNotification(string text, MessageType type)
-    {
-        await InvokeAsync(async () =>
-        {
-            await Notif.AddAsync(text, type);
-            StateHasChanged();
-        });
-    }
-
     private void ToggleDropdown()
     {
         dropdownOpen = !dropdownOpen;
@@ -187,7 +181,6 @@ else
 
     private async void OnFocusOut()
     {
-        // Delay so that button clicks inside the dropdown fire before it closes
         await Task.Delay(200);
         await InvokeAsync(() =>
         {
@@ -223,9 +216,6 @@ else
     }
 
     private async Task ToggleTheme() => await Theme.Toggle();
-    private void OnThemeChanged() => InvokeAsync(StateHasChanged);
-    private void OnWmChanged() => InvokeAsync(StateHasChanged);
-    private void OnNotifChanged() => InvokeAsync(StateHasChanged);
 
     private void OnSetupComplete()
     {
@@ -233,12 +223,9 @@ else
         StateHasChanged();
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
-        Wm.OnChanged -= OnWmChanged;
-        Theme.OnChanged -= OnThemeChanged;
-        Msg.OnNotification -= OnNotification;
-        Notif.OnChanged -= OnNotifChanged;
         _updateTimer?.Dispose();
+        base.Dispose();
     }
 }

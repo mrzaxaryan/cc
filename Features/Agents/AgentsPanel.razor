@@ -1,9 +1,9 @@
+@inherits EventSubscriber
 @inject WindowManager Wm
 @inject RelayStore Store
 @inject AgentStore AgentDb
 @inject RelayConnectionService Relay
 @inject IJSRuntime Js
-@implements IDisposable
 
 @{
     var relays = BuildRelayTabs();
@@ -199,12 +199,14 @@
 
     protected override void OnInitialized()
     {
-        Relay.OnChanged += OnServiceChanged;
-        Wm.OnChanged += OnServiceChanged;
+        On<RelayAgentsChangedEvent>();
+        On<RelayConnectionChangedEvent>();
+        On<WindowChangedEvent>();
+        On<AgentConnectedEvent>();
+        On<AgentDisconnectedEvent>();
+        On<AgentPairingChangedEvent>();
         _countdownTimer = new Timer(_ => InvokeAsync(StateHasChanged), null, 1000, 1000);
     }
-
-    private void OnServiceChanged() => InvokeAsync(StateHasChanged);
 
     private class RelayTab
     {
@@ -456,10 +458,9 @@
         CancelRename();
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
         _countdownTimer?.Dispose();
-        Relay.OnChanged -= OnServiceChanged;
-        Wm.OnChanged -= OnServiceChanged;
+        base.Dispose();
     }
 }

@@ -1,4 +1,5 @@
 using cc.Features.Relay;
+using cc.Infrastructure;
 using Microsoft.JSInterop;
 
 namespace cc.Features.Storage;
@@ -6,6 +7,7 @@ namespace cc.Features.Storage;
 public class CacheManager
 {
     private readonly IJSRuntime _js;
+    private readonly IEventBus _bus;
 
     public bool IsSupported { get; private set; }
     public bool HasDirectory { get; private set; }
@@ -13,11 +15,10 @@ public class CacheManager
     public string? DirectoryName { get; private set; }
     public bool SetupRequired => IsSupported && !HasDirectory;
 
-    public event Action? OnChanged;
-
-    public CacheManager(IJSRuntime js)
+    public CacheManager(IJSRuntime js, IEventBus bus)
     {
         _js = js;
+        _bus = bus;
     }
 
     /// <summary>Initialize: check support and try to restore persisted handle (no user gesture needed).</summary>
@@ -46,7 +47,7 @@ public class CacheManager
             HasDirectory = true;
             NeedsPermission = false;
             DirectoryName = await _js.InvokeAsync<string?>("ccFileSystem.getRootName");
-            OnChanged?.Invoke();
+            _bus.Publish(new CacheChangedEvent());
         }
         return granted;
     }
@@ -58,7 +59,7 @@ public class CacheManager
         if (name is null) return false;
         DirectoryName = name;
         HasDirectory = true;
-        OnChanged?.Invoke();
+        _bus.Publish(new CacheChangedEvent());
         return true;
     }
 
@@ -66,7 +67,7 @@ public class CacheManager
     public async Task WriteBlobAsync(string fileId, byte[] data)
     {
         await _js.InvokeVoidAsync("ccFileSystem.writeBlobById", fileId, data);
-        OnChanged?.Invoke();
+        _bus.Publish(new CacheChangedEvent());
     }
 
     /// <summary>Read a blob by file GUID (returns base64 string).</summary>
@@ -85,7 +86,7 @@ public class CacheManager
     public async Task DeleteBlobAsync(string fileId)
     {
         await _js.InvokeVoidAsync("ccFileSystem.deleteBlobById", fileId);
-        OnChanged?.Invoke();
+        _bus.Publish(new CacheChangedEvent());
     }
 
     /// <summary>Get total cache size in bytes (all blobs in .fs/).</summary>
@@ -146,7 +147,7 @@ public class CacheManager
 
             await _js.InvokeVoidAsync("ccFileSystem.endWrite");
             success = true;
-            OnChanged?.Invoke();
+            _bus.Publish(new CacheChangedEvent());
             return true;
         }
         catch (OperationCanceledException)
@@ -170,7 +171,7 @@ public class CacheManager
         await _js.InvokeVoidAsync("ccFileSystem.clearHandle");
         HasDirectory = false;
         DirectoryName = null;
-        OnChanged?.Invoke();
+        _bus.Publish(new CacheChangedEvent());
     }
 
     /// <summary>Clear all application data: all IndexedDB stores + persisted file handle.</summary>
@@ -181,6 +182,6 @@ public class CacheManager
         HasDirectory = false;
         DirectoryName = null;
         NeedsPermission = false;
-        OnChanged?.Invoke();
+        _bus.Publish(new CacheChangedEvent());
     }
 }

@@ -1,79 +1,87 @@
+/* Shell terminal panel */
+
 .sh {
     display: flex;
     flex-direction: column;
     height: 100%;
-    gap: 0;
+    min-height: 0;
+    overflow: hidden;
 }
 
-.sh-offline {
+/* Disconnected banner */
+.sh-banner {
     display: flex;
     align-items: center;
     gap: 0.4rem;
     padding: 0.3rem 0.6rem;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
+    flex-shrink: 0;
+}
+
+.sh-banner--warn {
     background: var(--cc-yellow-10);
-    border: 1px solid var(--cc-yellow-30);
-    border-radius: 4px;
+    border-bottom: 1px solid var(--cc-yellow-30);
     color: var(--cc-accent-yellow);
-    margin-bottom: 0.5rem;
 }
 
-.sh-offline-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--cc-accent-red);
-    flex-shrink: 0;
-}
-
-.sh-toolbar {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 0.3rem 0.5rem;
-    border-bottom: 1px solid var(--cc-border);
-    flex-shrink: 0;
-}
-
-.sh-spacer {
-    flex: 1;
-}
-
-.sh-output {
+/* Terminal output area */
+.sh-terminal {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     background: var(--cc-code);
-    padding: 0.5rem;
+    padding: 0.5rem 0.6rem;
+    scroll-behavior: smooth;
 }
 
-.sh-pre {
-    margin: 0;
-    padding: 0;
-    font-family: monospace;
-    font-size: 0.75rem;
+.sh-empty {
+    color: var(--cc-text-dim);
+    font-size: 0.72rem;
+    font-style: italic;
+    padding: 1.5rem 0;
+    text-align: center;
+}
+
+/* Individual output lines */
+.sh-line {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.73rem;
+    line-height: 1.5;
     color: var(--cc-text);
     white-space: pre-wrap;
     word-break: break-all;
-    line-height: 1.4;
+    min-height: 1.1em;
 }
 
+.sh-line--cmd {
+    color: var(--cc-accent-green);
+    font-weight: 500;
+    padding-top: 0.15rem;
+}
+
+.sh-line--err {
+    color: var(--cc-accent-red);
+}
+
+/* Input bar */
 .sh-input-bar {
     display: flex;
     align-items: center;
-    gap: 0.3rem;
-    padding: 0.35rem 0.5rem;
+    gap: 0.35rem;
+    padding: 0.4rem 0.5rem;
     border-top: 1px solid var(--cc-border);
     background: var(--cc-bg-deep);
     flex-shrink: 0;
 }
 
 .sh-prompt {
-    font-family: monospace;
-    font-size: 0.8rem;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.78rem;
     color: var(--cc-accent-green);
     flex-shrink: 0;
-    font-weight: 700;
+    font-weight: 600;
+    user-select: none;
 }
 
 .sh-input {
@@ -81,29 +89,89 @@
     min-width: 0;
     background: var(--cc-bg-surface);
     border: 1px solid var(--cc-border);
-    border-radius: 4px;
-    padding: 0.25rem 0.4rem;
-    font-family: monospace;
-    font-size: 0.75rem;
+    border-radius: var(--cc-radius-sm);
+    padding: 0.3rem 0.5rem;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.73rem;
     color: var(--cc-text);
     outline: none;
+    transition: border-color var(--cc-transition-fast);
 }
 
 .sh-input:focus {
     border-color: var(--cc-accent-blue);
+    box-shadow: 0 0 0 2px var(--cc-blue-15);
 }
 
 .sh-input:disabled {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: not-allowed;
 }
 
-@media (max-width: 768px) {
-    .sh-pre {
+.sh-input::placeholder {
+    color: var(--cc-text-dim);
+}
+
+/* ===== Tablet ===== */
+@media (max-width: 1024px) {
+    .sh-line {
         font-size: 0.7rem;
     }
 
     .sh-input {
         font-size: 0.7rem;
+    }
+}
+
+/* ===== Mobile ===== */
+@media (max-width: 768px) {
+    .sh-terminal {
+        padding: 0.4rem 0.5rem;
+    }
+
+    .sh-line {
+        font-size: 0.68rem;
+        line-height: 1.45;
+    }
+
+    .sh-input-bar {
+        padding: 0.35rem 0.4rem;
+        gap: 0.25rem;
+    }
+
+    .sh-input {
+        font-size: 0.68rem;
+        padding: 0.35rem 0.4rem;
+    }
+}
+
+/* ===== Small phone ===== */
+@media (max-width: 480px) {
+    .sh-terminal {
+        padding: 0.3rem 0.4rem;
+    }
+
+    .sh-line {
+        font-size: 0.65rem;
+    }
+
+    .sh-input {
+        font-size: 0.65rem;
+    }
+
+    .sh-input-bar {
+        padding: 0.3rem 0.3rem;
+    }
+}
+
+/* ===== Touch devices ===== */
+@media (pointer: coarse) {
+    .sh-input {
+        min-height: 36px;
+        font-size: 16px; /* Prevents iOS zoom on focus */
+    }
+
+    .sh-input-bar {
+        padding: 0.4rem 0.5rem;
     }
 }

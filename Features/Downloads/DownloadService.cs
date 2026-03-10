@@ -12,32 +12,35 @@ public class DownloadService : IDisposable
     private readonly RelayConnectionService _relaySvc;
     private readonly ServiceStateStore _serviceState;
     private readonly WindowManager _wm;
+    private readonly IEventBus _bus;
 
     private readonly HashSet<string> _processingAgents = new();
+    private readonly List<IDisposable> _subscriptions = new();
     private bool _disposing;
 
-    public event Action? OnChanged;
     public IReadOnlyCollection<string> ProcessingAgents => _processingAgents;
 
     public DownloadService(
         DownloadStore store, CacheManager cache,
         RelayConnectionService relaySvc, ServiceStateStore serviceState,
-        WindowManager wm)
+        WindowManager wm, IEventBus bus)
     {
         _store = store;
         _cache = cache;
         _relaySvc = relaySvc;
         _serviceState = serviceState;
         _wm = wm;
+        _bus = bus;
     }
 
     public async Task StartAsync()
     {
         await _store.LoadAsync();
         await ResetStaleDownloads();
-        _store.OnItemQueued += OnItemQueued;
-        _serviceState.OnChanged += OnServiceStateChanged;
-        _relaySvc.OnAgentOnline += OnAgentOnline;
+
+        _subscriptions.Add(_bus.Subscribe<DownloadItemQueuedEvent>(e => OnItemQueued(e.AgentUuid)));
+        _subscriptions.Add(_bus.Subscribe<ServiceStateChangedEvent>(_ => OnServiceStateChanged()));
+        _subscriptions.Add(_bus.Subscribe<AgentOnlineEvent>(e => OnAgentOnline(e.Uuid, e.AgentId, e.RelayUrl)));
     }
 
     private async Task ResetStaleDownloads()
@@ -56,7 +59,6 @@ public class DownloadService : IDisposable
             if (_serviceState.IsEffectivelyPaused(ServiceName.Upload, uuid))
                 _store.Cts.CancelAll();
         }
-        OnChanged?.Invoke();
     }
 
     private async void OnAgentOnline(string uuid, string agentId, string relayUrl)
@@ -154,8 +156,8 @@ public class DownloadService : IDisposable
     public void Dispose()
     {
         _disposing = true;
-        _store.OnItemQueued -= OnItemQueued;
-        _serviceState.OnChanged -= OnServiceStateChanged;
-        _relaySvc.OnAgentOnline -= OnAgentOnline;
+        foreach (var sub in _subscriptions)
+            sub.Dispose();
+        _subscriptions.Clear();
     }
 }

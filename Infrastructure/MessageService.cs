@@ -4,11 +4,13 @@ public enum MessageType { Info, Success, Warning, Error }
 
 public class MessageService
 {
-    public event Action<string, MessageType>? OnNotification;
+    private readonly IEventBus _bus;
+
+    public MessageService(IEventBus bus) => _bus = bus;
 
     public void Show(string text, MessageType type = MessageType.Info)
     {
-        OnNotification?.Invoke(text, type);
+        _bus.Publish(new NotificationEvent(text, type));
     }
 
     public void Error(string text) => Show(text, MessageType.Error);

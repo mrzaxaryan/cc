@@ -1,5 +1,6 @@
 @using System.Net.WebSockets
 @using System.Text
+@inherits EventSubscriber
 @inject CacheManager Cache
 @inject VfsStore Vfs
 @inject DownloadStore Downloads
@@ -9,7 +10,6 @@
 @inject MessageService Msg
 @inject WindowManager Wm
 @inject IJSRuntime Js
-@implements IDisposable
 
 <div class="fm">
     @if (!IsConnected)
@@ -207,23 +207,17 @@
 
     protected override void OnInitialized()
     {
-        Cache.OnChanged += OnCacheChanged;
-        Downloads.OnChanged += OnDownloadsChanged;
-    }
-
-    private void OnCacheChanged()
-    {
-        if (!_syncing && Cache.HasDirectory && entries is not null)
-            _ = SyncCacheAsync();
+        On<CacheChangedEvent>(e =>
+        {
+            if (!_syncing && Cache.HasDirectory && entries is not null)
+                _ = SyncCacheAsync();
+        });
+        On<DownloadStoreChangedEvent>(e => OnDownloadsChanged());
     }
 
     private void OnDownloadsChanged() => _ = InvokeAsync(StateHasChanged);
 
-    public void Dispose()
-    {
-        Cache.OnChanged -= OnCacheChanged;
-        Downloads.OnChanged -= OnDownloadsChanged;
-    }
+    public override void Dispose() => base.Dispose();
 
     public void Reset()
     {

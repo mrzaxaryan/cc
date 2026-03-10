@@ -1,6 +1,6 @@
+@inherits EventSubscriber
 @inject ExtensionGroupStore Store
 @inject MessageService Msg
-@implements IDisposable
 
 <PanelLayout Title="Extension Groups">
     <HeaderRight>
@@ -85,11 +85,9 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Store.OnChanged += OnStoreChanged;
+        On<ExtensionGroupStoreChangedEvent>();
         await Store.LoadAsync();
     }
-
-    private void OnStoreChanged() => InvokeAsync(StateHasChanged);
 
     private void ShowAddForm()
     {
@@ -187,5 +185,5 @@
         finally { saving = false; }
     }
 
-    public void Dispose() => Store.OnChanged -= OnStoreChanged;
+    public override void Dispose() => base.Dispose();
 }

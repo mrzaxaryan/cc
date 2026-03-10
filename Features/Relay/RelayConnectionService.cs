@@ -15,13 +15,12 @@ public class RelayConnectionService : IAsyncDisposable
     private readonly AgentStore _agentDb;
     private readonly WindowManager _wm;
     private readonly MessageService _msg;
+    private readonly IEventBus _bus;
 
     private readonly Dictionary<string, RelayState> _relayStates = new();
+    private IDisposable? _relayStoreSub;
     private bool _started;
     private bool _disposing;
-
-    public event Action? OnChanged;
-    public event Action<string, string, string>? OnAgentOnline; // (uuid, agentId, relayUrl)
 
     public IReadOnlyDictionary<string, RelayState> RelayStates => _relayStates;
     public bool IsDisposing => _disposing;
@@ -39,12 +38,13 @@ public class RelayConnectionService : IAsyncDisposable
 
     public RelayConnectionService(
         RelayStore relayStore, AgentStore agentDb,
-        WindowManager wm, MessageService msg)
+        WindowManager wm, MessageService msg, IEventBus bus)
     {
         _relayStore = relayStore;
         _agentDb = agentDb;
         _wm = wm;
         _msg = msg;
+        _bus = bus;
     }
 
     public async Task StartAsync()
@@ -54,17 +54,13 @@ public class RelayConnectionService : IAsyncDisposable
 
         await _relayStore.LoadAsync();
         await _agentDb.LoadAsync();
-        _relayStore.OnChanged += OnRelayStoreChanged;
+        _relayStoreSub = _bus.Subscribe<RelayStoreChangedEvent>(_ =>
+        {
+            SyncRelays();
+            _bus.Publish(new RelayAgentsChangedEvent(""));
+        });
         SyncRelays();
     }
-
-    private void OnRelayStoreChanged()
-    {
-        SyncRelays();
-        NotifyChanged();
-    }
-
-    private void NotifyChanged() => OnChanged?.Invoke();
 
     private void SyncRelays()
     {
@@ -170,8 +166,8 @@ public class RelayConnectionService : IAsyncDisposable
                     agent.Arch = architecture;
                     var relayEntry = _relayStore.GetByUrl(relayUrl);
                     await _agentDb.UpsertAsync(uuid, agent, relayEntry?.Id ?? "");
-                    NotifyChanged();
-                    OnAgentOnline?.Invoke(uuid, agent.Id, relayUrl);
+                    _bus.Publish(new RelayAgentsChangedEvent(relayUrl));
+                    _bus.Publish(new AgentOnlineEvent(uuid, agent.Id, relayUrl));
                 }
             }
         }
@@ -190,7 +186,7 @@ public class RelayConnectionService : IAsyncDisposable
             if (existingUuid is null)
                 _ = FetchUuid(agent, relayUrl);
             else
-                OnAgentOnline?.Invoke(existingUuid, agent.Id, relayUrl);
+                _bus.Publish(new AgentOnlineEvent(existingUuid, agent.Id, relayUrl));
         }
     }
 
@@ -228,7 +224,7 @@ public class RelayConnectionService : IAsyncDisposable
                 rs.Ws = new ClientWebSocket();
                 await rs.Ws.ConnectAsync(new Uri($"{relayUrl}/events"), token);
                 rs.Connected = true;
-                NotifyChanged();
+                _bus.Publish(new RelayConnectionChangedEvent(relayUrl, true));
 
                 var buffer = new byte[65536];
                 while (rs.Ws.State == WebSocketState.Open && !token.IsCancellationRequested)
@@ -245,7 +241,7 @@ public class RelayConnectionService : IAsyncDisposable
 
                     var json = Encoding.UTF8.GetString(ms.ToArray());
                     HandleEventMessage(json, relayUrl);
-                    NotifyChanged();
+                    _bus.Publish(new RelayAgentsChangedEvent(relayUrl));
                 }
             }
             catch (OperationCanceledException)
@@ -262,13 +258,13 @@ public class RelayConnectionService : IAsyncDisposable
                 rs.Connected = false;
                 rs.Agents = null;
                 if (!_disposing)
-                    NotifyChanged();
+                    _bus.Publish(new RelayConnectionChangedEvent(relayUrl, false));
             }
 
             if (!token.IsCancellationRequested)
             {
                 rs.ReconnectAt = DateTime.UtcNow.AddSeconds(30);
-                if (!_disposing) NotifyChanged();
+                if (!_disposing) _bus.Publish(new RelayAgentsChangedEvent(relayUrl));
                 await Task.Delay(30000, token).ContinueWith(_ => { });
                 rs.ReconnectAt = null;
             }
@@ -337,6 +333,7 @@ public class RelayConnectionService : IAsyncDisposable
                     };
 
                     _ = FetchUuid(agent, relayUrl);
+                    _bus.Publish(new AgentConnectedEvent(agent.Id, relayUrl));
                 }
                 else if (type == "agent_disconnected" && !string.IsNullOrEmpty(eventAgentId))
                 {
@@ -356,6 +353,8 @@ public class RelayConnectionService : IAsyncDisposable
                         _ = _wm.DisconnectAgent(eventAgentId);
                         _msg.Warn("Agent disconnected.");
                     }
+
+                    _bus.Publish(new AgentDisconnectedEvent(eventAgentId, uuid, relayUrl));
                 }
                 else if (type is "agent_paired" or "agent_unpaired" && !string.IsNullOrEmpty(eventAgentId))
                 {
@@ -378,6 +377,8 @@ public class RelayConnectionService : IAsyncDisposable
                         _ = _wm.DisconnectAgent(eventAgentId);
                         _msg.Warn("Agent relay disconnected.");
                     }
+
+                    _bus.Publish(new AgentPairingChangedEvent(eventAgentId, paired, relayUrl));
                 }
             }
         }
@@ -390,7 +391,7 @@ public class RelayConnectionService : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         _disposing = true;
-        _relayStore.OnChanged -= OnRelayStoreChanged;
+        _relayStoreSub?.Dispose();
         foreach (var rs in _relayStates.Values)
         {
             rs.Cts?.Cancel();

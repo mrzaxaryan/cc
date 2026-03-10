@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using cc.Infrastructure;
 using Microsoft.JSInterop;
 
 namespace cc.Features.Extensions;
@@ -14,12 +15,15 @@ public class ExtensionGroup
 public class ExtensionGroupStore
 {
     private readonly IJSRuntime _js;
+    private readonly IEventBus _bus;
     private List<ExtensionGroup> _cache = new();
     private bool _loaded;
 
-    public event Action? OnChanged;
-
-    public ExtensionGroupStore(IJSRuntime js) => _js = js;
+    public ExtensionGroupStore(IJSRuntime js, IEventBus bus)
+    {
+        _js = js;
+        _bus = bus;
+    }
 
     public IReadOnlyList<ExtensionGroup> Groups => _cache;
 
@@ -62,14 +66,14 @@ public class ExtensionGroupStore
             _cache[existing] = group;
         else
             _cache.Add(group);
-        OnChanged?.Invoke();
+        _bus.Publish(new ExtensionGroupStoreChangedEvent());
     }
 
     public async Task RemoveAsync(string name)
     {
         _cache.RemoveAll(g => g.Name == name);
         await _js.InvokeVoidAsync("ccExtGroupDb.remove", name);
-        OnChanged?.Invoke();
+        _bus.Publish(new ExtensionGroupStoreChangedEvent());
     }
 
     public async Task UpdateAsync(ExtensionGroup group)
@@ -78,7 +82,7 @@ public class ExtensionGroupStore
         var idx = _cache.FindIndex(g => g.Name == group.Name);
         if (idx >= 0) _cache[idx] = group;
         else _cache.Add(group);
-        OnChanged?.Invoke();
+        _bus.Publish(new ExtensionGroupStoreChangedEvent());
     }
 
     public async Task SeedDefaultsAsync()

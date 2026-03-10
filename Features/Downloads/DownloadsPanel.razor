@@ -1,8 +1,8 @@
+@inherits EventSubscriber
 @inject DownloadStore Downloads
 @inject AgentStore AgentDb
 @inject ServiceStateStore SvcState
 @inject MessageService Msg
-@implements IDisposable
 
 <PanelLayout Title="Upload Manager">
     <HeaderLeft>
@@ -152,21 +152,12 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Downloads.OnChanged += OnDownloadsChanged;
-        SvcState.OnChanged += OnDownloadsChanged;
+        On<DownloadStoreChangedEvent>(e => Refresh());
+        On<ServiceStateChangedEvent>(e => Refresh());
         await AgentDb.LoadAsync();
         await Downloads.LoadAsync();
         await SvcState.LoadAsync();
         Refresh();
-    }
-
-    private void OnDownloadsChanged()
-    {
-        _ = InvokeAsync(() =>
-        {
-            Refresh();
-            StateHasChanged();
-        });
     }
 
     private bool HasActiveSyncs =>
@@ -274,9 +265,5 @@
         foreach (var dl in toRemove) await Downloads.RemoveAsync(dl.Id);
     }
 
-    public void Dispose()
-    {
-        Downloads.OnChanged -= OnDownloadsChanged;
-        SvcState.OnChanged -= OnDownloadsChanged;
-    }
+    public override void Dispose() => base.Dispose();
 }

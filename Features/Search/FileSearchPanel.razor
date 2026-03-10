@@ -1,3 +1,4 @@
+@inherits EventSubscriber
 @inject SearchStore Scans
 @inject DownloadStore Downloads
 @inject VfsStore Vfs
@@ -5,7 +6,6 @@
 @inject ExtensionGroupStore ExtGroupStore
 @inject ServiceStateStore SvcState
 @inject MessageService Msg
-@implements IDisposable
 
 <PanelLayout Title="File Search">
     <HeaderLeft>
@@ -205,8 +205,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Scans.OnChanged += OnScansChanged;
-        SvcState.OnChanged += OnScansChanged;
+        On<SearchStoreChangedEvent>();
+        On<ServiceStateChangedEvent>();
         await Scans.LoadAsync();
         await Downloads.LoadAsync();
         await ExtGroupStore.LoadAsync();
@@ -429,9 +429,5 @@
         _ => cc.Shared.ProgressVariant.Muted
     };
 
-    public void Dispose()
-    {
-        Scans.OnChanged -= OnScansChanged;
-        SvcState.OnChanged -= OnScansChanged;
-    }
+    public override void Dispose() => base.Dispose();
 }

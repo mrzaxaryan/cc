@@ -44,15 +44,17 @@ public static class SearchStatus
 public class SearchStore
 {
     private readonly IJSRuntime _js;
+    private readonly IEventBus _bus;
     private List<SearchRecord> _cache = new();
     private bool _loaded;
 
     public readonly CtsManager Cts = new();
 
-    public event Action? OnChanged;
-    public event Action<string>? OnItemQueued; // fires with agentUuid
-
-    public SearchStore(IJSRuntime js) => _js = js;
+    public SearchStore(IJSRuntime js, IEventBus bus)
+    {
+        _js = js;
+        _bus = bus;
+    }
 
     public IReadOnlyList<SearchRecord> Searches => _cache;
 
@@ -90,15 +92,15 @@ public class SearchStore
         var id = await _js.InvokeAsync<int>("ccScanDb.put", record);
         record.Id = id;
         _cache.Add(record);
-        OnChanged?.Invoke();
-        OnItemQueued?.Invoke(record.AgentUuid);
+        _bus.Publish(new SearchStoreChangedEvent());
+        _bus.Publish(new SearchItemQueuedEvent(record.AgentUuid));
         return record;
     }
 
     public async Task UpdateAsync(SearchRecord record)
     {
         await _js.InvokeVoidAsync("ccScanDb.put", record);
-        OnChanged?.Invoke();
+        _bus.Publish(new SearchStoreChangedEvent());
     }
 
     public async Task PauseAsync(int id)
@@ -107,7 +109,7 @@ public class SearchStore
         if (record is null) return;
         record.Status = SearchStatus.Paused;
         await _js.InvokeVoidAsync("ccScanDb.put", record);
-        OnChanged?.Invoke();
+        _bus.Publish(new SearchStoreChangedEvent());
     }
 
     public async Task ResumeAsync(int id)
@@ -116,8 +118,8 @@ public class SearchStore
         if (record is null) return;
         record.Status = SearchStatus.Scanning;
         await _js.InvokeVoidAsync("ccScanDb.put", record);
-        OnChanged?.Invoke();
-        OnItemQueued?.Invoke(record.AgentUuid);
+        _bus.Publish(new SearchStoreChangedEvent());
+        _bus.Publish(new SearchItemQueuedEvent(record.AgentUuid));
     }
 
     public async Task CompleteAsync(int id)
@@ -127,7 +129,7 @@ public class SearchStore
         record.Status = SearchStatus.Completed;
         record.CompletedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         await _js.InvokeVoidAsync("ccScanDb.put", record);
-        OnChanged?.Invoke();
+        _bus.Publish(new SearchStoreChangedEvent());
     }
 
     public async Task FailAsync(int id, string error)
@@ -137,14 +139,14 @@ public class SearchStore
         record.Status = SearchStatus.Failed;
         record.Error = error;
         await _js.InvokeVoidAsync("ccScanDb.put", record);
-        OnChanged?.Invoke();
+        _bus.Publish(new SearchStoreChangedEvent());
     }
 
     public async Task RemoveAsync(int id)
     {
         _cache.RemoveAll(r => r.Id == id);
         await _js.InvokeVoidAsync("ccScanDb.remove", id);
-        OnChanged?.Invoke();
+        _bus.Publish(new SearchStoreChangedEvent());
     }
 
     public List<SearchRecord> GetByAgent(string agentUuid) =>

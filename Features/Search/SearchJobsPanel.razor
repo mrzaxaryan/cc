@@ -1,10 +1,10 @@
+@inherits EventSubscriber
 @inject SearchStore Scans
 @inject DownloadStore Downloads
 @inject AgentStore AgentDb
 @inject RelayConnectionService RelaySvc
 @inject ServiceStateStore SvcState
 @inject MessageService Msg
-@implements IDisposable
 
 <PanelLayout Title="File Search">
     <HeaderLeft>
@@ -211,15 +211,14 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Scans.OnChanged += OnChanged;
-        RelaySvc.OnChanged += OnChanged;
-        SvcState.OnChanged += OnChanged;
+        On<SearchStoreChangedEvent>();
+        On<RelayAgentsChangedEvent>();
+        On<RelayConnectionChangedEvent>();
+        On<ServiceStateChangedEvent>();
         await AgentDb.LoadAsync();
         await Scans.LoadAsync();
         await SvcState.LoadAsync();
     }
-
-    private void OnChanged() => InvokeAsync(StateHasChanged);
 
     private record AgentGroup(string Uuid, string Name, int Scanning, int Paused, int Completed, int Failed, int TotalFiles);
 
@@ -313,10 +312,5 @@
             await Scans.ResumeAsync(s.Id);
     }
 
-    public void Dispose()
-    {
-        Scans.OnChanged -= OnChanged;
-        RelaySvc.OnChanged -= OnChanged;
-        SvcState.OnChanged -= OnChanged;
-    }
+    public override void Dispose() => base.Dispose();
 }

@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using cc.Infrastructure;
 using Microsoft.JSInterop;
 
 namespace cc.Features.Relay;
@@ -17,12 +18,15 @@ public class RelayStore
     private const string DefaultName = "Default";
 
     private readonly IJSRuntime _js;
+    private readonly IEventBus _bus;
     private List<RelayRecord>? _relays;
     private bool _loaded;
 
-    public event Action? OnChanged;
-
-    public RelayStore(IJSRuntime js) => _js = js;
+    public RelayStore(IJSRuntime js, IEventBus bus)
+    {
+        _js = js;
+        _bus = bus;
+    }
 
     public IReadOnlyList<RelayRecord> Relays => _relays ?? [];
     public IReadOnlyList<RelayRecord> EnabledRelays => _relays?.Where(r => r.Enabled).ToList() ?? [];
@@ -76,14 +80,14 @@ public class RelayStore
         var entry = new RelayRecord { Id = Guid.NewGuid().ToString("N")[..8], Url = url, Name = name };
         _relays!.Add(entry);
         await _js.InvokeVoidAsync("ccRelayDb.put", entry);
-        OnChanged?.Invoke();
+        _bus.Publish(new RelayStoreChangedEvent());
     }
 
     public async Task RemoveRelay(string url)
     {
         _relays!.RemoveAll(r => r.Url == url);
         await _js.InvokeVoidAsync("ccRelayDb.remove", url);
-        OnChanged?.Invoke();
+        _bus.Publish(new RelayStoreChangedEvent());
     }
 
     public async Task SetEnabled(string url, bool enabled)
@@ -93,7 +97,7 @@ public class RelayStore
         if (entry.Enabled == enabled) return;
         entry.Enabled = enabled;
         await _js.InvokeVoidAsync("ccRelayDb.put", entry);
-        OnChanged?.Invoke();
+        _bus.Publish(new RelayStoreChangedEvent());
     }
 
     public async Task UpdateRelayName(string url, string name)
@@ -121,6 +125,6 @@ public class RelayStore
 
         entry.Name = newName;
         await _js.InvokeVoidAsync("ccRelayDb.put", entry);
-        OnChanged?.Invoke();
+        _bus.Publish(new RelayStoreChangedEvent());
     }
 }

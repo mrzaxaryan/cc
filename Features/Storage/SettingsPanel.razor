@@ -1,10 +1,10 @@
+@inherits EventSubscriber
 @inject CacheManager Cache
 @inject VfsStore Vfs
 @inject AgentStore AgentDb
 @inject DownloadStore Downloads
 @inject MessageService Msg
 @inject IJSRuntime Js
-@implements IDisposable
 
 <PanelLayout Title="Settings">
     <HeaderRight>
@@ -222,12 +222,12 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Cache.OnChanged += OnCacheChanged;
-        Vfs.OnChanged += OnCacheChanged;
+        On<CacheChangedEvent>(e => OnDataChanged());
+        On<VfsChangedEvent>(e => OnDataChanged());
         await Refresh();
     }
 
-    private void OnCacheChanged()
+    private void OnDataChanged()
     {
         _debounceTimer?.Dispose();
         _debounceTimer = new Timer(async _ =>
@@ -432,10 +432,9 @@
         _ => "—"
     };
 
-    public void Dispose()
+    public override void Dispose()
     {
         _debounceTimer?.Dispose();
-        Cache.OnChanged -= OnCacheChanged;
-        Vfs.OnChanged -= OnCacheChanged;
+        base.Dispose();
     }
 }

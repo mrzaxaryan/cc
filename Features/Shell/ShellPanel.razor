@@ -1,41 +1,69 @@
 @using cc.Features.Relay
 @inject MessageService Msg
+@inject IJSRuntime Js
 @implements IDisposable
 
-<div class="sh">
-    @if (!IsConnected)
-    {
-        <div class="sh-offline">
-            <span class="sh-offline-dot"></span>
-            Agent disconnected — shell unavailable.
-        </div>
-    }
-
-    <div class="sh-toolbar">
-        <CcBtn OnClick="ClearOutput" Title="Clear" Size="Size.Xs">Clear</CcBtn>
-        <CcBtn OnClick="PollOutput" Disabled="@(!IsConnected || _polling)" Loading="@_polling" Title="Read output" Size="Size.Xs">Read</CcBtn>
-        <div class="sh-spacer"></div>
-        @if (_autoRead)
+<PanelLayout Title="Shell">
+    <HeaderLeft>
+        @if (IsConnected)
         {
-            <CcBadge Variant="BadgeVariant.Success" Size="Size.Xs">Auto-read ON</CcBadge>
+            <CcBadge Variant="BadgeVariant.Success" Size="Size.Xs">Connected</CcBadge>
         }
+        else
+        {
+            <CcBadge Variant="BadgeVariant.Muted" Size="Size.Xs">Disconnected</CcBadge>
+        }
+    </HeaderLeft>
+    <HeaderRight>
+        <CcBtn OnClick="ClearOutput" Title="Clear terminal" Size="Size.Xs" Variant="BtnVariant.Ghost">Clear</CcBtn>
+        <CcBtn OnClick="PollOutput" Disabled="@(!IsConnected || _polling)" Loading="@_polling" Title="Read output" Size="Size.Xs">Read</CcBtn>
         <CcBtn OnClick="ToggleAutoRead" Title="@(_autoRead ? "Stop auto-read" : "Start auto-read")" Size="Size.Xs"
                Variant="@(_autoRead ? BtnVariant.Success : BtnVariant.Default)">
-            @(_autoRead ? "Stop" : "Auto")
+            @(_autoRead ? "Auto: ON" : "Auto: OFF")
         </CcBtn>
-    </div>
+    </HeaderRight>
+    <Body>
+        <div class="sh">
+            @if (!IsConnected)
+            {
+                <div class="sh-banner sh-banner--warn">
+                    <span class="status-dot dot-off"></span>
+                    Agent disconnected — shell unavailable.
+                </div>
+            }
 
-    <div class="sh-output" @ref="_outputEl">
-        <pre class="sh-pre">@_output</pre>
-    </div>
+            <div class="sh-terminal" @ref="_terminalEl">
+                @if (_lines.Count == 0 && string.IsNullOrEmpty(_pendingOutput))
+                {
+                    <div class="sh-empty">No output yet. Type a command below.</div>
+                }
+                else
+                {
+                    @foreach (var line in _lines)
+                    {
+                        <div class="sh-line @(line.IsCommand ? "sh-line--cmd" : line.IsError ? "sh-line--err" : "")">@line.Text</div>
+                    }
+                    @if (!string.IsNullOrEmpty(_pendingOutput))
+                    {
+                        <div class="sh-line">@_pendingOutput</div>
+                    }
+                }
+            </div>
 
-    <div class="sh-input-bar">
-        <span class="sh-prompt">&gt;</span>
-        <input class="sh-input" @bind="_inputValue" @bind:event="oninput"
-               @onkeydown="OnKeyDown" placeholder="Type command..." disabled="@(!IsConnected)" />
-        <CcBtn OnClick="SendCommand" Disabled="@(!IsConnected || string.IsNullOrWhiteSpace(_inputValue))" Size="Size.Xs" Variant="BtnVariant.Primary">Send</CcBtn>
-    </div>
-</div>
+            <div class="sh-input-bar">
+                <span class="sh-prompt">$</span>
+                <input class="sh-input" @bind="_inputValue" @bind:event="oninput"
+                       @ref="_inputEl"
+                       @onkeydown="OnKeyDown" placeholder="@(IsConnected ? "Type command..." : "Disconnected")"
+                       disabled="@(!IsConnected)" autocomplete="off" spellcheck="false" />
+                <CcBtn OnClick="SendCommand" Disabled="@(!IsConnected || string.IsNullOrWhiteSpace(_inputValue))"
+                       Size="Size.Xs" Variant="BtnVariant.Primary" Title="Send command">
+                    &#x23CE;
+                </CcBtn>
+            </div>
+        </div>
+    </Body>
+</PanelLayout>
 
 @code {
     [Parameter] public RelaySocket? Relay { get; set; }
@@ -43,16 +71,86 @@
     [Parameter] public string? AgentName { get; set; }
     [Parameter] public string? AgentUuid { get; set; }
 
-    private string _output = "";
+    private record ShellLine(string Text, bool IsCommand = false, bool IsError = false);
+
+    private readonly List<ShellLine> _lines = new();
+    private string _pendingOutput = "";
     private string _inputValue = "";
     private bool _polling;
     private bool _autoRead;
     private Timer? _autoReadTimer;
-    private ElementReference _outputEl;
-    private List<string> _history = new();
+    private ElementReference _terminalEl;
+    private ElementReference _inputEl;
+    private readonly List<string> _history = new();
     private int _historyIndex = -1;
+    private const int MaxLines = 2000;
 
     private bool IsConnected => Relay is { IsConnected: true };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await FocusInput();
+    }
+
+    private async Task FocusInput()
+    {
+        try { await _inputEl.FocusAsync(); } catch { }
+    }
+
+    private async Task ScrollToBottom()
+    {
+        try
+        {
+            await Js.InvokeVoidAsync("eval", $"document.querySelector('[_bl_{_terminalEl.Id}]')?.scrollTo(0, 999999)");
+        }
+        catch { }
+    }
+
+    private void AppendOutput(string text)
+    {
+        // Split into lines, handling partial lines
+        var combined = _pendingOutput + text;
+        var parts = combined.Split('\n');
+
+        // All but last are complete lines
+        for (var i = 0; i < parts.Length - 1; i++)
+            _lines.Add(new ShellLine(parts[i]));
+
+        // Last part may be partial (no trailing newline)
+        _pendingOutput = parts[^1];
+
+        TrimLines();
+    }
+
+    private void AppendCommand(string cmd)
+    {
+        FlushPending();
+        _lines.Add(new ShellLine($"$ {cmd}", IsCommand: true));
+        TrimLines();
+    }
+
+    private void AppendError(string msg)
+    {
+        FlushPending();
+        _lines.Add(new ShellLine(msg, IsError: true));
+        TrimLines();
+    }
+
+    private void FlushPending()
+    {
+        if (!string.IsNullOrEmpty(_pendingOutput))
+        {
+            _lines.Add(new ShellLine(_pendingOutput));
+            _pendingOutput = "";
+        }
+    }
+
+    private void TrimLines()
+    {
+        if (_lines.Count > MaxLines)
+            _lines.RemoveRange(0, _lines.Count - MaxLines);
+    }
 
     private async Task SendCommand()
     {
@@ -63,7 +161,9 @@
         _history.Add(cmd);
         _historyIndex = _history.Count;
 
-        _output += $"> {cmd}\n";
+        AppendCommand(cmd);
+        StateHasChanged();
+        await ScrollToBottom();
 
         var payload = RelaySocket.BuildWriteShell(cmd + "\n");
         try
@@ -73,17 +173,18 @@
             {
                 var status = RelaySocket.ReadStatus(response);
                 if (status != 0)
-                    _output += $"[WriteShell error: status {status}]\n";
+                    AppendError($"[WriteShell error: status {status}]");
             }
         }
         catch (Exception ex)
         {
-            _output += $"[Send error: {ex.Message}]\n";
+            AppendError($"[Send error: {ex.Message}]");
         }
 
-        // Auto-poll output after sending
-        await Task.Delay(200);
+        // Brief delay then read output
+        await Task.Delay(150);
         await PollOutput();
+        await FocusInput();
     }
 
     private async Task PollOutput()
@@ -101,19 +202,22 @@
                 var status = RelaySocket.ReadStatus(response);
                 if (status == 0 && response.Length >= 12)
                 {
-                    var (bytesRead, text) = RelaySocket.ReadShellOutput(response);
+                    var (_, text) = RelaySocket.ReadShellOutput(response);
                     if (!string.IsNullOrEmpty(text))
-                        _output += text;
+                    {
+                        AppendOutput(text);
+                        await ScrollToBottom();
+                    }
                 }
                 else if (status != 0)
                 {
-                    _output += $"[ReadShell error: status {status}]\n";
+                    AppendError($"[ReadShell error: status {status}]");
                 }
             }
         }
         catch (Exception ex)
         {
-            _output += $"[Read error: {ex.Message}]\n";
+            AppendError($"[Read error: {ex.Message}]");
         }
         finally
         {
@@ -133,7 +237,6 @@
                 await InvokeAsync(async () =>
                 {
                     await PollOutput();
-                    StateHasChanged();
                 });
             }, null, 500, 500);
         }
@@ -146,24 +249,28 @@
 
     private void ClearOutput()
     {
-        _output = "";
+        _lines.Clear();
+        _pendingOutput = "";
     }
 
     private async Task OnKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter")
+        switch (e.Key)
         {
-            await SendCommand();
-        }
-        else if (e.Key == "ArrowUp" && _history.Count > 0)
-        {
-            _historyIndex = Math.Max(0, _historyIndex - 1);
-            _inputValue = _history[_historyIndex];
-        }
-        else if (e.Key == "ArrowDown" && _history.Count > 0)
-        {
-            _historyIndex = Math.Min(_history.Count, _historyIndex + 1);
-            _inputValue = _historyIndex < _history.Count ? _history[_historyIndex] : "";
+            case "Enter":
+                await SendCommand();
+                break;
+            case "ArrowUp" when _history.Count > 0:
+                _historyIndex = Math.Max(0, _historyIndex - 1);
+                _inputValue = _history[_historyIndex];
+                break;
+            case "ArrowDown" when _history.Count > 0:
+                _historyIndex = Math.Min(_history.Count, _historyIndex + 1);
+                _inputValue = _historyIndex < _history.Count ? _history[_historyIndex] : "";
+                break;
+            case "l" when e.CtrlKey:
+                ClearOutput();
+                break;
         }
     }
 

@@ -15,15 +15,18 @@ public class NotificationRecord
 public class NotificationStore
 {
     private readonly IJSRuntime _js;
+    private readonly IEventBus _bus;
     private List<NotificationRecord> _items = new();
     private bool _loaded;
 
-    public NotificationStore(IJSRuntime js) => _js = js;
+    public NotificationStore(IJSRuntime js, IEventBus bus)
+    {
+        _js = js;
+        _bus = bus;
+    }
 
     public IReadOnlyList<NotificationRecord> Items => _items;
     public int UnreadCount { get; private set; }
-
-    public event Action? OnChanged;
 
     public async Task LoadAsync()
     {
@@ -56,7 +59,7 @@ public class NotificationStore
         var all = await _js.InvokeAsync<NotificationRecord[]>("ccNotificationDb.getAll");
         _items = all.OrderByDescending(r => r.Created).ToList();
         UnreadCount++;
-        OnChanged?.Invoke();
+        _bus.Publish(new NotificationStoreChangedEvent());
     }
 
     public async Task RemoveAsync(int id)
@@ -64,7 +67,7 @@ public class NotificationStore
         await _js.InvokeVoidAsync("ccNotificationDb.remove", id);
         _items.RemoveAll(n => n.Id == id);
         UnreadCount = Math.Max(0, UnreadCount - 1);
-        OnChanged?.Invoke();
+        _bus.Publish(new NotificationStoreChangedEvent());
     }
 
     public async Task ClearAsync()
@@ -72,12 +75,12 @@ public class NotificationStore
         await _js.InvokeVoidAsync("ccNotificationDb.clear");
         _items.Clear();
         UnreadCount = 0;
-        OnChanged?.Invoke();
+        _bus.Publish(new NotificationStoreChangedEvent());
     }
 
     public void MarkAllRead()
     {
         UnreadCount = 0;
-        OnChanged?.Invoke();
+        _bus.Publish(new NotificationStoreChangedEvent());
     }
 }

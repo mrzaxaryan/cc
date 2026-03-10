@@ -1,6 +1,6 @@
 
+@inherits EventSubscriber
 @inject WindowManager Wm
-@implements IDisposable
 
 @* Drag overlay — captures pointer events globally during drag *@
 @if (_dragging is not null)
@@ -133,8 +133,7 @@
 
     private static readonly Edge[] Edges = [Edge.N, Edge.S, Edge.E, Edge.W, Edge.NW, Edge.NE, Edge.SW, Edge.SE];
 
-    protected override void OnInitialized() => Wm.OnChanged += OnWmChanged;
-    private void OnWmChanged() => InvokeAsync(StateHasChanged);
+    protected override void OnInitialized() => On<WindowChangedEvent>();
 
     private bool IsTopWindow(WindowState win)
     {
@@ -247,5 +246,5 @@
         _ => "default"
     };
 
-    public void Dispose() => Wm.OnChanged -= OnWmChanged;
+    public override void Dispose() => base.Dispose();
 }

@@ -1,18 +1,19 @@
 using cc.Features.Relay;
-
+using cc.Infrastructure;
 
 namespace cc.Features.Workspace;
 
 public class WindowManager
 {
+    private readonly IEventBus _bus;
     private int _nextId;
     private int _topZ = 1040;
 
     public List<WindowState> Windows { get; } = new();
 
-    public event Action? OnChanged;
+    public WindowManager(IEventBus bus) => _bus = bus;
 
-    public void NotifyChanged() => OnChanged?.Invoke();
+    private void NotifyChanged() => _bus.Publish(new WindowChangedEvent());
 
     /// <summary>All agent IDs with active relay connections across windows.</summary>
     public IEnumerable<string> ConnectedAgentIds =>
@@ -25,7 +26,7 @@ public class WindowManager
         if (win.ZIndex == _topZ) return;
         _topZ++;
         win.ZIndex = _topZ;
-        OnChanged?.Invoke();
+        NotifyChanged();
     }
 
     public void OpenWindow(string panel)
@@ -51,7 +52,7 @@ public class WindowManager
             Height = 500,
             ZIndex = _topZ
         });
-        OnChanged?.Invoke();
+        NotifyChanged();
     }
 
     public void OpenAgentWindow(string panel, string agentId, RelaySocket? relay = null, string? agentName = null, string? agentUuid = null, string? searchPath = null)
@@ -86,7 +87,7 @@ public class WindowManager
             Height = 500,
             ZIndex = _topZ
         });
-        OnChanged?.Invoke();
+        NotifyChanged();
     }
 
     public async Task CloseWindow(WindowState win)
@@ -95,7 +96,7 @@ public class WindowManager
         // Only disconnect relay if no other window still uses it
         if (win.Relay is not null && !Windows.Any(w => w.Relay == win.Relay))
             await win.Relay.Disconnect();
-        OnChanged?.Invoke();
+        NotifyChanged();
     }
 
     public async Task CloseAllWindows()
@@ -106,20 +107,20 @@ public class WindowManager
                 await win.Relay.Disconnect();
         }
         Windows.Clear();
-        OnChanged?.Invoke();
+        NotifyChanged();
     }
 
     public void ToggleMinimize(WindowState win)
     {
         win.Minimized = !win.Minimized;
-        OnChanged?.Invoke();
+        NotifyChanged();
     }
 
     public void ToggleMaximize(WindowState win)
     {
         win.Maximized = !win.Maximized;
         if (win.Maximized) win.Minimized = false;
-        OnChanged?.Invoke();
+        NotifyChanged();
     }
 
     private static string DisplayTitle(string panel) => panel switch
@@ -144,6 +145,6 @@ public class WindowManager
             if (win.Relay is not null)
                 await win.Relay.Disconnect();
         }
-        OnChanged?.Invoke();
+        NotifyChanged();
     }
 }

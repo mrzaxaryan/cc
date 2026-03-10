@@ -1,6 +1,6 @@
+@inherits EventSubscriber
 @inject RelayConnectionService Relay
 @inject AgentStore AgentDb
-@implements IDisposable
 
 @{
     var data = BuildInfo();
@@ -42,11 +42,10 @@
 
     protected override void OnInitialized()
     {
-        Relay.OnChanged += OnChanged;
+        On<RelayAgentsChangedEvent>();
+        On<RelayConnectionChangedEvent>();
         _refreshTimer = new Timer(_ => InvokeAsync(StateHasChanged), null, 1000, 1000);
     }
-
-    private void OnChanged() => InvokeAsync(StateHasChanged);
 
     private record InfoRow(string Label, string Value, string? CssClass = null);
 
@@ -164,9 +163,9 @@
         if (HasValue(value)) rows.Add(new(label, value!));
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
         _refreshTimer?.Dispose();
-        Relay.OnChanged -= OnChanged;
+        base.Dispose();
     }
 }

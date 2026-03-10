@@ -8,6 +8,7 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 // Infrastructure
+builder.Services.AddSingleton<cc.Infrastructure.IEventBus, cc.Infrastructure.EventBus>();
 builder.Services.AddScoped<cc.Infrastructure.LocalStorageService>();
 builder.Services.AddSingleton<cc.Infrastructure.MessageService>();
 builder.Services.AddScoped<cc.Infrastructure.ServiceStateStore>();

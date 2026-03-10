@@ -1,10 +1,10 @@
+@inherits EventSubscriber
 @inject DownloadStore Downloads
 @inject DownloadService DownloadSvc
 @inject AgentStore AgentDb
 @inject RelayConnectionService RelaySvc
 @inject ServiceStateStore SvcState
 @inject MessageService Msg
-@implements IDisposable
 
 <PanelLayout Title="File Uploads">
     <HeaderLeft>
@@ -230,15 +230,14 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Downloads.OnChanged += OnChanged;
-        RelaySvc.OnChanged += OnChanged;
-        SvcState.OnChanged += OnChanged;
+        On<DownloadStoreChangedEvent>();
+        On<RelayAgentsChangedEvent>();
+        On<RelayConnectionChangedEvent>();
+        On<ServiceStateChangedEvent>();
         await AgentDb.LoadAsync();
         await Downloads.LoadAsync();
         await SvcState.LoadAsync();
     }
-
-    private void OnChanged() => InvokeAsync(StateHasChanged);
 
     private record AgentGroup(string Uuid, string Name, int Downloading, int Queued, int Paused, int Completed, int Failed, long CompletedSize);
 
@@ -338,10 +337,5 @@
             await Downloads.QueueAsync(dl.Id);
     }
 
-    public void Dispose()
-    {
-        Downloads.OnChanged -= OnChanged;
-        RelaySvc.OnChanged -= OnChanged;
-        SvcState.OnChanged -= OnChanged;
-    }
+    public override void Dispose() => base.Dispose();
 }

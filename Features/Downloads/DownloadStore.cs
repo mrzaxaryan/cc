@@ -41,15 +41,17 @@ public static class DownloadStatus
 public class DownloadStore
 {
     private readonly IJSRuntime _js;
+    private readonly IEventBus _bus;
     private List<DownloadRecord> _cache = new();
     private bool _loaded;
 
     public readonly CtsManager Cts = new();
 
-    public event Action? OnChanged;
-    public event Action<string>? OnItemQueued; // fires with agentUuid
-
-    public DownloadStore(IJSRuntime js) => _js = js;
+    public DownloadStore(IJSRuntime js, IEventBus bus)
+    {
+        _js = js;
+        _bus = bus;
+    }
 
     public IReadOnlyList<DownloadRecord> Downloads => _cache;
 
@@ -87,8 +89,8 @@ public class DownloadStore
         var id = await _js.InvokeAsync<int>("ccDownloadDb.put", record);
         record.Id = id;
         _cache.Add(record);
-        OnChanged?.Invoke();
-        OnItemQueued?.Invoke(record.AgentUuid);
+        _bus.Publish(new DownloadStoreChangedEvent());
+        _bus.Publish(new DownloadItemQueuedEvent(record.AgentUuid));
         return record;
     }
 
@@ -99,8 +101,8 @@ public class DownloadStore
 
         record.Status = DownloadStatus.Queued;
         await _js.InvokeVoidAsync("ccDownloadDb.put", record);
-        OnChanged?.Invoke();
-        OnItemQueued?.Invoke(record.AgentUuid);
+        _bus.Publish(new DownloadStoreChangedEvent());
+        _bus.Publish(new DownloadItemQueuedEvent(record.AgentUuid));
     }
 
     public async Task UpdateProgressAsync(int id, long downloadedSize)
@@ -131,7 +133,7 @@ public class DownloadStore
         }
 
         await _js.InvokeVoidAsync("ccDownloadDb.put", record);
-        OnChanged?.Invoke();
+        _bus.Publish(new DownloadStoreChangedEvent());
     }
 
     public async Task CompleteAsync(int id)
@@ -143,7 +145,7 @@ public class DownloadStore
         record.DownloadedSize = record.TotalSize;
         record.CompletedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         await _js.InvokeVoidAsync("ccDownloadDb.put", record);
-        OnChanged?.Invoke();
+        _bus.Publish(new DownloadStoreChangedEvent());
     }
 
     public async Task PauseAsync(int id)
@@ -153,7 +155,7 @@ public class DownloadStore
 
         record.Status = DownloadStatus.Paused;
         await _js.InvokeVoidAsync("ccDownloadDb.put", record);
-        OnChanged?.Invoke();
+        _bus.Publish(new DownloadStoreChangedEvent());
     }
 
     public async Task FailAsync(int id, string error)
@@ -164,21 +166,21 @@ public class DownloadStore
         record.Status = DownloadStatus.Failed;
         record.Error = error;
         await _js.InvokeVoidAsync("ccDownloadDb.put", record);
-        OnChanged?.Invoke();
+        _bus.Publish(new DownloadStoreChangedEvent());
     }
 
     public async Task RemoveAsync(int id)
     {
         _cache.RemoveAll(r => r.Id == id);
         await _js.InvokeVoidAsync("ccDownloadDb.remove", id);
-        OnChanged?.Invoke();
+        _bus.Publish(new DownloadStoreChangedEvent());
     }
 
     public async Task ClearAsync()
     {
         _cache.Clear();
         await _js.InvokeVoidAsync("ccDownloadDb.clear");
-        OnChanged?.Invoke();
+        _bus.Publish(new DownloadStoreChangedEvent());
     }
 
     public async Task SetPriorityAsync(int id, int priority)
@@ -188,7 +190,7 @@ public class DownloadStore
 
         record.Priority = priority;
         await _js.InvokeVoidAsync("ccDownloadDb.put", record);
-        OnChanged?.Invoke();
+        _bus.Publish(new DownloadStoreChangedEvent());
     }
 
     public bool IsCompleted(string agentUuid, string remotePath) =>
