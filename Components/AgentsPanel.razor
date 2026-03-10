@@ -183,8 +183,10 @@
                 AgentId = agent.Id,
                 RelayUrl = relayUrl,
                 Ip = agent.Ip,
-                Os = !string.IsNullOrEmpty(agent.Os) ? agent.Os : "—",
-                Arch = !string.IsNullOrEmpty(agent.Arch) ? agent.Arch : "—",
+                Os = !string.IsNullOrEmpty(agent.Os) ? agent.Os
+                    : !string.IsNullOrEmpty(record?.Os) ? record.Os : "—",
+                Arch = !string.IsNullOrEmpty(agent.Arch) ? agent.Arch
+                    : !string.IsNullOrEmpty(record?.Arch) ? record.Arch : "—",
                 Location = Formatters.FormatLocation(agent),
                 Network = Formatters.FormatNetwork(agent),
                 Paired = agent.Paired,

@@ -57,15 +57,14 @@ public class AgentStore
         }
     }
 
-    public async Task UpsertAsync(string uuid, AgentConnection agent, string relayStoreId, string? hostname = null)
+    public async Task UpsertAsync(string uuid, AgentConnection agent, string relayStoreId)
     {
         var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        var defaultName = !string.IsNullOrWhiteSpace(hostname) ? hostname : $"Agent #{_cache.Count + 1}";
 
         var record = new AgentRecord
         {
             Uuid = uuid,
-            Name = defaultName,
+            Name = $"Agent #{_cache.Count + 1}",
             AgentId = agent.Id,
             RelayStoreId = relayStoreId,
             Ip = agent.Ip,

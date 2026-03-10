@@ -178,7 +178,7 @@ public class RelayConnectionService : IAsyncDisposable
                     agent.Os = platform;
                     agent.Arch = architecture;
                     var relayEntry = _relayStore.GetByUrl(relayUrl);
-                    await _agentDb.UpsertAsync(uuid, agent, relayEntry?.Id ?? "", hostname);
+                    await _agentDb.UpsertAsync(uuid, agent, relayEntry?.Id ?? "");
                     NotifyChanged();
                     _ = AutoResumeDownloads(uuid, agent.Id, relayUrl);
                     _ = AutoResumeScans(uuid, agent.Id, relayUrl);
