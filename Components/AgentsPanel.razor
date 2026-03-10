@@ -43,6 +43,7 @@
                     <th>System</th>
                     <th>Location</th>
                     <th>Network</th>
+                    <th class="ap-col-paired">Paired</th>
                     <th>Last Seen</th>
                 </tr>
             </thead>
@@ -73,6 +74,12 @@
                         </td>
                         <td>@row.Location</td>
                         <td class="ap-net-cell">@row.Network</td>
+                        <td class="ap-col-paired">
+                            @if (row.Paired)
+                            {
+                                <span class="ap-dot ap-dot--on"></span>
+                            }
+                        </td>
                         <td class="ap-seen-cell">@row.LastSeen</td>
                     </CcTr>
                 }
@@ -136,6 +143,7 @@
         public string Arch { get; set; } = "";
         public string Location { get; set; } = "";
         public string Network { get; set; } = "";
+        public bool Paired { get; set; }
         public string LastSeen { get; set; } = "";
     }
 
@@ -179,6 +187,7 @@
                 Arch = !string.IsNullOrEmpty(agent.Arch) ? agent.Arch : "—",
                 Location = Formatters.FormatLocation(agent),
                 Network = Formatters.FormatNetwork(agent),
+                Paired = agent.Paired,
                 LastSeen = "Now"
             });
         }
@@ -201,6 +210,7 @@
                 Arch = !string.IsNullOrEmpty(record.Arch) ? record.Arch : "—",
                 Location = FormatStoredLocation(record),
                 Network = FormatStoredNetwork(record),
+                Paired = !string.IsNullOrEmpty(record.PairedRelayId),
                 LastSeen = Formatters.FormatTimestamp(record.LastSeen)
             });
         }

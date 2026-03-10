@@ -78,6 +78,11 @@
     text-align: center;
 }
 
+.ap-col-paired {
+    width: 48px;
+    text-align: center;
+}
+
 /* Status dot */
 .ap-dot {
     display: inline-block;
