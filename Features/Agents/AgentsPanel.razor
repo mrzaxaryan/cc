@@ -170,9 +170,9 @@
             </div>
         </div>
     }
+    <CcDropdownItem OnClick="CtxStartRename" Disabled="@(!ctxIsOnline)">Rename</CcDropdownItem>
     <CcDropdownItem OnClick="CtxOpenFiles" Disabled="@(!ctxIsOnline)">File Manager</CcDropdownItem>
     <CcDropdownItem OnClick="CtxOpenShell" Disabled="@(!ctxIsOnline)">Shell</CcDropdownItem>
-    <CcDropdownItem OnClick="CtxStartRename" Disabled="@(!ctxIsOnline)">Rename</CcDropdownItem>
 </CcDropdown>
 
 <CcDialog Visible="@renameVisible" Title="Rename Agent" ConfirmText="Rename"
