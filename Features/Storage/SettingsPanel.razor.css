@@ -2,7 +2,7 @@
 .cm-reset-warning {
     flex: 1;
     font-size: 0.72rem;
-    color: var(--cc-accent-red, #e53935);
+    color: var(--cc-accent-red);
     font-weight: 500;
 }
 
@@ -11,6 +11,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    margin-bottom: 0.35rem;
 }
 
 .cm-toolbar-actions {
@@ -54,6 +55,8 @@
     font-size: 0.7rem;
     overflow-x: auto;
     white-space: nowrap;
+    padding: 0.25rem 0;
+    margin-bottom: 0.25rem;
 }
 
 .cm-crumb {

@@ -93,6 +93,8 @@
 }
 
 .scan-new-btn {
+    display: flex;
+    gap: 0.3rem;
     margin-bottom: 0.5rem;
 }
 

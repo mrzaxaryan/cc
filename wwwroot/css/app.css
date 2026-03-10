@@ -65,6 +65,13 @@
     --cc-yellow-30: rgba(249, 226, 175, 0.3);
     --cc-yellow-40: rgba(249, 226, 175, 0.4);
     --cc-purple-40: rgba(203, 166, 247, 0.4);
+    --cc-green-04: rgba(166, 227, 161, 0.04);
+
+    /* Semantic surface aliases */
+    --cc-bg-alt: var(--cc-bg-surface);
+    --cc-bg-hover: var(--cc-bg-overlay);
+    --cc-bg: var(--cc-bg-base);
+    --cc-accent: var(--cc-accent-blue);
 
     /* Special */
     --cc-code: #11111b;
@@ -161,6 +168,7 @@
     --cc-yellow-30: rgba(223, 142, 29, 0.3);
     --cc-yellow-40: rgba(223, 142, 29, 0.4);
     --cc-purple-40: rgba(136, 57, 239, 0.4);
+    --cc-green-04: rgba(64, 160, 43, 0.04);
 
     --cc-code: #dce0e8;
     --cc-shadow: rgba(0, 0, 0, 0.12);
@@ -903,6 +911,7 @@ a:hover {
 .panel-stats {
     display: flex;
     gap: 0;
+    padding: 0.4rem 0;
 }
 
 .panel-stat {
@@ -958,6 +967,7 @@ a:hover {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    padding: 0.25rem 0;
 }
 
 .panel-card {

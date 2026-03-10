@@ -32,9 +32,9 @@
 }
 
 .ap-relay-tab--active {
-    background: var(--cc-bg-active, var(--cc-bg-hover));
+    background: var(--cc-bg-active);
     color: var(--cc-text);
-    border-color: var(--cc-accent, var(--cc-text));
+    border-color: var(--cc-accent);
 }
 
 .ap-relay-count {
@@ -55,8 +55,8 @@
 }
 
 ::deep .cc-table-hover tbody tr.ap-row:hover {
-    background: var(--cc-bg-highlight, var(--cc-bg-overlay));
-    box-shadow: inset 3px 0 0 var(--cc-accent-blue, var(--cc-accent, #4a9eff));
+    background: var(--cc-bg-highlight);
+    box-shadow: inset 3px 0 0 var(--cc-accent-blue);
 }
 
 ::deep .cc-table-wrap {
