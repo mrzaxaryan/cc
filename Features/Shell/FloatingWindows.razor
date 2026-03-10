@@ -1,0 +1,248 @@
+
+@inject WindowManager Wm
+@implements IDisposable
+
+@* Drag overlay — captures pointer events globally during drag *@
+@if (_dragging is not null)
+{
+    <div style="position:fixed;inset:0;z-index:9999;cursor:grabbing;touch-action:none;"
+         @onpointermove="OnDragMove"
+         @onpointerup="OnDragEnd"
+         @onpointercancel="OnDragEnd"
+         @onpointermove:preventDefault="true"></div>
+}
+
+@* Edge resize overlay *@
+@if (_edgeResizing is not null)
+{
+    <div style="position:fixed;inset:0;z-index:9999;cursor:@EdgeCursor(_edgeResizing.Edge);touch-action:none;"
+         @onpointermove="OnEdgeResizeMove"
+         @onpointerup="OnEdgeResizeEnd"
+         @onpointercancel="OnEdgeResizeEnd"
+         @onpointermove:preventDefault="true"></div>
+}
+
+@* Floating windows *@
+@foreach (var win in Wm.Windows)
+{
+    if (win.Minimized) continue;
+    var w = win;
+    var isFocused = IsTopWindow(w);
+    <div @key="win.Id" class="app-window @(win.Maximized ? "maximized" : "") @(isFocused ? "focused" : "unfocused")"
+         style="@(win.Maximized ? $"z-index:{win.ZIndex};" : $"left:{win.X}px;top:{win.Y}px;width:{win.Width}px;height:{win.Height}px;z-index:{win.ZIndex};")"
+         @onpointerdown="() => Wm.BringToFront(w)"
+         @onmousedown="() => Wm.BringToFront(w)">
+        <div class="app-window-titlebar"
+             style="touch-action:none;"
+             @onpointerdown="(e) => OnDragStart(e, win)"
+             @ondblclick="() => Wm.ToggleMaximize(win)">
+            <span class="app-window-icon"><CcIcon Name="@PanelIcon(win.Panel)" Size="Size.Xs" /></span>
+            <span class="app-window-title">@win.Title</span>
+            <div class="app-window-controls">
+                <button class="app-window-btn minimize-btn" @onclick="() => Wm.ToggleMinimize(win)" @onpointerdown:stopPropagation="true" title="Minimize">
+                    <svg width="10" height="10" viewBox="0 0 10 10"><line x1="2" y1="5" x2="8" y2="5" stroke="currentColor" stroke-width="1.5"/></svg>
+                </button>
+                <button class="app-window-btn maximize-btn" @onclick="() => Wm.ToggleMaximize(win)" @onpointerdown:stopPropagation="true" title="@(win.Maximized ? "Restore" : "Maximize")">
+                    @if (win.Maximized)
+                    {
+                        <svg width="10" height="10" viewBox="0 0 10 10"><rect x="1.5" y="3" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M3.5 3V2.5a1 1 0 0 1 1-1H8a1 1 0 0 1 1 1V6a1 1 0 0 1-1 1h-.5" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>
+                    }
+                    else
+                    {
+                        <svg width="10" height="10" viewBox="0 0 10 10"><rect x="1.5" y="1.5" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>
+                    }
+                </button>
+                <button class="app-window-btn close-btn" @onclick="async () => await Wm.CloseWindow(win)" @onpointerdown:stopPropagation="true" title="Close">
+                    <svg width="10" height="10" viewBox="0 0 10 10"><line x1="2" y1="2" x2="8" y2="8" stroke="currentColor" stroke-width="1.5"/><line x1="8" y1="2" x2="2" y2="8" stroke="currentColor" stroke-width="1.5"/></svg>
+                </button>
+            </div>
+        </div>
+        <div class="app-window-body">
+            @switch (win.Panel)
+            {
+                case "File Manager":    <FileManager Relay="win.Relay" AgentId="@win.AgentId" AgentName="@win.AgentName" AgentUuid="@win.AgentUuid" /> break;
+                case "Settings":        <CacheManagerPanel /> break;
+                case "Relay":           <RelayPanel /> break;
+                case "Agents":          <AgentsPanel /> break;
+                case "Sync Manager":    <DownloadManagerPanel AgentUuid="@win.AgentUuid" AgentName="@win.AgentName" /> break;
+                case "Sync":            <SyncPanel /> break;
+                case "Scanner":         <SearchConfigPanel AgentUuid="@win.AgentUuid" AgentName="@win.AgentName" InitialPath="@win.ScanPath" /> break;
+                case "Scan":            <SearchGlobalPanel /> break;
+                case "Extensions":      <ExtensionGroupPanel /> break;
+            }
+        </div>
+        @if (!win.Maximized)
+        {
+            @foreach (var edge in Edges)
+            {
+                var e = edge;
+                <div class="app-window-resize-@e.ToString().ToLower()" style="touch-action:none;"
+                     @onpointerdown="(ev) => OnEdgeResizeStart(ev, win, e)" @onpointerdown:stopPropagation="true"></div>
+            }
+        }
+    </div>
+}
+
+@* Taskbar — always visible when windows exist *@
+@if (Wm.Windows.Count > 0)
+{
+    <div class="mdi-taskbar">
+        @foreach (var win in Wm.Windows)
+        {
+            var w = win;
+            <button @key="win.Id"
+                    class="mdi-taskbar-item @(IsTopWindow(w) ? "active" : "") @(w.Minimized ? "minimized" : "")"
+                    @onclick="() => OnTaskbarClick(w)"
+                    @ondblclick:preventDefault="true"
+                    @ondblclick:stopPropagation="true">
+                <CcIcon Name="@PanelIcon(win.Panel)" Size="Size.Xs" />
+                <span class="mdi-taskbar-label">@win.Title</span>
+            </button>
+        }
+    </div>
+}
+
+@code {
+    private DragState? _dragging;
+    private EdgeResizeState? _edgeResizing;
+
+    private enum Edge { N, S, E, W, NW, NE, SW, SE }
+
+    private class DragState
+    {
+        public WindowState Window { get; init; } = null!;
+        public double StartMouseX { get; init; }
+        public double StartMouseY { get; init; }
+        public double StartWinX { get; init; }
+        public double StartWinY { get; init; }
+    }
+
+    private class EdgeResizeState
+    {
+        public WindowState Window { get; init; } = null!;
+        public Edge Edge { get; init; }
+        public double StartMouseX { get; init; }
+        public double StartMouseY { get; init; }
+        public double StartX { get; init; }
+        public double StartY { get; init; }
+        public double StartWidth { get; init; }
+        public double StartHeight { get; init; }
+    }
+
+    private static readonly Edge[] Edges = [Edge.N, Edge.S, Edge.E, Edge.W, Edge.NW, Edge.NE, Edge.SW, Edge.SE];
+
+    protected override void OnInitialized() => Wm.OnChanged += OnWmChanged;
+    private void OnWmChanged() => InvokeAsync(StateHasChanged);
+
+    private bool IsTopWindow(WindowState win)
+    {
+        if (win.Minimized) return false;
+        var visible = Wm.Windows.Where(w => !w.Minimized).ToList();
+        return visible.Count > 0 && visible.MaxBy(w => w.ZIndex) == win;
+    }
+
+    private static string PanelIcon(string panel) => panel switch
+    {
+        "Agents" => "agents",
+        "Relay" => "server",
+        "Settings" => "database",
+        "File Manager" => "folder",
+        "Sync Manager" => "sync",
+        "Sync" => "sync",
+        "Scanner" => "search",
+        "Scan" => "search",
+        "Extensions" => "database",
+        _ => "monitor"
+    };
+
+    private void OnTaskbarClick(WindowState win)
+    {
+        if (win.Minimized) { win.Minimized = false; Wm.BringToFront(win); }
+        else if (IsTopWindow(win)) Wm.ToggleMinimize(win);
+        else Wm.BringToFront(win);
+    }
+
+    // --- Drag ---
+
+    private void OnDragStart(PointerEventArgs e, WindowState win)
+    {
+        if (win.Maximized) return;
+        Wm.BringToFront(win);
+        _dragging = new DragState
+        {
+            Window = win,
+            StartMouseX = e.ClientX, StartMouseY = e.ClientY,
+            StartWinX = win.X, StartWinY = win.Y
+        };
+    }
+
+    private void OnDragMove(PointerEventArgs e)
+    {
+        if (_dragging is null) return;
+        _dragging.Window.X = Math.Max(0, _dragging.StartWinX + (e.ClientX - _dragging.StartMouseX));
+        _dragging.Window.Y = Math.Max(36, _dragging.StartWinY + (e.ClientY - _dragging.StartMouseY));
+    }
+
+    private void OnDragEnd(PointerEventArgs e) => _dragging = null;
+
+    // --- Edge Resize ---
+
+    private void OnEdgeResizeStart(PointerEventArgs e, WindowState win, Edge edge)
+    {
+        if (win.Maximized) return;
+        Wm.BringToFront(win);
+        _edgeResizing = new EdgeResizeState
+        {
+            Window = win, Edge = edge,
+            StartMouseX = e.ClientX, StartMouseY = e.ClientY,
+            StartX = win.X, StartY = win.Y,
+            StartWidth = win.Width, StartHeight = win.Height
+        };
+    }
+
+    private void OnEdgeResizeMove(PointerEventArgs e)
+    {
+        if (_edgeResizing is null) return;
+        var r = _edgeResizing;
+        var dx = e.ClientX - r.StartMouseX;
+        var dy = e.ClientY - r.StartMouseY;
+        var edge = r.Edge;
+
+        // East
+        if (edge is Edge.E or Edge.NE or Edge.SE)
+            r.Window.Width = Math.Max(320, r.StartWidth + dx);
+
+        // South
+        if (edge is Edge.S or Edge.SW or Edge.SE)
+            r.Window.Height = Math.Max(120, r.StartHeight + dy);
+
+        // West
+        if (edge is Edge.W or Edge.NW or Edge.SW)
+        {
+            var newW = Math.Max(320, r.StartWidth - dx);
+            r.Window.X = r.StartX + (r.StartWidth - newW);
+            r.Window.Width = newW;
+        }
+
+        // North
+        if (edge is Edge.N or Edge.NW or Edge.NE)
+        {
+            var newH = Math.Max(120, r.StartHeight - dy);
+            r.Window.Y = Math.Max(36, r.StartY + (r.StartHeight - newH));
+            r.Window.Height = newH;
+        }
+    }
+
+    private void OnEdgeResizeEnd(PointerEventArgs e) => _edgeResizing = null;
+
+    private static string EdgeCursor(Edge edge) => edge switch
+    {
+        Edge.N or Edge.S => "ns-resize",
+        Edge.E or Edge.W => "ew-resize",
+        Edge.NW or Edge.SE => "nwse-resize",
+        Edge.NE or Edge.SW => "nesw-resize",
+        _ => "default"
+    };
+
+    public void Dispose() => Wm.OnChanged -= OnWmChanged;
+}

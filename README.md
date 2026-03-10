@@ -76,16 +76,51 @@ Starts on `http://localhost:5057` / `https://localhost:7104`.
 ## Project Structure
 
 ```
-├── Program.cs              # App startup and HttpClient registration
-├── App.razor               # Root router component
-├── Pages/
-│   ├── Home.razor          # Welcome page
-│   ├── Agents.razor        # Agent monitoring + relay command interface
-│   └── NotFound.razor      # 404 page
-├── Layout/
-│   ├── MainLayout.razor    # Sidebar + content layout
-│   └── NavMenu.razor       # Navigation menu
-└── wwwroot/                # Static assets (Bootstrap 5, index.html)
+├── Program.cs                  # App startup and DI registration
+├── App.razor                   # Root router component
+├── Features/
+│   ├── Agents/                 # Agent monitoring and metadata
+│   │   ├── AgentsPanel.razor   # Agent list UI
+│   │   └── AgentStore.cs       # Agent persistence
+│   ├── Relay/                  # Relay server connectivity
+│   │   ├── RelayPanel.razor    # Relay config UI
+│   │   ├── RelayConnectionService.cs  # Central orchestrator
+│   │   ├── RelaySocket.cs      # Binary WebSocket protocol
+│   │   ├── RelayStore.cs       # Relay server persistence
+│   │   └── RelayModels.cs      # Agent/relay data models
+│   ├── FileManager/            # Remote file browsing, downloads, cache
+│   │   ├── FileManager.razor   # Remote file browser
+│   │   ├── SyncPanel.razor     # Upload queue
+│   │   ├── DownloadManagerPanel.razor  # Download progress
+│   │   ├── CacheManagerPanel.razor     # Storage setup
+│   │   ├── DownloadStore.cs    # Download queue + state
+│   │   ├── VfsStore.cs         # Virtual filesystem metadata
+│   │   ├── CacheManager.cs     # Browser FileSystem API
+│   │   └── DirEntry.cs         # Binary directory parser
+│   ├── Search/                 # File search across agents
+│   │   ├── SearchGlobalPanel.razor   # Global search UI
+│   │   ├── SearchConfigPanel.razor   # Per-agent search
+│   │   └── SearchStore.cs      # Search queue + state
+│   ├── Extensions/             # File type filtering
+│   │   ├── ExtensionGroupPanel.razor  # Group management UI
+│   │   └── ExtensionGroupStore.cs     # Extension groups
+│   ├── Shell/                  # Desktop window system
+│   │   ├── FloatingWindows.razor      # Multi-window shell
+│   │   ├── SetupWizard.razor   # Onboarding flow
+│   │   ├── MainLayout.razor    # Menu bar + content layout
+│   │   ├── WindowManager.cs    # Window state management
+│   │   └── WindowState.cs      # Window data model
+│   └── Notifications/          # Toast + notification history
+│       └── NotificationStore.cs
+├── Shared/                     # Reusable UI components (CcBtn, CcCard, ...)
+├── Infrastructure/             # Cross-cutting services
+│   ├── ThemeService.cs         # Dark/light theme
+│   ├── LocalStorageService.cs  # Browser localStorage
+│   ├── MessageService.cs       # Toast pub/sub
+│   ├── ServiceStateStore.cs    # Pause/resume states
+│   ├── CtsManager.cs           # Cancellation tokens
+│   └── Formatters.cs           # Display utilities
+└── wwwroot/                    # Static assets (CSS, index.html)
 ```
 
 ## Tech Stack

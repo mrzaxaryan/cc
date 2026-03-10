@@ -1,0 +1,439 @@
+@inject SearchStore Scans
+@inject DownloadStore Downloads
+@inject VfsStore Vfs
+@inject AgentStore AgentDb
+@inject ExtensionGroupStore ExtGroupStore
+@inject ServiceStateStore SvcState
+@inject MessageService Msg
+@implements IDisposable
+
+<div class="scan">
+    @* Header *@
+    <div class="scan-header">
+        <div class="scan-header-left">
+            <span class="scan-title">File Search</span>
+            @if (!string.IsNullOrEmpty(AgentName))
+            {
+                <span class="scan-agent">@AgentName</span>
+            }
+            @if (IsAgentServicePaused)
+            {
+                <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs">Service Paused</CcBadge>
+            }
+        </div>
+        <div class="scan-header-right">
+            @if (IsAgentServicePaused)
+            {
+                <CcBtn Variant="BtnVariant.Success" Size="Size.Xs" OnClick="ResumeAgentService" Title="Resume search service for this agent">RESUME SERVICE</CcBtn>
+            }
+            else
+            {
+                <CcBtn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="PauseAgentService" Title="Pause search service for this agent">PAUSE SERVICE</CcBtn>
+            }
+            @if (AgentScanning > 0 && !IsAgentServicePaused)
+            {
+                <CcBtn Variant="BtnVariant.Warning" Size="Size.Xs" OnClick="PauseAllAgent" Title="Pause all searches for this agent">PAUSE ALL</CcBtn>
+            }
+            @if (AgentPaused > 0 && !IsAgentServicePaused)
+            {
+                <CcBtn Variant="BtnVariant.Success" Size="Size.Xs" OnClick="ResumeAllAgent" Title="Resume all searches for this agent">RESUME ALL</CcBtn>
+            }
+            <CcBtn Size="Size.Xs" OnClick="Refresh" Title="Refresh">&#x21bb;</CcBtn>
+        </div>
+    </div>
+
+    @* New search form *@
+    @if (showNewScan)
+    {
+        <div class="scan-form">
+            @if (!fullScanMode)
+            {
+                <div class="scan-form-row">
+                    <label class="scan-label">Directory</label>
+                    <CcInput @bind-Value="newScanPath" Placeholder="C:\Users" Monospace />
+                </div>
+            }
+            <div class="scan-form-row">
+                <label class="scan-label">Extension groups</label>
+                <div class="scan-ext-groups">
+                    @foreach (var group in ExtGroupStore.Groups)
+                    {
+                        var g = group;
+                        var isActive = activeGroups.Contains(g.Name);
+                        <button class="scan-ext-group @(isActive ? "active" : "") @(!g.Enabled ? "disabled" : "")" @onclick="() => ToggleGroup(g.Name)" title="@g.Extensions" disabled="@(!g.Enabled)">
+                            @g.Name
+                        </button>
+                    }
+                </div>
+            </div>
+            <div class="scan-form-row">
+                <label class="scan-label">Extensions (comma-separated)</label>
+                <CcInput @bind-Value="newScanExtensions" Placeholder=".txt,.pdf,.doc,.xls" Monospace />
+            </div>
+            @if (!string.IsNullOrEmpty(extensionError))
+            {
+                <div class="scan-form-row scan-ext-error">@extensionError</div>
+            }
+            <div class="scan-form-row scan-form-check">
+                <label>
+                    <input type="checkbox" @bind="newScanAutoDownload" />
+                    Auto-download matching files
+                </label>
+            </div>
+            <div class="scan-form-actions">
+                @if (fullScanMode)
+                {
+                    <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="StartFullScan" Disabled="@(string.IsNullOrWhiteSpace(newScanExtensions))">START FULL SEARCH</CcBtn>
+                }
+                else
+                {
+                    <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="StartScan" Disabled="@(string.IsNullOrWhiteSpace(newScanPath) || string.IsNullOrWhiteSpace(newScanExtensions))">START SEARCH</CcBtn>
+                }
+                <CcBtn Size="Size.Xs" OnClick="CancelForm">CANCEL</CcBtn>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="scan-new-btn">
+            <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="ShowNewScan">NEW SEARCH</CcBtn>
+            <CcBtn Size="Size.Xs" OnClick="ShowFullScan">FULL SEARCH</CcBtn>
+        </div>
+    }
+
+    @* Active scans *@
+    <div class="scan-tabs">
+        <button class="scan-tab @(filter == Filter.All ? "active" : "")" @onclick="() => SetFilter(Filter.All)">
+            All <span class="scan-tab-count">@allRecords.Count</span>
+        </button>
+        <button class="scan-tab @(filter == Filter.Active ? "active" : "")" @onclick="() => SetFilter(Filter.Active)">
+            Active <span class="scan-tab-count">@CountByFilter(Filter.Active)</span>
+        </button>
+        <button class="scan-tab @(filter == Filter.Done ? "active" : "")" @onclick="() => SetFilter(Filter.Done)">
+            Done <span class="scan-tab-count">@CountByFilter(Filter.Done)</span>
+        </button>
+    </div>
+
+    @if (filteredRecords.Count == 0)
+    {
+        <div class="scan-empty">
+            @if (allRecords.Count == 0)
+            {
+                <span>No searches yet. Click NEW SEARCH to start.</span>
+            }
+            else
+            {
+                <span>No @filter.ToString().ToLower() searches</span>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="scan-list">
+            @foreach (var scan in filteredRecords)
+            {
+                var s = scan;
+                var pct = s.DirsTotal > 0 ? (int)(s.DirsScanned * 100 / s.DirsTotal) : 0;
+                <div class="scan-item @StatusClass(s.Status)">
+                    <div class="scan-item-row">
+                        <span class="scan-item-icon">@StatusIcon(s.Status)</span>
+                        <div class="scan-item-info">
+                            <span class="scan-item-path" title="@(string.IsNullOrEmpty(s.RootPath) ? "Full filesystem" : s.RootPath)">@(string.IsNullOrEmpty(s.RootPath) ? "Full filesystem" : s.RootPath)</span>
+                            <span class="scan-item-meta">
+                                @s.Extensions
+                                @if (!string.IsNullOrEmpty(s.AgentName) && string.IsNullOrEmpty(AgentUuid))
+                                {
+                                    <span class="scan-item-agent">@s.AgentName</span>
+                                }
+                            </span>
+                        </div>
+                        <div class="scan-item-status">
+                            @switch (s.Status)
+                            {
+                                case SearchStatus.Scanning:
+                                    <CcBtn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseScan(s)" Title="Pause">&#x23F8;</CcBtn>
+                                    break;
+                                case SearchStatus.Paused:
+                                    <CcBtn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeScan(s)" Title="Resume">&#x25B6;</CcBtn>
+                                    break;
+                                case SearchStatus.Completed:
+                                    <CcBadge Variant="BadgeVariant.Success" Size="Size.Xs">DONE</CcBadge>
+                                    break;
+                                case SearchStatus.Failed:
+                                    <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@s.Error">FAILED</CcBadge>
+                                    break;
+                            }
+                            <CcBtn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => RemoveScan(s)" Title="Remove" CssClass="scan-remove-btn">&#x2715;</CcBtn>
+                        </div>
+                    </div>
+                    <div class="scan-item-stats">
+                        <span>Dirs: @s.DirsScanned / @s.DirsTotal</span>
+                        <span>Files found: @s.FilesFound</span>
+                        @if (s.AutoDownload)
+                        {
+                            <span>Queued: @s.FilesQueued</span>
+                        }
+                    </div>
+                    @if (s.Status is SearchStatus.Scanning or SearchStatus.Paused)
+                    {
+                        <CcProgress Size="Size.Xs" Variant="@ProgressVariant(s.Status)" Percent="@pct" />
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string? AgentUuid { get; set; }
+    [Parameter] public string? AgentName { get; set; }
+    [Parameter] public string? InitialPath { get; set; }
+
+    private enum Filter { All, Active, Done }
+
+    private List<SearchRecord> allRecords = new();
+    private List<SearchRecord> filteredRecords = new();
+    private Filter filter = Filter.All;
+
+    private bool showNewScan;
+    private bool fullScanMode;
+    private string newScanPath = "";
+    private string newScanExtensions = "";
+    private bool newScanAutoDownload = true;
+    private HashSet<string> activeGroups = new();
+    private string extensionError = "";
+
+    private bool IsAgentServicePaused => !string.IsNullOrEmpty(AgentUuid) && SvcState.IsEffectivelyPaused(ServiceName.Search, AgentUuid);
+
+    protected override async Task OnInitializedAsync()
+    {
+        Scans.OnChanged += OnScansChanged;
+        SvcState.OnChanged += OnScansChanged;
+        await Scans.LoadAsync();
+        await Downloads.LoadAsync();
+        await ExtGroupStore.LoadAsync();
+        await SvcState.LoadAsync();
+
+        if (!string.IsNullOrEmpty(InitialPath))
+        {
+            newScanPath = InitialPath;
+            showNewScan = true;
+        }
+
+        Refresh();
+    }
+
+    private void OnScansChanged()
+    {
+        _ = InvokeAsync(() =>
+        {
+            Refresh();
+            StateHasChanged();
+        });
+    }
+
+    private void SetFilter(Filter f) { filter = f; ApplyFilter(); }
+
+    private void ApplyFilter()
+    {
+        filteredRecords = filter switch
+        {
+            Filter.Active => allRecords.Where(r => r.Status is SearchStatus.Scanning or SearchStatus.Paused).ToList(),
+            Filter.Done => allRecords.Where(r => r.Status is SearchStatus.Completed or SearchStatus.Failed).ToList(),
+            _ => allRecords.ToList()
+        };
+    }
+
+    private int CountByFilter(Filter f) => f switch
+    {
+        Filter.Active => allRecords.Count(r => r.Status is SearchStatus.Scanning or SearchStatus.Paused),
+        Filter.Done => allRecords.Count(r => r.Status is SearchStatus.Completed or SearchStatus.Failed),
+        _ => allRecords.Count
+    };
+
+    private void Refresh()
+    {
+        allRecords = string.IsNullOrEmpty(AgentUuid)
+            ? Scans.Searches.ToList()
+            : Scans.GetByAgent(AgentUuid);
+        allRecords = allRecords
+            .OrderBy(r => r.Status == SearchStatus.Scanning ? 0 : r.Status == SearchStatus.Paused ? 1 : 2)
+            .ThenByDescending(r => r.CreatedAt)
+            .ToList();
+        ApplyFilter();
+    }
+
+    private async Task StartScan()
+    {
+        if (string.IsNullOrEmpty(AgentUuid) || string.IsNullOrWhiteSpace(newScanPath) || string.IsNullOrWhiteSpace(newScanExtensions))
+            return;
+
+        if (!ValidateExtensions()) return;
+
+        var extensions = ExtensionGroupStore.NormalizeExtensions(newScanExtensions);
+
+        var path = newScanPath.TrimEnd('\\', '/');
+        if (!string.IsNullOrEmpty(path) && !path.EndsWith(@"\"))
+            path += @"\";
+
+        await Scans.AddAsync(AgentUuid, AgentName ?? "", path, extensions, newScanAutoDownload);
+        showNewScan = false;
+        activeGroups.Clear();
+        extensionError = "";
+        Refresh();
+    }
+
+    private async Task StartFullScan()
+    {
+        if (string.IsNullOrEmpty(AgentUuid) || string.IsNullOrWhiteSpace(newScanExtensions))
+            return;
+
+        if (!ValidateExtensions()) return;
+
+        var extensions = ExtensionGroupStore.NormalizeExtensions(newScanExtensions);
+        await Scans.AddAsync(AgentUuid, AgentName ?? "", "", extensions, newScanAutoDownload);
+        showNewScan = false;
+        fullScanMode = false;
+        activeGroups.Clear();
+        extensionError = "";
+        Refresh();
+    }
+
+    private void ShowNewScan() { fullScanMode = false; showNewScan = true; }
+    private void ShowFullScan() { fullScanMode = true; showNewScan = true; }
+    private void CancelForm() { showNewScan = false; fullScanMode = false; }
+
+    private void ToggleGroup(string groupName)
+    {
+        if (!activeGroups.Remove(groupName))
+            activeGroups.Add(groupName);
+        RebuildExtensions();
+    }
+
+    private void RebuildExtensions()
+    {
+        var current = newScanExtensions
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(e => e.StartsWith(".") ? e.ToLowerInvariant() : $".{e.ToLowerInvariant()}")
+            .ToHashSet();
+
+        var allGroupExts = new HashSet<string>();
+        foreach (var g in ExtGroupStore.Groups)
+            foreach (var e in g.Extensions.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                allGroupExts.Add(e);
+
+        // keep manually added extensions (not in any group)
+        var manual = current.Where(e => !allGroupExts.Contains(e)).ToList();
+
+        // add extensions from active groups
+        var result = new List<string>(manual);
+        foreach (var groupName in activeGroups)
+        {
+            var group = ExtGroupStore.Groups.FirstOrDefault(g => g.Name == groupName);
+            if (group is not null)
+                result.AddRange(group.Extensions.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        }
+
+        newScanExtensions = string.Join(",", result.Distinct());
+        extensionError = "";
+    }
+
+    private bool ValidateExtensions()
+    {
+        if (string.IsNullOrWhiteSpace(newScanExtensions))
+        {
+            extensionError = "At least one extension is required.";
+            return false;
+        }
+
+        var normalized = ExtensionGroupStore.NormalizeExtensions(newScanExtensions);
+        var invalid = ExtensionGroupStore.GetInvalidExtensions(normalized);
+
+        if (invalid.Count > 0)
+        {
+            extensionError = $"Invalid extension(s): {string.Join(", ", invalid)} — must be a dot followed by 1-15 alphanumeric characters.";
+            return false;
+        }
+
+        extensionError = "";
+        return true;
+    }
+
+    private int AgentScanning => allRecords.Count(r => r.Status == SearchStatus.Scanning);
+    private int AgentPaused => allRecords.Count(r => r.Status == SearchStatus.Paused);
+
+    private async Task PauseAgentService()
+    {
+        if (string.IsNullOrEmpty(AgentUuid)) return;
+        await SvcState.PauseAsync(ServiceName.Search, AgentUuid);
+        var scanning = allRecords.Where(r => r.Status == SearchStatus.Scanning).ToList();
+        foreach (var s in scanning)
+            Scans.Cts.Cancel(s.Id);
+    }
+
+    private async Task ResumeAgentService()
+    {
+        if (string.IsNullOrEmpty(AgentUuid)) return;
+        await SvcState.ResumeAsync(ServiceName.Search, AgentUuid);
+    }
+
+    private void PauseAllAgent()
+    {
+        foreach (var s in allRecords.Where(r => r.Status == SearchStatus.Scanning))
+            Scans.Cts.Cancel(s.Id);
+    }
+
+    private async Task ResumeAllAgent()
+    {
+        var paused = allRecords.Where(r => r.Status == SearchStatus.Paused).ToList();
+        foreach (var s in paused)
+        {
+            if (!Scans.Cts.HasActive(s.Id))
+                await Scans.ResumeAsync(s.Id);
+        }
+    }
+
+    private void PauseScan(SearchRecord scan) => Scans.Cts.Cancel(scan.Id);
+
+    private async Task ResumeScan(SearchRecord scan)
+    {
+        if (Scans.Cts.HasActive(scan.Id)) return;
+        await Scans.ResumeAsync(scan.Id);
+    }
+
+    private async Task RemoveScan(SearchRecord scan)
+    {
+        Scans.Cts.Cancel(scan.Id);
+        await Scans.RemoveAsync(scan.Id);
+    }
+
+    private static string StatusIcon(string s) => s switch
+    {
+        SearchStatus.Scanning => "\u25CF",
+        SearchStatus.Paused => "\u25A0",
+        SearchStatus.Completed => "\u2713",
+        SearchStatus.Failed => "\u2717",
+        _ => "\u25CB"
+    };
+
+    private static string StatusClass(string s) => s switch
+    {
+        SearchStatus.Scanning => "scan-item-active",
+        SearchStatus.Completed => "scan-item-done",
+        SearchStatus.Failed => "scan-item-failed",
+        _ => ""
+    };
+
+    private static ProgressVariant ProgressVariant(string s) => s switch
+    {
+        SearchStatus.Scanning => cc.Shared.ProgressVariant.Info,
+        SearchStatus.Paused => cc.Shared.ProgressVariant.Warning,
+        _ => cc.Shared.ProgressVariant.Muted
+    };
+
+    public void Dispose()
+    {
+        Scans.OnChanged -= OnScansChanged;
+        SvcState.OnChanged -= OnScansChanged;
+    }
+}
