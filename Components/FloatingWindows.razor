@@ -84,11 +84,15 @@
             }
             else if (win.Panel == "Scanner")
             {
-                <ScanConfigPanel AgentUuid="@win.AgentUuid" AgentName="@win.AgentName" InitialPath="@win.ScanPath" />
+                <SearchConfigPanel AgentUuid="@win.AgentUuid" AgentName="@win.AgentName" InitialPath="@win.ScanPath" />
             }
             else if (win.Panel == "Scan")
             {
-                <ScanGlobalPanel />
+                <SearchGlobalPanel />
+            }
+            else if (win.Panel == "Extensions")
+            {
+                <ExtensionGroupPanel />
             }
         </div>
         @if (!win.Maximized)
@@ -180,6 +184,7 @@
         "Sync" => "sync",
         "Scanner" => "search",
         "Scan" => "search",
+        "Extensions" => "database",
         _ => "monitor"
     };
 

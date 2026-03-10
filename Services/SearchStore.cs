@@ -3,7 +3,7 @@ using Microsoft.JSInterop;
 
 namespace cc.Services;
 
-public class ScanRecord
+public class SearchRecord
 {
     [JsonPropertyName("id")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
@@ -12,7 +12,7 @@ public class ScanRecord
     [JsonPropertyName("agentName")] public string AgentName { get; set; } = "";
     [JsonPropertyName("rootPath")] public string RootPath { get; set; } = "";
     [JsonPropertyName("extensions")] public string Extensions { get; set; } = ""; // comma-separated e.g. ".txt,.pdf,.doc"
-    [JsonPropertyName("status")] public string Status { get; set; } = ScanStatus.Pending;
+    [JsonPropertyName("status")] public string Status { get; set; } = SearchStatus.Pending;
     [JsonPropertyName("error")] public string? Error { get; set; }
     [JsonPropertyName("dirsScanned")] public int DirsScanned { get; set; }
     [JsonPropertyName("dirsTotal")] public int DirsTotal { get; set; }
@@ -31,7 +31,7 @@ public class ScanRecord
     }
 }
 
-public static class ScanStatus
+public static class SearchStatus
 {
     public const string Pending = "pending";
     public const string Scanning = "scanning";
@@ -40,10 +40,10 @@ public static class ScanStatus
     public const string Failed = "failed";
 }
 
-public class ScanStore
+public class SearchStore
 {
     private readonly IJSRuntime _js;
-    private List<ScanRecord> _cache = new();
+    private List<SearchRecord> _cache = new();
     private bool _loaded;
 
     private readonly Dictionary<int, CancellationTokenSource> _activeCts = new();
@@ -51,9 +51,9 @@ public class ScanStore
     public event Action? OnChanged;
     public event Action<string>? OnItemQueued; // fires with agentUuid
 
-    public ScanStore(IJSRuntime js) => _js = js;
+    public SearchStore(IJSRuntime js) => _js = js;
 
-    public IReadOnlyList<ScanRecord> Scans => _cache;
+    public IReadOnlyList<SearchRecord> Searches => _cache;
 
     public async Task LoadAsync()
     {
@@ -62,7 +62,7 @@ public class ScanStore
 
         try
         {
-            var records = await _js.InvokeAsync<ScanRecord[]>("ccScanDb.getAll");
+            var records = await _js.InvokeAsync<SearchRecord[]>("ccScanDb.getAll");
             _cache = records.ToList();
         }
         catch
@@ -71,16 +71,16 @@ public class ScanStore
         }
     }
 
-    public async Task<ScanRecord> AddAsync(string agentUuid, string agentName, string rootPath, string extensions, bool autoDownload)
+    public async Task<SearchRecord> AddAsync(string agentUuid, string agentName, string rootPath, string extensions, bool autoDownload)
     {
-        var record = new ScanRecord
+        var record = new SearchRecord
         {
             AgentUuid = agentUuid,
             AgentName = agentName,
             RootPath = rootPath,
             Extensions = extensions,
             AutoDownload = autoDownload,
-            Status = ScanStatus.Scanning,
+            Status = SearchStatus.Scanning,
             PendingDirs = new List<string> { rootPath },
             DirsTotal = 1,
             CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
@@ -94,7 +94,7 @@ public class ScanStore
         return record;
     }
 
-    public async Task UpdateAsync(ScanRecord record)
+    public async Task UpdateAsync(SearchRecord record)
     {
         await _js.InvokeVoidAsync("ccScanDb.put", record);
         OnChanged?.Invoke();
@@ -104,7 +104,7 @@ public class ScanStore
     {
         var record = _cache.FirstOrDefault(r => r.Id == id);
         if (record is null) return;
-        record.Status = ScanStatus.Paused;
+        record.Status = SearchStatus.Paused;
         await _js.InvokeVoidAsync("ccScanDb.put", record);
         OnChanged?.Invoke();
     }
@@ -113,7 +113,7 @@ public class ScanStore
     {
         var record = _cache.FirstOrDefault(r => r.Id == id);
         if (record is null) return;
-        record.Status = ScanStatus.Scanning;
+        record.Status = SearchStatus.Scanning;
         await _js.InvokeVoidAsync("ccScanDb.put", record);
         OnChanged?.Invoke();
         OnItemQueued?.Invoke(record.AgentUuid);
@@ -123,7 +123,7 @@ public class ScanStore
     {
         var record = _cache.FirstOrDefault(r => r.Id == id);
         if (record is null) return;
-        record.Status = ScanStatus.Completed;
+        record.Status = SearchStatus.Completed;
         record.CompletedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         await _js.InvokeVoidAsync("ccScanDb.put", record);
         OnChanged?.Invoke();
@@ -133,7 +133,7 @@ public class ScanStore
     {
         var record = _cache.FirstOrDefault(r => r.Id == id);
         if (record is null) return;
-        record.Status = ScanStatus.Failed;
+        record.Status = SearchStatus.Failed;
         record.Error = error;
         await _js.InvokeVoidAsync("ccScanDb.put", record);
         OnChanged?.Invoke();
@@ -146,17 +146,17 @@ public class ScanStore
         OnChanged?.Invoke();
     }
 
-    public List<ScanRecord> GetByAgent(string agentUuid) =>
+    public List<SearchRecord> GetByAgent(string agentUuid) =>
         _cache.Where(r => r.AgentUuid == agentUuid).ToList();
 
-    public List<ScanRecord> GetActive() =>
-        _cache.Where(r => r.Status is ScanStatus.Scanning or ScanStatus.Paused).ToList();
+    public List<SearchRecord> GetActive() =>
+        _cache.Where(r => r.Status is SearchStatus.Scanning or SearchStatus.Paused).ToList();
 
-    public bool HasActiveScan(string agentUuid) =>
-        _cache.Any(r => r.AgentUuid == agentUuid && r.Status == ScanStatus.Scanning);
+    public bool HasActiveSearch(string agentUuid) =>
+        _cache.Any(r => r.AgentUuid == agentUuid && r.Status == SearchStatus.Scanning);
 
-    public ScanRecord? GetNextPending(string agentUuid) =>
-        _cache.FirstOrDefault(r => r.AgentUuid == agentUuid && r.Status == ScanStatus.Scanning && r.PendingDirs.Count > 0);
+    public SearchRecord? GetNextPending(string agentUuid) =>
+        _cache.FirstOrDefault(r => r.AgentUuid == agentUuid && r.Status == SearchStatus.Scanning && r.PendingDirs.Count > 0);
 
     // --- CTS management ---
 

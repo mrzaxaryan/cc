@@ -1,6 +1,7 @@
 @inject DownloadStore Downloads
 @inject AgentStore AgentDb
 @inject RelayConnectionService RelaySvc
+@inject ServiceStateStore SvcState
 @inject MessageService Msg
 @implements IDisposable
 
@@ -9,7 +10,11 @@
     <div class="sp-header">
         <div class="sp-header-left">
             <span class="sp-title">File Uploads</span>
-            @if (IsGloballyRunning)
+            @if (IsGlobalServicePaused)
+            {
+                <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs">Service Paused</CcBadge>
+            }
+            else if (IsGloballyRunning)
             {
                 <CcBadge Variant="BadgeVariant.Success" Size="Size.Xs">
                     <CcIcon Name="sync" Size="Size.Xs" CssClass="sp-spinning" /> Running
@@ -25,11 +30,19 @@
             }
         </div>
         <div class="sp-header-right">
-            @if (SyncDownloading > 0 || SyncQueued > 0)
+            @if (IsGlobalServicePaused)
             {
-                <CcBtn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="StopAll" Title="Stop all active uploads">STOP ALL</CcBtn>
+                <CcBtn Variant="BtnVariant.Success" Size="Size.Xs" OnClick="ResumeService" Title="Resume upload service for all agents">RESUME SERVICE</CcBtn>
             }
-            @if (SyncPaused > 0)
+            else
+            {
+                <CcBtn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="PauseService" Title="Pause upload service for all agents">PAUSE SERVICE</CcBtn>
+            }
+            @if ((SyncDownloading > 0 || SyncQueued > 0) && !IsGlobalServicePaused)
+            {
+                <CcBtn Variant="BtnVariant.Warning" Size="Size.Xs" OnClick="StopAll" Title="Stop all active uploads">STOP ALL</CcBtn>
+            }
+            @if (SyncPaused > 0 && !IsGlobalServicePaused)
             {
                 <CcBtn Variant="BtnVariant.Success" Size="Size.Xs" OnClick="ResumeAll" Title="Resume all paused">RESUME ALL</CcBtn>
             }
@@ -66,11 +79,16 @@
         {
             var isProcessing = RelaySvc.ProcessingAgents.Contains(group.Uuid);
             var isOnline = RelaySvc.GetAllAgents().Any(a => AgentDb.GetUuidByAgentId(a.Agent.Id) == group.Uuid);
+            var isAgentPaused = SvcState.IsPaused(ServiceName.Upload, group.Uuid);
             <div class="sp-agent-card">
                 <div class="sp-agent-header">
                     <span class="status-dot @(isOnline ? "dot-on" : "dot-off")"></span>
                     <span class="sp-agent-name">@group.Name</span>
-                    @if (isProcessing)
+                    @if (isAgentPaused)
+                    {
+                        <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs">Paused</CcBadge>
+                    }
+                    else if (isProcessing)
                     {
                         <CcBadge Variant="BadgeVariant.Info" Size="Size.Xs">
                             <CcIcon Name="sync" Size="Size.Xs" CssClass="sp-spinning" /> Uploading
@@ -87,6 +105,14 @@
                         <span class="sp-count-done">@group.Completed&#x2713;</span>
                         @if (group.Failed > 0) { <span class="sp-count-fail">@group.Failed&#x2717;</span> }
                     </span>
+                    @if (isAgentPaused)
+                    {
+                        <CcBtn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeAgentService(group.Uuid)" Title="Resume upload service for this agent">&#x25B6;</CcBtn>
+                    }
+                    else
+                    {
+                        <CcBtn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseAgentService(group.Uuid)" Title="Pause upload service for this agent">&#x23F8;</CcBtn>
+                    }
                 </div>
 
                 @* Active downloads for this agent *@
@@ -203,13 +229,16 @@
     private int SyncCompleted => Downloads.Downloads.Count(r => r.Status == DownloadStatus.Completed);
     private int SyncFailed => Downloads.Downloads.Count(r => r.Status == DownloadStatus.Failed);
     private bool IsGloballyRunning => RelaySvc.ProcessingAgents.Count > 0 || SyncDownloading > 0;
+    private bool IsGlobalServicePaused => SvcState.IsPaused(ServiceName.Upload, "global");
 
     protected override async Task OnInitializedAsync()
     {
         Downloads.OnChanged += OnChanged;
         RelaySvc.OnChanged += OnChanged;
+        SvcState.OnChanged += OnChanged;
         await AgentDb.LoadAsync();
         await Downloads.LoadAsync();
+        await SvcState.LoadAsync();
     }
 
     private void OnChanged() => InvokeAsync(StateHasChanged);
@@ -257,6 +286,40 @@
             expandedAgents.Add(uuid);
     }
 
+    // --- Service-level controls ---
+
+    private async Task PauseService()
+    {
+        await SvcState.PauseAsync(ServiceName.Upload, "global");
+        Downloads.CancelAll();
+        var queued = Downloads.Downloads.Where(r => r.Status == DownloadStatus.Queued).ToList();
+        foreach (var dl in queued)
+            await Downloads.PauseAsync(dl.Id);
+    }
+
+    private async Task ResumeService()
+    {
+        await SvcState.ResumeAsync(ServiceName.Upload, "global");
+    }
+
+    private async Task PauseAgentService(string uuid)
+    {
+        await SvcState.PauseAsync(ServiceName.Upload, uuid);
+        var active = Downloads.Downloads.Where(r => r.AgentUuid == uuid && r.Status == DownloadStatus.Downloading).ToList();
+        foreach (var dl in active)
+            Downloads.CancelCts(dl.Id);
+        var queued = Downloads.Downloads.Where(r => r.AgentUuid == uuid && r.Status == DownloadStatus.Queued).ToList();
+        foreach (var dl in queued)
+            await Downloads.PauseAsync(dl.Id);
+    }
+
+    private async Task ResumeAgentService(string uuid)
+    {
+        await SvcState.ResumeAsync(ServiceName.Upload, uuid);
+    }
+
+    // --- Item-level controls ---
+
     private void PauseDownload(DownloadRecord dl) => Downloads.CancelCts(dl.Id);
 
     private async Task ResumeDownload(DownloadRecord dl)
@@ -284,5 +347,6 @@
     {
         Downloads.OnChanged -= OnChanged;
         RelaySvc.OnChanged -= OnChanged;
+        SvcState.OnChanged -= OnChanged;
     }
 }

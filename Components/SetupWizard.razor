@@ -1,0 +1,282 @@
+@inject CacheManager Cache
+@inject RelayStore Relay
+@inject ExtensionGroupStore ExtGroups
+@inject MessageService Msg
+
+<div class="su">
+    @* Sidebar *@
+    <div class="su-sidebar">
+        <div class="su-brand">
+            <span class="su-logo">cc</span>
+            <span class="su-brand-name">Command & Control</span>
+        </div>
+
+        <nav class="su-nav">
+            @if (needsCache)
+            {
+                <button class="su-nav-item @(step == Step.Cache ? "active" : "") @(IsStepDone(Step.Cache) ? "done" : "")" @onclick="() => GoToStep(Step.Cache)">
+                    <span class="su-nav-num">@StepNumber(Step.Cache)</span>
+                    <span class="su-nav-label">Cache Storage</span>
+                    @if (IsStepDone(Step.Cache)) { <span class="su-nav-check">&#x2713;</span> }
+                </button>
+            }
+            @if (needsRelay)
+            {
+                <button class="su-nav-item @(step == Step.Relay ? "active" : "") @(IsStepDone(Step.Relay) ? "done" : "")" @onclick="() => GoToStep(Step.Relay)">
+                    <span class="su-nav-num">@StepNumber(Step.Relay)</span>
+                    <span class="su-nav-label">Relay Server</span>
+                    @if (IsStepDone(Step.Relay)) { <span class="su-nav-check">&#x2713;</span> }
+                </button>
+            }
+            @if (needsExtensions)
+            {
+                <button class="su-nav-item @(step == Step.Extensions ? "active" : "") @(IsStepDone(Step.Extensions) ? "done" : "")" @onclick="() => GoToStep(Step.Extensions)">
+                    <span class="su-nav-num">@StepNumber(Step.Extensions)</span>
+                    <span class="su-nav-label">File Extensions</span>
+                    @if (IsStepDone(Step.Extensions)) { <span class="su-nav-check">&#x2713;</span> }
+                </button>
+            }
+        </nav>
+
+        <div class="su-sidebar-footer">
+            <span class="su-footer-text">Initial setup &mdash; configure your environment before getting started.</span>
+        </div>
+    </div>
+
+    @* Main content *@
+    <div class="su-main">
+        <div class="su-content">
+            @if (step == Step.Cache)
+            {
+                <h2 class="su-title">Cache Storage</h2>
+                @if (!Cache.IsSupported)
+                {
+                    <p class="su-desc">Your browser does not support the File System Access API. Please use a Chromium-based browser (Chrome, Edge, Brave) for local file caching.</p>
+                    <div class="su-actions">
+                        <CcBtn Size="Size.Lg" OnClick="SkipCache">Continue without cache</CcBtn>
+                    </div>
+                }
+                else if (Cache.NeedsPermission)
+                {
+                    <p class="su-desc">Your previously selected cache folder needs permission to be re-granted.</p>
+                    <div class="su-actions">
+                        <CcBtn Variant="BtnVariant.Primary" Size="Size.Lg" OnClick="ReGrantPermission" Disabled="@picking" Loading="@picking">Grant Access</CcBtn>
+                        <CcBtn Size="Size.Md" OnClick="PickFolder" Disabled="@picking">Pick Different Folder</CcBtn>
+                    </div>
+                }
+                else
+                {
+                    <p class="su-desc">Select a folder on your device to use as the local file cache. Files downloaded from agents will be stored here.</p>
+                    <div class="su-info-box">
+                        <span class="su-info-icon">&#x1f4c1;</span>
+                        <div class="su-info-text">
+                            <strong>Why a cache folder?</strong>
+                            <span>Agent files are downloaded and stored locally for offline browsing, searching, and analysis. Choose a folder with enough free space.</span>
+                        </div>
+                    </div>
+                    <div class="su-actions">
+                        <CcBtn Variant="BtnVariant.Primary" Size="Size.Lg" OnClick="PickFolder" Disabled="@picking" Loading="@picking">Select Cache Folder</CcBtn>
+                        <CcBtn Size="Size.Md" OnClick="SkipCache">Skip for now</CcBtn>
+                    </div>
+                }
+            }
+            else if (step == Step.Relay)
+            {
+                <h2 class="su-title">Relay Server</h2>
+                <p class="su-desc">Configure the relay server that agents connect through. The relay acts as a bridge between this dashboard and your deployed agents.</p>
+
+                <div class="su-form">
+                    <div class="su-field">
+                        <label class="su-label">Relay Name</label>
+                        <CcInput @bind-Value="relayName" Size="Size.Md" Placeholder="My Relay" />
+                    </div>
+                    <div class="su-field">
+                        <label class="su-label">Relay URL</label>
+                        <CcInput @bind-Value="relayUrl" Size="Size.Md" Placeholder="wss://relay.example.com" Monospace />
+                        <span class="su-field-hint">Must start with wss:// or ws://</span>
+                    </div>
+                </div>
+
+                <div class="su-actions">
+                    <CcBtn Variant="BtnVariant.Primary" Size="Size.Lg" OnClick="SaveRelay" Disabled="@saving" Loading="@saving">Save & Continue</CcBtn>
+                    <CcBtn Size="Size.Md" OnClick="SkipRelay">Use Default</CcBtn>
+                </div>
+            }
+            else if (step == Step.Extensions)
+            {
+                <h2 class="su-title">File Extension Groups</h2>
+                <p class="su-desc">Choose which file types to look for when searching agent filesystems. Click a group to toggle it. All groups are selected by default.</p>
+
+                <div class="su-ext-groups">
+                    @foreach (var group in ExtensionGroupStore.DefaultGroups)
+                    {
+                        var g = group;
+                        var isActive = selectedExtGroups.Contains(g.Key);
+                        <button class="su-ext-group @(isActive ? "active" : "")" @onclick="() => ToggleExtGroup(g.Key)">
+                            <div class="su-ext-group-top">
+                                <span class="su-ext-group-check">@(isActive ? "\u2713" : "")</span>
+                                <span class="su-ext-group-name">@g.Key</span>
+                            </div>
+                            <span class="su-ext-group-exts">@string.Join(", ", g.Value)</span>
+                        </button>
+                    }
+                </div>
+
+                <div class="su-actions">
+                    <CcBtn Variant="BtnVariant.Primary" Size="Size.Lg" OnClick="SaveExtensions" Disabled="@saving" Loading="@saving">Finish Setup</CcBtn>
+                    <CcBtn Size="Size.Md" OnClick="SaveAllExtensions" Disabled="@saving">Select All & Finish</CcBtn>
+                </div>
+
+                <p class="su-hint">You can add custom groups or modify these later from the Extensions panel.</p>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback OnComplete { get; set; }
+
+    private enum Step { Cache, Relay, Extensions }
+
+    private Step step;
+    private bool picking;
+    private bool saving;
+    private string relayName = "";
+    private string relayUrl = "";
+    private HashSet<string> selectedExtGroups = new(ExtensionGroupStore.DefaultGroups.Keys);
+    private HashSet<Step> completedSteps = new();
+
+    private bool needsCache;
+    private bool needsRelay;
+    private bool needsExtensions;
+
+    protected override void OnInitialized()
+    {
+        needsCache = Cache.SetupRequired || Cache.NeedsPermission;
+        needsRelay = Relay.SetupRequired;
+        needsExtensions = ExtGroups.SetupRequired;
+
+        step = needsCache ? Step.Cache : needsRelay ? Step.Relay : Step.Extensions;
+
+        var enabled = Relay.EnabledRelays.FirstOrDefault();
+        relayName = enabled?.Name ?? "";
+        relayUrl = enabled?.Url ?? "";
+    }
+
+    private int StepNumber(Step s)
+    {
+        var n = 0;
+        if (needsCache) { n++; if (s == Step.Cache) return n; }
+        if (needsRelay) { n++; if (s == Step.Relay) return n; }
+        if (needsExtensions) { n++; if (s == Step.Extensions) return n; }
+        return n;
+    }
+
+    private bool IsStepDone(Step s) => completedSteps.Contains(s);
+
+    private void GoToStep(Step s) { step = s; }
+
+    private void AdvanceFromCache()
+    {
+        completedSteps.Add(Step.Cache);
+        if (needsRelay) { step = Step.Relay; StateHasChanged(); }
+        else if (needsExtensions) { step = Step.Extensions; StateHasChanged(); }
+        else OnComplete.InvokeAsync();
+    }
+
+    private void AdvanceFromRelay()
+    {
+        completedSteps.Add(Step.Relay);
+        if (needsExtensions) { step = Step.Extensions; StateHasChanged(); }
+        else OnComplete.InvokeAsync();
+    }
+
+    private async Task ReGrantPermission()
+    {
+        picking = true;
+        StateHasChanged();
+        try
+        {
+            var success = await Cache.ReRequestPermissionAsync();
+            if (success) AdvanceFromCache();
+            else Msg.Error("Permission denied. Try again or pick a different folder.");
+        }
+        catch (Exception ex) { Msg.Error(ex.Message); }
+        finally { picking = false; }
+    }
+
+    private async Task PickFolder()
+    {
+        picking = true;
+        StateHasChanged();
+        try
+        {
+            var success = await Cache.PickDirectoryAsync();
+            if (success) AdvanceFromCache();
+            else Msg.Warn("No folder selected. Please try again.");
+        }
+        catch (Exception ex) { Msg.Error(ex.Message); }
+        finally { picking = false; }
+    }
+
+    private void SkipCache() => AdvanceFromCache();
+
+    private async Task SaveRelay()
+    {
+        var name = relayName.Trim();
+        var url = relayUrl.Trim().TrimEnd('/');
+
+        if (string.IsNullOrEmpty(url)) { Msg.Error("Relay URL is required."); return; }
+        if (!url.StartsWith("wss://") && !url.StartsWith("ws://")) { Msg.Error("URL must start with wss:// or ws://"); return; }
+        if (string.IsNullOrEmpty(name)) name = "Default";
+
+        saving = true;
+        StateHasChanged();
+        try
+        {
+            var existing = Relay.EnabledRelays.FirstOrDefault();
+            if (existing != null && existing.Url == url)
+                await Relay.UpdateRelayName(url, name);
+            else
+            {
+                await Relay.AddRelay(name, url);
+                await Relay.SetEnabled(url, true);
+            }
+            AdvanceFromRelay();
+        }
+        catch (Exception ex) { Msg.Error(ex.Message); }
+        finally { saving = false; }
+    }
+
+    private void SkipRelay() => AdvanceFromRelay();
+
+    private void ToggleExtGroup(string name)
+    {
+        if (!selectedExtGroups.Remove(name))
+            selectedExtGroups.Add(name);
+    }
+
+    private async Task SaveExtensions()
+    {
+        saving = true;
+        StateHasChanged();
+        try
+        {
+            foreach (var (name, exts) in ExtensionGroupStore.DefaultGroups)
+            {
+                var enabled = selectedExtGroups.Contains(name);
+                await ExtGroups.AddAsync(name, string.Join(",", exts), enabled);
+            }
+            completedSteps.Add(Step.Extensions);
+            await OnComplete.InvokeAsync();
+        }
+        catch (Exception ex) { Msg.Error(ex.Message); }
+        finally { saving = false; }
+    }
+
+    private async Task SaveAllExtensions()
+    {
+        selectedExtGroups = new HashSet<string>(ExtensionGroupStore.DefaultGroups.Keys);
+        await SaveExtensions();
+    }
+}

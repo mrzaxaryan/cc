@@ -1,5 +1,6 @@
 @inject DownloadStore Downloads
 @inject AgentStore AgentDb
+@inject ServiceStateStore SvcState
 @inject MessageService Msg
 @implements IDisposable
 
@@ -12,11 +13,23 @@
             {
                 <span class="sm-agent">@AgentName</span>
             }
+            @if (IsAgentServicePaused)
+            {
+                <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs">Service Paused</CcBadge>
+            }
         </div>
         <div class="sm-header-right">
-            @if (HasActiveSyncs)
+            @if (IsAgentServicePaused)
             {
-                <CcBtn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="StopAllSyncs" Title="Pause all">STOP ALL</CcBtn>
+                <CcBtn Variant="BtnVariant.Success" Size="Size.Xs" OnClick="ResumeAgentService" Title="Resume upload service for this agent">RESUME SERVICE</CcBtn>
+            }
+            else
+            {
+                <CcBtn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="PauseAgentService" Title="Pause upload service for this agent">PAUSE SERVICE</CcBtn>
+            }
+            @if (HasActiveSyncs && !IsAgentServicePaused)
+            {
+                <CcBtn Variant="BtnVariant.Warning" Size="Size.Xs" OnClick="StopAllSyncs" Title="Pause all">STOP ALL</CcBtn>
             }
             @if (activeRecords.Count > 0)
             {
@@ -139,11 +152,15 @@
     private Filter filter = Filter.All;
     private bool confirmClear;
 
+    private bool IsAgentServicePaused => !string.IsNullOrEmpty(AgentUuid) && SvcState.IsEffectivelyPaused(ServiceName.Upload, AgentUuid);
+
     protected override async Task OnInitializedAsync()
     {
         Downloads.OnChanged += OnDownloadsChanged;
+        SvcState.OnChanged += OnDownloadsChanged;
         await AgentDb.LoadAsync();
         await Downloads.LoadAsync();
+        await SvcState.LoadAsync();
         Refresh();
     }
 
@@ -205,6 +222,24 @@
         _ => cc.Components.Shared.ProgressVariant.Muted
     };
 
+    private async Task PauseAgentService()
+    {
+        if (string.IsNullOrEmpty(AgentUuid)) return;
+        await SvcState.PauseAsync(ServiceName.Upload, AgentUuid);
+        var active = activeRecords.Where(r => r.Status == DownloadStatus.Downloading).ToList();
+        foreach (var dl in active)
+            Downloads.CancelCts(dl.Id);
+        var queued = activeRecords.Where(r => r.Status == DownloadStatus.Queued).ToList();
+        foreach (var dl in queued)
+            await Downloads.PauseAsync(dl.Id);
+    }
+
+    private async Task ResumeAgentService()
+    {
+        if (string.IsNullOrEmpty(AgentUuid)) return;
+        await SvcState.ResumeAsync(ServiceName.Upload, AgentUuid);
+    }
+
     private async Task StopAllSyncs()
     {
         var active = activeRecords.FirstOrDefault(r => r.Status == DownloadStatus.Downloading);
@@ -243,5 +278,9 @@
         foreach (var dl in toRemove) await Downloads.RemoveAsync(dl.Id);
     }
 
-    public void Dispose() => Downloads.OnChanged -= OnDownloadsChanged;
+    public void Dispose()
+    {
+        Downloads.OnChanged -= OnDownloadsChanged;
+        SvcState.OnChanged -= OnDownloadsChanged;
+    }
 }

@@ -6,6 +6,7 @@
 @inject ThemeService Theme
 @inject MessageService Msg
 @inject NotificationStore Notif
+@inject ExtensionGroupStore ExtGroups
 @inject IJSRuntime JS
 @implements IDisposable
 
@@ -26,25 +27,13 @@
         <CcIcon Name="sync" Size="Size.Xs" /> Uploads
     </button>
     <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Scan")'>
-        <CcIcon Name="search" Size="Size.Xs" /> Scan
+        <CcIcon Name="search" Size="Size.Xs" /> Search
+    </button>
+    <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Extensions")'>
+        <CcIcon Name="database" Size="Size.Xs" /> Extensions
     </button>
 
     <div class="mdi-spacer"></div>
-
-    @* Relay status indicators *@
-    @foreach (var rs in RelaySvc.RelayStates.Values)
-    {
-        <span class="mdi-relay-status" title="@rs.Url">
-            <span class="mdi-relay-dot @(rs.Connected ? "dot-on" : "dot-off")"></span>
-            <span class="mdi-relay-name">@rs.Name</span>
-            @if (rs.Connected)
-            {
-                <span class="mdi-relay-count">@(rs.Agents?.Count ?? 0)</span>
-            }
-        </span>
-    }
-
-    <span class="mdi-sep"></span>
 
     @* Notifications *@
     <div class="notif-wrapper" @onfocusout="OnFocusOut" tabindex="-1">
@@ -117,13 +106,13 @@
 
 <FloatingWindows />
 
-@if (showWelcome)
+@if (showSetup)
 {
-    <Welcome OnComplete="OnWelcomeComplete" />
+    <SetupWizard OnComplete="OnSetupComplete" />
 }
 
 @code {
-    private bool showWelcome;
+    private bool showSetup;
     private bool initialized;
     private bool dropdownOpen;
     private bool updateAvailable;
@@ -135,7 +124,6 @@
         Theme.OnChanged += OnThemeChanged;
         Msg.OnNotification += OnNotification;
         Notif.OnChanged += OnNotifChanged;
-        RelaySvc.OnChanged += OnRelayChanged;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -147,10 +135,11 @@
             await Cache.InitializeAsync();
             await Relay.LoadAsync();
             await Notif.LoadAsync();
+            await ExtGroups.LoadAsync();
             await RelaySvc.StartAsync();
-            if (Cache.SetupRequired || Cache.NeedsPermission || Relay.SetupRequired)
+            if (Cache.SetupRequired || Cache.NeedsPermission || Relay.SetupRequired || ExtGroups.SetupRequired)
             {
-                showWelcome = true;
+                showSetup = true;
             }
             StateHasChanged();
 
@@ -226,11 +215,10 @@
     private void OnThemeChanged() => InvokeAsync(StateHasChanged);
     private void OnWmChanged() => InvokeAsync(StateHasChanged);
     private void OnNotifChanged() => InvokeAsync(StateHasChanged);
-    private void OnRelayChanged() => InvokeAsync(StateHasChanged);
 
-    private void OnWelcomeComplete()
+    private void OnSetupComplete()
     {
-        showWelcome = false;
+        showSetup = false;
         StateHasChanged();
     }
 
@@ -240,7 +228,6 @@
         Theme.OnChanged -= OnThemeChanged;
         Msg.OnNotification -= OnNotification;
         Notif.OnChanged -= OnNotifChanged;
-        RelaySvc.OnChanged -= OnRelayChanged;
         _updateTimer?.Dispose();
     }
 }

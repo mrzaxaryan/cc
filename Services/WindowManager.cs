@@ -46,7 +46,7 @@ public class WindowManager
             Title = DisplayTitle(panel),
             X = 100 + offset,
             Y = 80 + offset,
-            Width = panel switch { "File Manager" => 800, "Settings" => 650, "Relay" => 900, "Agents" => 950, "Sync Manager" => 600, "Scan" => 700, _ => 700 },
+            Width = panel switch { "File Manager" => 800, "Settings" => 650, "Relay" => 900, "Agents" => 950, "Sync Manager" => 600, "Scan" => 700, "Extensions" => 500, _ => 700 },
             Height = 500,
             ZIndex = _topZ
         });
@@ -127,6 +127,7 @@ public class WindowManager
         "Sync Manager" => "Upload Manager",
         "Scanner" => "File Search",
         "Scan" => "File Search",
+        "Extensions" => "Extension Groups",
         _ => panel
     };
 

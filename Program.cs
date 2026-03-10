@@ -16,7 +16,9 @@ builder.Services.AddScoped<cc.Services.ThemeService>();
 builder.Services.AddScoped<cc.Services.AgentStore>();
 builder.Services.AddScoped<cc.Services.DownloadStore>();
 builder.Services.AddScoped<cc.Services.VfsStore>();
-builder.Services.AddScoped<cc.Services.ScanStore>();
+builder.Services.AddScoped<cc.Services.SearchStore>();
+builder.Services.AddScoped<cc.Services.ServiceStateStore>();
+builder.Services.AddScoped<cc.Services.ExtensionGroupStore>();
 builder.Services.AddScoped<cc.Services.RelayConnectionService>();
 builder.Services.AddScoped<cc.Services.NotificationStore>();
 

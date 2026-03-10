@@ -1,7 +1,7 @@
 // IndexedDB CRUD for agents, relays, and virtual filesystem
 (function () {
     const DB_NAME = 'cc-agents';
-    const DB_VERSION = 6;
+    const DB_VERSION = 8;
     const AGENTS_STORE = 'agents';
     const RELAYS_STORE = 'relays';
     const DOWNLOADS_STORE = 'downloads';
@@ -9,6 +9,8 @@
     const FILES_STORE = 'files';
     const NOTIFICATIONS_STORE = 'notifications';
     const SCANS_STORE = 'scans';
+    const EXTGROUPS_STORE = 'extgroups';
+    const SERVICES_STORE = 'services';
 
     function openDb() {
         return new Promise((resolve, reject) => {
@@ -48,6 +50,13 @@
                     const scanStore = db.createObjectStore(SCANS_STORE, { keyPath: 'id', autoIncrement: true });
                     scanStore.createIndex('agentUuid', 'agentUuid', { unique: false });
                     scanStore.createIndex('status', 'status', { unique: false });
+                }
+                if (!db.objectStoreNames.contains(EXTGROUPS_STORE)) {
+                    db.createObjectStore(EXTGROUPS_STORE, { keyPath: 'name' });
+                }
+                if (!db.objectStoreNames.contains(SERVICES_STORE)) {
+                    const svcStore = db.createObjectStore(SERVICES_STORE, { keyPath: 'key' });
+                    svcStore.createIndex('service', 'service', { unique: false });
                 }
             };
             req.onsuccess = () => resolve(req.result);
@@ -216,6 +225,22 @@
         remove: id => run(NOTIFICATIONS_STORE, 'readwrite', s => s.delete(id)),
         clear: () => run(NOTIFICATIONS_STORE, 'readwrite', s => s.clear()),
         count: () => run(NOTIFICATIONS_STORE, 'readonly', s => s.count())
+    };
+
+    window.ccExtGroupDb = {
+        getAll: () => run(EXTGROUPS_STORE, 'readonly', s => s.getAll()),
+        get: name => run(EXTGROUPS_STORE, 'readonly', s => s.get(name)),
+        put: record => run(EXTGROUPS_STORE, 'readwrite', s => s.put(record)),
+        remove: name => run(EXTGROUPS_STORE, 'readwrite', s => s.delete(name)),
+        clear: () => run(EXTGROUPS_STORE, 'readwrite', s => s.clear())
+    };
+
+    window.ccServiceDb = {
+        getAll: () => run(SERVICES_STORE, 'readonly', s => s.getAll()),
+        get: key => run(SERVICES_STORE, 'readonly', s => s.get(key)),
+        put: record => run(SERVICES_STORE, 'readwrite', s => s.put(record)),
+        remove: key => run(SERVICES_STORE, 'readwrite', s => s.delete(key)),
+        clear: () => run(SERVICES_STORE, 'readwrite', s => s.clear())
     };
 
     window.ccDbInfo = {

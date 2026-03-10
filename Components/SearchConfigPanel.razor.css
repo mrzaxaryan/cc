@@ -97,6 +97,49 @@
     margin-top: 0.2rem;
 }
 
+/* Extension groups */
+.scan-ext-groups {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.scan-ext-group {
+    background: var(--cc-bg-alt);
+    border: 1px solid var(--cc-border);
+    border-radius: 3px;
+    color: var(--cc-text-muted);
+    font-size: 0.65rem;
+    font-weight: 500;
+    padding: 0.15rem 0.4rem;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.scan-ext-group:hover {
+    border-color: var(--cc-accent-blue);
+    color: var(--cc-text);
+}
+
+.scan-ext-group.active {
+    background: var(--cc-accent-blue);
+    border-color: var(--cc-accent-blue);
+    color: #fff;
+}
+
+.scan-ext-group.disabled,
+.scan-ext-group:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Extension validation error */
+.scan-ext-error {
+    font-size: 0.65rem;
+    color: var(--cc-accent-red);
+    font-weight: 500;
+}
+
 .scan-new-btn {
     margin-bottom: 0.5rem;
 }

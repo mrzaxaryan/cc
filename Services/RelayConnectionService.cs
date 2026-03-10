@@ -12,15 +12,16 @@ public class RelayConnectionService : IAsyncDisposable
     private readonly RelayStore _relayStore;
     private readonly AgentStore _agentDb;
     private readonly DownloadStore _downloads;
-    private readonly ScanStore _scans;
+    private readonly SearchStore _scans;
     private readonly VfsStore _vfs;
     private readonly CacheManager _cache;
     private readonly WindowManager _wm;
     private readonly MessageService _msg;
+    private readonly ServiceStateStore _serviceState;
 
     private readonly Dictionary<string, RelayState> _relayStates = new();
     private readonly HashSet<string> _processingAgents = new();
-    private readonly HashSet<string> _scanningAgents = new();
+    private readonly HashSet<string> _searchingAgents = new();
     private bool _started;
     private bool _disposing;
 
@@ -42,8 +43,9 @@ public class RelayConnectionService : IAsyncDisposable
 
     public RelayConnectionService(
         RelayStore relayStore, AgentStore agentDb, DownloadStore downloads,
-        ScanStore scans, VfsStore vfs,
-        CacheManager cache, WindowManager wm, MessageService msg)
+        SearchStore scans, VfsStore vfs,
+        CacheManager cache, WindowManager wm, MessageService msg,
+        ServiceStateStore serviceState)
     {
         _relayStore = relayStore;
         _agentDb = agentDb;
@@ -53,6 +55,7 @@ public class RelayConnectionService : IAsyncDisposable
         _cache = cache;
         _wm = wm;
         _msg = msg;
+        _serviceState = serviceState;
     }
 
     public async Task StartAsync()
@@ -64,17 +67,35 @@ public class RelayConnectionService : IAsyncDisposable
         await _agentDb.LoadAsync();
         await _downloads.LoadAsync();
         await _scans.LoadAsync();
+        await _serviceState.LoadAsync();
         await ResetStaleDownloads();
-        await ResetStaleScans();
+        await ResetStaleSearches();
         _relayStore.OnChanged += OnRelayStoreChanged;
         _downloads.OnItemQueued += OnItemQueued;
-        _scans.OnItemQueued += OnScanItemQueued;
+        _scans.OnItemQueued += OnSearchItemQueued;
+        _serviceState.OnChanged += OnServiceStateChanged;
         SyncRelays();
     }
 
     private void OnRelayStoreChanged()
     {
         SyncRelays();
+        NotifyChanged();
+    }
+
+    private void OnServiceStateChanged()
+    {
+        // When a service is paused, cancel active work for affected agents
+        foreach (var uuid in _searchingAgents.ToList())
+        {
+            if (_serviceState.IsEffectivelyPaused(ServiceName.Search, uuid))
+                _scans.CancelAll(); // CTS cancellation triggers pause in the processing loop
+        }
+        foreach (var uuid in _processingAgents.ToList())
+        {
+            if (_serviceState.IsEffectivelyPaused(ServiceName.Upload, uuid))
+                _downloads.CancelAll();
+        }
         NotifyChanged();
     }
 
@@ -181,7 +202,7 @@ public class RelayConnectionService : IAsyncDisposable
                     await _agentDb.UpsertAsync(uuid, agent, relayEntry?.Id ?? "");
                     NotifyChanged();
                     _ = AutoResumeDownloads(uuid, agent.Id, relayUrl);
-                    _ = AutoResumeScans(uuid, agent.Id, relayUrl);
+                    _ = AutoResumeSearches(uuid, agent.Id, relayUrl);
                 }
             }
         }
@@ -202,7 +223,7 @@ public class RelayConnectionService : IAsyncDisposable
             else
             {
                 _ = AutoResumeDownloads(existingUuid, agent.Id, relayUrl);
-                _ = AutoResumeScans(existingUuid, agent.Id, relayUrl);
+                _ = AutoResumeSearches(existingUuid, agent.Id, relayUrl);
             }
         }
     }
@@ -210,6 +231,7 @@ public class RelayConnectionService : IAsyncDisposable
     private async Task AutoResumeDownloads(string uuid, string agentId, string relayUrl)
     {
         if (!_cache.HasDirectory) return;
+        if (_serviceState.IsEffectivelyPaused(ServiceName.Upload, uuid)) return;
         await _downloads.LoadAsync();
 
         // Queue all paused downloads for this agent
@@ -226,6 +248,7 @@ public class RelayConnectionService : IAsyncDisposable
     private void OnItemQueued(string agentUuid)
     {
         if (_disposing || !_cache.HasDirectory) return;
+        if (_serviceState.IsEffectivelyPaused(ServiceName.Upload, agentUuid)) return;
 
         var agent = _agentDb.GetByUuid(agentUuid);
         if (agent is null) return;
@@ -302,20 +325,21 @@ public class RelayConnectionService : IAsyncDisposable
         }
     }
 
-    // --- Scan processing ---
+    // --- Search processing ---
 
-    private async Task ResetStaleScans()
+    private async Task ResetStaleSearches()
     {
-        var stale = _scans.Scans
-            .Where(r => r.Status == ScanStatus.Scanning && !_scans.HasActiveCts(r.Id))
+        var stale = _scans.Searches
+            .Where(r => r.Status == SearchStatus.Scanning && !_scans.HasActiveCts(r.Id))
             .ToList();
         foreach (var s in stale)
             await _scans.PauseAsync(s.Id);
     }
 
-    private void OnScanItemQueued(string agentUuid)
+    private void OnSearchItemQueued(string agentUuid)
     {
         if (_disposing) return;
+        if (_serviceState.IsEffectivelyPaused(ServiceName.Search, agentUuid)) return;
 
         var agent = _agentDb.GetByUuid(agentUuid);
         if (agent is null) return;
@@ -326,27 +350,28 @@ public class RelayConnectionService : IAsyncDisposable
         var online = GetAllAgents().Any(a => a.Agent.Id == agent.AgentId);
         if (!online) return;
 
-        _ = TryProcessScanQueue(agentUuid, agent.AgentId, relayEntry.Url);
+        _ = TryProcessSearchQueue(agentUuid, agent.AgentId, relayEntry.Url);
     }
 
-    private async Task AutoResumeScans(string uuid, string agentId, string relayUrl)
+    private async Task AutoResumeSearches(string uuid, string agentId, string relayUrl)
     {
+        if (_serviceState.IsEffectivelyPaused(ServiceName.Search, uuid)) return;
         await _scans.LoadAsync();
         var paused = _scans.GetByAgent(uuid)
-            .Where(r => r.Status == ScanStatus.Paused)
+            .Where(r => r.Status == SearchStatus.Paused)
             .ToList();
         foreach (var s in paused)
             await _scans.ResumeAsync(s.Id);
 
-        await TryProcessScanQueue(uuid, agentId, relayUrl);
+        await TryProcessSearchQueue(uuid, agentId, relayUrl);
     }
 
-    private async Task TryProcessScanQueue(string uuid, string agentId, string relayUrl)
+    private async Task TryProcessSearchQueue(string uuid, string agentId, string relayUrl)
     {
-        if (_scanningAgents.Contains(uuid)) return;
+        if (_searchingAgents.Contains(uuid)) return;
         if (_scans.GetNextPending(uuid) is null) return;
 
-        _scanningAgents.Add(uuid);
+        _searchingAgents.Add(uuid);
         RelaySocket? relay = null;
         try
         {
@@ -364,7 +389,7 @@ public class RelayConnectionService : IAsyncDisposable
                 _msg.Info($"Search started: {label} ({scan.Extensions}) on {agent}");
                 try
                 {
-                    await ProcessScan(relay, scan, cts.Token);
+                    await ProcessSearch(relay, scan, cts.Token);
                     _msg.Success($"Search completed: {label} on {agent} — {scan.FilesFound} files found in {scan.DirsScanned} dirs");
                 }
                 catch (OperationCanceledException)
@@ -394,13 +419,13 @@ public class RelayConnectionService : IAsyncDisposable
         catch { }
         finally
         {
-            _scanningAgents.Remove(uuid);
+            _searchingAgents.Remove(uuid);
             if (relay is not null && !_wm.Windows.Any(w => w.Relay == relay))
                 await relay.Disconnect();
         }
     }
 
-    private async Task ProcessScan(RelaySocket relay, ScanRecord scan, CancellationToken ct)
+    private async Task ProcessSearch(RelaySocket relay, SearchRecord scan, CancellationToken ct)
     {
         var extensionSet = scan.Extensions
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
@@ -693,7 +718,8 @@ public class RelayConnectionService : IAsyncDisposable
         _disposing = true;
         _relayStore.OnChanged -= OnRelayStoreChanged;
         _downloads.OnItemQueued -= OnItemQueued;
-        _scans.OnItemQueued -= OnScanItemQueued;
+        _scans.OnItemQueued -= OnSearchItemQueued;
+        _serviceState.OnChanged -= OnServiceStateChanged;
         foreach (var rs in _relayStates.Values)
         {
             rs.Cts?.Cancel();

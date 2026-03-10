@@ -1,0 +1,186 @@
+@inject ExtensionGroupStore Store
+@inject MessageService Msg
+@implements IDisposable
+
+<div class="eg">
+    <div class="eg-toolbar">
+        <span class="eg-title">Extension Groups</span>
+        <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="ShowAddForm">ADD GROUP</CcBtn>
+    </div>
+
+    @if (showForm)
+    {
+        <div class="eg-form">
+            <div class="eg-form-row">
+                <label class="eg-label">Group Name</label>
+                <CcInput @bind-Value="formName" Placeholder="e.g. Audio" />
+            </div>
+            <div class="eg-form-row">
+                <label class="eg-label">Extensions (comma-separated)</label>
+                <CcInput @bind-Value="formExtensions" Placeholder=".mp3,.wav,.flac,.ogg" Monospace />
+            </div>
+            @if (!string.IsNullOrEmpty(formError))
+            {
+                <div class="eg-form-error">@formError</div>
+            }
+            <div class="eg-form-actions">
+                <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="SaveGroup" Disabled="@saving" Loading="@saving">
+                    @(editingGroup is not null ? "UPDATE" : "ADD")
+                </CcBtn>
+                <CcBtn Size="Size.Xs" OnClick="CancelForm">CANCEL</CcBtn>
+            </div>
+        </div>
+    }
+
+    <div class="eg-list">
+        @if (Store.Groups.Count == 0)
+        {
+            <div class="eg-empty">
+                No extension groups configured.
+                <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="SeedDefaults" Disabled="@saving">LOAD DEFAULTS</CcBtn>
+            </div>
+        }
+        else
+        {
+            @foreach (var group in Store.Groups)
+            {
+                var g = group;
+                <div class="eg-item @(!g.Enabled ? "eg-item-disabled" : "")">
+                    <div class="eg-item-header">
+                        <label class="eg-item-toggle">
+                            <input type="checkbox" checked="@g.Enabled" @onchange="() => ToggleEnabled(g)" />
+                            <span class="eg-item-name">@g.Name</span>
+                        </label>
+                        <div class="eg-item-actions">
+                            <CcBtn Size="Size.Xs" OnClick="() => EditGroup(g)" Title="Edit">EDIT</CcBtn>
+                            <CcBtn Size="Size.Xs" Variant="BtnVariant.Danger" OnClick="() => RemoveGroup(g)" Title="Remove">&#x2715;</CcBtn>
+                        </div>
+                    </div>
+                    <div class="eg-item-exts">@g.Extensions</div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private static readonly System.Text.RegularExpressions.Regex ValidExtRegex = new(@"^\.[a-zA-Z0-9]{1,15}$");
+
+    private bool showForm;
+    private bool saving;
+    private string formName = "";
+    private string formExtensions = "";
+    private string formError = "";
+    private ExtensionGroup? editingGroup;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Store.OnChanged += OnStoreChanged;
+        await Store.LoadAsync();
+    }
+
+    private void OnStoreChanged() => InvokeAsync(StateHasChanged);
+
+    private void ShowAddForm()
+    {
+        editingGroup = null;
+        formName = "";
+        formExtensions = "";
+        formError = "";
+        showForm = true;
+    }
+
+    private void EditGroup(ExtensionGroup group)
+    {
+        editingGroup = group;
+        formName = group.Name;
+        formExtensions = group.Extensions;
+        formError = "";
+        showForm = true;
+    }
+
+    private void CancelForm()
+    {
+        showForm = false;
+        editingGroup = null;
+        formError = "";
+    }
+
+    private async Task SaveGroup()
+    {
+        var name = formName.Trim();
+        if (string.IsNullOrEmpty(name))
+        {
+            formError = "Group name is required.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(formExtensions))
+        {
+            formError = "At least one extension is required.";
+            return;
+        }
+
+        var normalized = NormalizeExtensions(formExtensions);
+        var parts = normalized.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        var invalid = parts.Where(e => !ValidExtRegex.IsMatch(e)).ToList();
+        if (invalid.Count > 0)
+        {
+            formError = $"Invalid: {string.Join(", ", invalid)} — must be a dot followed by 1-15 alphanumeric characters.";
+            return;
+        }
+
+        // Check duplicate name when adding new
+        if (editingGroup is null && Store.Groups.Any(g => g.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+        {
+            formError = $"A group named '{name}' already exists.";
+            return;
+        }
+
+        saving = true;
+        StateHasChanged();
+        try
+        {
+            if (editingGroup is not null && editingGroup.Name != name)
+            {
+                // Name changed — remove old, add new
+                await Store.RemoveAsync(editingGroup.Name);
+            }
+            await Store.AddAsync(name, normalized, editingGroup?.Enabled ?? true);
+            showForm = false;
+            editingGroup = null;
+            formError = "";
+        }
+        catch (Exception ex) { Msg.Error(ex.Message); }
+        finally { saving = false; }
+    }
+
+    private async Task ToggleEnabled(ExtensionGroup group)
+    {
+        group.Enabled = !group.Enabled;
+        await Store.UpdateAsync(group);
+    }
+
+    private async Task RemoveGroup(ExtensionGroup group)
+    {
+        await Store.RemoveAsync(group.Name);
+    }
+
+    private async Task SeedDefaults()
+    {
+        saving = true;
+        StateHasChanged();
+        try
+        {
+            await Store.SeedDefaultsAsync();
+        }
+        catch (Exception ex) { Msg.Error(ex.Message); }
+        finally { saving = false; }
+    }
+
+    private static string NormalizeExtensions(string raw) =>
+        string.Join(",", raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(e => e.StartsWith(".") ? e.ToLowerInvariant() : $".{e.ToLowerInvariant()}"));
+
+    public void Dispose() => Store.OnChanged -= OnStoreChanged;
+}
