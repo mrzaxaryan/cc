@@ -2,6 +2,8 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using cc.Features.FileManager;
+using cc.Features.Storage;
+using cc.Features.Downloads;
 using cc.Features.Workspace;
 using cc.Features.Agents;
 using cc.Features.Search;

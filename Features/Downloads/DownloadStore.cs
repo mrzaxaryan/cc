@@ -2,7 +2,7 @@ using cc.Infrastructure;
 using System.Text.Json.Serialization;
 using Microsoft.JSInterop;
 
-namespace cc.Features.FileManager;
+namespace cc.Features.Downloads;
 
 public class DownloadRecord
 {

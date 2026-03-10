@@ -1,7 +1,7 @@
 using cc.Features.Relay;
 using Microsoft.JSInterop;
 
-namespace cc.Features.FileManager;
+namespace cc.Features.Storage;
 
 public class CacheManager
 {
