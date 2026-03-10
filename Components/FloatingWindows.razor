@@ -69,15 +69,18 @@
     </div>
 }
 
-@* Taskbar for minimized windows *@
-@{ var minimized = Wm.Windows.Where(w => w.Minimized).ToList(); }
-@if (minimized.Count > 0)
+@* Taskbar — always visible when windows exist *@
+@if (Wm.Windows.Count > 0)
 {
     <div class="mdi-taskbar">
-        @foreach (var win in minimized)
+        @foreach (var win in Wm.Windows)
         {
             var w = win;
-            <button @key="win.Id" class="mdi-taskbar-item" @onclick="() => RestoreWindow(w)">@win.Title</button>
+            <button @key="win.Id"
+                    class="mdi-taskbar-item @(IsTopWindow(w) ? "active" : "") @(w.Minimized ? "minimized" : "")"
+                    @onclick="() => OnTaskbarClick(w)">
+                @win.Title
+            </button>
         }
     </div>
 }
@@ -114,10 +117,31 @@
 
     private void OnWmChanged() => InvokeAsync(StateHasChanged);
 
-    private void RestoreWindow(WindowState win)
+    private bool IsTopWindow(WindowState win)
     {
-        win.Minimized = false;
-        Wm.BringToFront(win);
+        if (win.Minimized) return false;
+        var visible = Wm.Windows.Where(w => !w.Minimized).ToList();
+        return visible.Count > 0 && visible.MaxBy(w => w.ZIndex) == win;
+    }
+
+    private void OnTaskbarClick(WindowState win)
+    {
+        if (win.Minimized)
+        {
+            // Restore minimized window
+            win.Minimized = false;
+            Wm.BringToFront(win);
+        }
+        else if (IsTopWindow(win))
+        {
+            // Already focused — minimize it
+            Wm.ToggleMinimize(win);
+        }
+        else
+        {
+            // Bring to front
+            Wm.BringToFront(win);
+        }
     }
 
     private void OnDragStart(MouseEventArgs e, WindowState win)

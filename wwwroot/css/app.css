@@ -161,7 +161,7 @@ h1:focus {
     left: 0 !important;
     top: 36px !important;
     width: 100vw !important;
-    height: calc(100vh - 36px) !important;
+    height: calc(100vh - 36px - 32px) !important;
     border-radius: 0;
     border: none;
     z-index: 1045 !important;
@@ -294,6 +294,10 @@ h1:focus {
     background: var(--cc-bg-active);
     color: var(--cc-text);
     border-color: var(--cc-border-active);
+}
+
+.mdi-taskbar-item.minimized {
+    opacity: 0.5;
 }
 
 /* ===== Theme tuning ===== */
