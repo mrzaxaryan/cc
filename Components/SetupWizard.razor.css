@@ -106,6 +106,16 @@
     color: #fff;
 }
 
+.su-nav-item.locked {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.su-nav-item.locked:hover {
+    background: none;
+    color: var(--cc-text-dim);
+}
+
 .su-nav-label {
     flex: 1;
 }

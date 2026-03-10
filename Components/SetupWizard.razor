@@ -12,14 +12,16 @@
         </div>
 
         <nav class="su-nav">
-            <button class="su-nav-item @(step == Step.Welcome ? "active" : "") @(IsStepDone(Step.Welcome) ? "done" : "")" @onclick="() => GoToStep(Step.Welcome)">
+            <button class="su-nav-item @(step == Step.Welcome ? "active" : "") @(IsStepDone(Step.Welcome) ? "done" : "") @(!CanNavigateTo(Step.Welcome) ? "locked" : "")"
+                    @onclick="() => GoToStep(Step.Welcome)" disabled="@(!CanNavigateTo(Step.Welcome))">
                 <span class="su-nav-num">1</span>
                 <span class="su-nav-label">Welcome</span>
                 @if (IsStepDone(Step.Welcome)) { <span class="su-nav-check">&#x2713;</span> }
             </button>
             @if (needsCache)
             {
-                <button class="su-nav-item @(step == Step.Cache ? "active" : "") @(IsStepDone(Step.Cache) ? "done" : "")" @onclick="() => GoToStep(Step.Cache)">
+                <button class="su-nav-item @(step == Step.Cache ? "active" : "") @(IsStepDone(Step.Cache) ? "done" : "") @(!CanNavigateTo(Step.Cache) ? "locked" : "")"
+                        @onclick="() => GoToStep(Step.Cache)" disabled="@(!CanNavigateTo(Step.Cache))">
                     <span class="su-nav-num">@StepNumber(Step.Cache)</span>
                     <span class="su-nav-label">Cache Storage</span>
                     @if (IsStepDone(Step.Cache)) { <span class="su-nav-check">&#x2713;</span> }
@@ -27,7 +29,8 @@
             }
             @if (needsRelay)
             {
-                <button class="su-nav-item @(step == Step.Relay ? "active" : "") @(IsStepDone(Step.Relay) ? "done" : "")" @onclick="() => GoToStep(Step.Relay)">
+                <button class="su-nav-item @(step == Step.Relay ? "active" : "") @(IsStepDone(Step.Relay) ? "done" : "") @(!CanNavigateTo(Step.Relay) ? "locked" : "")"
+                        @onclick="() => GoToStep(Step.Relay)" disabled="@(!CanNavigateTo(Step.Relay))">
                     <span class="su-nav-num">@StepNumber(Step.Relay)</span>
                     <span class="su-nav-label">Relay Server</span>
                     @if (IsStepDone(Step.Relay)) { <span class="su-nav-check">&#x2713;</span> }
@@ -35,7 +38,8 @@
             }
             @if (needsExtensions)
             {
-                <button class="su-nav-item @(step == Step.Extensions ? "active" : "") @(IsStepDone(Step.Extensions) ? "done" : "")" @onclick="() => GoToStep(Step.Extensions)">
+                <button class="su-nav-item @(step == Step.Extensions ? "active" : "") @(IsStepDone(Step.Extensions) ? "done" : "") @(!CanNavigateTo(Step.Extensions) ? "locked" : "")"
+                        @onclick="() => GoToStep(Step.Extensions)" disabled="@(!CanNavigateTo(Step.Extensions))">
                     <span class="su-nav-num">@StepNumber(Step.Extensions)</span>
                     <span class="su-nav-label">File Extensions</span>
                     @if (IsStepDone(Step.Extensions)) { <span class="su-nav-check">&#x2713;</span> }
@@ -348,7 +352,32 @@
 
     private bool IsStepDone(Step s) => completedSteps.Contains(s);
 
-    private void GoToStep(Step s) { step = s; }
+    private bool CanNavigateTo(Step s)
+    {
+        if (s == step) return true;
+        if (IsStepDone(s)) return true;
+        // Can navigate to the next uncompleted step only if all previous are done
+        foreach (var prev in GetOrderedSteps())
+        {
+            if (prev == s) return true;
+            if (!IsStepDone(prev)) return false;
+        }
+        return false;
+    }
+
+    private List<Step> GetOrderedSteps()
+    {
+        var steps = new List<Step> { Step.Welcome };
+        if (needsCache) steps.Add(Step.Cache);
+        if (needsRelay) steps.Add(Step.Relay);
+        if (needsExtensions) steps.Add(Step.Extensions);
+        return steps;
+    }
+
+    private void GoToStep(Step s)
+    {
+        if (CanNavigateTo(s)) step = s;
+    }
 
     private void AdvanceFromWelcome()
     {
