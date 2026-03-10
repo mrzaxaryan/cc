@@ -196,15 +196,19 @@
         else if (tab == Tab.About)
         {
             <div class="cm-about">
-                <div class="cm-about-brand">cc</div>
+                <div class="cm-about-hero">
+                    <img class="cm-about-icon" src="icon-192.png" alt="CC" />
+                    <div class="cm-about-brand">CC</div>
+                    <div class="cm-about-tagline">Command &amp; Control</div>
+                </div>
                 <CcCard Compact>
                     <div class="cm-about-rows">
                         <div class="cm-about-row">
-                            <span class="cm-about-label">Build</span>
+                            <span class="cm-about-label">Version</span>
                             <code class="cm-about-value">@BuildMeta.Version</code>
                         </div>
                         <div class="cm-about-row">
-                            <span class="cm-about-label">Date</span>
+                            <span class="cm-about-label">Built</span>
                             <code class="cm-about-value">@BuildMeta.Date</code>
                         </div>
                         <div class="cm-about-row">
@@ -214,6 +218,10 @@
                         <div class="cm-about-row">
                             <span class="cm-about-label">Runtime</span>
                             <code class="cm-about-value">@System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription</code>
+                        </div>
+                        <div class="cm-about-row">
+                            <span class="cm-about-label">Platform</span>
+                            <code class="cm-about-value">@System.Runtime.InteropServices.RuntimeInformation.OSDescription</code>
                         </div>
                     </div>
                 </CcCard>

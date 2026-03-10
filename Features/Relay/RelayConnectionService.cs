@@ -148,8 +148,9 @@ public class RelayConnectionService : IAsyncDisposable
 
     // --- UUID fetching ---
 
-    private async Task FetchUuid(AgentConnection agent, string relayUrl)
+    private async Task FetchUuid(AgentConnection agent, string relayUrl, int attempt = 0)
     {
+        const int maxRetries = 2;
         var relay = new RelaySocket { BaseUrl = relayUrl };
         try
         {
@@ -164,14 +165,45 @@ public class RelayConnectionService : IAsyncDisposable
                     var uuid = guid.ToString();
                     agent.Os = platform;
                     agent.Arch = architecture;
+
+                    // Also update the live agent in the current connections array
+                    // in case it was replaced by a newer "agents" event
+                    if (_relayStates.TryGetValue(relayUrl, out var rs) && rs.Agents?.Connections is not null)
+                    {
+                        var liveAgent = rs.Agents.Connections.FirstOrDefault(a => a.Id == agent.Id);
+                        if (liveAgent is not null && liveAgent != agent)
+                        {
+                            liveAgent.Os = platform;
+                            liveAgent.Arch = architecture;
+                        }
+                    }
+
                     var relayEntry = _relayStore.GetByUrl(relayUrl);
                     await _agentDb.UpsertAsync(uuid, agent, relayEntry?.Id ?? "");
                     _bus.Publish(new RelayAgentsChangedEvent(relayUrl));
                     _bus.Publish(new AgentOnlineEvent(uuid, agent.Id, relayUrl));
+                    return;
                 }
             }
+
+            // Response was null, too short, or bad status — retry
+            if (attempt < maxRetries)
+            {
+                await relay.Disconnect();
+                await Task.Delay(1000 * (attempt + 1));
+                await FetchUuid(agent, relayUrl, attempt + 1);
+            }
         }
-        catch { }
+        catch when (attempt < maxRetries)
+        {
+            await relay.Disconnect();
+            await Task.Delay(1000 * (attempt + 1));
+            await FetchUuid(agent, relayUrl, attempt + 1);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[FetchUuid] Failed for {agent.Id} after {attempt + 1} attempts: {ex.Message}");
+        }
         finally
         {
             await relay.Disconnect();

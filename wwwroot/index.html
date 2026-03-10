@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>cc</title>
+    <title>CC</title>
     <base href="/" />
     <link rel="preload" id="webassembly" />
     <link rel="stylesheet" href="css/app.css" />
@@ -12,7 +12,14 @@
     <link href="cc.styles.css" rel="stylesheet" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
     <meta name="theme-color" content="#1e1e2e" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="CC" />
+    <meta name="application-name" content="CC" />
+    <meta name="msapplication-TileColor" content="#181828" />
+    <meta name="description" content="Agent management and command & control panel" />
     <script>
         (function() {
             var t = localStorage.getItem('cc-theme') || 'dark';
@@ -26,7 +33,7 @@
 <body>
     <div id="app">
         <div class="cc-loading">
-            <span class="cc-loading-brand">cc</span>
+            <span class="cc-loading-brand">CC</span>
             <div class="cc-loading-spinner"></div>
             <div class="cc-loading-text"></div>
         </div>

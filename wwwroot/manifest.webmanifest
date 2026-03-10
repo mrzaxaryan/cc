@@ -1,15 +1,15 @@
 {
-  "name": "cc",
-  "short_name": "cc",
-  "description": "Command & Control agent management panel",
+  "name": "CC — Command & Control",
+  "short_name": "CC",
+  "description": "Agent management and command & control panel",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#1e1e2e",
-  "theme_color": "#1e1e2e",
+  "background_color": "#181828",
+  "theme_color": "#181828",
   "prefer_related_applications": false,
-  "categories": ["utilities"],
+  "categories": ["utilities", "productivity"],
   "icons": [
     {
       "src": "icon-48.png",
@@ -33,6 +33,12 @@
       "purpose": "any"
     },
     {
+      "src": "icon-192-maskable.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "maskable"
+    },
+    {
       "src": "icon-256.png",
       "type": "image/png",
       "sizes": "256x256"
@@ -47,6 +53,12 @@
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "any"
+    },
+    {
+      "src": "icon-512-maskable.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
     }
   ]
 }
