@@ -19,11 +19,11 @@ public class AgentRecord
     [JsonPropertyName("asn")] public int Asn { get; set; }
     [JsonPropertyName("asOrganization")] public string AsOrganization { get; set; } = "";
     [JsonPropertyName("userAgent")] public string UserAgent { get; set; } = "";
-    [JsonPropertyName("protocol")] public string Protocol { get; set; } = "";
+    [JsonPropertyName("requestPriority")] public string RequestPriority { get; set; } = "";
     [JsonPropertyName("tlsVersion")] public string TlsVersion { get; set; } = "";
     [JsonPropertyName("os")] public string Os { get; set; } = "";
     [JsonPropertyName("arch")] public string Arch { get; set; } = "";
-    [JsonPropertyName("relayId")] public string? RelayId { get; set; }
+    [JsonPropertyName("pairedRelayId")] public string? PairedRelayId { get; set; }
     [JsonPropertyName("firstSeen")] public double FirstSeen { get; set; }
     [JsonPropertyName("lastSeen")] public double LastSeen { get; set; }
 }
@@ -76,11 +76,11 @@ public class AgentStore
             Asn = agent.Asn,
             AsOrganization = agent.AsOrganization,
             UserAgent = agent.UserAgent,
-            Protocol = agent.Protocol,
+            RequestPriority = agent.RequestPriority,
             TlsVersion = agent.TlsVersion,
             Os = agent.Os,
             Arch = agent.Arch,
-            RelayId = agent.RelayId,
+            PairedRelayId = agent.PairedRelayId,
             FirstSeen = now,
             LastSeen = now
         };
@@ -104,6 +104,13 @@ public class AgentStore
     public AgentRecord? GetByUuid(string uuid)
     {
         return _cache.TryGetValue(uuid, out var record) ? record : null;
+    }
+
+    public async Task MarkOfflineAsync(string uuid)
+    {
+        if (!_cache.TryGetValue(uuid, out var record)) return;
+        record.LastSeen = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        await _js.InvokeVoidAsync("ccAgentDb.put", record);
     }
 
     public async Task RenameAsync(string uuid, string name)

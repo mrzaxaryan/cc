@@ -566,6 +566,9 @@ public class RelayConnectionService : IAsyncDisposable
 
             var type = typeProp.GetString();
 
+            if (type is "agent_disconnected" or "agent_connected")
+                Console.WriteLine($"[Event] {type}: {json[..Math.Min(json.Length, 500)]}");
+
             if (type == "agents" && root.TryGetProperty("agents", out var agentsProp))
             {
                 var agentArray = JsonSerializer.Deserialize<AgentConnection[]>(agentsProp.GetRawText(), JsonOptions) ?? [];
@@ -589,6 +592,13 @@ public class RelayConnectionService : IAsyncDisposable
                     ? JsonSerializer.Deserialize<AgentConnection>(agentProp.GetRawText(), JsonOptions)
                     : null;
 
+                // Extract agent ID: prefer agent.Id, fall back to root-level "id" or "agentId"
+                var eventAgentId = agent?.Id;
+                if (string.IsNullOrEmpty(eventAgentId) && root.TryGetProperty("id", out var idProp))
+                    eventAgentId = idProp.GetString();
+                if (string.IsNullOrEmpty(eventAgentId) && root.TryGetProperty("agentId", out var agentIdProp))
+                    eventAgentId = agentIdProp.GetString();
+
                 if (rs.Agents is null) return;
 
                 if (type == "agent_connected" && agent is not null)
@@ -603,32 +613,33 @@ public class RelayConnectionService : IAsyncDisposable
 
                     _ = FetchUuid(agent, relayUrl);
                 }
-                else if (type == "agent_disconnected" && agent is not null)
+                else if (type == "agent_disconnected" && !string.IsNullOrEmpty(eventAgentId))
                 {
-                    var list = rs.Agents.Connections.Where(a => a.Id != agent.Id).ToList();
+                    var list = rs.Agents.Connections.Where(a => a.Id != eventAgentId).ToList();
                     rs.Agents = new GroupInfo<AgentConnection>
                     {
                         Count = list.Count,
                         Connections = list.ToArray()
                     };
 
-                    var uuid = _agentDb.GetUuidByAgentId(agent.Id);
+                    var uuid = _agentDb.GetUuidByAgentId(eventAgentId);
                     if (uuid is not null)
-                        _ = _agentDb.RemoveAsync(uuid);
+                        _ = _agentDb.MarkOfflineAsync(uuid);
 
-                    if (_wm.ConnectedAgentIds.Contains(agent.Id))
+                    if (_wm.ConnectedAgentIds.Contains(eventAgentId))
                     {
-                        _ = _wm.DisconnectAgent(agent.Id);
+                        _ = _wm.DisconnectAgent(eventAgentId);
                         _msg.Warn("Agent disconnected.");
                     }
                 }
-                else if (type == "agent_relayed" && agent is not null)
+                else if (type == "agent_paired" && !string.IsNullOrEmpty(eventAgentId))
                 {
-                    var existing = rs.Agents.Connections.FirstOrDefault(a => a.Id == agent.Id);
+                    var existing = rs.Agents.Connections.FirstOrDefault(a => a.Id == eventAgentId);
                     if (existing is not null)
                     {
-                        existing.Relayed = true;
-                        existing.RelayId = agent.RelayId;
+                        existing.Paired = true;
+                        var relayId = root.TryGetProperty("relayId", out var relayIdProp) ? relayIdProp.GetString() : null;
+                        existing.PairedRelayId = relayId;
                         rs.Agents = new GroupInfo<AgentConnection>
                         {
                             Count = rs.Agents.Count,
@@ -636,13 +647,13 @@ public class RelayConnectionService : IAsyncDisposable
                         };
                     }
                 }
-                else if (type == "agent_unrelayed" && agent is not null)
+                else if (type == "agent_unpaired" && !string.IsNullOrEmpty(eventAgentId))
                 {
-                    var existing = rs.Agents.Connections.FirstOrDefault(a => a.Id == agent.Id);
+                    var existing = rs.Agents.Connections.FirstOrDefault(a => a.Id == eventAgentId);
                     if (existing is not null)
                     {
-                        existing.Relayed = false;
-                        existing.RelayId = null;
+                        existing.Paired = false;
+                        existing.PairedRelayId = null;
                         rs.Agents = new GroupInfo<AgentConnection>
                         {
                             Count = rs.Agents.Count,
@@ -650,9 +661,9 @@ public class RelayConnectionService : IAsyncDisposable
                         };
                     }
 
-                    if (_wm.ConnectedAgentIds.Contains(agent.Id))
+                    if (_wm.ConnectedAgentIds.Contains(eventAgentId))
                     {
-                        _ = _wm.DisconnectAgent(agent.Id);
+                        _ = _wm.DisconnectAgent(eventAgentId);
                         _msg.Warn("Agent relay disconnected.");
                     }
                 }

@@ -2,7 +2,6 @@
 .ap {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
     height: 100%;
     min-height: 0;
     overflow: hidden;
@@ -17,62 +16,62 @@
 .ap-empty {
     color: var(--cc-text-dim);
     font-size: 0.85rem;
+    padding: 0.5rem;
 }
 
-/* Relay cards */
-.ap-relays {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-}
-
-.ap-relay-card {
-    flex: 1;
-    min-width: 200px;
-}
-
-.ap-relay-info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-    min-width: 0;
-}
-
-.ap-relay-header {
+/* Relay filter bar */
+.ap-relay-bar {
     display: flex;
     align-items: center;
+    gap: 0.25rem;
+    padding: 0.35rem 0.5rem;
+    border-bottom: 1px solid var(--cc-border);
+    flex-shrink: 0;
+    overflow-x: auto;
+}
+
+.ap-relay-tab {
+    display: inline-flex;
+    align-items: center;
     gap: 0.3rem;
-    flex-wrap: wrap;
+    padding: 0.2rem 0.5rem;
+    border: 1px solid var(--cc-border);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--cc-text-muted);
+    font-size: 0.72rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
-.ap-relay-name {
-    font-weight: 600;
-    font-size: 0.8rem;
+.ap-relay-tab:hover {
+    background: var(--cc-bg-hover);
     color: var(--cc-text);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
-.ap-relay-host {
-    font-size: 0.68rem;
+.ap-relay-tab--active {
+    background: var(--cc-bg-active, var(--cc-bg-hover));
+    color: var(--cc-text);
+    border-color: var(--cc-accent, var(--cc-text));
+}
+
+.ap-relay-count {
+    font-size: 0.62rem;
+    color: var(--cc-text-dim);
+    background: var(--cc-bg-hover);
+    padding: 0 0.3rem;
+    border-radius: 3px;
+    min-width: 1.1em;
+    text-align: center;
+}
+
+.ap-relay-single {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.72rem;
     color: var(--cc-text-muted);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.ap-relay-meta {
-    font-size: 0.65rem;
-    color: var(--cc-text-muted);
-}
-
-.ap-relay-warn {
-    color: var(--cc-accent-yellow);
-}
-
-.ap-relay-err {
-    color: var(--cc-accent-red);
 }
 
 /* Agent table rows */

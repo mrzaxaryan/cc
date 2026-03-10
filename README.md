@@ -42,15 +42,19 @@ Real-time dashboard for monitoring [Position-Independent-Agent](https://github.c
 
 ## Data Source
 
-Fetches from [`https://relay.nostdlib.workers.dev/`](https://relay.nostdlib.workers.dev/) which returns:
+Fetches from [`https://relay.nostdlib.workers.dev/status`](https://relay.nostdlib.workers.dev/status) which returns:
 
 ```json
 {
-  "clients": {
+  "agents": {
     "count": 1,
-    "connections": [{ "id": "...", "ip": "...", "location": "...", "connectedAt": 0, "messageCount": 0, "relayed": false }]
+    "connections": [{ "id": "...", "connectedAt": 0, "paired": false, "pairedRelayId": null, "messagesForwarded": 0, "lastActiveAt": 0, "ip": "...", "country": "...", "city": "..." }]
   },
   "relays": {
+    "count": 0,
+    "connections": []
+  },
+  "eventListeners": {
     "count": 0,
     "connections": []
   }

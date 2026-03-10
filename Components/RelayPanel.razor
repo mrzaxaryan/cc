@@ -104,9 +104,14 @@
         var hasError = relayErrors.TryGetValue(relay.Url, out var error);
         var isLoading = relayLoading.Contains(relay.Url);
 
+        var isCollapsed = collapsedRelays.Contains(relay.Url);
+
         <CcCard CssClass="rp-section">
             <Header>
-                <span>@relay.Name</span>
+                <span class="rp-collapse-toggle" @onclick="() => ToggleCollapse(relay.Url)">
+                    <span class="rp-chevron @(isCollapsed ? "" : "rp-chevron--open")">&#9656;</span>
+                    @relay.Name
+                </span>
                 @if (relay.Enabled)
                 {
                     <CcBadge Variant="BadgeVariant.Success" Size="Size.Xs">Enabled</CcBadge>
@@ -125,7 +130,7 @@
                 {
                     <p class="rp-error"><em>@error</em></p>
                 }
-                else if (hasStatus && status is not null)
+                else if (!isCollapsed && hasStatus && status is not null)
                 {
                     <div class="rp-stats">
                         <CcCard Compact>
@@ -166,7 +171,7 @@
                                     <th>Connected At</th>
                                     <th>Last Active</th>
                                     <th>Messages</th>
-                                    <th>Relayed</th>
+                                    <th>Paired</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -180,11 +185,11 @@
                                         <td><code>@agent.TlsVersion</code></td>
                                         <td>@Formatters.FormatTimestamp(agent.ConnectedAt)</td>
                                         <td>@Formatters.FormatTimestamp(agent.LastActiveAt)</td>
-                                        <td>@agent.MessageCount</td>
+                                        <td>@agent.MessagesForwarded</td>
                                         <td>
-                                            @if (agent.Relayed)
+                                            @if (agent.Paired)
                                             {
-                                                <CcBadge Variant="BadgeVariant.Success" Title="@agent.RelayId">Yes</CcBadge>
+                                                <CcBadge Variant="BadgeVariant.Success" Title="@agent.PairedRelayId">Yes</CcBadge>
                                             }
                                             else
                                             {
@@ -217,7 +222,7 @@
                                 {
                                     <tr>
                                         <td><code>@r.Id</code></td>
-                                        <td><code>@r.AgentId</code></td>
+                                        <td><code>@r.PairedAgentId</code></td>
                                         <td>@Formatters.FormatTimestamp(r.ConnectedAt)</td>
                                     </tr>
                                 }
@@ -280,6 +285,7 @@
     private readonly Dictionary<string, HealthStatus> relayHealth = new();
     private readonly Dictionary<string, string> relayErrors = new();
     private readonly HashSet<string> relayLoading = new();
+    private readonly HashSet<string> collapsedRelays = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -310,7 +316,7 @@
         var httpUrl = RelayStore.GetHttpBaseUrl(relayUrl);
         try
         {
-            var status = await Http.GetFromJsonAsync<HealthStatus>($"{httpUrl}/health");
+            var status = await Http.GetFromJsonAsync<HealthStatus>($"{httpUrl}/status");
             if (status is not null)
                 relayHealth[relayUrl] = status;
         }
@@ -351,6 +357,12 @@
         editingUrl = relay.Url;
         editName = relay.Name;
         editUrl = relay.Url;
+    }
+
+    private void ToggleCollapse(string url)
+    {
+        if (!collapsedRelays.Remove(url))
+            collapsedRelays.Add(url);
     }
 
     private void CancelEdit() => editingUrl = null;

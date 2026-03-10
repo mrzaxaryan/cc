@@ -17,9 +17,9 @@ public class AgentConnection
 {
     public string Id { get; set; } = "";
     public double ConnectedAt { get; set; }
-    public bool Relayed { get; set; }
-    public string? RelayId { get; set; }
-    public int MessageCount { get; set; }
+    public bool Paired { get; set; }
+    public string? PairedRelayId { get; set; }
+    public int MessagesForwarded { get; set; }
     public double LastActiveAt { get; set; }
     public string Ip { get; set; } = "";
     public string Country { get; set; } = "";
@@ -33,7 +33,7 @@ public class AgentConnection
     public int Asn { get; set; }
     public string AsOrganization { get; set; } = "";
     public string UserAgent { get; set; } = "";
-    public string Protocol { get; set; } = "";
+    public string RequestPriority { get; set; } = "";
     public string TlsVersion { get; set; } = "";
     public string HttpVersion { get; set; } = "";
     public string Os { get; set; } = "";
@@ -44,7 +44,7 @@ public class RelayConnection
 {
     public string Id { get; set; } = "";
     public double ConnectedAt { get; set; }
-    public string AgentId { get; set; } = "";
+    public string PairedAgentId { get; set; } = "";
 }
 
 public class EventListenerConnection

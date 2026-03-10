@@ -111,7 +111,6 @@ public class WindowManager
     public void ToggleMinimize(WindowState win)
     {
         win.Minimized = !win.Minimized;
-        if (win.Minimized) win.Maximized = false;
         OnChanged?.Invoke();
     }
 

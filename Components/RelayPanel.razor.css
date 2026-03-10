@@ -122,6 +122,30 @@
     color: var(--cc-text-dim);
 }
 
+/* Collapse toggle */
+.rp-collapse-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.rp-chevron {
+    display: inline-block;
+    font-size: 0.7rem;
+    transition: transform 0.15s ease;
+}
+
+.rp-chevron--open {
+    transform: rotate(90deg);
+}
+
+.rp-error {
+    color: var(--cc-accent-red, #e55);
+    font-size: 0.85rem;
+}
+
 /* States */
 .rp-loading {
     color: var(--cc-text-muted);
