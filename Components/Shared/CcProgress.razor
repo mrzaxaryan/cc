@@ -7,29 +7,21 @@
 @code {
     [Parameter] public int Percent { get; set; }
     [Parameter] public string? CssClass { get; set; }
-
-    /// <summary>
-    /// Variant: info (default), success, warning, danger, muted
-    /// </summary>
-    [Parameter] public string Variant { get; set; } = "info";
-
-    /// <summary>
-    /// Size: sm (default), xs
-    /// </summary>
-    [Parameter] public string Size { get; set; } = "sm";
+    [Parameter] public ProgressVariant Variant { get; set; } = ProgressVariant.Info;
+    [Parameter] public Size Size { get; set; } = Size.Sm;
 
     private string VariantClass => Variant switch
     {
-        "success" => "cc-progress-success",
-        "warning" => "cc-progress-warning",
-        "danger" => "cc-progress-danger",
-        "muted" => "cc-progress-muted",
+        ProgressVariant.Success => "cc-progress-success",
+        ProgressVariant.Warning => "cc-progress-warning",
+        ProgressVariant.Danger => "cc-progress-danger",
+        ProgressVariant.Muted => "cc-progress-muted",
         _ => "cc-progress-info"
     };
 
     private string SizeClass => Size switch
     {
-        "xs" => "cc-progress-xs",
+        Size.Xs => "cc-progress-xs",
         _ => ""
     };
 }

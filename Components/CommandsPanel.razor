@@ -3,7 +3,7 @@
 
 <div class="cp">
     <div class="cp-section">
-        <CcBtn Variant="primary" OnClick="SendGetUUID" Disabled="@sending">GetUUID</CcBtn>
+        <CcBtn Variant="BtnVariant.Primary" OnClick="SendGetUUID" Disabled="@sending">GetUUID</CcBtn>
     </div>
 
     <div class="cp-section">
@@ -12,16 +12,16 @@
     </div>
 
     <div class="cp-commands">
-        <CcBtn Variant="primary" OnClick="SendGetDirectoryContent" Disabled="@sending">GetDirectoryContent</CcBtn>
+        <CcBtn Variant="BtnVariant.Primary" OnClick="SendGetDirectoryContent" Disabled="@sending">GetDirectoryContent</CcBtn>
 
         <div class="cp-cmd-group">
-            <CcBtn Variant="primary" OnClick="SendGetFileContent" Disabled="@sending">GetFileContent</CcBtn>
+            <CcBtn Variant="BtnVariant.Primary" OnClick="SendGetFileContent" Disabled="@sending">GetFileContent</CcBtn>
             <CcInput @bind-Value="readCountStr" Type="number" Placeholder="Size" CssClass="cp-narrow" Monospace />
             <CcInput @bind-Value="fileOffsetStr" Type="number" Placeholder="Offset" CssClass="cp-narrow" Monospace />
         </div>
 
         <div class="cp-cmd-group">
-            <CcBtn Variant="primary" OnClick="SendGetFileChunkHash" Disabled="@sending">GetFileChunkHash</CcBtn>
+            <CcBtn Variant="BtnVariant.Primary" OnClick="SendGetFileChunkHash" Disabled="@sending">GetFileChunkHash</CcBtn>
             <CcInput @bind-Value="chunkSizeStr" Type="number" Placeholder="Chunk" CssClass="cp-narrow" Monospace />
             <CcInput @bind-Value="hashOffsetStr" Type="number" Placeholder="Offset" CssClass="cp-narrow" Monospace />
         </div>

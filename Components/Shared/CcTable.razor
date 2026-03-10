@@ -1,7 +1,7 @@
 @inherits Microsoft.AspNetCore.Components.ComponentBase
 
 <div class="cc-table-wrap @CssClass">
-    <table class="cc-table @(Striped ? "cc-table-striped" : "") @(Hover ? "cc-table-hover" : "") @(Fixed ? "cc-table-fixed" : "")">
+    <table class="cc-table @(Striped ? "cc-table-striped" : "") @(Hover ? "cc-table-hover" : "") @(Fixed ? "cc-table-fixed" : "") @(Compact ? "cc-table-compact" : "")">
         @ChildContent
     </table>
 </div>
@@ -12,4 +12,5 @@
     [Parameter] public bool Striped { get; set; }
     [Parameter] public bool Hover { get; set; }
     [Parameter] public bool Fixed { get; set; }
+    [Parameter] public bool Compact { get; set; }
 }

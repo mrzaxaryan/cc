@@ -175,6 +175,8 @@
 
     private string currentPath = "";
     private string[] pathSegments = [];
+    private bool _isUnix;
+    private string Sep => _isUnix ? "/" : @"\";
     private List<DirEntry>? entries;
     private DirEntry? selectedEntry;
     private bool loading;
@@ -229,6 +231,7 @@
     {
         currentPath = "";
         pathSegments = [];
+        _isUnix = false;
         entries = null;
         selectedEntry = null;
         viewingFile = false;
@@ -298,6 +301,8 @@
         pathSegments = currentPath
             .Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries)
             .ToArray();
+        if (_isUnix && pathSegments.Length > 0)
+            pathSegments[0] = "/" + pathSegments[0];
     }
 
     private async Task NavigateTo(string path)
@@ -309,8 +314,10 @@
         }
 
         currentPath = path.TrimEnd('\\', '/');
-        if (!string.IsNullOrEmpty(currentPath) && !currentPath.EndsWith(@"\"))
-            currentPath += @"\";
+        if (!string.IsNullOrEmpty(currentPath))
+            currentPath += Sep;
+        else if (_isUnix)
+            currentPath = "/";
 
         UpdatePathSegments();
         loading = true;
@@ -326,6 +333,15 @@
             var (parsed, parseError) = DirEntry.ParseDirectoryResponse(response);
             if (parseError is not null) { Msg.Error(parseError); return; }
             entries = parsed;
+
+            // Detect Unix agent on first root listing (no drive entries)
+            if (!_isUnix && currentPath == "" && parsed?.Count > 0 && !parsed.Any(e => e.IsDrive))
+            {
+                _isUnix = true;
+                currentPath = "/";
+                UpdatePathSegments();
+            }
+
             _ = SyncCacheAsync();
         }
         catch (Exception ex)
@@ -342,8 +358,10 @@
     private async Task NavigateFromCache(string path)
     {
         currentPath = path.TrimEnd('\\', '/');
-        if (!string.IsNullOrEmpty(currentPath) && !currentPath.EndsWith(@"\"))
-            currentPath += @"\";
+        if (!string.IsNullOrEmpty(currentPath))
+            currentPath += Sep;
+        else if (_isUnix)
+            currentPath = "/";
 
         UpdatePathSegments();
         loading = true;
@@ -398,7 +416,7 @@
             await NavigateTo("");
             return;
         }
-        var parent = string.Join(@"\", pathSegments.Take(pathSegments.Length - 1));
+        var parent = string.Join(Sep, pathSegments.Take(pathSegments.Length - 1));
         await NavigateTo(parent);
     }
 
@@ -406,7 +424,7 @@
 
     private async Task NavigateToBreadcrumb(int index)
     {
-        var path = string.Join(@"\", pathSegments.Take(index + 1));
+        var path = string.Join(Sep, pathSegments.Take(index + 1));
         await NavigateTo(path);
     }
 

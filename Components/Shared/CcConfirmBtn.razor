@@ -1,0 +1,33 @@
+@inherits Microsoft.AspNetCore.Components.ComponentBase
+
+@if (_confirming)
+{
+    <CcBtn Variant="BtnVariant.DangerSolid" Size="Size" OnClick="Confirm">@ConfirmLabel</CcBtn>
+    <CcBtn Size="Size" OnClick="Cancel">@CancelLabel</CcBtn>
+}
+else
+{
+    <CcBtn Variant="Variant" Size="Size" OnClick="ShowConfirm" Disabled="@Disabled" Title="@Title">@ChildContent</CcBtn>
+}
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public string ConfirmLabel { get; set; } = "YES";
+    [Parameter] public string CancelLabel { get; set; } = "NO";
+    [Parameter] public BtnVariant Variant { get; set; } = BtnVariant.Danger;
+    [Parameter] public Size Size { get; set; } = Size.Xs;
+
+    private bool _confirming;
+
+    private void ShowConfirm() => _confirming = true;
+    private void Cancel() => _confirming = false;
+
+    private async Task Confirm()
+    {
+        _confirming = false;
+        await OnConfirm.InvokeAsync();
+    }
+}

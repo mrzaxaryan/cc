@@ -18,8 +18,8 @@
                     <div class="ap-relay-info">
                         <div class="ap-relay-header">
                             <span class="ap-relay-name">@rs.Name</span>
-                            <CcBadge Variant="@(rs.Connected ? "success" : "danger")" Size="xs">@(rs.Connected ? "Live" : "Off")</CcBadge>
-                            <CcBadge Variant="dark" Size="xs">@GetProtocolShort(rs.Url)</CcBadge>
+                            <CcBadge Variant="@(rs.Connected ? BadgeVariant.Success : BadgeVariant.Danger)" Size="Size.Xs">@(rs.Connected ? "Live" : "Off")</CcBadge>
+                            <CcBadge Variant="BadgeVariant.Dark" Size="Size.Xs">@GetProtocolShort(rs.Url)</CcBadge>
                         </div>
                         <code class="ap-relay-host" title="@rs.Url">@GetHostFromUrl(rs.Url)</code>
                         @if (rs.Connected)
@@ -33,7 +33,7 @@
                             var secs = Math.Max(0, (int)Math.Ceiling((rs.ReconnectAt.Value - DateTime.UtcNow).TotalSeconds));
                             <span class="ap-relay-meta ap-relay-warn">
                                 Reconnecting in @(secs)s...
-                                <CcBtn Variant="link" Size="xs" OnClick="() => Relay.ForceReconnect(rs.Url)">Connect now</CcBtn>
+                                <CcBtn Variant="BtnVariant.Link" Size="Size.Xs" OnClick="() => Relay.ForceReconnect(rs.Url)">Connect now</CcBtn>
                             </span>
                         }
                         else
@@ -78,23 +78,25 @@
                 <tbody>
                     @foreach (var row in rows)
                     {
-                        <tr class="ap-agent-row @(row.IsOnline && Wm.ConnectedAgentIds.Contains(row.AgentId) ? "cc-row-active" : "") @(!row.IsOnline ? "cc-row-dim" : "")"
-                            @oncontextmenu="(e) => ShowContextMenu(e, row.AgentId, row.RelayUrl, row.IsOnline)"
-                            @oncontextmenu:preventDefault="true">
+                        <CcTr Active="@(row.IsOnline && Wm.ConnectedAgentIds.Contains(row.AgentId))"
+                              Dim="@(!row.IsOnline)"
+                              CssClass="ap-agent-row"
+                              OnContextMenu="(e) => ShowContextMenu(e, row.AgentId, row.RelayUrl, row.IsOnline)"
+                              PreventDefault>
                             <td>
                                 @if (row.IsOnline)
                                 {
-                                    <CcBadge Variant="success">Online</CcBadge>
+                                    <CcBadge Variant="BadgeVariant.Success">Online</CcBadge>
                                 }
                                 else
                                 {
-                                    <CcBadge Variant="muted">Offline</CcBadge>
+                                    <CcBadge Variant="BadgeVariant.Muted">Offline</CcBadge>
                                 }
                             </td>
                             <td>
                                 @if (renamingUuid == row.Uuid)
                                 {
-                                    <CcInput @bind-Value="renameValue" Size="xs"
+                                    <CcInput @bind-Value="renameValue" Size="Size.Xs"
                                              OnKeyDown="OnRenameKeyDown" OnBlur="CancelRename" />
                                 }
                                 else
@@ -106,11 +108,11 @@
                             <td>
                                 @if (row.IsOnline && row.RelayUsed)
                                 {
-                                    <CcBadge Variant="success" Size="xs">Used</CcBadge>
+                                    <CcBadge Variant="BadgeVariant.Success" Size="Size.Xs">Used</CcBadge>
                                 }
                                 else if (row.IsOnline)
                                 {
-                                    <CcBadge Variant="muted" Size="xs">Unused</CcBadge>
+                                    <CcBadge Variant="BadgeVariant.Muted" Size="Size.Xs">Unused</CcBadge>
                                 }
                                 else
                                 {
@@ -121,7 +123,7 @@
                             <td>@row.Location</td>
                             <td>@row.Network</td>
                             <td>@row.LastSeen</td>
-                        </tr>
+                        </CcTr>
                     }
                 </tbody>
             </CcTable>
@@ -130,8 +132,8 @@
 </div>
 
 <CcDropdown Visible="@ctxVisible" X="@ctxX" Y="@ctxY" OnClose="HideContextMenu">
-    <button class="cc-dropdown-item" @onclick="CtxOpenFiles">File Manager</button>
-    <button class="cc-dropdown-item" @onclick="CtxStartRename">Rename</button>
+    <CcDropdownItem OnClick="CtxOpenFiles">File Manager</CcDropdownItem>
+    <CcDropdownItem OnClick="CtxStartRename">Rename</CcDropdownItem>
 </CcDropdown>
 
 @code {

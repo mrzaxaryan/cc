@@ -5,7 +5,7 @@
 <div class="rp">
     <div class="rp-toolbar">
         <h5 class="rp-title">Relay</h5>
-        <CcBtn Variant="primary" OnClick="LoadStatus" Disabled="@loading">
+        <CcBtn Variant="BtnVariant.Primary" OnClick="LoadStatus" Disabled="@loading">
             @(loading ? "Refreshing..." : "Refresh")
         </CcBtn>
     </div>
@@ -13,7 +13,7 @@
     <CcCard CssClass="rp-section">
         <Header>
             <span>Relay Servers</span>
-            <CcBtn Variant="success" OnClick="() => showAdd = !showAdd">
+            <CcBtn Variant="BtnVariant.Success" OnClick="() => showAdd = !showAdd">
                 @(showAdd ? "Cancel" : "+ Add")
             </CcBtn>
         </Header>
@@ -31,7 +31,7 @@
                             <CcInput @bind-Value="newUrl" Placeholder="wss://relay.example.com" Monospace />
                         </div>
                         <div class="rp-add-action">
-                            <CcBtn Variant="success" OnClick="AddRelay"
+                            <CcBtn Variant="BtnVariant.Success" OnClick="AddRelay"
                                    Disabled="@(string.IsNullOrWhiteSpace(newName) || string.IsNullOrWhiteSpace(newUrl))">
                                 Add
                             </CcBtn>
@@ -54,7 +54,7 @@
                     {
                         var isActive = relay.Url == Store.ActiveUrl;
                         var isEditing = editingUrl == relay.Url;
-                        <tr class="@(isActive ? "cc-row-active" : "")">
+                        <CcTr Active="@isActive">
                             <td class="rp-active-cell">
                                 @if (isActive)
                                 {
@@ -67,7 +67,7 @@
                                 <td><CcInput @bind-Value="editName" /></td>
                                 <td><CcInput @bind-Value="editUrl" Monospace /></td>
                                 <td class="rp-actions">
-                                    <CcBtn Variant="success" OnClick="SaveEdit"
+                                    <CcBtn Variant="BtnVariant.Success" OnClick="SaveEdit"
                                            Disabled="@(string.IsNullOrWhiteSpace(editName) || string.IsNullOrWhiteSpace(editUrl))"
                                            Title="Save">&#10003;</CcBtn>
                                     <CcBtn OnClick="CancelEdit" Title="Cancel">&#10007;</CcBtn>
@@ -81,16 +81,16 @@
                                     <CcBtn OnClick="() => StartEdit(relay)" Title="Edit">&#9998;</CcBtn>
                                     @if (!isActive)
                                     {
-                                        <CcBtn Variant="primary" OnClick="() => SelectRelay(relay.Url)" Title="Set as active">Use</CcBtn>
-                                        <CcBtn Variant="danger" OnClick="() => RemoveRelay(relay.Url)" Title="Remove">&times;</CcBtn>
+                                        <CcBtn Variant="BtnVariant.Primary" OnClick="() => SelectRelay(relay.Url)" Title="Set as active">Use</CcBtn>
+                                        <CcBtn Variant="BtnVariant.Danger" OnClick="() => RemoveRelay(relay.Url)" Title="Remove">&times;</CcBtn>
                                     }
                                     else
                                     {
-                                        <CcBadge Variant="success">Active</CcBadge>
+                                        <CcBadge Variant="BadgeVariant.Success">Active</CcBadge>
                                     }
                                 </td>
                             }
-                        </tr>
+                        </CcTr>
                     }
                 </tbody>
             </CcTable>
@@ -160,11 +160,11 @@
                             <td>
                                 @if (agent.Relayed)
                                 {
-                                    <CcBadge Variant="success" Title="@agent.RelayId">Yes</CcBadge>
+                                    <CcBadge Variant="BadgeVariant.Success" Title="@agent.RelayId">Yes</CcBadge>
                                 }
                                 else
                                 {
-                                    <CcBadge Variant="muted">No</CcBadge>
+                                    <CcBadge Variant="BadgeVariant.Muted">No</CcBadge>
                                 }
                             </td>
                         </tr>

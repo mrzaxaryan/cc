@@ -1,0 +1,29 @@
+@inherits Microsoft.AspNetCore.Components.ComponentBase
+
+<tr class="@StateClass @CssClass"
+    @onclick="OnClick"
+    @oncontextmenu="OnContextMenu"
+    @oncontextmenu:preventDefault="PreventDefault">
+    @ChildContent
+</tr>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? CssClass { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnContextMenu { get; set; }
+    [Parameter] public bool PreventDefault { get; set; }
+    [Parameter] public bool Active { get; set; }
+    [Parameter] public bool Dim { get; set; }
+
+    private string StateClass
+    {
+        get
+        {
+            var cls = "";
+            if (Active) cls += "cc-tr-active ";
+            if (Dim) cls += "cc-tr-dim ";
+            return cls.TrimEnd();
+        }
+    }
+}

@@ -1,0 +1,9 @@
+/* Active row */
+.cc-tr-active {
+    background: rgba(137, 180, 250, 0.08) !important;
+}
+
+/* Dimmed row */
+.cc-tr-dim {
+    opacity: 0.5;
+}

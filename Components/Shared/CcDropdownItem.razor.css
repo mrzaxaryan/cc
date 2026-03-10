@@ -1,0 +1,27 @@
+/* Dropdown item */
+.cc-dropdown-item {
+    display: block;
+    width: 100%;
+    background: none;
+    border: none;
+    color: var(--cc-text);
+    font-size: 0.78rem;
+    padding: 0.35rem 0.75rem;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.1s;
+}
+
+.cc-dropdown-item:hover:not(:disabled) {
+    background: var(--cc-bg-highlight);
+}
+
+.cc-dropdown-item:focus-visible {
+    outline: 2px solid var(--cc-accent-blue);
+    outline-offset: -2px;
+}
+
+.cc-dropdown-item:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}

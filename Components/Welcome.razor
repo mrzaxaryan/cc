@@ -11,20 +11,20 @@
             @if (!Cache.IsSupported)
             {
                 <p class="wc-desc">Your browser does not support the File System Access API. Please use a Chromium-based browser (Chrome, Edge, Brave) for local file caching.</p>
-                <CcBtn Size="md" OnClick="SkipCache">Continue without cache</CcBtn>
+                <CcBtn Size="Size.Md" OnClick="SkipCache">Continue without cache</CcBtn>
             }
             else if (Cache.NeedsPermission)
             {
                 <p class="wc-desc">Your previously selected cache folder needs permission to be re-granted.</p>
                 <div class="wc-actions">
-                    <CcBtn Variant="primary" Size="lg" OnClick="ReGrantPermission" Disabled="@picking" Loading="@picking">Grant Access</CcBtn>
-                    <CcBtn Size="md" OnClick="PickFolder" Disabled="@picking">Pick Different Folder</CcBtn>
+                    <CcBtn Variant="BtnVariant.Primary" Size="Size.Lg" OnClick="ReGrantPermission" Disabled="@picking" Loading="@picking">Grant Access</CcBtn>
+                    <CcBtn Size="Size.Md" OnClick="PickFolder" Disabled="@picking">Pick Different Folder</CcBtn>
                 </div>
             }
             else
             {
                 <p class="wc-desc">Select a folder on your device to use as the local file cache. Files downloaded from agents will be stored here.</p>
-                <CcBtn Variant="primary" Size="lg" OnClick="PickFolder" Disabled="@picking" Loading="@picking">Select Cache Folder</CcBtn>
+                <CcBtn Variant="BtnVariant.Primary" Size="Size.Lg" OnClick="PickFolder" Disabled="@picking" Loading="@picking">Select Cache Folder</CcBtn>
                 <p class="wc-hint">You can change this later in the Cache Manager.</p>
             }
         }
@@ -35,17 +35,17 @@
             <div class="wc-form">
                 <div class="wc-field">
                     <label class="wc-label">Relay Name</label>
-                    <CcInput @bind-Value="relayName" Size="md" Placeholder="My Relay" />
+                    <CcInput @bind-Value="relayName" Size="Size.Md" Placeholder="My Relay" />
                 </div>
                 <div class="wc-field">
                     <label class="wc-label">Relay URL</label>
-                    <CcInput @bind-Value="relayUrl" Size="md" Placeholder="wss://relay.example.com" Monospace />
+                    <CcInput @bind-Value="relayUrl" Size="Size.Md" Placeholder="wss://relay.example.com" Monospace />
                 </div>
             </div>
 
             <div class="wc-actions">
-                <CcBtn Variant="primary" Size="lg" OnClick="SaveRelay" Disabled="@saving" Loading="@saving">Save & Continue</CcBtn>
-                <CcBtn Size="md" OnClick="SkipRelay">Use Default</CcBtn>
+                <CcBtn Variant="BtnVariant.Primary" Size="Size.Lg" OnClick="SaveRelay" Disabled="@saving" Loading="@saving">Save & Continue</CcBtn>
+                <CcBtn Size="Size.Md" OnClick="SkipRelay">Use Default</CcBtn>
             </div>
 
             <p class="wc-hint">You can add more relays later on the Relay page.</p>

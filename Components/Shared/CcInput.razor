@@ -6,6 +6,7 @@
        @onchange="OnValueChanged"
        @oninput="OnInputEvent"
        @onkeydown="OnKeyDown"
+       @onfocus="OnFocus"
        @onblur="OnBlur"
        placeholder="@Placeholder"
        disabled="@Disabled"
@@ -15,6 +16,7 @@
     [Parameter] public string? Value { get; set; }
     [Parameter] public EventCallback<string> ValueChanged { get; set; }
     [Parameter] public EventCallback<KeyboardEventArgs> OnKeyDown { get; set; }
+    [Parameter] public EventCallback OnFocus { get; set; }
     [Parameter] public EventCallback OnBlur { get; set; }
     [Parameter] public string Type { get; set; } = "text";
     [Parameter] public string? Placeholder { get; set; }
@@ -23,17 +25,13 @@
     [Parameter] public string? Spellcheck { get; set; }
     [Parameter] public string? CssClass { get; set; }
     [Parameter] public bool BindOnInput { get; set; }
-
-    /// <summary>
-    /// Size: sm (default), md, lg, xs
-    /// </summary>
-    [Parameter] public string Size { get; set; } = "sm";
+    [Parameter] public Size Size { get; set; } = Size.Sm;
 
     private string SizeClass => Size switch
     {
-        "xs" => "cc-input-xs",
-        "md" => "cc-input-md",
-        "lg" => "cc-input-lg",
+        Size.Xs => "cc-input-xs",
+        Size.Md => "cc-input-md",
+        Size.Lg => "cc-input-lg",
         _ => ""
     };
 

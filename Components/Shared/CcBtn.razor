@@ -8,7 +8,7 @@
         type="button">
     @if (Loading)
     {
-        <span class="cc-btn-spinner"></span>
+        <span class="cc-spinner cc-spinner-inline"></span>
     }
     @ChildContent
 </button>
@@ -21,35 +21,27 @@
     [Parameter] public string? Title { get; set; }
     [Parameter] public string? CssClass { get; set; }
     [Parameter] public bool StopPropagation { get; set; }
-
-    /// <summary>
-    /// Variant: default, primary, success, danger, warning, ghost, link
-    /// </summary>
-    [Parameter] public string Variant { get; set; } = "default";
-
-    /// <summary>
-    /// Size: sm (default), md, lg, xs, icon
-    /// </summary>
-    [Parameter] public string Size { get; set; } = "sm";
+    [Parameter] public BtnVariant Variant { get; set; } = BtnVariant.Default;
+    [Parameter] public Size Size { get; set; } = Size.Sm;
 
     private string VariantClass => Variant switch
     {
-        "primary" => "cc-btn-primary",
-        "success" => "cc-btn-success",
-        "danger" => "cc-btn-danger",
-        "danger-solid" => "cc-btn-danger-solid",
-        "warning" => "cc-btn-warning",
-        "ghost" => "cc-btn-ghost",
-        "link" => "cc-btn-link",
+        BtnVariant.Primary => "cc-btn-primary",
+        BtnVariant.Success => "cc-btn-success",
+        BtnVariant.Danger => "cc-btn-danger",
+        BtnVariant.DangerSolid => "cc-btn-danger-solid",
+        BtnVariant.Warning => "cc-btn-warning",
+        BtnVariant.Ghost => "cc-btn-ghost",
+        BtnVariant.Link => "cc-btn-link",
         _ => ""
     };
 
     private string SizeClass => Size switch
     {
-        "xs" => "cc-btn-xs",
-        "md" => "cc-btn-md",
-        "lg" => "cc-btn-lg",
-        "icon" => "cc-btn-icon",
+        Size.Xs => "cc-btn-xs",
+        Size.Md => "cc-btn-md",
+        Size.Lg => "cc-btn-lg",
+        Size.Icon => "cc-btn-icon",
         _ => ""
     };
 }

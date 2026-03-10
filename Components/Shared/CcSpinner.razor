@@ -4,15 +4,11 @@
 
 @code {
     [Parameter] public string? CssClass { get; set; }
-
-    /// <summary>
-    /// Size: sm (default), xs
-    /// </summary>
-    [Parameter] public string Size { get; set; } = "sm";
+    [Parameter] public Size Size { get; set; } = Size.Sm;
 
     private string SizeClass => Size switch
     {
-        "xs" => "cc-spinner-xs",
+        Size.Xs => "cc-spinner-xs",
         _ => ""
     };
 }

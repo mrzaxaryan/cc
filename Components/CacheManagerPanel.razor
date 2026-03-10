@@ -8,19 +8,19 @@
 <div class="cm">
     @* Header *@
     <div class="cm-toolbar">
-        <CcBadge Variant="info">@(Cache.DirectoryName ?? "No folder")</CcBadge>
+        <CcBadge Variant="BadgeVariant.Info">@(Cache.DirectoryName ?? "No folder")</CcBadge>
         <div class="cm-toolbar-actions">
             <CcBtn OnClick="Refresh" Disabled="@loading" Title="Refresh">&#x21bb;</CcBtn>
             @if (confirmPrune)
             {
-                <CcBtn Variant="danger-solid" OnClick="ConfirmPrune" Disabled="@loading">YES</CcBtn>
+                <CcBtn Variant="BtnVariant.DangerSolid" OnClick="ConfirmPrune" Disabled="@loading">YES</CcBtn>
                 <CcBtn OnClick="() => confirmPrune = false">NO</CcBtn>
             }
             else
             {
-                <CcBtn Variant="danger" OnClick="() => confirmPrune = true" Disabled="@(loading || stats.fileCount == 0)" Title="Prune">PRUNE</CcBtn>
+                <CcBtn Variant="BtnVariant.Danger" OnClick="() => confirmPrune = true" Disabled="@(loading || stats.fileCount == 0)" Title="Prune">PRUNE</CcBtn>
             }
-            <CcBtn Variant="warning" OnClick="ChangeFolder" Title="Change folder">&#x1f4c1;</CcBtn>
+            <CcBtn Variant="BtnVariant.Warning" OnClick="ChangeFolder" Title="Change folder">&#x1f4c1;</CcBtn>
         </div>
     </div>
 
@@ -92,15 +92,7 @@
                         <a href="javascript:void(0)" class="cm-item-name" @onclick="() => NavigateToAgent(agent.uuid)" @onclick:preventDefault>@agent.name</a>
                         <span class="cm-item-meta">@agent.dirs d / @agent.files f</span>
                         <span class="cm-item-meta">@Formatters.FormatSize((ulong)agent.size)</span>
-                        @if (confirmDeleteId == agent.uuid)
-                        {
-                            <CcBtn Variant="danger-solid" Size="xs" OnClick="() => DeleteAgentCache(agent.uuid)">YES</CcBtn>
-                            <CcBtn Size="xs" OnClick="() => confirmDeleteId = null">NO</CcBtn>
-                        }
-                        else
-                        {
-                            <CcBtn Variant="danger" Size="xs" OnClick="() => confirmDeleteId = agent.uuid" Title="Delete">DEL</CcBtn>
-                        }
+                        <CcConfirmBtn OnConfirm="() => DeleteAgentCache(agent.uuid)" Title="Delete agent cache">DEL</CcConfirmBtn>
                     </div>
                 }
             }
@@ -123,15 +115,7 @@
                     <div class="cm-item">
                         <span class="cm-item-icon">&#x1f4c1;</span>
                         <a href="javascript:void(0)" class="cm-item-name" @onclick="() => NavigateToDirectory(dir.Id)" @onclick:preventDefault>@dir.Name</a>
-                        @if (confirmDeleteId == dir.Id)
-                        {
-                            <CcBtn Variant="danger-solid" Size="xs" OnClick="() => DeleteDir(dir)">YES</CcBtn>
-                            <CcBtn Size="xs" OnClick="() => confirmDeleteId = null">NO</CcBtn>
-                        }
-                        else
-                        {
-                            <CcBtn Variant="danger" Size="xs" OnClick="() => confirmDeleteId = dir.Id" Title="Delete">DEL</CcBtn>
-                        }
+                        <CcConfirmBtn OnConfirm="() => DeleteDir(dir)" Title="Delete">DEL</CcConfirmBtn>
                     </div>
                 }
                 @foreach (var file in childFiles)
@@ -140,15 +124,7 @@
                         <span class="cm-item-icon">&#x1f4c4;</span>
                         <span class="cm-item-name">@file.Name</span>
                         <span class="cm-item-meta">@Formatters.FormatSize((ulong)file.Size)</span>
-                        @if (confirmDeleteId == file.Id)
-                        {
-                            <CcBtn Variant="danger-solid" Size="xs" OnClick="() => DeleteFile(file)">YES</CcBtn>
-                            <CcBtn Size="xs" OnClick="() => confirmDeleteId = null">NO</CcBtn>
-                        }
-                        else
-                        {
-                            <CcBtn Variant="danger" Size="xs" OnClick="() => confirmDeleteId = file.Id" Title="Delete">DEL</CcBtn>
-                        }
+                        <CcConfirmBtn OnConfirm="() => DeleteFile(file)" Title="Delete">DEL</CcConfirmBtn>
                     </div>
                 }
                 @if (childDirs.Count == 0 && childFiles.Count == 0)
@@ -171,7 +147,6 @@
     private long blobSize;
     private bool loading;
     private bool confirmPrune;
-    private string? confirmDeleteId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -284,7 +259,6 @@
 
     private async Task DeleteDir(VfsDirectory dir)
     {
-        confirmDeleteId = null;
         try
         {
             await Vfs.RemoveDirectoryAsync(dir.Id);
@@ -295,7 +269,6 @@
 
     private async Task DeleteFile(VfsFile file)
     {
-        confirmDeleteId = null;
         try
         {
             await Vfs.RemoveFileAsync(file.Id);
@@ -306,7 +279,6 @@
 
     private async Task DeleteAgentCache(string agentUuid)
     {
-        confirmDeleteId = null;
         try
         {
             loading = true;
