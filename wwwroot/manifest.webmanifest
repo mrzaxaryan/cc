@@ -2,6 +2,7 @@
   "name": "CC — Command & Control",
   "short_name": "CC",
   "description": "Agent management and command & control panel",
+  "id": "/",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

@@ -28,12 +28,26 @@ self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
     if (url.origin !== self.location.origin) return;
 
+    // Network-first for manifest and icons so PWA updates pick up new assets
+    const networkFirst = event.request.mode === 'navigate'
+        || url.pathname.endsWith('.webmanifest')
+        || url.pathname.match(/icon-.*\.png$/);
+
+    if (networkFirst) {
+        event.respondWith(
+            fetch(event.request)
+                .then(response => {
+                    const clone = response.clone();
+                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                    return response;
+                })
+                .catch(() => caches.match(event.request).then(cached => cached || caches.match('index.html')))
+        );
+        return;
+    }
+
     event.respondWith(
         caches.match(event.request).then(cached => {
-            // For navigation requests, always try network first
-            if (event.request.mode === 'navigate') {
-                return fetch(event.request).catch(() => cached || caches.match('index.html'));
-            }
             // For assets, serve from cache (fast), fall back to network
             return cached || fetch(event.request);
         })
