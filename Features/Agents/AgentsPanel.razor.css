@@ -51,6 +51,27 @@
 .ap-row {
     cursor: context-menu;
     user-select: none;
+    transition: background 0.15s, box-shadow 0.15s;
+}
+
+::deep .cc-table-hover tbody tr.ap-row:hover {
+    background: var(--cc-bg-highlight, var(--cc-bg-overlay));
+    box-shadow: inset 3px 0 0 var(--cc-accent-blue, var(--cc-accent, #4a9eff));
+}
+
+::deep .cc-table-wrap {
+    border-top: none;
+    border-radius: 0;
+}
+
+::deep .cc-table thead th {
+    border-bottom: 2px solid var(--cc-border);
+}
+
+::deep .cc-table tbody tr.ap-row td {
+    border-bottom: 1px solid var(--cc-border);
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
 }
 
 .ap-col-status {
@@ -67,18 +88,24 @@
 .ap-name-cell {
     display: flex;
     flex-direction: column;
-    gap: 0.1rem;
+    gap: 0.15rem;
 }
 
 .ap-name {
     font-weight: 600;
     font-size: 0.8rem;
     color: var(--cc-text);
+    letter-spacing: 0.01em;
 }
 
 .ap-uuid {
     font-size: 0.62rem;
     color: var(--cc-text-dim);
+    opacity: 0.7;
+}
+
+.ap-row:hover .ap-uuid {
+    opacity: 1;
 }
 
 /* System column */
@@ -156,4 +183,160 @@
 ::deep .ap-ctx-copy-item {
     font-size: 0.74rem;
     color: var(--cc-text-muted);
+}
+
+/* ===== Mobile card view (hidden on desktop) ===== */
+.ap-card-view {
+    display: none;
+}
+
+.ap-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.55rem 0.6rem;
+    border-bottom: 1px solid var(--cc-border);
+    cursor: context-menu;
+    user-select: none;
+    transition: background 0.15s;
+}
+
+.ap-card:last-child {
+    border-bottom: none;
+}
+
+.ap-card:active {
+    background: var(--cc-bg-overlay);
+}
+
+.ap-card--dim {
+    opacity: 0.55;
+}
+
+.ap-card--active {
+    background: var(--cc-blue-04);
+}
+
+.ap-card-top {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.ap-card-name {
+    font-weight: 600;
+    font-size: 0.82rem;
+    color: var(--cc-text);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ap-card-paired {
+    width: 7px;
+    height: 7px;
+    flex-shrink: 0;
+}
+
+.ap-card-seen {
+    font-size: 0.65rem;
+    color: var(--cc-text-dim);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.ap-card-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem 0.6rem;
+    padding-left: calc(8px + 0.35rem); /* align with name after status dot */
+}
+
+.ap-card-detail {
+    font-size: 0.68rem;
+    color: var(--cc-text-muted);
+}
+
+.ap-card-detail code {
+    font-size: 0.66rem;
+    color: var(--cc-text-muted);
+}
+
+/* ===== Tablet: hide less important columns ===== */
+@media (max-width: 1024px) {
+    .ap-col-net {
+        display: none;
+    }
+
+    .ap-net-cell {
+        max-width: 140px;
+    }
+}
+
+/* ===== Mobile: switch to card view ===== */
+@media (max-width: 768px) {
+    .ap-table-view {
+        display: none;
+    }
+
+    .ap-card-view {
+        display: block;
+    }
+
+    /* Relay bar — scrollable, touch-friendly */
+    .ap-relay-bar {
+        padding: 0.3rem 0.4rem;
+        gap: 0.3rem;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .ap-relay-bar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .ap-relay-tab {
+        padding: 0.3rem 0.55rem;
+        font-size: 0.7rem;
+        min-height: 28px;
+    }
+
+    /* Context submenu — show inline on mobile (no hover) */
+    .ap-ctx-submenu {
+        position: static;
+        border: none;
+        box-shadow: none;
+        border-radius: 0;
+        border-top: 1px solid var(--cc-border);
+        min-width: unset;
+    }
+
+    .ap-ctx-submenu-wrap:hover > .ap-ctx-submenu,
+    .ap-ctx-submenu {
+        display: block;
+    }
+
+    .ap-ctx-sub-trigger {
+        display: none;
+    }
+}
+
+/* ===== Small phone ===== */
+@media (max-width: 480px) {
+    .ap-card {
+        padding: 0.5rem 0.45rem;
+    }
+
+    .ap-card-name {
+        font-size: 0.78rem;
+    }
+
+    .ap-card-details {
+        gap: 0.15rem 0.4rem;
+    }
+
+    .ap-card-detail {
+        font-size: 0.64rem;
+    }
 }

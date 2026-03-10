@@ -1,0 +1,172 @@
+@inject RelayConnectionService Relay
+@inject AgentStore AgentDb
+@implements IDisposable
+
+@{
+    var data = BuildInfo();
+}
+
+<PanelLayout Title="Agent Information">
+    <HeaderLeft>
+        @if (data.IsOnline)
+        {
+            <CcBadge Variant="BadgeVariant.Success" Size="Size.Xs">Online</CcBadge>
+        }
+        else
+        {
+            <CcBadge Variant="BadgeVariant.Muted" Size="Size.Xs">Offline</CcBadge>
+        }
+    </HeaderLeft>
+    <Body>
+        <div class="ai-body">
+            <table class="ai-table">
+                <tbody>
+                    @foreach (var row in data.Rows)
+                    {
+                        <tr>
+                            <th>@row.Label</th>
+                            <td class="@row.CssClass">@((MarkupString)row.Value)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </Body>
+</PanelLayout>
+
+@code {
+    [Parameter] public string? AgentId { get; set; }
+    [Parameter] public string? AgentUuid { get; set; }
+
+    private Timer? _refreshTimer;
+
+    protected override void OnInitialized()
+    {
+        Relay.OnChanged += OnChanged;
+        _refreshTimer = new Timer(_ => InvokeAsync(StateHasChanged), null, 1000, 1000);
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    private record InfoRow(string Label, string Value, string? CssClass = null);
+
+    private record InfoData(bool IsOnline, List<InfoRow> Rows);
+
+    private InfoData BuildInfo()
+    {
+        var rows = new List<InfoRow>();
+        AgentConnection? live = null;
+        AgentRecord? stored = null;
+
+        // Try to find live connection
+        if (!string.IsNullOrEmpty(AgentId))
+        {
+            live = Relay.GetAllAgents()
+                .Select(a => a.Agent)
+                .FirstOrDefault(a => a.Id == AgentId);
+        }
+
+        // Resolve UUID
+        var uuid = AgentUuid;
+        if (uuid is null && !string.IsNullOrEmpty(AgentId))
+            uuid = AgentDb.GetUuidByAgentId(AgentId);
+
+        if (uuid is not null)
+            stored = AgentDb.GetByUuid(uuid);
+
+        var isOnline = live is not null;
+
+        // Status
+        var statusDot = isOnline ? "dot-on" : "dot-off";
+        rows.Add(new("Status", $"<span class=\"status-dot {statusDot}\"></span> {(isOnline ? "Online" : "Offline")}"));
+
+        // Identity
+        Add(rows, "Name", stored?.Name);
+        if (uuid is not null)
+            rows.Add(new("UUID", $"<code>{uuid}</code>"));
+        else if (isOnline)
+            rows.Add(new("UUID", "Not yet received", "ai-note"));
+        if (!string.IsNullOrEmpty(AgentId))
+            rows.Add(new("Agent ID", $"<code>{AgentId}</code>"));
+
+        // Network
+        var ip = live?.Ip ?? stored?.Ip;
+        if (HasValue(ip)) rows.Add(new("IP", $"<code>{ip}</code>"));
+
+        // System
+        var os = Pick(live?.Os, stored?.Os);
+        if (HasValue(os)) rows.Add(new("OS", os!));
+        var arch = Pick(live?.Arch, stored?.Arch);
+        if (HasValue(arch)) rows.Add(new("Arch", arch!));
+
+        // Geo
+        var country = Pick(live?.Country, stored?.Country);
+        var city = Pick(live?.City, stored?.City);
+        var region = Pick(live?.Region, stored?.Region);
+        var continent = Pick(live?.Continent, stored?.Continent);
+        var timezone = Pick(live?.Timezone, stored?.Timezone);
+
+        if (HasValue(country)) rows.Add(new("Country", country!));
+        if (HasValue(city)) rows.Add(new("City", city!));
+        if (HasValue(region)) rows.Add(new("Region", region!));
+        if (HasValue(continent)) rows.Add(new("Continent", continent!));
+        if (HasValue(timezone)) rows.Add(new("Timezone", timezone!));
+
+        if (live is not null && HasValue(live.PostalCode))
+            rows.Add(new("Postal Code", live.PostalCode));
+        if (live is not null && HasValue(live.Latitude) && HasValue(live.Longitude))
+            rows.Add(new("Coordinates", $"<code>{live.Latitude}, {live.Longitude}</code>"));
+
+        // ASN
+        var asn = live?.Asn ?? stored?.Asn ?? 0;
+        var asOrg = Pick(live?.AsOrganization, stored?.AsOrganization);
+        if (asn > 0) rows.Add(new("ASN", asn.ToString()));
+        if (HasValue(asOrg)) rows.Add(new("AS Organization", asOrg!));
+
+        // Connection details
+        var ua = Pick(live?.UserAgent, stored?.UserAgent);
+        if (HasValue(ua)) rows.Add(new("User Agent", ua!, "ai-ua"));
+
+        var tls = Pick(live?.TlsVersion, stored?.TlsVersion);
+        if (HasValue(tls)) rows.Add(new("TLS", tls!));
+
+        if (live is not null && HasValue(live.HttpVersion))
+            rows.Add(new("HTTP", live.HttpVersion));
+
+        var reqPri = Pick(live?.RequestPriority, stored?.RequestPriority);
+        if (HasValue(reqPri)) rows.Add(new("Request Priority", reqPri!));
+
+        // State
+        if (live is not null && live.Paired)
+            rows.Add(new("Paired", "Yes"));
+        if (live is not null && live.MessagesForwarded > 0)
+            rows.Add(new("Messages Forwarded", live.MessagesForwarded.ToString()));
+
+        // Timestamps
+        if (live is not null && live.ConnectedAt > 0)
+            rows.Add(new("Connected At", Formatters.FormatTimestamp(live.ConnectedAt)));
+        if (stored is not null && stored.FirstSeen > 0)
+            rows.Add(new("First Seen", Formatters.FormatTimestamp(stored.FirstSeen)));
+        if (stored is not null && stored.LastSeen > 0 && !isOnline)
+            rows.Add(new("Last Seen", Formatters.FormatTimestamp(stored.LastSeen)));
+
+        return new InfoData(isOnline, rows);
+    }
+
+    private static string? Pick(string? a, string? b) =>
+        HasValue(a) ? a : HasValue(b) ? b : null;
+
+    private static bool HasValue(string? v) =>
+        !string.IsNullOrWhiteSpace(v) && v != "\u2014";
+
+    private static void Add(List<InfoRow> rows, string label, string? value)
+    {
+        if (HasValue(value)) rows.Add(new(label, value!));
+    }
+
+    public void Dispose()
+    {
+        _refreshTimer?.Dispose();
+        Relay.OnChanged -= OnChanged;
+    }
+}

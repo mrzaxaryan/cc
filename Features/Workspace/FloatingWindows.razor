@@ -69,6 +69,7 @@
                 case "FileSearch":        <FileSearchPanel AgentUuid="@win.AgentUuid" AgentName="@win.AgentName" InitialPath="@win.SearchPath" /> break;
                 case "SearchJobs":        <SearchJobsPanel /> break;
                 case "ExtensionGroups":   <ExtensionGroupsPanel /> break;
+                case "AgentInfo":         <AgentInfoPanel AgentId="@win.AgentId" AgentUuid="@win.AgentUuid" /> break;
             }
         </div>
         @if (!win.Maximized)

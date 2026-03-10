@@ -1095,10 +1095,40 @@ a:hover {
     animation: cc-pulse 1.5s ease-in-out infinite;
 }
 
-/* ===== Mobile / Touch Responsive ===== */
+/* ===== Tablet Responsive (≤1024px) ===== */
+@media (max-width: 1024px) {
+    .app-window-body {
+        padding: 0.5rem;
+    }
+
+    .notif-dropdown {
+        width: 300px;
+    }
+
+    .panel-stats {
+        gap: 0;
+    }
+
+    .panel-stat-value {
+        font-size: 0.9rem;
+    }
+
+    /* Tighter table cells on tablet */
+    .cc-table th {
+        padding: 0.35rem 0.45rem;
+        font-size: 0.62rem;
+    }
+
+    .cc-table td {
+        padding: 0.3rem 0.45rem;
+        font-size: 0.74rem;
+    }
+}
+
+/* ===== Mobile / Touch Responsive (≤768px) ===== */
 @media (max-width: 768px) {
     :root {
-        --cc-taskbar-h: 40px;
+        --cc-taskbar-h: 44px;
     }
 
     .app-window:not(.minimized) {
@@ -1120,21 +1150,131 @@ a:hover {
 
     .app-window-titlebar {
         padding: 0 8px;
-        height: 38px;
+        height: 40px;
         font-size: 0.85rem;
     }
 
     .app-window-btn {
-        width: 36px;
-        height: 32px;
+        width: 40px;
+        height: 36px;
+        font-size: 0.9rem;
     }
 
+    .app-window-body {
+        padding: 0.4rem;
+        font-size: 0.82rem;
+    }
+
+    /* Taskbar — larger items on mobile */
+    .mdi-taskbar {
+        height: var(--cc-taskbar-h);
+        gap: 3px;
+        padding: 0 var(--cc-space-1);
+    }
+
+    .mdi-taskbar-item {
+        font-size: 0.7rem;
+        padding: 4px 8px;
+        min-height: 34px;
+    }
+
+    /* Notifications — full width on mobile */
     .notif-dropdown {
         width: calc(100vw - 1rem);
         right: -0.5rem;
+        max-height: 60vh;
+    }
+
+    .notif-item {
+        padding: 0.6rem 0.75rem;
+    }
+
+    /* Panel stats — compact on mobile */
+    .panel-stat-value {
+        font-size: 0.85rem;
+    }
+
+    .panel-stat-label {
+        font-size: 0.55rem;
+    }
+
+    /* Panel tabs — scrollable on mobile */
+    .panel-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .panel-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .panel-tab {
+        padding: 0.4rem 0.7rem;
+        font-size: 0.72rem;
+        white-space: nowrap;
+    }
+
+    /* Tables — compact mode on mobile */
+    .cc-table th {
+        padding: 0.3rem 0.35rem;
+        font-size: 0.58rem;
+    }
+
+    .cc-table td {
+        padding: 0.3rem 0.35rem;
+        font-size: 0.72rem;
+    }
+
+    /* Panel empty state */
+    .panel-empty {
+        padding: 1.5rem 0.75rem;
+        font-size: 0.78rem;
+    }
+
+    /* Card list items — more touch-friendly */
+    .panel-row-item {
+        padding: 0.45rem 0.6rem;
+    }
+
+    .panel-card-header {
+        padding: 0.5rem 0.6rem;
+    }
+
+    /* Status dots — slightly larger on mobile */
+    .status-dot {
+        width: 9px;
+        height: 9px;
     }
 }
 
+/* ===== Small Phone (≤480px) ===== */
+@media (max-width: 480px) {
+    :root {
+        --cc-taskbar-h: 48px;
+    }
+
+    .app-window-body {
+        padding: 0.25rem;
+    }
+
+    .mdi-taskbar-item {
+        font-size: 0.65rem;
+        padding: 4px 6px;
+        max-width: 140px;
+    }
+
+    .panel-stat-value {
+        font-size: 0.78rem;
+    }
+
+    .panel-agent-label {
+        max-width: 100px;
+        font-size: 0.65rem;
+    }
+}
+
+/* ===== Touch Device Enhancements ===== */
 @media (pointer: coarse) {
     .app-window-titlebar {
         -webkit-user-select: none;
@@ -1142,13 +1282,44 @@ a:hover {
     }
 
     .app-window-btn {
-        width: 36px;
-        height: 32px;
+        width: 40px;
+        height: 34px;
     }
 
     /* Wider touch targets for edge resize */
-    .app-window-resize-n, .app-window-resize-s { height: 10px; }
-    .app-window-resize-e, .app-window-resize-w { width: 10px; }
+    .app-window-resize-n, .app-window-resize-s { height: 12px; }
+    .app-window-resize-e, .app-window-resize-w { width: 12px; }
     .app-window-resize-nw, .app-window-resize-ne,
-    .app-window-resize-sw, .app-window-resize-se { width: 16px; height: 16px; }
+    .app-window-resize-sw, .app-window-resize-se { width: 18px; height: 18px; }
+
+    /* Larger scrollbar thumb for touch */
+    ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    /* Prevent text selection on interactive elements */
+    .panel-tab,
+    .ap-relay-tab,
+    .mdi-taskbar-item,
+    .mdi-menu-item {
+        -webkit-user-select: none;
+        user-select: none;
+    }
+
+    /* Increase minimum touch target size */
+    .cc-btn {
+        min-height: 32px;
+        min-width: 32px;
+    }
+
+    .cc-btn-xs {
+        min-height: 28px;
+        min-width: 28px;
+    }
+
+    .cc-btn-icon {
+        min-height: 32px;
+        min-width: 32px;
+    }
 }

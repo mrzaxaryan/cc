@@ -23,3 +23,12 @@
     from { opacity: 0; transform: translateY(-4px); }
     to   { opacity: 1; transform: translateY(0); }
 }
+
+/* Mobile — ensure dropdown fits in viewport */
+@media (max-width: 768px) {
+    .cc-dropdown {
+        max-width: calc(100vw - 1rem);
+        max-height: 60vh;
+        overflow-y: auto;
+    }
+}

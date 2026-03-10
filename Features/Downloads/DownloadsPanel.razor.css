@@ -107,3 +107,18 @@
     color: var(--cc-text-dim);
 }
 
+/* ===== Mobile ===== */
+@media (max-width: 768px) {
+    .sm-item {
+        padding: 0.5rem;
+    }
+
+    .sm-item-name {
+        font-size: 0.72rem;
+    }
+
+    .sm-item-meta {
+        flex-wrap: wrap;
+    }
+}
+

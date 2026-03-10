@@ -131,3 +131,31 @@
     font-size: 0.85rem;
 }
 
+/* ===== Mobile ===== */
+@media (max-width: 768px) {
+    /* Stack add form fields vertically */
+    .rp-add-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.4rem;
+    }
+
+    .rp-add-field-wide {
+        flex: unset;
+    }
+
+    /* Compact stats */
+    .rp-stat-value {
+        font-size: 1.1rem;
+    }
+
+    .rp-stat-label {
+        font-size: 0.62rem;
+    }
+
+    /* Hide user-agent column */
+    .rp-ua-cell {
+        display: none;
+    }
+}
+

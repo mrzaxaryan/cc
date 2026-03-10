@@ -122,3 +122,27 @@
     gap: 3px;
     justify-content: flex-end;
 }
+
+/* ===== Mobile ===== */
+@media (max-width: 768px) {
+    .eg-table thead th {
+        padding: 0.3rem 0.35rem;
+        font-size: 0.55rem;
+    }
+
+    .eg-table td {
+        padding: 0.35rem 0.35rem;
+    }
+
+    .eg-col-name {
+        font-size: 0.72rem;
+    }
+
+    .eg-exts-text {
+        font-size: 0.6rem;
+    }
+
+    .eg-form {
+        padding: 0.4rem;
+    }
+}

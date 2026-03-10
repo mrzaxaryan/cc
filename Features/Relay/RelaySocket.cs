@@ -138,4 +138,26 @@ public class RelaySocket
     }
 
     public static ulong ReadEntryCount(byte[] response) => BitConverter.ToUInt64(response, 4);
+
+    // --- Shell commands (0x04 WriteShell, 0x05 ReadShell) ---
+
+    public static byte[] BuildWriteShell(string input)
+    {
+        var inputBytes = Encoding.Unicode.GetBytes(input + "\0");
+        var payload = new byte[1 + inputBytes.Length];
+        payload[0] = 0x04;
+        inputBytes.CopyTo(payload, 1);
+        return payload;
+    }
+
+    public static byte[] BuildReadShell() => [0x05];
+
+    public static (ulong bytesRead, string output) ReadShellOutput(byte[] response)
+    {
+        var bytesRead = BitConverter.ToUInt64(response, 4);
+        var length = (int)Math.Min(bytesRead, (ulong)(response.Length - 12));
+        if (length <= 0) return (bytesRead, "");
+        var output = Encoding.UTF8.GetString(response, 12, length);
+        return (bytesRead, output);
+    }
 }

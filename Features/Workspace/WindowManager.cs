@@ -82,7 +82,7 @@ public class WindowManager
             SearchPath = searchPath,
             X = 100 + offset,
             Y = 80 + offset,
-            Width = panel switch { "FileManager" => 800, "FileSearch" => 600, _ => 700 },
+            Width = panel switch { "FileManager" => 800, "FileSearch" => 600, "AgentInfo" => 480, _ => 700 },
             Height = 500,
             ZIndex = _topZ
         });
@@ -130,6 +130,7 @@ public class WindowManager
         "SearchJobs" => "Search Jobs",
         "ExtensionGroups" => "Extension Groups",
         "FileManager" => "File Manager",
+        "AgentInfo" => "Agent Info",
         "Settings" => "Settings",
         _ => panel
     };

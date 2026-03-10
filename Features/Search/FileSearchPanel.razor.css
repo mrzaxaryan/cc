@@ -202,3 +202,32 @@
     padding-left: 1.4rem;
 }
 
+/* ===== Mobile ===== */
+@media (max-width: 768px) {
+    .scan-form {
+        padding: 0.4rem;
+    }
+
+    .scan-ext-group {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.68rem;
+        min-height: 28px;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .scan-item {
+        padding: 0.5rem;
+    }
+
+    .scan-item-path {
+        font-size: 0.7rem;
+    }
+
+    .scan-item-stats {
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        padding-left: 1.2rem;
+    }
+}
+

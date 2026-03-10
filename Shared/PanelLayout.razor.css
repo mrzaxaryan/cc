@@ -48,4 +48,32 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile — tighter panel spacing */
+@media (max-width: 768px) {
+    .panel-header {
+        padding: 0.4rem 0.4rem 0.3rem;
+        gap: 0.35rem;
+    }
+
+    .panel-title {
+        font-size: 0.78rem;
+    }
+
+    .panel-toolbar {
+        padding: 0 0.4rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .panel-header {
+        padding: 0.35rem 0.3rem 0.25rem;
+        flex-wrap: wrap;
+    }
+
+    .panel-toolbar {
+        padding: 0 0.3rem;
+    }
 }

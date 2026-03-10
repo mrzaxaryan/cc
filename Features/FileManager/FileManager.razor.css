@@ -319,3 +319,68 @@
     border-radius: 0;
     min-height: 0;
 }
+
+/* ===== Mobile: stack split view, larger touch targets ===== */
+@media (max-width: 768px) {
+    /* Stack split view vertically */
+    .fm-split {
+        flex-direction: column;
+    }
+
+    .fm-split .fm-listing {
+        flex: 0 0 auto;
+        max-height: 40vh;
+    }
+
+    .fm-split .fm-viewer {
+        flex: 1;
+    }
+
+    /* Larger touch targets for file entries */
+    .fm-entry {
+        padding: 0.45rem 0.5rem;
+        gap: 0.4rem;
+        min-height: 36px;
+    }
+
+    /* Breadcrumb — touch scroll */
+    .fm-breadcrumb {
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding: 0.25rem 0.3rem;
+    }
+
+    .fm-breadcrumb::-webkit-scrollbar {
+        display: none;
+    }
+
+    .fm-crumb {
+        padding: 0.2rem 0.3rem;
+    }
+
+    /* Code viewer */
+    .fm-code {
+        font-size: 0.7rem;
+        padding: 0.4rem;
+    }
+
+    .fm-toolbar {
+        gap: 3px;
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 480px) {
+    .fm-entry {
+        padding: 0.5rem 0.4rem;
+        font-size: 0.74rem;
+    }
+
+    .fm-entry-size {
+        font-size: 0.6rem;
+    }
+
+    .fm-code {
+        font-size: 0.65rem;
+    }
+}
