@@ -8,10 +8,42 @@
     var relays = BuildRelayTabs();
     var rows = BuildAgentRows(Relay.GetAllAgents());
     var filtered = selectedRelay is null ? rows : rows.Where(r => r.RelayUrl == selectedRelay && r.IsOnline).ToList();
+    var onlineCount = rows.Count(r => r.IsOnline);
+    var offlineCount = rows.Count - onlineCount;
 }
 
 <PanelLayout Title="Agents">
+    <HeaderLeft>
+        @if (onlineCount > 0)
+        {
+            <CcBadge Variant="BadgeVariant.Success" Size="Size.Xs">@onlineCount Online</CcBadge>
+        }
+        else
+        {
+            <CcBadge Variant="BadgeVariant.Muted" Size="Size.Xs">None Online</CcBadge>
+        }
+    </HeaderLeft>
     <Toolbar>
+        <div class="panel-stats">
+            <div class="panel-stat">
+                <span class="panel-stat-value panel-stat-active">@onlineCount</span>
+                <span class="panel-stat-label">Online</span>
+            </div>
+            <div class="panel-stat">
+                <span class="panel-stat-value">@offlineCount</span>
+                <span class="panel-stat-label">Offline</span>
+            </div>
+            <div class="panel-stat">
+                <span class="panel-stat-value">@rows.Count</span>
+                <span class="panel-stat-label">Total</span>
+            </div>
+            <div class="panel-stat">
+                <span class="panel-stat-value panel-stat-done">@rows.Count(r => r.Paired)</span>
+                <span class="panel-stat-label">Paired</span>
+            </div>
+        </div>
+    </Toolbar>
+    <Body>
         <div class="ap-relay-bar">
             <button class="ap-relay-tab @(selectedRelay is null ? "ap-relay-tab--active" : "")"
                     @onclick="() => selectedRelay = null">
@@ -22,17 +54,15 @@
                 var url = relay.Url;
                 <button class="ap-relay-tab @(selectedRelay == url ? "ap-relay-tab--active" : "")"
                         @onclick="() => selectedRelay = url">
-                    <span class="ap-dot @(relay.Connected ? "ap-dot--on" : "ap-dot--off")"></span>
+                    <span class="status-dot @(relay.Connected ? "dot-on" : "dot-off")"></span>
                     @relay.Name
                     <span class="ap-relay-count">@relay.AgentCount</span>
                 </button>
             }
         </div>
-    </Toolbar>
-    <Body>
         @if (filtered.Count == 0)
         {
-            <p class="panel-empty"><em>No agents known.</em></p>
+            <div class="panel-empty">No agents known.</div>
         }
         else
         {
@@ -58,7 +88,7 @@
                               OnContextMenu="(e) => ShowContextMenu(e, row.AgentId, row.RelayUrl, row.IsOnline)"
                               PreventDefault>
                             <td class="ap-col-status">
-                                <span class="ap-dot @(row.IsOnline ? "ap-dot--on" : "ap-dot--off")"></span>
+                                <span class="status-dot @(row.IsOnline ? "dot-on" : "dot-off")"></span>
                             </td>
                             <td>
                                 <div class="ap-name-cell">
@@ -69,7 +99,7 @@
                             <td><code>@row.Ip</code></td>
                             <td>
                                 <span class="ap-sys">@row.Os</span>
-                                @if (row.Arch != "—")
+                                @if (row.Arch != "\u2014")
                                 {
                                     <span class="ap-arch">@row.Arch</span>
                                 }
@@ -79,7 +109,7 @@
                             <td class="ap-col-paired">
                                 @if (row.Paired)
                                 {
-                                    <span class="ap-dot ap-dot--on"></span>
+                                    <span class="status-dot dot-on"></span>
                                 }
                             </td>
                             <td class="ap-seen-cell">@row.LastSeen</td>
@@ -181,15 +211,15 @@
             rows.Add(new AgentRow
             {
                 IsOnline = true,
-                Name = record?.Name ?? "—",
+                Name = record?.Name ?? "\u2014",
                 Uuid = uuid,
                 AgentId = agent.Id,
                 RelayUrl = relayUrl,
                 Ip = agent.Ip,
                 Os = !string.IsNullOrEmpty(agent.Os) ? agent.Os
-                    : !string.IsNullOrEmpty(record?.Os) ? record.Os : "—",
+                    : !string.IsNullOrEmpty(record?.Os) ? record.Os : "\u2014",
                 Arch = !string.IsNullOrEmpty(agent.Arch) ? agent.Arch
-                    : !string.IsNullOrEmpty(record?.Arch) ? record.Arch : "—",
+                    : !string.IsNullOrEmpty(record?.Arch) ? record.Arch : "\u2014",
                 Location = Formatters.FormatLocation(agent),
                 Network = Formatters.FormatNetwork(agent),
                 Paired = agent.Paired,
@@ -211,11 +241,11 @@
                 AgentId = record.AgentId,
                 RelayUrl = relayEntry?.Url ?? "",
                 Ip = record.Ip,
-                Os = !string.IsNullOrEmpty(record.Os) ? record.Os : "—",
-                Arch = !string.IsNullOrEmpty(record.Arch) ? record.Arch : "—",
+                Os = !string.IsNullOrEmpty(record.Os) ? record.Os : "\u2014",
+                Arch = !string.IsNullOrEmpty(record.Arch) ? record.Arch : "\u2014",
                 Location = Formatters.FormatLocation(record),
                 Network = Formatters.FormatNetwork(record),
-                Paired = !string.IsNullOrEmpty(record.PairedRelayId),
+                Paired = false,
                 LastSeen = Formatters.FormatTimestamp(record.LastSeen)
             });
         }

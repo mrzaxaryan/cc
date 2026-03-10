@@ -1,11 +1,12 @@
 /* Agents Panel */
 
-
 /* Relay filter bar */
 .ap-relay-bar {
     display: flex;
     align-items: center;
     gap: 0.25rem;
+    padding: 0.35rem 0.5rem;
+    border-bottom: 1px solid var(--cc-border);
     flex-shrink: 0;
     overflow-x: auto;
 }
@@ -59,23 +60,6 @@
 .ap-col-paired {
     width: 48px;
     text-align: center;
-}
-
-/* Status dot */
-.ap-dot {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-}
-
-.ap-dot--on {
-    background: var(--cc-accent-green);
-    box-shadow: 0 0 4px var(--cc-accent-green);
-}
-
-.ap-dot--off {
-    background: var(--cc-text-dim);
 }
 
 /* Name + UUID stacked cell */

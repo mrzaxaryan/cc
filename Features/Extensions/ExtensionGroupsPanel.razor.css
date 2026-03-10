@@ -36,67 +36,89 @@
     margin-top: 0.2rem;
 }
 
-/* List */
-.eg-list {
+/* Table */
+.eg-table-wrap {
     flex: 1;
     overflow-y: auto;
     min-height: 0;
 }
 
-.eg-item {
-    padding: 0.5rem;
+.eg-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+}
+
+.eg-table thead th {
+    position: sticky;
+    top: 0;
+    background: var(--cc-bg);
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: var(--cc-text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    text-align: left;
+    padding: 0.35rem 0.5rem;
+    border-bottom: 1px solid var(--cc-border);
+    z-index: 1;
+}
+
+.eg-table tbody tr {
     border-bottom: 1px solid var(--cc-border);
     transition: background 0.15s;
 }
 
-.eg-item:last-child {
+.eg-table tbody tr:last-child {
     border-bottom: none;
 }
 
-.eg-item:hover {
+.eg-table tbody tr:hover {
     background: var(--cc-hover-subtle);
 }
 
-.eg-item-disabled {
+.eg-table td {
+    padding: 0.4rem 0.5rem;
+    vertical-align: middle;
+}
+
+.eg-row-disabled {
     opacity: 0.5;
 }
 
-.eg-item-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.4rem;
+.eg-col-toggle {
+    width: 1.5rem;
+    text-align: center;
 }
 
-.eg-item-toggle {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
+.eg-col-toggle input[type="checkbox"] {
+    accent-color: var(--cc-accent-blue);
     cursor: pointer;
 }
 
-.eg-item-toggle input[type="checkbox"] {
-    accent-color: var(--cc-accent-blue);
-}
-
-.eg-item-name {
-    font-size: 0.8rem;
+.eg-col-name {
     font-weight: 600;
     color: var(--cc-text);
+    white-space: nowrap;
 }
 
-.eg-item-actions {
-    display: flex;
-    gap: 3px;
-    flex-shrink: 0;
+.eg-col-exts {
+    width: 100%;
 }
 
-.eg-item-exts {
+.eg-exts-text {
     font-size: 0.65rem;
     color: var(--cc-text-dim);
     font-family: monospace;
-    margin-top: 0.2rem;
-    padding-left: 1.4rem;
     word-break: break-word;
 }
 
+.eg-col-actions {
+    white-space: nowrap;
+}
+
+.eg-actions {
+    display: flex;
+    gap: 3px;
+    justify-content: flex-end;
+}

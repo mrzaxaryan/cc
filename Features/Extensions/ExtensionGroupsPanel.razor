@@ -31,35 +31,47 @@
             </div>
         }
 
-        <div class="eg-list">
-            @if (Store.Groups.Count == 0)
-            {
-                <div class="panel-empty">
-                    No extension groups configured.
-                    <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="SeedDefaults" Disabled="@saving">LOAD DEFAULTS</CcBtn>
-                </div>
-            }
-            else
-            {
-                @foreach (var group in Store.Groups)
-                {
-                    var g = group;
-                    <div class="eg-item @(!g.Enabled ? "eg-item-disabled" : "")">
-                        <div class="eg-item-header">
-                            <label class="eg-item-toggle">
-                                <input type="checkbox" checked="@g.Enabled" @onchange="() => ToggleEnabled(g)" />
-                                <span class="eg-item-name">@g.Name</span>
-                            </label>
-                            <div class="eg-item-actions">
-                                <CcBtn Size="Size.Xs" OnClick="() => EditGroup(g)" Title="Edit">EDIT</CcBtn>
-                                <CcBtn Size="Size.Xs" Variant="BtnVariant.Danger" OnClick="() => RemoveGroup(g)" Title="Remove">&#x2715;</CcBtn>
-                            </div>
-                        </div>
-                        <div class="eg-item-exts">@g.Extensions</div>
-                    </div>
-                }
-            }
-        </div>
+        @if (Store.Groups.Count == 0)
+        {
+            <div class="panel-empty">
+                No extension groups configured.
+                <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="SeedDefaults" Disabled="@saving">LOAD DEFAULTS</CcBtn>
+            </div>
+        }
+        else
+        {
+            <div class="eg-table-wrap">
+                <table class="eg-table">
+                    <thead>
+                        <tr>
+                            <th class="eg-col-toggle"></th>
+                            <th class="eg-col-name">Name</th>
+                            <th class="eg-col-exts">Extensions</th>
+                            <th class="eg-col-actions"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var group in Store.Groups)
+                        {
+                            var g = group;
+                            <tr class="@(!g.Enabled ? "eg-row-disabled" : "")">
+                                <td class="eg-col-toggle">
+                                    <input type="checkbox" checked="@g.Enabled" @onchange="() => ToggleEnabled(g)" />
+                                </td>
+                                <td class="eg-col-name">@g.Name</td>
+                                <td class="eg-col-exts"><span class="eg-exts-text">@g.Extensions</span></td>
+                                <td class="eg-col-actions">
+                                    <div class="eg-actions">
+                                        <CcBtn Size="Size.Xs" OnClick="() => EditGroup(g)" Title="Edit">EDIT</CcBtn>
+                                        <CcBtn Size="Size.Xs" Variant="BtnVariant.Danger" OnClick="() => RemoveGroup(g)" Title="Remove">&#x2715;</CcBtn>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
     </Body>
 </PanelLayout>
 
