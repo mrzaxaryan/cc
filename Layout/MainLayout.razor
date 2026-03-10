@@ -20,9 +20,9 @@
     <div class="notif-wrapper" @onfocusout="OnFocusOut" tabindex="-1">
         <button class="notif-bell" @onclick="ToggleDropdown" title="Notifications">
             <span>&#128276;</span>
-            @if (Notif.UnreadCount > 0)
+            @if (updateAvailable || Notif.UnreadCount > 0)
             {
-                <span class="notif-badge">@(Notif.UnreadCount > 99 ? "99+" : Notif.UnreadCount.ToString())</span>
+                <span class="notif-badge">@BadgeText()</span>
             }
         </button>
 
@@ -36,8 +36,15 @@
                         <button class="notif-clear-all" @onclick="ClearAll">Clear all</button>
                     }
                 </div>
+                @if (updateAvailable)
+                {
+                    <div class="notif-update">
+                        <span>A new version is available.</span>
+                        <button class="notif-reload" @onclick="ReloadApp">Reload</button>
+                    </div>
+                }
                 <div class="notif-list">
-                    @if (Notif.Items.Count == 0)
+                    @if (!updateAvailable && Notif.Items.Count == 0)
                     {
                         <div class="notif-empty">No notifications</div>
                     }
@@ -86,6 +93,8 @@
     private bool showWelcome;
     private bool initialized;
     private bool dropdownOpen;
+    private bool updateAvailable;
+    private Timer? _updateTimer;
 
     protected override void OnInitialized()
     {
@@ -110,6 +119,21 @@
                 showWelcome = true;
             }
             StateHasChanged();
+
+            // Poll for service worker update
+            _updateTimer = new Timer(async _ =>
+            {
+                try
+                {
+                    var available = await JS.InvokeAsync<bool>("eval", "!!window._ccUpdateAvailable");
+                    if (available && !updateAvailable)
+                    {
+                        updateAvailable = true;
+                        await InvokeAsync(StateHasChanged);
+                    }
+                }
+                catch { }
+            }, null, 3000, 5000);
         }
     }
 
@@ -151,6 +175,17 @@
         dropdownOpen = false;
     }
 
+    private string BadgeText()
+    {
+        var count = Notif.UnreadCount + (updateAvailable ? 1 : 0);
+        return count > 99 ? "99+" : count.ToString();
+    }
+
+    private void ReloadApp()
+    {
+        _ = JS.InvokeVoidAsync("location.reload");
+    }
+
     private static string FormatTime(double epochMs)
     {
         var dt = DateTimeOffset.FromUnixTimeMilliseconds((long)epochMs).LocalDateTime;
@@ -178,5 +213,6 @@
         Theme.OnChanged -= OnThemeChanged;
         Msg.OnNotification -= OnNotification;
         Notif.OnChanged -= OnNotifChanged;
+        _updateTimer?.Dispose();
     }
 }

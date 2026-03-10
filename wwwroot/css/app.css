@@ -1,7 +1,14 @@
+/* ===================================================================
+   CC Design System — Desktop App Shell
+   =================================================================== */
+
+/* ===== Fonts ===== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
 /* ===== Theme Variables ===== */
 :root,
 [data-theme="dark"] {
-    /* Backgrounds */
+    /* Backgrounds — surface elevation */
     --cc-bg-base: #1e1e2e;
     --cc-bg-deep: #16161e;
     --cc-bg-surface: #181825;
@@ -11,6 +18,7 @@
 
     /* Borders */
     --cc-border: #313244;
+    --cc-border-subtle: #262637;
     --cc-border-light: #3a3a4a;
     --cc-border-active: #585b70;
 
@@ -26,30 +34,36 @@
     --cc-accent-yellow: #f9e2af;
     --cc-accent-purple: #cba6f7;
 
+    /* Semantic aliases */
+    --cc-success: var(--cc-accent-green);
+    --cc-danger: var(--cc-accent-red);
+    --cc-warning: var(--cc-accent-yellow);
+    --cc-info: var(--cc-accent-blue);
+
     /* Accent translucent */
+    --cc-blue-04: rgba(137, 180, 250, 0.04);
+    --cc-blue-08: rgba(137, 180, 250, 0.08);
     --cc-blue-15: rgba(137, 180, 250, 0.15);
+    --cc-blue-18: rgba(137, 180, 250, 0.18);
     --cc-blue-30: rgba(137, 180, 250, 0.3);
+    --cc-green-10: rgba(166, 227, 161, 0.1);
     --cc-green-12: rgba(166, 227, 161, 0.12);
     --cc-green-15: rgba(166, 227, 161, 0.15);
+    --cc-green-18: rgba(166, 227, 161, 0.18);
     --cc-green-25: rgba(166, 227, 161, 0.25);
     --cc-green-30: rgba(166, 227, 161, 0.3);
+    --cc-red-04: rgba(243, 139, 168, 0.04);
     --cc-red-12: rgba(243, 139, 168, 0.12);
     --cc-red-15: rgba(243, 139, 168, 0.15);
+    --cc-red-18: rgba(243, 139, 168, 0.18);
     --cc-red-30: rgba(243, 139, 168, 0.3);
     --cc-red-40: rgba(243, 139, 168, 0.4);
     --cc-yellow-10: rgba(249, 226, 175, 0.1);
     --cc-yellow-12: rgba(249, 226, 175, 0.12);
     --cc-yellow-15: rgba(249, 226, 175, 0.15);
+    --cc-yellow-18: rgba(249, 226, 175, 0.18);
     --cc-yellow-30: rgba(249, 226, 175, 0.3);
     --cc-yellow-40: rgba(249, 226, 175, 0.4);
-    --cc-blue-04: rgba(137, 180, 250, 0.04);
-    --cc-blue-08: rgba(137, 180, 250, 0.08);
-    --cc-blue-18: rgba(137, 180, 250, 0.18);
-    --cc-green-10: rgba(166, 227, 161, 0.1);
-    --cc-green-18: rgba(166, 227, 161, 0.18);
-    --cc-red-04: rgba(243, 139, 168, 0.04);
-    --cc-red-18: rgba(243, 139, 168, 0.18);
-    --cc-yellow-18: rgba(249, 226, 175, 0.18);
     --cc-purple-40: rgba(203, 166, 247, 0.4);
 
     /* Special */
@@ -64,12 +78,43 @@
     --cc-workspace-grad1: rgba(137, 180, 250, 0.03);
     --cc-workspace-grad2: rgba(203, 166, 247, 0.03);
     --cc-selection: rgba(137, 180, 250, 0.25);
-    --cc-focus-ring: rgba(137, 180, 250, 0.15);
+    --cc-focus-ring: rgba(137, 180, 250, 0.5);
     --cc-hover-white: rgba(255, 255, 255, 0.1);
     --cc-hover-subtle: rgba(255, 255, 255, 0.02);
     --cc-blue-glow: rgba(137, 180, 250, 0.3);
     --cc-blue-glow-strong: rgba(137, 180, 250, 0.4);
-    --cc-taskbar-h: 32px;
+
+    /* Spacing scale */
+    --cc-space-1: 4px;
+    --cc-space-2: 8px;
+    --cc-space-3: 12px;
+    --cc-space-4: 16px;
+    --cc-space-5: 20px;
+    --cc-space-6: 24px;
+    --cc-space-7: 28px;
+    --cc-space-8: 32px;
+
+    /* Layout dimensions */
+    --cc-titlebar-h: 32px;
+    --cc-activity-bar-w: 48px;
+    --cc-tab-bar-h: 36px;
+    --cc-status-bar-h: 24px;
+
+    /* Elevation */
+    --cc-elevation-1: 0 1px 3px rgba(0, 0, 0, 0.2);
+    --cc-elevation-2: 0 4px 12px rgba(0, 0, 0, 0.3);
+    --cc-elevation-3: 0 8px 32px rgba(0, 0, 0, 0.5);
+
+    /* Radius */
+    --cc-radius-sm: 4px;
+    --cc-radius-md: 6px;
+    --cc-radius-lg: 8px;
+    --cc-radius-xl: 12px;
+
+    /* Motion */
+    --cc-transition-fast: 100ms ease;
+    --cc-transition-normal: 150ms ease;
+    --cc-transition-slow: 200ms ease;
 
     color-scheme: dark;
 }
@@ -82,6 +127,7 @@
     --cc-bg-highlight: #bcc0cc;
     --cc-bg-active: #acb0be;
     --cc-border: #bcc0cc;
+    --cc-border-subtle: #ccd0da;
     --cc-border-light: #ccd0da;
     --cc-border-active: #9ca0b0;
     --cc-text: #4c4f69;
@@ -93,29 +139,29 @@
     --cc-accent-yellow: #df8e1d;
     --cc-accent-purple: #8839ef;
 
+    --cc-blue-04: rgba(30, 102, 245, 0.04);
+    --cc-blue-08: rgba(30, 102, 245, 0.08);
     --cc-blue-15: rgba(30, 102, 245, 0.15);
+    --cc-blue-18: rgba(30, 102, 245, 0.18);
     --cc-blue-30: rgba(30, 102, 245, 0.3);
+    --cc-green-10: rgba(64, 160, 43, 0.1);
     --cc-green-12: rgba(64, 160, 43, 0.12);
     --cc-green-15: rgba(64, 160, 43, 0.15);
+    --cc-green-18: rgba(64, 160, 43, 0.18);
     --cc-green-25: rgba(64, 160, 43, 0.25);
     --cc-green-30: rgba(64, 160, 43, 0.3);
+    --cc-red-04: rgba(210, 15, 57, 0.04);
     --cc-red-12: rgba(210, 15, 57, 0.12);
     --cc-red-15: rgba(210, 15, 57, 0.15);
+    --cc-red-18: rgba(210, 15, 57, 0.18);
     --cc-red-30: rgba(210, 15, 57, 0.3);
     --cc-red-40: rgba(210, 15, 57, 0.4);
     --cc-yellow-10: rgba(223, 142, 29, 0.1);
     --cc-yellow-12: rgba(223, 142, 29, 0.12);
     --cc-yellow-15: rgba(223, 142, 29, 0.15);
+    --cc-yellow-18: rgba(223, 142, 29, 0.18);
     --cc-yellow-30: rgba(223, 142, 29, 0.3);
     --cc-yellow-40: rgba(223, 142, 29, 0.4);
-    --cc-blue-04: rgba(30, 102, 245, 0.04);
-    --cc-blue-08: rgba(30, 102, 245, 0.08);
-    --cc-blue-18: rgba(30, 102, 245, 0.18);
-    --cc-green-10: rgba(64, 160, 43, 0.1);
-    --cc-green-18: rgba(64, 160, 43, 0.18);
-    --cc-red-04: rgba(210, 15, 57, 0.04);
-    --cc-red-18: rgba(210, 15, 57, 0.18);
-    --cc-yellow-18: rgba(223, 142, 29, 0.18);
     --cc-purple-40: rgba(136, 57, 239, 0.4);
 
     --cc-code: #dce0e8;
@@ -129,11 +175,15 @@
     --cc-workspace-grad1: rgba(30, 102, 245, 0.04);
     --cc-workspace-grad2: rgba(136, 57, 239, 0.04);
     --cc-selection: rgba(30, 102, 245, 0.2);
-    --cc-focus-ring: rgba(30, 102, 245, 0.15);
+    --cc-focus-ring: rgba(30, 102, 245, 0.5);
     --cc-hover-white: rgba(0, 0, 0, 0.06);
     --cc-hover-subtle: rgba(0, 0, 0, 0.02);
     --cc-blue-glow: rgba(30, 102, 245, 0.3);
     --cc-blue-glow-strong: rgba(30, 102, 245, 0.4);
+
+    --cc-elevation-1: 0 1px 3px rgba(0, 0, 0, 0.08);
+    --cc-elevation-2: 0 4px 12px rgba(0, 0, 0, 0.12);
+    --cc-elevation-3: 0 8px 32px rgba(0, 0, 0, 0.2);
 
     color-scheme: light;
 }
@@ -146,8 +196,8 @@
 }
 
 html, body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    font-size: 0.85rem;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 13px;
     line-height: 1.5;
     overflow: hidden;
     height: 100%;
@@ -163,13 +213,15 @@ html, body {
     color: var(--cc-text);
 }
 
-h1:focus {
-    outline: none;
+h1:focus { outline: none; }
+
+code, pre, .mono {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
 }
 
 code {
     color: var(--cc-accent-blue);
-    font-size: 0.8rem;
+    font-size: 0.9em;
 }
 
 pre {
@@ -240,7 +292,7 @@ a:hover {
     background: #b32121;
     padding: 1rem 1rem 1rem 1.5rem;
     color: white;
-    border-radius: 4px;
+    border-radius: var(--cc-radius-sm);
 }
 
 .blazor-error-boundary::after {
@@ -289,8 +341,8 @@ a:hover {
     display: flex;
     flex-direction: column;
     border: 1px solid var(--cc-border-light);
-    border-radius: 8px;
-    box-shadow: 0 4px 24px var(--cc-shadow), 0 0 0 1px var(--cc-window-border-glow);
+    border-radius: var(--cc-radius-lg);
+    box-shadow: var(--cc-elevation-3), 0 0 0 1px var(--cc-window-border-glow);
     background: var(--cc-bg-base);
     overflow: hidden;
     min-width: 320px;
@@ -299,9 +351,9 @@ a:hover {
 
 .app-window.maximized {
     left: 0 !important;
-    top: 36px !important;
+    top: var(--cc-titlebar-h) !important;
     width: 100vw !important;
-    height: calc(100vh - 36px - var(--cc-taskbar-h, 32px)) !important;
+    height: calc(100vh - var(--cc-titlebar-h) - var(--cc-status-bar-h)) !important;
     border-radius: 0;
     border: none;
     z-index: 1045 !important;
@@ -321,7 +373,7 @@ a:hover {
     cursor: grab;
     user-select: none;
     flex-shrink: 0;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     border-bottom: 1px solid var(--cc-bg-overlay);
 }
 
@@ -345,9 +397,9 @@ a:hover {
     font-size: 0.85rem;
     line-height: 1;
     padding: 0.2rem 0.4rem;
-    border-radius: 4px;
+    border-radius: var(--cc-radius-sm);
     cursor: pointer;
-    transition: background 0.15s, color 0.15s, transform 0.1s;
+    transition: background var(--cc-transition-normal), color var(--cc-transition-normal), transform 0.1s;
 }
 
 .app-window-btn:hover {
@@ -360,7 +412,7 @@ a:hover {
 }
 
 .app-window-btn:focus-visible {
-    outline: 2px solid var(--cc-accent-blue);
+    outline: 2px solid var(--cc-focus-ring);
     outline-offset: 1px;
 }
 
@@ -405,66 +457,6 @@ a:hover {
     border-bottom: 2px solid var(--cc-resize-border);
 }
 
-/* ===== Taskbar ===== */
-.mdi-taskbar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 32px;
-    background: var(--cc-bg-deep);
-    border-top: 1px solid var(--cc-bg-overlay);
-    display: flex;
-    align-items: center;
-    padding: 0 0.5rem;
-    gap: 2px;
-    z-index: 1050;
-    overflow-x: auto;
-}
-
-.mdi-taskbar:empty {
-    display: none;
-}
-
-.mdi-taskbar-item {
-    background: var(--cc-bg-overlay);
-    border: 1px solid var(--cc-border-light);
-    color: var(--cc-text-muted);
-    font-size: 0.7rem;
-    padding: 0.2rem 0.6rem;
-    border-radius: 4px;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: background 0.15s, color 0.15s;
-    max-width: 160px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.mdi-taskbar-item:hover {
-    background: var(--cc-border-light);
-    color: var(--cc-text);
-}
-
-.mdi-taskbar-item:focus-visible {
-    outline: 2px solid var(--cc-accent-blue);
-    outline-offset: -1px;
-}
-
-.mdi-taskbar-item:active {
-    transform: scale(0.97);
-}
-
-.mdi-taskbar-item.active {
-    background: var(--cc-bg-active);
-    color: var(--cc-text);
-    border-color: var(--cc-border-active);
-}
-
-.mdi-taskbar-item.minimized {
-    opacity: 0.5;
-}
-
 /* ===== Scrollbar ===== */
 ::-webkit-scrollbar {
     width: 8px;
@@ -472,12 +464,12 @@ a:hover {
 }
 
 ::-webkit-scrollbar-track {
-    background: var(--cc-bg-base);
+    background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
     background: var(--cc-scrollbar-thumb);
-    border-radius: 4px;
+    border-radius: var(--cc-radius-sm);
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -485,10 +477,10 @@ a:hover {
 }
 
 ::-webkit-scrollbar-corner {
-    background: var(--cc-bg-base);
+    background: transparent;
 }
 
-/* ===== Header Notifications ===== */
+/* ===== Notifications ===== */
 .notif-wrapper {
     position: relative;
     display: flex;
@@ -502,8 +494,8 @@ a:hover {
     font-size: 0.9rem;
     padding: 0.25rem 0.5rem;
     cursor: pointer;
-    border-radius: 4px;
-    transition: background 0.15s, color 0.15s;
+    border-radius: var(--cc-radius-sm);
+    transition: background var(--cc-transition-normal), color var(--cc-transition-normal);
     position: relative;
     display: flex;
     align-items: center;
@@ -520,7 +512,7 @@ a:hover {
     right: 0;
     background: var(--cc-accent-red);
     color: #fff;
-    font-size: 0.6rem;
+    font-size: 0.55rem;
     font-weight: 700;
     min-width: 14px;
     height: 14px;
@@ -542,12 +534,12 @@ a:hover {
     max-height: 420px;
     background: var(--cc-bg-surface);
     border: 1px solid var(--cc-border);
-    border-radius: 8px;
-    box-shadow: 0 8px 32px var(--cc-shadow);
+    border-radius: var(--cc-radius-lg);
+    box-shadow: var(--cc-elevation-3);
     z-index: 11000;
     display: flex;
     flex-direction: column;
-    animation: notif-drop 0.15s ease-out;
+    animation: notif-drop var(--cc-transition-normal);
 }
 
 @keyframes notif-drop {
@@ -574,11 +566,38 @@ a:hover {
     cursor: pointer;
     padding: 0.15rem 0.4rem;
     border-radius: 3px;
-    transition: background 0.15s;
+    transition: background var(--cc-transition-normal);
 }
 
 .notif-clear-all:hover {
     background: var(--cc-red-15);
+}
+
+.notif-update {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    background: var(--cc-blue-18);
+    border-bottom: 1px solid var(--cc-accent-blue);
+    font-size: 0.78rem;
+    color: var(--cc-accent-blue);
+}
+
+.notif-reload {
+    background: var(--cc-accent-blue);
+    color: var(--cc-bg-deep);
+    border: none;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+.notif-reload:hover {
+    opacity: 0.85;
 }
 
 .notif-list {
@@ -604,14 +623,8 @@ a:hover {
     transition: background 0.1s;
 }
 
-.notif-item:last-child {
-    border-bottom: none;
-}
-
-.notif-item:hover {
-    background: var(--cc-hover-subtle);
-}
-
+.notif-item:last-child { border-bottom: none; }
+.notif-item:hover { background: var(--cc-hover-subtle); }
 .notif-item.notif-error { border-left: 3px solid var(--cc-accent-red); }
 .notif-item.notif-success { border-left: 3px solid var(--cc-accent-green); }
 .notif-item.notif-warning { border-left: 3px solid var(--cc-accent-yellow); }
@@ -631,51 +644,30 @@ a:hover {
     padding-top: 1px;
 }
 
-.notif-copy {
-    background: none;
-    border: none;
-    color: var(--cc-text-dim);
-    font-size: 0.75rem;
-    line-height: 1;
-    padding: 0 0.15rem;
-    cursor: pointer;
-    opacity: 0;
-    flex-shrink: 0;
-    border-radius: 3px;
-    transition: opacity 0.15s, color 0.15s;
-}
-
-.notif-item:hover .notif-copy {
-    opacity: 0.6;
-}
-
-.notif-copy:hover {
-    opacity: 1 !important;
-    color: var(--cc-accent-blue);
-}
-
+.notif-copy,
 .notif-remove {
     background: none;
     border: none;
     color: var(--cc-text-dim);
-    font-size: 0.95rem;
     line-height: 1;
     padding: 0 0.15rem;
     cursor: pointer;
     opacity: 0;
     flex-shrink: 0;
     border-radius: 3px;
-    transition: opacity 0.15s, color 0.15s;
+    transition: opacity var(--cc-transition-normal), color var(--cc-transition-normal);
 }
 
+.notif-copy { font-size: 0.75rem; }
+.notif-remove { font-size: 0.95rem; }
+
+.notif-item:hover .notif-copy,
 .notif-item:hover .notif-remove {
     opacity: 0.6;
 }
 
-.notif-remove:hover {
-    opacity: 1 !important;
-    color: var(--cc-accent-red);
-}
+.notif-copy:hover { opacity: 1 !important; color: var(--cc-accent-blue); }
+.notif-remove:hover { opacity: 1 !important; color: var(--cc-accent-red); }
 
 /* ===== Theme Toggle ===== */
 .theme-toggle {
@@ -685,8 +677,8 @@ a:hover {
     font-size: 0.85rem;
     padding: 0.25rem 0.5rem;
     cursor: pointer;
-    border-radius: 4px;
-    transition: background 0.15s, color 0.15s;
+    border-radius: var(--cc-radius-sm);
+    transition: background var(--cc-transition-normal), color var(--cc-transition-normal);
     display: flex;
     align-items: center;
 }
@@ -709,25 +701,22 @@ a:hover {
 
 /* ===== Mobile / Touch Responsive ===== */
 @media (max-width: 768px) {
-    :root { --cc-taskbar-h: 40px; }
+    :root {
+        --cc-activity-bar-w: 0px;
+    }
 
-    /* Force windows to fill the screen on small devices */
     .app-window:not(.minimized) {
         left: 0 !important;
-        top: 36px !important;
+        top: var(--cc-titlebar-h) !important;
         width: 100vw !important;
-        height: calc(100vh - 36px - 40px) !important;
+        height: calc(100vh - var(--cc-titlebar-h) - var(--cc-status-bar-h)) !important;
         border-radius: 0;
         border: none;
         z-index: 1045 !important;
     }
 
-    /* Hide resize handle on mobile — windows are always full-screen */
-    .app-window-resize {
-        display: none;
-    }
+    .app-window-resize { display: none; }
 
-    /* Larger touch targets for titlebar buttons */
     .app-window-btn {
         padding: 0.4rem 0.6rem;
         font-size: 1rem;
@@ -743,40 +732,12 @@ a:hover {
         font-size: 0.85rem;
     }
 
-    /* Taller taskbar with larger items */
-    .mdi-taskbar {
-        height: 40px;
-        padding: 0 0.35rem;
-        gap: 3px;
-        -webkit-overflow-scrolling: touch;
-    }
-
-    .mdi-taskbar-item {
-        font-size: 0.75rem;
-        padding: 0.35rem 0.7rem;
-        min-height: 32px;
-    }
-
-    /* Larger menu items for touch */
-    .mdi-menu-item {
-        padding: 0.4rem 0.8rem;
-        font-size: 0.82rem;
-        min-height: 32px;
-    }
-
-    /* Adjust workspace for taller mobile taskbar */
-    .mdi-workspace {
-        bottom: 40px;
-    }
-
-    /* Notifications dropdown full-width on mobile */
     .notif-dropdown {
         width: calc(100vw - 1rem);
         right: -0.5rem;
     }
 }
 
-/* Touch-friendly: prevent text selection during drag on touch devices */
 @media (pointer: coarse) {
     .app-window-titlebar {
         -webkit-user-select: none;
