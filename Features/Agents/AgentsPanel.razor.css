@@ -50,6 +50,7 @@
 /* Agent table rows */
 .ap-row {
     cursor: context-menu;
+    user-select: none;
 }
 
 .ap-col-status {
@@ -103,4 +104,56 @@
     white-space: nowrap;
     color: var(--cc-text-muted);
     font-size: 0.74rem;
+}
+
+/* Context menu copy submenu */
+.ap-ctx-submenu-wrap {
+    position: relative;
+}
+
+.ap-ctx-sub-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    background: none;
+    border: none;
+    color: var(--cc-text);
+    font-size: 0.78rem;
+    padding: 0.35rem 0.75rem;
+    text-align: left;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+}
+
+.ap-ctx-sub-trigger:hover {
+    background: var(--cc-bg-highlight);
+}
+
+.ap-ctx-arrow {
+    font-size: 0.62rem;
+}
+
+.ap-ctx-submenu {
+    display: none;
+    position: absolute;
+    left: 100%;
+    top: 0;
+    min-width: 130px;
+    background: var(--cc-bg-base);
+    border: 1px solid var(--cc-border-light);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px var(--cc-shadow);
+    padding: 0.25rem 0;
+    z-index: 1;
+}
+
+.ap-ctx-submenu-wrap:hover > .ap-ctx-submenu {
+    display: block;
+}
+
+::deep .ap-ctx-copy-item {
+    font-size: 0.74rem;
+    color: var(--cc-text-muted);
 }

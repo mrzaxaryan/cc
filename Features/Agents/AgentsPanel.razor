@@ -2,6 +2,7 @@
 @inject RelayStore Store
 @inject AgentStore AgentDb
 @inject RelayConnectionService Relay
+@inject IJSRuntime Js
 @implements IDisposable
 
 @{
@@ -85,7 +86,7 @@
                         <CcTr Active="@(row.IsOnline && Wm.ConnectedAgentIds.Contains(row.AgentId))"
                               Dim="@(!row.IsOnline)"
                               CssClass="ap-row"
-                              OnContextMenu="(e) => ShowContextMenu(e, row.AgentId, row.RelayUrl, row.IsOnline)"
+                              OnContextMenu="(e) => ShowContextMenu(e, row)"
                               PreventDefault>
                             <td class="ap-col-status">
                                 <span class="status-dot @(row.IsOnline ? "dot-on" : "dot-off")"></span>
@@ -122,8 +123,23 @@
 </PanelLayout>
 
 <CcDropdown Visible="@ctxVisible" X="@ctxX" Y="@ctxY" OnClose="HideContextMenu">
-    <CcDropdownItem OnClick="CtxOpenFiles">File Manager</CcDropdownItem>
-    <CcDropdownItem OnClick="CtxStartRename">Rename</CcDropdownItem>
+    @if (ctxRow is not null)
+    {
+        <div class="ap-ctx-submenu-wrap">
+            <button class="ap-ctx-sub-trigger" type="button">
+                Copy <span class="ap-ctx-arrow">&#9656;</span>
+            </button>
+            <div class="ap-ctx-submenu">
+                @foreach (var item in GetCopyItems(ctxRow))
+                {
+                    var val = item.Value;
+                    <CcDropdownItem OnClick="() => CtxCopy(val)" CssClass="ap-ctx-copy-item">@item.Label</CcDropdownItem>
+                }
+            </div>
+        </div>
+    }
+    <CcDropdownItem OnClick="CtxOpenFiles" Disabled="@(!ctxIsOnline)">File Manager</CcDropdownItem>
+    <CcDropdownItem OnClick="CtxStartRename" Disabled="@(!ctxIsOnline)">Rename</CcDropdownItem>
 </CcDropdown>
 
 <CcDialog Visible="@renameVisible" Title="Rename Agent" ConfirmText="Rename"
@@ -142,6 +158,7 @@
     private string? ctxAgentId;
     private string? ctxRelayUrl;
     private bool ctxIsOnline;
+    private AgentRow? ctxRow;
 
     private bool renameVisible;
     private string? renamingUuid;
@@ -253,17 +270,42 @@
         return rows;
     }
 
-    private void ShowContextMenu(MouseEventArgs e, string agentId, string relayUrl, bool isOnline)
+    private record CopyItem(string Label, string Value);
+
+    private static List<CopyItem> GetCopyItems(AgentRow row)
+    {
+        var items = new List<CopyItem>();
+        if (IsCopyable(row.Name)) items.Add(new("Name", row.Name));
+        if (row.Uuid is not null) items.Add(new("UUID", row.Uuid));
+        if (IsCopyable(row.Ip)) items.Add(new("IP", row.Ip));
+        var sys = row.Arch != "\u2014" ? $"{row.Os} {row.Arch}" : row.Os;
+        if (IsCopyable(sys)) items.Add(new("System", sys));
+        if (IsCopyable(row.Location)) items.Add(new("Location", row.Location));
+        if (IsCopyable(row.Network)) items.Add(new("Network", row.Network));
+        if (IsCopyable(row.LastSeen) && row.LastSeen != "Now") items.Add(new("Last Seen", row.LastSeen));
+        return items;
+    }
+
+    private static bool IsCopyable(string? v) => !string.IsNullOrWhiteSpace(v) && v != "\u2014";
+
+    private void ShowContextMenu(MouseEventArgs e, AgentRow row)
     {
         ctxX = e.ClientX;
         ctxY = e.ClientY;
-        ctxAgentId = agentId;
-        ctxRelayUrl = relayUrl;
-        ctxIsOnline = isOnline;
+        ctxAgentId = row.AgentId;
+        ctxRelayUrl = row.RelayUrl;
+        ctxIsOnline = row.IsOnline;
+        ctxRow = row;
         ctxVisible = true;
     }
 
     private void HideContextMenu() => ctxVisible = false;
+
+    private async Task CtxCopy(string value)
+    {
+        HideContextMenu();
+        await Js.InvokeVoidAsync("navigator.clipboard.writeText", value);
+    }
 
     private async Task CtxOpenFiles()
     {
