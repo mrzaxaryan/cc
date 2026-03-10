@@ -23,8 +23,7 @@ public class AgentRecord
     [JsonPropertyName("tlsVersion")] public string TlsVersion { get; set; } = "";
     [JsonPropertyName("os")] public string Os { get; set; } = "";
     [JsonPropertyName("arch")] public string Arch { get; set; } = "";
-    [JsonPropertyName("pairedRelayId")] public string? PairedRelayId { get; set; }
-    [JsonPropertyName("firstSeen")] public double FirstSeen { get; set; }
+[JsonPropertyName("firstSeen")] public double FirstSeen { get; set; }
     [JsonPropertyName("lastSeen")] public double LastSeen { get; set; }
 }
 
@@ -80,8 +79,7 @@ public class AgentStore
             TlsVersion = agent.TlsVersion,
             Os = agent.Os,
             Arch = agent.Arch,
-            PairedRelayId = agent.PairedRelayId,
-            FirstSeen = now,
+FirstSeen = now,
             LastSeen = now
         };
 
