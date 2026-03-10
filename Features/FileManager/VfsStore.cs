@@ -89,15 +89,27 @@ public class VfsStore
     {
         if (string.IsNullOrEmpty(remotePath)) return RootParentId;
 
-        var segments = remotePath.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var normalized = remotePath.Replace('\\', '/');
+        var isUnixRoot = normalized.StartsWith('/');
+        var segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
         var currentParent = RootParentId;
-        var pathSoFar = "";
+
+        // Unix/Android paths start with "/" — create a root drive entry
+        if (isUnixRoot)
+        {
+            var rootDir = await PutDirectoryAsync(agentUuid, RootParentId, "/", "/", isDrive: true);
+            currentParent = rootDir.Id;
+        }
+
+        var pathSoFar = isUnixRoot ? "" : "";
 
         for (int i = 0; i < segments.Length; i++)
         {
             var seg = segments[i];
-            pathSoFar = i == 0 ? seg : $"{pathSoFar}/{seg}";
-            var isDrive = i == 0 && seg.EndsWith(":");
+            pathSoFar = isUnixRoot
+                ? $"/{string.Join('/', segments.Take(i + 1))}"
+                : (i == 0 ? seg : $"{pathSoFar}/{seg}");
+            var isDrive = !isUnixRoot && i == 0 && seg.EndsWith(":");
             var dir = await PutDirectoryAsync(agentUuid, currentParent, seg, pathSoFar, isDrive);
             currentParent = dir.Id;
         }

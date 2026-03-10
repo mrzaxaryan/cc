@@ -117,22 +117,22 @@
             rows.Add(new("Coordinates", $"<code>{live.Latitude}, {live.Longitude}</code>"));
 
         // ASN
-        var asn = live?.Asn ?? stored?.Asn ?? 0;
-        var asOrg = Pick(live?.AsOrganization, stored?.AsOrganization);
+        var asn = live?.Asn ?? 0;
+        var asOrg = live?.AsOrganization;
         if (asn > 0) rows.Add(new("ASN", asn.ToString()));
         if (HasValue(asOrg)) rows.Add(new("AS Organization", asOrg!));
 
         // Connection details
-        var ua = Pick(live?.UserAgent, stored?.UserAgent);
-        if (HasValue(ua)) rows.Add(new("User Agent", ua!, "ai-ua"));
+        var ua = live?.UserAgent;
+        rows.Add(new("User Agent", HasValue(ua) ? ua! : "\u2014", "ai-ua"));
 
-        var tls = Pick(live?.TlsVersion, stored?.TlsVersion);
+        var tls = live?.TlsVersion;
         if (HasValue(tls)) rows.Add(new("TLS", tls!));
 
         if (live is not null && HasValue(live.HttpVersion))
             rows.Add(new("HTTP", live.HttpVersion));
 
-        var reqPri = Pick(live?.RequestPriority, stored?.RequestPriority);
+        var reqPri = live?.RequestPriority;
         if (HasValue(reqPri)) rows.Add(new("Request Priority", reqPri!));
 
         // State

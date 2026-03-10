@@ -330,7 +330,7 @@
                 Os = !string.IsNullOrEmpty(record.Os) ? record.Os : "\u2014",
                 Arch = !string.IsNullOrEmpty(record.Arch) ? record.Arch : "\u2014",
                 Location = Formatters.FormatLocation(record),
-                Network = Formatters.FormatNetwork(record),
+                Network = "\u2014",
                 Paired = false,
                 LastSeen = Formatters.FormatTimestamp(record.LastSeen),
                 Country = record.Country,
@@ -338,11 +338,11 @@
                 Region = record.Region,
                 Continent = record.Continent,
                 Timezone = record.Timezone,
-                Asn = record.Asn,
-                AsOrganization = record.AsOrganization,
-                UserAgent = record.UserAgent,
-                RequestPriority = record.RequestPriority,
-                TlsVersion = record.TlsVersion,
+                Asn = 0,
+                AsOrganization = "\u2014",
+                UserAgent = "\u2014",
+                RequestPriority = "\u2014",
+                TlsVersion = "\u2014",
                 FirstSeen = record.FirstSeen > 0 ? Formatters.FormatTimestamp(record.FirstSeen) : ""
             });
         }

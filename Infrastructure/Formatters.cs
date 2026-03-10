@@ -46,8 +46,7 @@ public static class Formatters
     public static string FormatNetwork(AgentConnection c) =>
         FormatNetwork(c.Asn, c.AsOrganization);
 
-    public static string FormatNetwork(AgentRecord r) =>
-        FormatNetwork(r.Asn, r.AsOrganization, "\u2014");
+
 
     public static string FormatCoords(AgentConnection c)
     {

@@ -15,14 +15,9 @@ public class AgentRecord
     [JsonPropertyName("region")] public string Region { get; set; } = "";
     [JsonPropertyName("continent")] public string Continent { get; set; } = "";
     [JsonPropertyName("timezone")] public string Timezone { get; set; } = "";
-    [JsonPropertyName("asn")] public int Asn { get; set; }
-    [JsonPropertyName("asOrganization")] public string AsOrganization { get; set; } = "";
-    [JsonPropertyName("userAgent")] public string UserAgent { get; set; } = "";
-    [JsonPropertyName("requestPriority")] public string RequestPriority { get; set; } = "";
-    [JsonPropertyName("tlsVersion")] public string TlsVersion { get; set; } = "";
     [JsonPropertyName("os")] public string Os { get; set; } = "";
     [JsonPropertyName("arch")] public string Arch { get; set; } = "";
-[JsonPropertyName("firstSeen")] public double FirstSeen { get; set; }
+    [JsonPropertyName("firstSeen")] public double FirstSeen { get; set; }
     [JsonPropertyName("lastSeen")] public double LastSeen { get; set; }
 }
 
@@ -68,14 +63,9 @@ public class AgentStore
             Region = agent.Region,
             Continent = agent.Continent,
             Timezone = agent.Timezone,
-            Asn = agent.Asn,
-            AsOrganization = agent.AsOrganization,
-            UserAgent = agent.UserAgent,
-            RequestPriority = agent.RequestPriority,
-            TlsVersion = agent.TlsVersion,
             Os = agent.Os,
             Arch = agent.Arch,
-FirstSeen = now,
+            FirstSeen = now,
             LastSeen = now
         };
 

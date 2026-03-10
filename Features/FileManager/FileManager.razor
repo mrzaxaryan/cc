@@ -282,6 +282,9 @@
         }
     };
 
+    private bool IsUnixPath => currentPath.StartsWith('/');
+    private string PathSep => IsUnixPath ? "/" : @"\";
+
     private void UpdatePathSegments()
     {
         pathSegments = currentPath
@@ -293,9 +296,11 @@
     {
         if (!IsConnected) { if (HasCache) await NavigateFromCache(path); return; }
 
+        var isUnix = path.StartsWith('/');
         currentPath = path.TrimEnd('\\', '/');
-        if (!string.IsNullOrEmpty(currentPath) && !currentPath.EndsWith(@"\"))
-            currentPath += @"\";
+        if (isUnix && string.IsNullOrEmpty(currentPath)) currentPath = "/";
+        if (!string.IsNullOrEmpty(currentPath))
+            currentPath += isUnix ? "/" : @"\";
 
         UpdatePathSegments();
         loading = true; entries = null; StateHasChanged();
@@ -318,9 +323,11 @@
 
     private async Task NavigateFromCache(string path)
     {
+        var isUnix = path.StartsWith('/');
         currentPath = path.TrimEnd('\\', '/');
-        if (!string.IsNullOrEmpty(currentPath) && !currentPath.EndsWith(@"\"))
-            currentPath += @"\";
+        if (isUnix && string.IsNullOrEmpty(currentPath)) currentPath = "/";
+        if (!string.IsNullOrEmpty(currentPath))
+            currentPath += isUnix ? "/" : @"\";
 
         UpdatePathSegments();
         loading = true; entries = null; StateHasChanged();
@@ -350,13 +357,19 @@
 
     private async Task NavigateUp()
     {
-        if (pathSegments.Length <= 1) { await NavigateTo(""); return; }
-        var parent = string.Join(@"\", pathSegments.Take(pathSegments.Length - 1));
+        if (pathSegments.Length <= 1) { await NavigateTo(IsUnixPath ? "/" : ""); return; }
+        var parent = string.Join(PathSep, pathSegments.Take(pathSegments.Length - 1));
+        if (IsUnixPath) parent = "/" + parent;
         await NavigateTo(parent);
     }
 
     private async Task NavigateToRoot() => await NavigateTo("");
-    private async Task NavigateToBreadcrumb(int index) => await NavigateTo(string.Join(@"\", pathSegments.Take(index + 1)));
+    private async Task NavigateToBreadcrumb(int index)
+    {
+        var joined = string.Join(PathSep, pathSegments.Take(index + 1));
+        if (IsUnixPath) joined = "/" + joined;
+        await NavigateTo(joined);
+    }
     private async Task OnPathKeyDown(KeyboardEventArgs e) { if (e.Key == "Enter") await NavigateTo(currentPath); }
     private async Task OpenAsDirectory(string name) => await NavigateTo(currentPath + name);
 
