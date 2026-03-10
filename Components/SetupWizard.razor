@@ -12,6 +12,11 @@
         </div>
 
         <nav class="su-nav">
+            <button class="su-nav-item @(step == Step.Welcome ? "active" : "") @(IsStepDone(Step.Welcome) ? "done" : "")" @onclick="() => GoToStep(Step.Welcome)">
+                <span class="su-nav-num">1</span>
+                <span class="su-nav-label">Welcome</span>
+                @if (IsStepDone(Step.Welcome)) { <span class="su-nav-check">&#x2713;</span> }
+            </button>
             @if (needsCache)
             {
                 <button class="su-nav-item @(step == Step.Cache ? "active" : "") @(IsStepDone(Step.Cache) ? "done" : "")" @onclick="() => GoToStep(Step.Cache)">
@@ -46,19 +51,97 @@
     @* Main content *@
     <div class="su-main">
         <div class="su-content">
-            @if (step == Step.Cache)
+            @if (step == Step.Welcome)
+            {
+                <h2 class="su-title">Welcome to CC</h2>
+                <p class="su-desc">CC is a command center dashboard built with Blazor WebAssembly (.NET 10). It connects to remote agents through a WebSocket relay and provides a real-time interface for browsing filesystems, searching files, and downloading data to a local cache.</p>
+
+                <div class="su-section-label">How it works</div>
+                <div class="su-features">
+                    <div class="su-feature">
+                        <span class="su-feature-icon">&#x1f4bb;</span>
+                        <div class="su-feature-text">
+                            <strong>Agent</strong>
+                            <span>Cross-platform remote agent built on PIR (Position-Independent Runtime) &mdash; a zero-dependency C++23 shellcode runtime with cryptography, networking, and TLS 1.3. Communicates via a binary command protocol over WebSocket.</span>
+                        </div>
+                    </div>
+                    <div class="su-feature">
+                        <span class="su-feature-icon">&#x1f310;</span>
+                        <div class="su-feature-text">
+                            <strong>Relay</strong>
+                            <span>WebSocket relay running on Cloudflare Workers with Durable Objects. Pairs agents with dashboard connections 1:1 &mdash; no direct inbound connections to agents needed.</span>
+                        </div>
+                    </div>
+                    <div class="su-feature">
+                        <span class="su-feature-icon">&#x1f5a5;</span>
+                        <div class="su-feature-text">
+                            <strong>CC (this dashboard)</strong>
+                            <span>Blazor WebAssembly app that runs entirely in your browser. Connects to the relay, sends commands to agents, and caches downloaded files locally using the File System Access API and IndexedDB.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="su-section-label">Features</div>
+                <div class="su-features">
+                    <div class="su-feature">
+                        <span class="su-feature-icon">&#x1f4c1;</span>
+                        <div class="su-feature-text">
+                            <strong>Remote File Browser</strong>
+                            <span>Navigate agent filesystems, view file contents, and upload files to the local cache.</span>
+                        </div>
+                    </div>
+                    <div class="su-feature">
+                        <span class="su-feature-icon">&#x1f50d;</span>
+                        <div class="su-feature-text">
+                            <strong>File Search</strong>
+                            <span>Recursively search entire filesystems by file extension with configurable extension groups and auto-download.</span>
+                        </div>
+                    </div>
+                    <div class="su-feature">
+                        <span class="su-feature-icon">&#x1f4be;</span>
+                        <div class="su-feature-text">
+                            <strong>Local-only Storage</strong>
+                            <span>All data stays on your machine. Files are cached to a local folder, metadata is stored in IndexedDB. Nothing is sent to external servers.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="su-section-label">Repositories</div>
+                <div class="su-links">
+                    <a class="su-link" href="https://github.com/mrzaxaryan/cc" target="_blank" rel="noopener">
+                        <span class="su-link-icon">&#x1f5a5;</span> CC Dashboard
+                    </a>
+                    <a class="su-link" href="https://github.com/mrzaxaryan/relay" target="_blank" rel="noopener">
+                        <span class="su-link-icon">&#x1f310;</span> Relay Server
+                    </a>
+                    <a class="su-link" href="https://github.com/mrzaxaryan/Position-Independent-Agent" target="_blank" rel="noopener">
+                        <span class="su-link-icon">&#x1f4bb;</span> Agent
+                    </a>
+                    <a class="su-link" href="https://github.com/mrzaxaryan/Position-Independent-Runtime" target="_blank" rel="noopener">
+                        <span class="su-link-icon">&#x2699;</span> PIR Runtime
+                    </a>
+                </div>
+
+                <div class="su-actions">
+                    <CcBtn Variant="BtnVariant.Primary" Size="Size.Lg" OnClick="AdvanceFromWelcome">Get Started</CcBtn>
+                </div>
+            }
+            else if (step == Step.Cache)
             {
                 <h2 class="su-title">Cache Storage</h2>
                 @if (!Cache.IsSupported)
                 {
-                    <p class="su-desc">Your browser does not support the File System Access API. Please use a Chromium-based browser (Chrome, Edge, Brave) for local file caching.</p>
-                    <div class="su-actions">
-                        <CcBtn Size="Size.Lg" OnClick="SkipCache">Continue without cache</CcBtn>
+                    <div class="su-info-box su-info-box-danger">
+                        <span class="su-info-icon">&#x26A0;</span>
+                        <div class="su-info-text">
+                            <strong>Browser not supported</strong>
+                            <span>Your browser does not support the File System Access API. A cache folder is required for CC to function. Please use a Chromium-based browser (Chrome, Edge, Brave).</span>
+                        </div>
                     </div>
                 }
                 else if (Cache.NeedsPermission)
                 {
-                    <p class="su-desc">Your previously selected cache folder needs permission to be re-granted.</p>
+                    <p class="su-desc">Your previously selected cache folder needs permission to be re-granted. A cache folder is required for storing downloaded agent files.</p>
                     <div class="su-actions">
                         <CcBtn Variant="BtnVariant.Primary" Size="Size.Lg" OnClick="ReGrantPermission" Disabled="@picking" Loading="@picking">Grant Access</CcBtn>
                         <CcBtn Size="Size.Md" OnClick="PickFolder" Disabled="@picking">Pick Different Folder</CcBtn>
@@ -66,25 +149,58 @@
                 }
                 else
                 {
-                    <p class="su-desc">Select a folder on your device to use as the local file cache. Files downloaded from agents will be stored here.</p>
+                    <p class="su-desc">Select a folder on your device to use as the local file cache. This is required &mdash; all files downloaded from agents are stored here for offline browsing, searching, and analysis.</p>
                     <div class="su-info-box">
                         <span class="su-info-icon">&#x1f4c1;</span>
                         <div class="su-info-text">
                             <strong>Why a cache folder?</strong>
-                            <span>Agent files are downloaded and stored locally for offline browsing, searching, and analysis. Choose a folder with enough free space.</span>
+                            <span>CC stores agent data locally on your machine. Downloaded files, filesystem metadata, and search results all require a cache directory. Choose a folder with enough free space.</span>
                         </div>
                     </div>
                     <div class="su-actions">
                         <CcBtn Variant="BtnVariant.Primary" Size="Size.Lg" OnClick="PickFolder" Disabled="@picking" Loading="@picking">Select Cache Folder</CcBtn>
-                        <CcBtn Size="Size.Md" OnClick="SkipCache">Skip for now</CcBtn>
                     </div>
                 }
+
             }
             else if (step == Step.Relay)
             {
-                <h2 class="su-title">Relay Server</h2>
-                <p class="su-desc">Configure the relay server that agents connect through. The relay acts as a bridge between this dashboard and your deployed agents.</p>
+                <h2 class="su-title">Relay Servers</h2>
+                <p class="su-desc">Configure the relay servers that agents connect through. The relay acts as a bridge between this dashboard and your deployed agents. You can add multiple relays.</p>
 
+                @if (Relay.Relays.Count > 0)
+                {
+                    <div class="su-section-label">Configured relays</div>
+                    <div class="su-relay-list">
+                        @foreach (var r in Relay.Relays)
+                        {
+                            var relay = r;
+                            <div class="su-relay-item @(relay.Enabled ? "su-relay-enabled" : "")">
+                                <div class="su-relay-info">
+                                    <span class="su-relay-name">@relay.Name</span>
+                                    <span class="su-relay-url">@relay.Url</span>
+                                </div>
+                                <div class="su-relay-actions">
+                                    <CcBtn Size="Size.Xs" OnClick="() => EditRelay(relay)" Title="Edit">EDIT</CcBtn>
+                                    @if (relay.Enabled)
+                                    {
+                                        <CcBtn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => ToggleRelay(relay)" Title="Disable">OFF</CcBtn>
+                                    }
+                                    else
+                                    {
+                                        <CcBtn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ToggleRelay(relay)" Title="Enable">ON</CcBtn>
+                                    }
+                                    @if (Relay.Relays.Count > 1)
+                                    {
+                                        <button class="su-ext-remove" @onclick="() => RemoveRelay(relay)" title="Remove">&#x2715;</button>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+
+                <div class="su-section-label">@(editingRelay is not null ? "Edit relay" : "Add relay")</div>
                 <div class="su-form">
                     <div class="su-field">
                         <label class="su-label">Relay Name</label>
@@ -92,21 +208,40 @@
                     </div>
                     <div class="su-field">
                         <label class="su-label">Relay URL</label>
-                        <CcInput @bind-Value="relayUrl" Size="Size.Md" Placeholder="wss://relay.example.com" Monospace />
+                        <CcInput @bind-Value="relayUrl" Size="Size.Md" Placeholder="wss://relay.example.com" Monospace Disabled="@(editingRelay is not null)" />
                         <span class="su-field-hint">Must start with wss:// or ws://</span>
                     </div>
                 </div>
 
                 <div class="su-actions">
-                    <CcBtn Variant="BtnVariant.Primary" Size="Size.Lg" OnClick="SaveRelay" Disabled="@saving" Loading="@saving">Save & Continue</CcBtn>
-                    <CcBtn Size="Size.Md" OnClick="SkipRelay">Use Default</CcBtn>
+                    @if (editingRelay is not null)
+                    {
+                        <CcBtn Variant="BtnVariant.Primary" Size="Size.Md" OnClick="UpdateRelay" Disabled="@saving" Loading="@saving">Update Relay</CcBtn>
+                        <CcBtn Size="Size.Md" OnClick="CancelEditRelay">Cancel</CcBtn>
+                    }
+                    else
+                    {
+                        <CcBtn Variant="BtnVariant.Primary" Size="Size.Md" OnClick="AddRelay" Disabled="@saving" Loading="@saving">Add Relay</CcBtn>
+                    }
                 </div>
+
+                @if (Relay.EnabledRelays.Count > 0)
+                {
+                    <div class="su-actions" style="margin-top: 1rem;">
+                        <CcBtn Variant="BtnVariant.Primary" Size="Size.Lg" OnClick="() => AdvanceFromRelay()">Continue</CcBtn>
+                    </div>
+                }
+                else
+                {
+                    <p class="su-hint">At least one enabled relay is required to continue.</p>
+                }
             }
             else if (step == Step.Extensions)
             {
                 <h2 class="su-title">File Extension Groups</h2>
-                <p class="su-desc">Choose which file types to look for when searching agent filesystems. Click a group to toggle it. All groups are selected by default.</p>
+                <p class="su-desc">Choose which file types to look for when searching agent filesystems. Click a group to toggle it. You can also add your own custom groups below.</p>
 
+                <div class="su-section-label">Default groups</div>
                 <div class="su-ext-groups">
                     @foreach (var group in ExtensionGroupStore.DefaultGroups)
                     {
@@ -122,12 +257,44 @@
                     }
                 </div>
 
+                @if (customGroups.Count > 0)
+                {
+                    <div class="su-section-label">Custom groups</div>
+                    <div class="su-ext-groups">
+                        @foreach (var cg in customGroups)
+                        {
+                            var c = cg;
+                            <div class="su-ext-group active">
+                                <div class="su-ext-group-top">
+                                    <span class="su-ext-group-check">&#x2713;</span>
+                                    <span class="su-ext-group-name">@c.Name</span>
+                                    <button class="su-ext-remove" @onclick="() => RemoveCustomGroup(c.Name)" title="Remove">&#x2715;</button>
+                                </div>
+                                <span class="su-ext-group-exts">@c.Extensions</span>
+                            </div>
+                        }
+                    </div>
+                }
+
+                <div class="su-section-label">Add custom group</div>
+                <div class="su-custom-form">
+                    <div class="su-custom-row">
+                        <CcInput @bind-Value="customGroupName" Placeholder="Group name (e.g. Audio)" Size="Size.Sm" />
+                        <CcInput @bind-Value="customGroupExts" Placeholder="Extensions (e.g. .mp3,.wav,.flac)" Size="Size.Sm" Monospace />
+                        <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="AddCustomGroup">ADD</CcBtn>
+                    </div>
+                    @if (!string.IsNullOrEmpty(customGroupError))
+                    {
+                        <div class="su-custom-error">@customGroupError</div>
+                    }
+                </div>
+
                 <div class="su-actions">
                     <CcBtn Variant="BtnVariant.Primary" Size="Size.Lg" OnClick="SaveExtensions" Disabled="@saving" Loading="@saving">Finish Setup</CcBtn>
                     <CcBtn Size="Size.Md" OnClick="SaveAllExtensions" Disabled="@saving">Select All & Finish</CcBtn>
                 </div>
 
-                <p class="su-hint">You can add custom groups or modify these later from the Extensions panel.</p>
+                <p class="su-hint">You can modify these later from the Extensions panel.</p>
             }
         </div>
     </div>
@@ -136,15 +303,21 @@
 @code {
     [Parameter] public EventCallback OnComplete { get; set; }
 
-    private enum Step { Cache, Relay, Extensions }
+    private enum Step { Welcome, Cache, Relay, Extensions }
 
     private Step step;
     private bool picking;
     private bool saving;
     private string relayName = "";
     private string relayUrl = "";
+    private RelayEntry? editingRelay;
     private HashSet<string> selectedExtGroups = new(ExtensionGroupStore.DefaultGroups.Keys);
     private HashSet<Step> completedSteps = new();
+    private List<(string Name, string Extensions)> customGroups = new();
+    private string customGroupName = "";
+    private string customGroupExts = "";
+    private string customGroupError = "";
+    private static readonly System.Text.RegularExpressions.Regex ValidExtRegex = new(@"^\.[a-zA-Z0-9]{1,15}$");
 
     private bool needsCache;
     private bool needsRelay;
@@ -156,7 +329,7 @@
         needsRelay = Relay.SetupRequired;
         needsExtensions = ExtGroups.SetupRequired;
 
-        step = needsCache ? Step.Cache : needsRelay ? Step.Relay : Step.Extensions;
+        step = Step.Welcome;
 
         var enabled = Relay.EnabledRelays.FirstOrDefault();
         relayName = enabled?.Name ?? "";
@@ -165,7 +338,8 @@
 
     private int StepNumber(Step s)
     {
-        var n = 0;
+        var n = 1; // Welcome is always 1
+        if (s == Step.Welcome) return n;
         if (needsCache) { n++; if (s == Step.Cache) return n; }
         if (needsRelay) { n++; if (s == Step.Relay) return n; }
         if (needsExtensions) { n++; if (s == Step.Extensions) return n; }
@@ -175,6 +349,15 @@
     private bool IsStepDone(Step s) => completedSteps.Contains(s);
 
     private void GoToStep(Step s) { step = s; }
+
+    private void AdvanceFromWelcome()
+    {
+        completedSteps.Add(Step.Welcome);
+        if (needsCache) { step = Step.Cache; StateHasChanged(); }
+        else if (needsRelay) { step = Step.Relay; StateHasChanged(); }
+        else if (needsExtensions) { step = Step.Extensions; StateHasChanged(); }
+        else OnComplete.InvokeAsync();
+    }
 
     private void AdvanceFromCache()
     {
@@ -219,41 +402,116 @@
         finally { picking = false; }
     }
 
-    private void SkipCache() => AdvanceFromCache();
-
-    private async Task SaveRelay()
+    private async Task AddRelay()
     {
         var name = relayName.Trim();
         var url = relayUrl.Trim().TrimEnd('/');
 
         if (string.IsNullOrEmpty(url)) { Msg.Error("Relay URL is required."); return; }
         if (!url.StartsWith("wss://") && !url.StartsWith("ws://")) { Msg.Error("URL must start with wss:// or ws://"); return; }
-        if (string.IsNullOrEmpty(name)) name = "Default";
+        if (string.IsNullOrEmpty(name)) name = url;
+
+        if (Relay.Relays.Any(r => r.Url == url)) { Msg.Error("A relay with this URL already exists."); return; }
 
         saving = true;
         StateHasChanged();
         try
         {
-            var existing = Relay.EnabledRelays.FirstOrDefault();
-            if (existing != null && existing.Url == url)
-                await Relay.UpdateRelayName(url, name);
-            else
-            {
-                await Relay.AddRelay(name, url);
-                await Relay.SetEnabled(url, true);
-            }
-            AdvanceFromRelay();
+            await Relay.AddRelay(name, url);
+            await Relay.SetEnabled(url, true);
+            relayName = "";
+            relayUrl = "";
         }
         catch (Exception ex) { Msg.Error(ex.Message); }
         finally { saving = false; }
     }
 
-    private void SkipRelay() => AdvanceFromRelay();
+    private void EditRelay(RelayEntry relay)
+    {
+        editingRelay = relay;
+        relayName = relay.Name;
+        relayUrl = relay.Url;
+    }
+
+    private async Task UpdateRelay()
+    {
+        if (editingRelay is null) return;
+        var name = relayName.Trim();
+        if (string.IsNullOrEmpty(name)) name = editingRelay.Url;
+
+        saving = true;
+        StateHasChanged();
+        try
+        {
+            await Relay.UpdateRelayName(editingRelay.Url, name);
+            editingRelay = null;
+            relayName = "";
+            relayUrl = "";
+        }
+        catch (Exception ex) { Msg.Error(ex.Message); }
+        finally { saving = false; }
+    }
+
+    private void CancelEditRelay()
+    {
+        editingRelay = null;
+        relayName = "";
+        relayUrl = "";
+    }
+
+    private async Task ToggleRelay(RelayEntry relay)
+    {
+        await Relay.SetEnabled(relay.Url, !relay.Enabled);
+        StateHasChanged();
+    }
+
+    private async Task RemoveRelay(RelayEntry relay)
+    {
+        await Relay.RemoveRelay(relay.Url);
+        if (editingRelay?.Url == relay.Url) CancelEditRelay();
+        StateHasChanged();
+    }
 
     private void ToggleExtGroup(string name)
     {
         if (!selectedExtGroups.Remove(name))
             selectedExtGroups.Add(name);
+    }
+
+    private void AddCustomGroup()
+    {
+        var name = customGroupName.Trim();
+        var exts = customGroupExts.Trim();
+
+        if (string.IsNullOrEmpty(name)) { customGroupError = "Group name is required."; return; }
+        if (string.IsNullOrWhiteSpace(exts)) { customGroupError = "At least one extension is required."; return; }
+
+        // Check duplicates against defaults and existing custom groups
+        if (ExtensionGroupStore.DefaultGroups.ContainsKey(name) || customGroups.Any(g => g.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+        {
+            customGroupError = $"A group named '{name}' already exists.";
+            return;
+        }
+
+        var normalized = string.Join(",", exts.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(e => e.StartsWith(".") ? e.ToLowerInvariant() : $".{e.ToLowerInvariant()}"));
+        var parts = normalized.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        var invalid = parts.Where(e => !ValidExtRegex.IsMatch(e)).ToList();
+        if (invalid.Count > 0)
+        {
+            customGroupError = $"Invalid: {string.Join(", ", invalid)} — must be dot + 1-15 alphanumeric characters.";
+            return;
+        }
+
+        customGroups.Add((name, normalized));
+        customGroupName = "";
+        customGroupExts = "";
+        customGroupError = "";
+    }
+
+    private void RemoveCustomGroup(string name)
+    {
+        customGroups.RemoveAll(g => g.Name == name);
     }
 
     private async Task SaveExtensions()
@@ -266,6 +524,10 @@
             {
                 var enabled = selectedExtGroups.Contains(name);
                 await ExtGroups.AddAsync(name, string.Join(",", exts), enabled);
+            }
+            foreach (var (name, exts) in customGroups)
+            {
+                await ExtGroups.AddAsync(name, exts, true);
             }
             completedSteps.Add(Step.Extensions);
             await OnComplete.InvokeAsync();

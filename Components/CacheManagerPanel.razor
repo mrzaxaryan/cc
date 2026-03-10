@@ -152,6 +152,15 @@
                 <span class="cm-db-version">v4</span>
                 <div class="cm-toolbar-actions">
                     <CcBtn OnClick="LoadDbStats" Disabled="@dbLoading" Title="Refresh">&#x21bb;</CcBtn>
+                    @if (confirmClearAll)
+                    {
+                        <CcBtn Variant="BtnVariant.DangerSolid" OnClick="ClearAllData" Disabled="@clearingAll" Loading="@clearingAll">YES, DELETE ALL</CcBtn>
+                        <CcBtn OnClick="() => confirmClearAll = false">NO</CcBtn>
+                    }
+                    else
+                    {
+                        <CcBtn Variant="BtnVariant.Danger" OnClick="() => confirmClearAll = true" Disabled="@dbLoading">CLEAR ALL</CcBtn>
+                    }
                 </div>
             </div>
             @if (dbLoading)
@@ -204,6 +213,8 @@
     private long blobSize;
     private bool loading;
     private bool confirmPrune;
+    private bool confirmClearAll;
+    private bool clearingAll;
 
     // IndexedDB tab
     private record DbTable(string Name, int Count);
@@ -394,6 +405,24 @@
     }
 
     // IndexedDB
+
+    private async Task ClearAllData()
+    {
+        clearingAll = true;
+        confirmClearAll = false;
+        StateHasChanged();
+        try
+        {
+            await Cache.ClearAllDataAsync();
+            dbTables = new();
+            agentStats = new();
+            stats = default;
+            blobSize = 0;
+            Msg.Success("All application data cleared.");
+        }
+        catch (Exception ex) { Msg.Error(ex.Message); }
+        finally { clearingAll = false; StateHasChanged(); }
+    }
 
     private async Task LoadDbStats()
     {

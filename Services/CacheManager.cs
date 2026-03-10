@@ -171,4 +171,15 @@ public class CacheManager
         DirectoryName = null;
         OnChanged?.Invoke();
     }
+
+    /// <summary>Clear all application data: all IndexedDB stores + persisted file handle.</summary>
+    public async Task ClearAllDataAsync()
+    {
+        await _js.InvokeVoidAsync("ccClearAll");
+        await _js.InvokeVoidAsync("ccFileSystem.clearHandle");
+        HasDirectory = false;
+        DirectoryName = null;
+        NeedsPermission = false;
+        OnChanged?.Invoke();
+    }
 }

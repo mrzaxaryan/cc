@@ -10,105 +10,107 @@
 @inject IJSRuntime JS
 @implements IDisposable
 
-<div class="mdi-menubar">
-    <span class="mdi-brand">cc</span>
-    <span class="mdi-sep"></span>
-
-    <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Agents")'>
-        <CcIcon Name="agents" Size="Size.Xs" /> Agents
-    </button>
-    <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Relay")'>
-        <CcIcon Name="server" Size="Size.Xs" /> Relay
-    </button>
-    <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Settings")'>
-        <CcIcon Name="database" Size="Size.Xs" /> Cache
-    </button>
-    <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Sync")'>
-        <CcIcon Name="sync" Size="Size.Xs" /> Uploads
-    </button>
-    <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Scan")'>
-        <CcIcon Name="search" Size="Size.Xs" /> Search
-    </button>
-    <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Extensions")'>
-        <CcIcon Name="database" Size="Size.Xs" /> Extensions
-    </button>
-
-    <div class="mdi-spacer"></div>
-
-    @* Notifications *@
-    <div class="notif-wrapper" @onfocusout="OnFocusOut" tabindex="-1">
-        <button class="mdi-icon-btn" @onclick="ToggleDropdown" title="Notifications">
-            <CcIcon Name="bell" Size="Size.Sm" />
-            @if (updateAvailable || Notif.UnreadCount > 0)
-            {
-                <span class="notif-badge">@BadgeText()</span>
-            }
-        </button>
-
-        @if (dropdownOpen)
-        {
-            <div class="notif-dropdown">
-                <div class="notif-header">
-                    <span>Notifications</span>
-                    @if (Notif.Items.Count > 0)
-                    {
-                        <button class="notif-clear-all" @onclick="ClearAll">Clear all</button>
-                    }
-                </div>
-                @if (updateAvailable)
-                {
-                    <div class="notif-update">
-                        <span>A new version is available.</span>
-                        <button class="notif-reload" @onclick="ReloadApp">Reload</button>
-                    </div>
-                }
-                <div class="notif-list">
-                    @if (!updateAvailable && Notif.Items.Count == 0)
-                    {
-                        <div class="notif-empty">No notifications</div>
-                    }
-                    else
-                    {
-                        @foreach (var n in Notif.Items)
-                        {
-                            <div class="notif-item notif-@n.Type" @key="n.Id">
-                                <span class="notif-text">@n.Text</span>
-                                <span class="notif-time">@FormatTime(n.Created)</span>
-                                @if (n.Type == "error")
-                                {
-                                    <button class="notif-copy" @onclick="() => CopyText(n.Text)" title="Copy">
-                                        <CcIcon Name="copy" Size="Size.Xs" />
-                                    </button>
-                                }
-                                <button class="notif-remove" @onclick="() => RemoveOne(n.Id)" title="Dismiss">&times;</button>
-                            </div>
-                        }
-                    }
-                </div>
-            </div>
-        }
-    </div>
-
-    @* Theme toggle *@
-    <button class="mdi-icon-btn" @onclick="ToggleTheme" title="Toggle theme">
-        @if (Theme.Current == cc.Services.Theme.Dark)
-        {
-            <CcIcon Name="sun" Size="Size.Sm" />
-        }
-        else
-        {
-            <CcIcon Name="moon" Size="Size.Sm" />
-        }
-    </button>
-</div>
-
-<div class="mdi-workspace"></div>
-
-<FloatingWindows />
-
 @if (showSetup)
 {
     <SetupWizard OnComplete="OnSetupComplete" />
+}
+else if (initialized)
+{
+    <div class="mdi-menubar">
+        <span class="mdi-brand">cc</span>
+        <span class="mdi-sep"></span>
+
+        <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Agents")'>
+            <CcIcon Name="agents" Size="Size.Xs" /> Agents
+        </button>
+        <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Relay")'>
+            <CcIcon Name="server" Size="Size.Xs" /> Relay
+        </button>
+        <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Settings")'>
+            <CcIcon Name="database" Size="Size.Xs" /> Cache
+        </button>
+        <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Sync")'>
+            <CcIcon Name="sync" Size="Size.Xs" /> Uploads
+        </button>
+        <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Scan")'>
+            <CcIcon Name="search" Size="Size.Xs" /> Search
+        </button>
+        <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Extensions")'>
+            <CcIcon Name="database" Size="Size.Xs" /> Extensions
+        </button>
+
+        <div class="mdi-spacer"></div>
+
+        @* Notifications *@
+        <div class="notif-wrapper" @onfocusout="OnFocusOut" tabindex="-1">
+            <button class="mdi-icon-btn" @onclick="ToggleDropdown" title="Notifications">
+                <CcIcon Name="bell" Size="Size.Sm" />
+                @if (updateAvailable || Notif.UnreadCount > 0)
+                {
+                    <span class="notif-badge">@BadgeText()</span>
+                }
+            </button>
+
+            @if (dropdownOpen)
+            {
+                <div class="notif-dropdown">
+                    <div class="notif-header">
+                        <span>Notifications</span>
+                        @if (Notif.Items.Count > 0)
+                        {
+                            <button class="notif-clear-all" @onclick="ClearAll">Clear all</button>
+                        }
+                    </div>
+                    @if (updateAvailable)
+                    {
+                        <div class="notif-update">
+                            <span>A new version is available.</span>
+                            <button class="notif-reload" @onclick="ReloadApp">Reload</button>
+                        </div>
+                    }
+                    <div class="notif-list">
+                        @if (!updateAvailable && Notif.Items.Count == 0)
+                        {
+                            <div class="notif-empty">No notifications</div>
+                        }
+                        else
+                        {
+                            @foreach (var n in Notif.Items)
+                            {
+                                <div class="notif-item notif-@n.Type" @key="n.Id">
+                                    <span class="notif-text">@n.Text</span>
+                                    <span class="notif-time">@FormatTime(n.Created)</span>
+                                    @if (n.Type == "error")
+                                    {
+                                        <button class="notif-copy" @onclick="() => CopyText(n.Text)" title="Copy">
+                                            <CcIcon Name="copy" Size="Size.Xs" />
+                                        </button>
+                                    }
+                                    <button class="notif-remove" @onclick="() => RemoveOne(n.Id)" title="Dismiss">&times;</button>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        @* Theme toggle *@
+        <button class="mdi-icon-btn" @onclick="ToggleTheme" title="Toggle theme">
+            @if (Theme.Current == cc.Services.Theme.Dark)
+            {
+                <CcIcon Name="sun" Size="Size.Sm" />
+            }
+            else
+            {
+                <CcIcon Name="moon" Size="Size.Sm" />
+            }
+        </button>
+    </div>
+
+    <div class="mdi-workspace"></div>
+
+    <FloatingWindows />
 }
 
 @code {

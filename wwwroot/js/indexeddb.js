@@ -243,6 +243,18 @@
         clear: () => run(SERVICES_STORE, 'readwrite', s => s.clear())
     };
 
+    window.ccClearAll = async function () {
+        const db = await openDb();
+        const names = Array.from(db.objectStoreNames);
+        const tx = db.transaction(names, 'readwrite');
+        for (const name of names) tx.objectStore(name).clear();
+        await new Promise((resolve, reject) => {
+            tx.oncomplete = resolve;
+            tx.onerror = () => reject(tx.error);
+        });
+        db.close();
+    };
+
     window.ccDbInfo = {
         getTableStats: () => {
             return openDb().then(db => {
