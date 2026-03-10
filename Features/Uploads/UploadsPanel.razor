@@ -15,7 +15,7 @@
         else if (IsGloballyRunning)
         {
             <CcBadge Variant="BadgeVariant.Success" Size="Size.Xs">
-                <CcIcon Name="sync" Size="Size.Xs" CssClass="sp-spinning" /> Running
+                <CcIcon Name="sync" Size="Size.Xs" CssClass="panel-spinning" /> Running
             </CcBadge>
         }
         else if (SyncPaused > 0 || SyncQueued > 0)
@@ -70,16 +70,16 @@
         </div>
     </Toolbar>
     <Body>
-        <div class="sp-agents">
+        <div class="panel-card-list">
             @foreach (var group in GetAgentGroups())
             {
                 var isProcessing = DownloadSvc.ProcessingAgents.Contains(group.Uuid);
                 var isOnline = RelaySvc.GetAllAgents().Any(a => AgentDb.GetUuidByAgentId(a.Agent.Id) == group.Uuid);
                 var isAgentPaused = SvcState.IsPaused(ServiceName.Upload, group.Uuid);
-                <div class="sp-agent-card">
-                    <div class="sp-agent-header">
+                <div class="panel-card">
+                    <div class="panel-card-header">
                         <span class="status-dot @(isOnline ? "dot-on" : "dot-off")"></span>
-                        <span class="sp-agent-name">@group.Name</span>
+                        <span class="panel-card-name">@group.Name</span>
                         @if (isAgentPaused)
                         {
                             <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs">Paused</CcBadge>
@@ -87,19 +87,19 @@
                         else if (isProcessing)
                         {
                             <CcBadge Variant="BadgeVariant.Info" Size="Size.Xs">
-                                <CcIcon Name="sync" Size="Size.Xs" CssClass="sp-spinning" /> Uploading
+                                <CcIcon Name="sync" Size="Size.Xs" CssClass="panel-spinning" /> Uploading
                             </CcBadge>
                         }
                         else if (group.Queued > 0 && !isOnline)
                         {
                             <CcBadge Variant="BadgeVariant.Warning" Size="Size.Xs">Offline</CcBadge>
                         }
-                        <span class="sp-agent-summary">
-                            @if (group.Downloading > 0) { <span class="sp-count-active">@group.Downloading&#x25CF;</span> }
-                            @if (group.Queued > 0) { <span class="sp-count-queued">@group.Queued&#x25CB;</span> }
-                            @if (group.Paused > 0) { <span class="sp-count-paused">@group.Paused&#x25A0;</span> }
-                            <span class="sp-count-done">@group.Completed&#x2713;</span>
-                            @if (group.Failed > 0) { <span class="sp-count-fail">@group.Failed&#x2717;</span> }
+                        <span class="panel-card-summary">
+                            @if (group.Downloading > 0) { <span class="panel-count-active">@group.Downloading&#x25CF;</span> }
+                            @if (group.Queued > 0) { <span class="panel-count-queued">@group.Queued&#x25CB;</span> }
+                            @if (group.Paused > 0) { <span class="panel-count-paused">@group.Paused&#x25A0;</span> }
+                            <span class="panel-count-done">@group.Completed&#x2713;</span>
+                            @if (group.Failed > 0) { <span class="panel-count-fail">@group.Failed&#x2717;</span> }
                         </span>
                         @if (isAgentPaused)
                         {
@@ -115,11 +115,11 @@
                     @foreach (var dl in GetAgentDownloads(group.Uuid, DownloadStatus.Downloading))
                     {
                         var pct = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
-                        <div class="sp-file">
-                            <div class="sp-file-row">
-                                <span class="sp-file-icon sp-icon-active">&#x25CF;</span>
-                                <span class="sp-file-name" title="@dl.RemotePath">@dl.FileName</span>
-                                <span class="sp-file-status">
+                        <div class="panel-row-item">
+                            <div class="panel-row">
+                                <span class="panel-row-icon active">&#x25CF;</span>
+                                <span class="panel-row-name" title="@dl.RemotePath">@dl.FileName</span>
+                                <span class="panel-row-status">
                                     <span class="sp-pct">@pct%</span>
                                     @if (dl.SpeedBytesPerSec > 0)
                                     {
@@ -135,13 +135,13 @@
                     @* Queued *@
                     @foreach (var dl in GetAgentDownloads(group.Uuid, DownloadStatus.Queued))
                     {
-                        <div class="sp-file">
-                            <div class="sp-file-row">
-                                <span class="sp-file-icon">&#x25CB;</span>
-                                <span class="sp-file-name" title="@dl.RemotePath">@dl.FileName</span>
-                                <span class="sp-file-status">
+                        <div class="panel-row-item">
+                            <div class="panel-row">
+                                <span class="panel-row-icon">&#x25CB;</span>
+                                <span class="panel-row-name" title="@dl.RemotePath">@dl.FileName</span>
+                                <span class="panel-row-status">
                                     <CcBadge Variant="BadgeVariant.Muted" Size="Size.Xs">QUEUED</CcBadge>
-                                    <span class="sp-file-size">@Formatters.FormatSize((ulong)dl.TotalSize)</span>
+                                    <span class="panel-row-meta">@Formatters.FormatSize((ulong)dl.TotalSize)</span>
                                 </span>
                             </div>
                         </div>
@@ -151,11 +151,11 @@
                     @foreach (var dl in GetAgentDownloads(group.Uuid, DownloadStatus.Paused))
                     {
                         var pctP = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
-                        <div class="sp-file">
-                            <div class="sp-file-row">
-                                <span class="sp-file-icon">&#x25A0;</span>
-                                <span class="sp-file-name" title="@dl.RemotePath">@dl.FileName</span>
-                                <span class="sp-file-status">
+                        <div class="panel-row-item">
+                            <div class="panel-row">
+                                <span class="panel-row-icon">&#x25A0;</span>
+                                <span class="panel-row-name" title="@dl.RemotePath">@dl.FileName</span>
+                                <span class="panel-row-status">
                                     <CcBadge Variant="BadgeVariant.Warning" Size="Size.Xs">@pctP%</CcBadge>
                                     <CcBtn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeDownload(dl)" Title="Resume">&#x25B6;</CcBtn>
                                 </span>
@@ -166,11 +166,11 @@
                     @* Failed *@
                     @foreach (var dl in GetAgentDownloads(group.Uuid, DownloadStatus.Failed))
                     {
-                        <div class="sp-file">
-                            <div class="sp-file-row">
-                                <span class="sp-file-icon sp-icon-fail">&#x2717;</span>
-                                <span class="sp-file-name" title="@dl.RemotePath">@dl.FileName</span>
-                                <span class="sp-file-status">
+                        <div class="panel-row-item">
+                            <div class="panel-row">
+                                <span class="panel-row-icon fail">&#x2717;</span>
+                                <span class="panel-row-name" title="@dl.RemotePath">@dl.FileName</span>
+                                <span class="panel-row-status">
                                     <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@dl.Error">FAILED</CcBadge>
                                     <CcBtn Size="Size.Xs" OnClick="() => ResumeDownload(dl)" Title="Retry">&#x21bb;</CcBtn>
                                 </span>
@@ -181,12 +181,12 @@
                     @* Completed (collapsed summary) *@
                     @if (group.Completed > 0)
                     {
-                        <div class="sp-file sp-file-done-summary" @onclick="() => ToggleCompleted(group.Uuid)">
-                            <div class="sp-file-row">
-                                <span class="sp-file-icon sp-icon-done">&#x2713;</span>
-                                <span class="sp-file-name">@group.Completed completed files (@Formatters.FormatSize((ulong)group.CompletedSize))</span>
-                                <span class="sp-file-status">
-                                    <span class="sp-expand">@(expandedAgents.Contains(group.Uuid) ? "&#x25B2;" : "&#x25BC;")</span>
+                        <div class="panel-row-item panel-done-summary" @onclick="() => ToggleCompleted(group.Uuid)">
+                            <div class="panel-row">
+                                <span class="panel-row-icon done">&#x2713;</span>
+                                <span class="panel-row-name">@group.Completed completed files (@Formatters.FormatSize((ulong)group.CompletedSize))</span>
+                                <span class="panel-row-status">
+                                    <span class="panel-expand">@(expandedAgents.Contains(group.Uuid) ? "&#x25B2;" : "&#x25BC;")</span>
                                 </span>
                             </div>
                         </div>
@@ -194,12 +194,12 @@
                         {
                             @foreach (var dl in GetAgentDownloads(group.Uuid, DownloadStatus.Completed))
                             {
-                                <div class="sp-file sp-file-done">
-                                    <div class="sp-file-row">
-                                        <span class="sp-file-icon sp-icon-done">&#x2713;</span>
-                                        <span class="sp-file-name" title="@dl.RemotePath">@dl.FileName</span>
-                                        <span class="sp-file-status">
-                                            <span class="sp-file-size">@Formatters.FormatSize((ulong)dl.TotalSize)</span>
+                                <div class="panel-row-item panel-done-item">
+                                    <div class="panel-row">
+                                        <span class="panel-row-icon done">&#x2713;</span>
+                                        <span class="panel-row-name" title="@dl.RemotePath">@dl.FileName</span>
+                                        <span class="panel-row-status">
+                                            <span class="panel-row-meta">@Formatters.FormatSize((ulong)dl.TotalSize)</span>
                                         </span>
                                     </div>
                                 </div>

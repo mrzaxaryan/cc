@@ -953,6 +953,148 @@ a:hover {
     color: var(--cc-accent-red) !important;
 }
 
+/* Agent card list — used by SearchJobs, Uploads */
+.panel-card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.panel-card {
+    border: 1px solid var(--cc-border);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.panel-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.6rem;
+    background: var(--cc-hover-subtle);
+    border-bottom: 1px solid var(--cc-border);
+}
+
+.panel-card-name {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--cc-text);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.panel-card-summary {
+    display: flex;
+    gap: 0.4rem;
+    font-size: 0.65rem;
+    font-weight: 600;
+}
+
+/* Count colors — used by SearchJobs, Uploads */
+.panel-count-active { color: var(--cc-accent-blue); }
+.panel-count-queued { color: var(--cc-text-dim); }
+.panel-count-paused { color: var(--cc-accent-yellow); }
+.panel-count-done { color: var(--cc-accent-green); }
+.panel-count-fail { color: var(--cc-accent-red); }
+
+/* Card row items — used by SearchJobs, Uploads */
+.panel-row-item {
+    padding: 0.3rem 0.6rem;
+    border-bottom: 1px solid var(--cc-border);
+}
+
+.panel-row-item:last-child {
+    border-bottom: none;
+}
+
+.panel-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.panel-row-icon {
+    width: 1em;
+    text-align: center;
+    flex-shrink: 0;
+    font-size: 0.65rem;
+    color: var(--cc-text-dim);
+}
+
+.panel-row-icon.active {
+    color: var(--cc-accent-blue);
+    animation: cc-pulse 1.5s ease-in-out infinite;
+}
+
+.panel-row-icon.done {
+    color: var(--cc-accent-green);
+}
+
+.panel-row-icon.fail {
+    color: var(--cc-accent-red);
+}
+
+.panel-row-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.panel-row-name {
+    flex: 1;
+    font-family: monospace;
+    font-size: 0.72rem;
+    color: var(--cc-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.panel-row-meta {
+    font-size: 0.6rem;
+    color: var(--cc-text-dim);
+}
+
+.panel-row-status {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+/* Completed summary — used by SearchJobs, Uploads */
+.panel-done-summary {
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.panel-done-summary:hover {
+    background: var(--cc-hover-subtle);
+}
+
+.panel-done-summary .panel-row-name {
+    font-family: inherit;
+    color: var(--cc-text-dim);
+    font-size: 0.7rem;
+}
+
+.panel-expand {
+    font-size: 0.6rem;
+    color: var(--cc-text-dim);
+}
+
+.panel-done-item {
+    opacity: 0.6;
+}
+
+.panel-spinning {
+    animation: cc-pulse 1.5s ease-in-out infinite;
+}
+
 /* ===== Mobile / Touch Responsive ===== */
 @media (max-width: 768px) {
     :root {

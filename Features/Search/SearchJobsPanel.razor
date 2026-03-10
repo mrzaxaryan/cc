@@ -15,7 +15,7 @@
         else if (IsGloballyRunning)
         {
             <CcBadge Variant="BadgeVariant.Success" Size="Size.Xs">
-                <CcIcon Name="search" Size="Size.Xs" CssClass="sg-spinning" /> Searching
+                <CcIcon Name="search" Size="Size.Xs" CssClass="panel-spinning" /> Searching
             </CcBadge>
         }
         else if (TotalPaused > 0)
@@ -70,24 +70,24 @@
         </div>
     </Toolbar>
     <Body>
-        <div class="sg-agents">
+        <div class="panel-card-list">
             @foreach (var group in GetAgentGroups())
             {
                 var isOnline = RelaySvc.GetAllAgents().Any(a => AgentDb.GetUuidByAgentId(a.Agent.Id) == group.Uuid);
                 var isAgentPaused = SvcState.IsPaused(ServiceName.Search, group.Uuid);
-                <div class="sg-agent-card">
-                    <div class="sg-agent-header">
+                <div class="panel-card">
+                    <div class="panel-card-header">
                         <span class="status-dot @(isOnline ? "dot-on" : "dot-off")"></span>
-                        <span class="sg-agent-name">@group.Name</span>
+                        <span class="panel-card-name">@group.Name</span>
                         @if (isAgentPaused)
                         {
                             <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs">Paused</CcBadge>
                         }
-                        <span class="sg-agent-summary">
-                            @if (group.Scanning > 0) { <span class="sg-count-active">@group.Scanning&#x25CF;</span> }
-                            @if (group.Paused > 0) { <span class="sg-count-paused">@group.Paused&#x25A0;</span> }
-                            <span class="sg-count-done">@group.Completed&#x2713;</span>
-                            @if (group.Failed > 0) { <span class="sg-count-fail">@group.Failed&#x2717;</span> }
+                        <span class="panel-card-summary">
+                            @if (group.Scanning > 0) { <span class="panel-count-active">@group.Scanning&#x25CF;</span> }
+                            @if (group.Paused > 0) { <span class="panel-count-paused">@group.Paused&#x25A0;</span> }
+                            <span class="panel-count-done">@group.Completed&#x2713;</span>
+                            @if (group.Failed > 0) { <span class="panel-count-fail">@group.Failed&#x2717;</span> }
                         </span>
                         @if (isAgentPaused)
                         {
@@ -103,15 +103,15 @@
                     @foreach (var scan in GetAgentScans(group.Uuid, SearchStatus.Scanning))
                     {
                         var pct = scan.DirsTotal > 0 ? (int)(scan.DirsScanned * 100 / scan.DirsTotal) : 0;
-                        <div class="sg-scan">
-                            <div class="sg-scan-row">
-                                <span class="sg-scan-icon sg-icon-active">&#x25CF;</span>
-                                <div class="sg-scan-info">
-                                    <span class="sg-scan-path" title="@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)">@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)</span>
-                                    <span class="sg-scan-meta">@scan.Extensions</span>
+                        <div class="panel-row-item">
+                            <div class="panel-row">
+                                <span class="panel-row-icon active">&#x25CF;</span>
+                                <div class="panel-row-info">
+                                    <span class="panel-row-name" title="@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)">@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)</span>
+                                    <span class="panel-row-meta">@scan.Extensions</span>
                                 </div>
-                                <span class="sg-scan-status">
-                                    <span class="sg-scan-stats-inline">@scan.DirsScanned/@scan.DirsTotal dirs &middot; @scan.FilesFound files</span>
+                                <span class="panel-row-status">
+                                    <span class="panel-row-meta">@scan.DirsScanned/@scan.DirsTotal dirs &middot; @scan.FilesFound files</span>
                                     <CcBtn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseScan(scan)" Title="Pause">&#x23F8;</CcBtn>
                                 </span>
                             </div>
@@ -123,14 +123,14 @@
                     @foreach (var scan in GetAgentScans(group.Uuid, SearchStatus.Paused))
                     {
                         var pctP = scan.DirsTotal > 0 ? (int)(scan.DirsScanned * 100 / scan.DirsTotal) : 0;
-                        <div class="sg-scan">
-                            <div class="sg-scan-row">
-                                <span class="sg-scan-icon">&#x25A0;</span>
-                                <div class="sg-scan-info">
-                                    <span class="sg-scan-path" title="@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)">@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)</span>
-                                    <span class="sg-scan-meta">@scan.Extensions &middot; @scan.FilesFound files found</span>
+                        <div class="panel-row-item">
+                            <div class="panel-row">
+                                <span class="panel-row-icon">&#x25A0;</span>
+                                <div class="panel-row-info">
+                                    <span class="panel-row-name" title="@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)">@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)</span>
+                                    <span class="panel-row-meta">@scan.Extensions &middot; @scan.FilesFound files found</span>
                                 </div>
-                                <span class="sg-scan-status">
+                                <span class="panel-row-status">
                                     <CcBadge Variant="BadgeVariant.Warning" Size="Size.Xs">@pctP%</CcBadge>
                                     <CcBtn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeScan(scan)" Title="Resume">&#x25B6;</CcBtn>
                                 </span>
@@ -141,14 +141,14 @@
                     @* Failed *@
                     @foreach (var scan in GetAgentScans(group.Uuid, SearchStatus.Failed))
                     {
-                        <div class="sg-scan">
-                            <div class="sg-scan-row">
-                                <span class="sg-scan-icon sg-icon-fail">&#x2717;</span>
-                                <div class="sg-scan-info">
-                                    <span class="sg-scan-path" title="@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)">@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)</span>
-                                    <span class="sg-scan-meta">@scan.Extensions &middot; @scan.FilesFound files found</span>
+                        <div class="panel-row-item">
+                            <div class="panel-row">
+                                <span class="panel-row-icon fail">&#x2717;</span>
+                                <div class="panel-row-info">
+                                    <span class="panel-row-name" title="@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)">@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)</span>
+                                    <span class="panel-row-meta">@scan.Extensions &middot; @scan.FilesFound files found</span>
                                 </div>
-                                <span class="sg-scan-status">
+                                <span class="panel-row-status">
                                     <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@scan.Error">FAILED</CcBadge>
                                     <CcBtn Size="Size.Xs" OnClick="() => ResumeScan(scan)" Title="Retry">&#x21bb;</CcBtn>
                                 </span>
@@ -159,12 +159,12 @@
                     @* Completed (collapsed summary) *@
                     @if (group.Completed > 0)
                     {
-                        <div class="sg-scan sg-scan-done-summary" @onclick="() => ToggleCompleted(group.Uuid)">
-                            <div class="sg-scan-row">
-                                <span class="sg-scan-icon sg-icon-done">&#x2713;</span>
-                                <span class="sg-scan-path">@group.Completed completed searches (@group.TotalFiles files found)</span>
-                                <span class="sg-scan-status">
-                                    <span class="sg-expand">@(expandedAgents.Contains(group.Uuid) ? "&#x25B2;" : "&#x25BC;")</span>
+                        <div class="panel-row-item panel-done-summary" @onclick="() => ToggleCompleted(group.Uuid)">
+                            <div class="panel-row">
+                                <span class="panel-row-icon done">&#x2713;</span>
+                                <span class="panel-row-name">@group.Completed completed searches (@group.TotalFiles files found)</span>
+                                <span class="panel-row-status">
+                                    <span class="panel-expand">@(expandedAgents.Contains(group.Uuid) ? "&#x25B2;" : "&#x25BC;")</span>
                                 </span>
                             </div>
                         </div>
@@ -172,14 +172,14 @@
                         {
                             @foreach (var scan in GetAgentScans(group.Uuid, SearchStatus.Completed))
                             {
-                                <div class="sg-scan sg-scan-done">
-                                    <div class="sg-scan-row">
-                                        <span class="sg-scan-icon sg-icon-done">&#x2713;</span>
-                                        <div class="sg-scan-info">
-                                            <span class="sg-scan-path" title="@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)">@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)</span>
-                                            <span class="sg-scan-meta">@scan.Extensions &middot; @scan.DirsScanned dirs &middot; @scan.FilesFound files</span>
+                                <div class="panel-row-item panel-done-item">
+                                    <div class="panel-row">
+                                        <span class="panel-row-icon done">&#x2713;</span>
+                                        <div class="panel-row-info">
+                                            <span class="panel-row-name" title="@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)">@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)</span>
+                                            <span class="panel-row-meta">@scan.Extensions &middot; @scan.DirsScanned dirs &middot; @scan.FilesFound files</span>
                                         </div>
-                                        <span class="sg-scan-status">
+                                        <span class="panel-row-status">
                                             <CcBtn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => RemoveScan(scan)" Title="Remove">&#x2715;</CcBtn>
                                         </span>
                                     </div>
