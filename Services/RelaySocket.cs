@@ -89,6 +89,33 @@ public class RelaySocket
 
     public static Guid ReadUuid(byte[] response) => new(response.AsSpan(4, 16));
 
+    // SystemInfo layout: UUID (16) + Hostname (256) + Architecture (32) + Platform (32) = 336 bytes
+    // Response: UINT32 status + SystemInfo
+    public const int SystemInfoOffset = 4;
+    public const int SystemInfoSize = 16 + 256 + 32 + 32; // 336
+
+    public static (Guid uuid, string hostname, string architecture, string platform) ReadSystemInfo(byte[] response)
+    {
+        var uuid = new Guid(response.AsSpan(SystemInfoOffset, 16));
+        var hostname = ReadNullTerminatedString(response, SystemInfoOffset + 16, 256);
+        var architecture = ReadNullTerminatedString(response, SystemInfoOffset + 16 + 256, 32);
+        var platform = ReadNullTerminatedString(response, SystemInfoOffset + 16 + 256 + 32, 32);
+        return (uuid, hostname, architecture, platform);
+    }
+
+    private static string ReadNullTerminatedString(byte[] data, int offset, int maxLength)
+    {
+        var end = offset + maxLength;
+        if (end > data.Length) end = data.Length;
+        var length = 0;
+        for (var i = offset; i < end; i++)
+        {
+            if (data[i] == 0) break;
+            length++;
+        }
+        return Encoding.ASCII.GetString(data, offset, length);
+    }
+
     public static string ReadHash(byte[] response) => Convert.ToHexString(response.AsSpan(4, 32));
 
     public static (ulong bytesRead, byte[] data) ReadFileContent(byte[] response)

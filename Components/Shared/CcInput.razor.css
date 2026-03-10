@@ -13,7 +13,7 @@
 
 .cc-input:focus {
     border-color: var(--cc-accent-blue);
-    box-shadow: 0 0 0 2px rgba(137, 180, 250, 0.15);
+    box-shadow: 0 0 0 2px var(--cc-focus-ring);
 }
 
 .cc-input:disabled {

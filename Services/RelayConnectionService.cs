@@ -156,12 +156,15 @@ public class RelayConnectionService : IAsyncDisposable
         {
             await relay.Connect(agent.Id);
             var response = await relay.SendAndReceive(new byte[] { 0x00 });
-            if (response is not null && response.Length >= 20)
+            if (response is not null && response.Length >= 4 + RelaySocket.SystemInfoSize)
             {
                 var status = RelaySocket.ReadStatus(response);
                 if (status == 0)
                 {
-                    var uuid = RelaySocket.ReadUuid(response).ToString();
+                    var (guid, hostname, architecture, platform) = RelaySocket.ReadSystemInfo(response);
+                    var uuid = guid.ToString();
+                    agent.Os = platform;
+                    agent.Arch = architecture;
                     var relayEntry = _relayStore.GetByUrl(relayUrl);
                     await _agentDb.UpsertAsync(uuid, agent, relayEntry?.Id ?? "");
                     NotifyChanged();

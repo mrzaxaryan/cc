@@ -15,22 +15,22 @@
 
 /* Variants */
 .cc-badge-success {
-    background: rgba(166, 227, 161, 0.15);
+    background: var(--cc-green-15);
     color: var(--cc-accent-green);
 }
 
 .cc-badge-danger {
-    background: rgba(243, 139, 168, 0.15);
+    background: var(--cc-red-15);
     color: var(--cc-accent-red);
 }
 
 .cc-badge-warning {
-    background: rgba(249, 226, 175, 0.15);
+    background: var(--cc-yellow-15);
     color: var(--cc-accent-yellow);
 }
 
 .cc-badge-info {
-    background: rgba(137, 180, 250, 0.15);
+    background: var(--cc-blue-15);
     color: var(--cc-accent-blue);
 }
 

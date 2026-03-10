@@ -1,3 +1,4 @@
+/* Menubar */
 .mdi-menubar {
     display: flex;
     align-items: center;
@@ -60,6 +61,7 @@
     flex: 1;
 }
 
+/* Status indicator */
 .mdi-status {
     font-size: 0.7rem;
     font-family: monospace;
@@ -74,8 +76,8 @@
 
 .mdi-status.connected {
     color: var(--cc-accent-green);
-    background: rgba(166, 227, 161, 0.1);
-    border: 1px solid rgba(166, 227, 161, 0.25);
+    background: var(--cc-green-10);
+    border: 1px solid var(--cc-green-25);
 }
 
 .mdi-status.disconnected {
@@ -84,6 +86,7 @@
     border: 1px solid var(--cc-border);
 }
 
+/* Workspace */
 .mdi-workspace {
     position: fixed;
     top: 36px;

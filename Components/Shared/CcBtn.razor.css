@@ -60,7 +60,7 @@
 
 .cc-btn-danger {
     color: var(--cc-accent-red);
-    border-color: rgba(243, 139, 168, 0.4);
+    border-color: var(--cc-red-40);
 }
 
 .cc-btn-danger:hover:not(:disabled) {
@@ -76,7 +76,7 @@
 
 .cc-btn-warning {
     color: var(--cc-accent-yellow);
-    border-color: rgba(249, 226, 175, 0.4);
+    border-color: var(--cc-yellow-40);
 }
 
 .cc-btn-warning:hover:not(:disabled) {
@@ -134,4 +134,3 @@
 .cc-btn-icon:hover:not(:disabled) {
     background: var(--cc-bg-overlay);
 }
-

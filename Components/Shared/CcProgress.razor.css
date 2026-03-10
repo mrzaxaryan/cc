@@ -15,7 +15,7 @@
 /* Variants */
 .cc-progress-info {
     background: var(--cc-accent-blue);
-    box-shadow: 0 0 6px rgba(137, 180, 250, 0.3);
+    box-shadow: 0 0 6px var(--cc-blue-30);
 }
 
 .cc-progress-success {

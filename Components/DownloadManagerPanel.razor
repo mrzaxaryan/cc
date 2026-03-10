@@ -21,21 +21,21 @@
         <div class="sm-header-right">
             @if (HasActiveSyncs)
             {
-                <button class="sm-btn sm-btn-danger" @onclick="StopAllSyncs" title="Pause all">STOP ALL</button>
+                <CcBtn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="StopAllSyncs" Title="Pause all">STOP ALL</CcBtn>
             }
             @if (activeRecords.Count > 0)
             {
                 @if (confirmClear)
                 {
-                    <button class="sm-btn sm-btn-danger-solid" @onclick="ClearPaused">YES</button>
-                    <button class="sm-btn" @onclick="() => confirmClear = false">NO</button>
+                    <CcBtn Variant="BtnVariant.DangerSolid" Size="Size.Xs" OnClick="ClearPaused">YES</CcBtn>
+                    <CcBtn Size="Size.Xs" OnClick="() => confirmClear = false">NO</CcBtn>
                 }
                 else
                 {
-                    <button class="sm-btn sm-btn-danger" @onclick="() => confirmClear = true" title="Clear paused/failed">CLEAR</button>
+                    <CcBtn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="() => confirmClear = true" Title="Clear paused/failed">CLEAR</CcBtn>
                 }
             }
-            <button class="sm-btn" @onclick="Refresh" title="Refresh">&#x21bb;</button>
+            <CcBtn Size="Size.Xs" OnClick="Refresh" Title="Refresh">&#x21bb;</CcBtn>
         </div>
     </div>
 
@@ -98,36 +98,34 @@
                                     {
                                         <span class="sm-speed">@Formatters.FormatSpeed(dl.SpeedBytesPerSec)</span>
                                     }
-                                    <button class="sm-btn sm-btn-warn" @onclick="() => PauseDownload(rec)" title="Pause">&#x23F8;</button>
+                                    <CcBtn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseDownload(rec)" Title="Pause">&#x23F8;</CcBtn>
                                     break;
 
                                 case DownloadStatus.Queued:
-                                    <span class="sm-badge">QUEUED</span>
-                                    <button class="sm-btn-icon" @onclick="() => BumpPriority(rec, -1)" title="Higher priority">&#x25B2;</button>
-                                    <button class="sm-btn-icon" @onclick="() => BumpPriority(rec, 1)" title="Lower priority">&#x25BC;</button>
+                                    <CcBadge Variant="BadgeVariant.Muted" Size="Size.Xs">QUEUED</CcBadge>
+                                    <CcBtn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => BumpPriority(rec, -1)" Title="Higher priority">&#x25B2;</CcBtn>
+                                    <CcBtn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => BumpPriority(rec, 1)" Title="Lower priority">&#x25BC;</CcBtn>
                                     break;
 
                                 case DownloadStatus.Paused:
-                                    <span class="sm-badge sm-badge-warn">PAUSED @pct%</span>
-                                    <button class="sm-btn sm-btn-ok" @onclick="() => ResumeDownload(rec)" disabled="@(_resuming.Contains(rec.Id))" title="Resume">&#x25B6;</button>
+                                    <CcBadge Variant="BadgeVariant.Warning" Size="Size.Xs">PAUSED @pct%</CcBadge>
+                                    <CcBtn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeDownload(rec)" Disabled="@(_resuming.Contains(rec.Id))" Title="Resume">&#x25B6;</CcBtn>
                                     break;
 
                                 case DownloadStatus.Completed:
-                                    <span class="sm-badge sm-badge-ok">DONE</span>
+                                    <CcBadge Variant="BadgeVariant.Success" Size="Size.Xs">DONE</CcBadge>
                                     break;
 
                                 case DownloadStatus.Failed:
-                                    <span class="sm-badge sm-badge-err" title="@dl.Error">FAILED</span>
+                                    <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@dl.Error">FAILED</CcBadge>
                                     break;
                             }
-                            <button class="sm-btn-icon sm-btn-icon-danger" @onclick="() => RemoveDownload(rec)" title="Remove">&#x2715;</button>
+                            <CcBtn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => RemoveDownload(rec)" Title="Remove" CssClass="sm-remove-btn">&#x2715;</CcBtn>
                         </div>
                     </div>
                     @if (dl.Status is DownloadStatus.Downloading or DownloadStatus.Queued or DownloadStatus.Paused)
                     {
-                        <div class="sm-progress">
-                            <div class="sm-progress-fill @ProgressClass(dl.Status)" style="width:@pct%"></div>
-                        </div>
+                        <CcProgress Size="Size.Xs" Variant="@ProgressVariant(dl.Status)" Percent="@pct" />
                     }
                 </div>
             }
@@ -168,11 +166,7 @@
     private bool HasActiveSyncs =>
         activeRecords.Any(r => r.Status is DownloadStatus.Downloading or DownloadStatus.Queued);
 
-    private void SetFilter(Filter f)
-    {
-        filter = f;
-        ApplyFilter();
-    }
+    private void SetFilter(Filter f) { filter = f; ApplyFilter(); }
 
     private void ApplyFilter()
     {
@@ -211,29 +205,25 @@
         _ => ""
     };
 
-    private static string ProgressClass(string s) => s switch
+    private static ProgressVariant ProgressVariant(string s) => s switch
     {
-        DownloadStatus.Downloading => "sm-progress-active",
-        DownloadStatus.Paused => "sm-progress-paused",
-        _ => "sm-progress-queued"
+        DownloadStatus.Downloading => cc.Components.Shared.ProgressVariant.Info,
+        DownloadStatus.Paused => cc.Components.Shared.ProgressVariant.Warning,
+        _ => cc.Components.Shared.ProgressVariant.Muted
     };
 
     private async Task StopAllSyncs()
     {
         var active = activeRecords.FirstOrDefault(r => r.Status == DownloadStatus.Downloading);
-        if (active is not null)
-            Downloads.CancelCts(active.Id);
+        if (active is not null) Downloads.CancelCts(active.Id);
         var queued = activeRecords.Where(r => r.Status == DownloadStatus.Queued).ToList();
-        foreach (var dl in queued)
-            await Downloads.PauseAsync(dl.Id);
+        foreach (var dl in queued) await Downloads.PauseAsync(dl.Id);
     }
 
     private void Refresh()
     {
         var all = Downloads.GetActive();
-        activeRecords = string.IsNullOrEmpty(AgentUuid)
-            ? all
-            : all.Where(r => r.AgentUuid == AgentUuid).ToList();
+        activeRecords = string.IsNullOrEmpty(AgentUuid) ? all : all.Where(r => r.AgentUuid == AgentUuid).ToList();
         activeRecords = activeRecords
             .OrderBy(r => r.Status == DownloadStatus.Downloading ? 0 : r.Status == DownloadStatus.Queued ? 1 : r.Status == DownloadStatus.Paused ? 2 : r.Status == DownloadStatus.Failed ? 3 : 4)
             .ThenBy(r => r.Priority)
@@ -242,105 +232,60 @@
         ApplyFilter();
     }
 
-    private async Task BumpPriority(DownloadRecord dl, int delta)
-    {
-        await Downloads.SetPriorityAsync(dl.Id, dl.Priority + delta);
-    }
-
-    private void PauseDownload(DownloadRecord dl)
-    {
-        Downloads.CancelCts(dl.Id);
-    }
+    private async Task BumpPriority(DownloadRecord dl, int delta) => await Downloads.SetPriorityAsync(dl.Id, dl.Priority + delta);
+    private void PauseDownload(DownloadRecord dl) => Downloads.CancelCts(dl.Id);
 
     private async Task ResumeDownload(DownloadRecord dl)
     {
-        if (_resuming.Contains(dl.Id)) return;
-        if (Downloads.HasActiveCts(dl.Id)) return;
-        _resuming.Add(dl.Id);
-        StateHasChanged();
+        if (_resuming.Contains(dl.Id) || Downloads.HasActiveCts(dl.Id)) return;
+        _resuming.Add(dl.Id); StateHasChanged();
 
         RelaySocket? relay = null;
         try
         {
             await AgentDb.LoadAsync();
             await RelayDb.LoadAsync();
-
             var agent = AgentDb.GetByUuid(dl.AgentUuid);
             if (agent is null) { Msg.Error("Agent not found"); return; }
-
             var relayEntry = !string.IsNullOrEmpty(agent.RelayStoreId) ? RelayDb.GetById(agent.RelayStoreId) : null;
             var relayUrl = relayEntry?.Url;
             if (string.IsNullOrEmpty(relayUrl)) { Msg.Error("No relay URL for agent"); return; }
 
             relay = await RelaySvc.CreateRelay(agent.AgentId, relayUrl);
             if (relay is null) return;
-
             var cts = Downloads.RegisterCts(dl.Id);
 
             try
             {
-                var success = await Cache.DownloadFromAgentAsync(
-                    relay, dl.RemotePath, dl.CacheSubPath,
-                    dl.DownloadedSize, cts.Token,
-                    async (downloaded, _) =>
-                    {
-                        await Downloads.UpdateProgressAsync(dl.Id, downloaded);
-                    });
-
-                if (success)
-                    await Downloads.CompleteAsync(dl.Id);
-                else
-                    await Downloads.FailAsync(dl.Id, "Sync returned failure");
+                var success = await Cache.DownloadFromAgentAsync(relay, dl.RemotePath, dl.CacheSubPath, dl.DownloadedSize, cts.Token,
+                    async (downloaded, _) => { await Downloads.UpdateProgressAsync(dl.Id, downloaded); });
+                if (success) await Downloads.CompleteAsync(dl.Id);
+                else await Downloads.FailAsync(dl.Id, "Sync returned failure");
             }
-            catch (OperationCanceledException)
-            {
-                await Downloads.PauseAsync(dl.Id);
-            }
+            catch (OperationCanceledException) { await Downloads.PauseAsync(dl.Id); }
             catch (Exception ex)
             {
-                if (cts.IsCancellationRequested)
-                    await Downloads.PauseAsync(dl.Id);
-                else
-                {
-                    await Downloads.FailAsync(dl.Id, ex.Message);
-                    Msg.Error($"Sync failed: {ex.Message}");
-                }
+                if (cts.IsCancellationRequested) await Downloads.PauseAsync(dl.Id);
+                else { await Downloads.FailAsync(dl.Id, ex.Message); Msg.Error($"Sync failed: {ex.Message}"); }
             }
-            finally
-            {
-                Downloads.RemoveCts(dl.Id);
-            }
+            finally { Downloads.RemoveCts(dl.Id); }
         }
-        catch (Exception ex)
-        {
-            Msg.Error($"Resume failed: {ex.Message}");
-        }
+        catch (Exception ex) { Msg.Error($"Resume failed: {ex.Message}"); }
         finally
         {
-            if (relay is not null && !Wm.Windows.Any(w => w.Relay == relay))
-                await relay.Disconnect();
-
-            _resuming.Remove(dl.Id);
-            StateHasChanged();
+            if (relay is not null && !Wm.Windows.Any(w => w.Relay == relay)) await relay.Disconnect();
+            _resuming.Remove(dl.Id); StateHasChanged();
         }
     }
 
-    private async Task RemoveDownload(DownloadRecord dl)
-    {
-        Downloads.CancelCts(dl.Id);
-        await Downloads.RemoveAsync(dl.Id);
-    }
+    private async Task RemoveDownload(DownloadRecord dl) { Downloads.CancelCts(dl.Id); await Downloads.RemoveAsync(dl.Id); }
 
     private async Task ClearPaused()
     {
         confirmClear = false;
         var toRemove = activeRecords.Where(r => r.Status is DownloadStatus.Paused or DownloadStatus.Failed).ToList();
-        foreach (var dl in toRemove)
-            await Downloads.RemoveAsync(dl.Id);
+        foreach (var dl in toRemove) await Downloads.RemoveAsync(dl.Id);
     }
 
-    public void Dispose()
-    {
-        Downloads.OnChanged -= OnDownloadsChanged;
-    }
+    public void Dispose() => Downloads.OnChanged -= OnDownloadsChanged;
 }

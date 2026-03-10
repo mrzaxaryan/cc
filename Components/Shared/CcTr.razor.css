@@ -1,6 +1,6 @@
 /* Active row */
 .cc-tr-active {
-    background: rgba(137, 180, 250, 0.08) !important;
+    background: var(--cc-blue-08) !important;
     border-left: 2px solid var(--cc-accent-blue);
 }
 
