@@ -218,6 +218,23 @@ window.ccFileSystem = {
         }
     },
 
+    // Save a blob to the user's downloads by streaming directly from .fs/
+    async saveBlobToDownload(fileName, fileId) {
+        if (!_rootHandle) throw new Error('No directory selected');
+        const fsDir = await _rootHandle.getDirectoryHandle('.fs', { create: false });
+        const fileHandle = await fsDir.getFileHandle(fileId);
+        const file = await fileHandle.getFile();
+
+        const url = URL.createObjectURL(file);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    },
+
     // Clear the persisted handle (reset)
     async clearHandle() {
         _rootHandle = null;

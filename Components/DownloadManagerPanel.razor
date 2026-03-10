@@ -10,80 +10,87 @@
 
 <div>
     <div class="d-flex align-items-center gap-2 mb-2">
-        <span class="badge bg-primary">Downloads</span>
-        <small class="text-muted">@activeRecords.Count active</small>
-        <button class="btn btn-outline-secondary btn-sm py-0 px-1 ms-auto" @onclick="Refresh" title="Refresh">&#x21bb;</button>
-        @if (activeRecords.Count > 0)
+        <span class="badge bg-primary">Sync Manager</span>
+        @if (!string.IsNullOrEmpty(AgentName))
         {
-            @if (confirmClear)
-            {
-                <button class="btn btn-danger btn-sm py-0 px-1" @onclick="ClearPaused">YES</button>
-                <button class="btn btn-outline-secondary btn-sm py-0 px-1" @onclick="() => confirmClear = false">NO</button>
-            }
-            else
-            {
-                <button class="btn btn-outline-danger btn-sm py-0 px-1" @onclick="() => confirmClear = true" title="Clear paused">CLEAR</button>
-            }
+            <small class="fw-bold text-truncate">@AgentName</small>
         }
+        <small class="text-muted">@activeRecords.Count active</small>
+        <div class="d-flex gap-1 ms-auto">
+            @if (HasActiveSyncs)
+            {
+                <button class="btn btn-outline-danger btn-sm py-0 px-1" style="font-size:0.65rem" @onclick="StopAllSyncs" title="Pause all syncs">STOP ALL</button>
+            }
+            @if (activeRecords.Count > 0)
+            {
+                @if (confirmClear)
+                {
+                    <button class="btn btn-danger btn-sm py-0 px-1" @onclick="ClearPaused">YES</button>
+                    <button class="btn btn-outline-secondary btn-sm py-0 px-1" @onclick="() => confirmClear = false">NO</button>
+                }
+                else
+                {
+                    <button class="btn btn-outline-danger btn-sm py-0 px-1" @onclick="() => confirmClear = true" title="Clear paused">CLEAR</button>
+                }
+            }
+            <button class="btn btn-outline-secondary btn-sm py-0 px-1" @onclick="Refresh" title="Refresh">&#x21bb;</button>
+        </div>
     </div>
 
     @if (activeRecords.Count == 0)
     {
         <div class="text-muted small text-center py-4">
-            <em>No active downloads</em>
+            <em>No active syncs</em>
         </div>
     }
     else
     {
         <div style="max-height:60vh;overflow-y:auto;">
-            @foreach (var group in groupedRecords)
+            @foreach (var dl in activeRecords)
             {
-                <div class="card mb-2">
-                    <div class="card-header py-1 d-flex align-items-center gap-1">
-                        <small class="fw-bold text-truncate">@group.AgentName</small>
-                        <small class="text-muted ms-auto" style="font-size:0.65rem">@group.Records.Count file(s)</small>
-                    </div>
-                    <div class="list-group list-group-flush">
-                        @foreach (var dl in group.Records)
+                var rec = dl;
+                var pct = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
+                <div class="list-group-item py-1 small">
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="flex-shrink-0" style="width:1.2em;text-align:center;">&#x1f4c4;</span>
+                        <span class="flex-grow-1 text-truncate font-monospace" title="@dl.RemotePath">@dl.FileName</span>
+                        @if (dl.Status == DownloadStatus.Downloading)
                         {
-                            var rec = dl;
-                            var pct = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
-                            <div class="list-group-item py-1 small">
-                                <div class="d-flex align-items-center gap-1">
-                                    <span class="flex-shrink-0" style="width:1.2em;text-align:center;">&#x1f4c4;</span>
-                                    <span class="flex-grow-1 text-truncate font-monospace" title="@dl.RemotePath">@dl.FileName</span>
-                                    @if (dl.Status == DownloadStatus.Downloading)
-                                    {
-                                        <span class="spinner-border spinner-border-sm flex-shrink-0" style="width:0.8rem;height:0.8rem;"></span>
-                                        <span class="badge bg-info text-dark py-0 flex-shrink-0" style="font-size:0.6rem">@pct%</span>
-                                        @if (dl.SpeedBytesPerSec > 0)
-                                        {
-                                            <span class="text-muted flex-shrink-0" style="font-size:0.6rem">@Formatters.FormatSpeed(dl.SpeedBytesPerSec)</span>
-                                        }
-                                        <button class="btn btn-outline-warning btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.6rem"
-                                                @onclick="() => PauseDownload(rec)" title="Pause">&#x23F8;</button>
-                                    }
-                                    else if (dl.Status == DownloadStatus.Paused)
-                                    {
-                                        <span class="badge bg-warning text-dark py-0 flex-shrink-0" style="font-size:0.6rem">PAUSED @pct%</span>
-                                        <button class="btn btn-outline-success btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.6rem"
-                                                @onclick="() => ResumeDownload(rec)" disabled="@(_resuming.Contains(rec.Id))" title="Resume">&#x25B6;</button>
-                                    }
-                                    <button class="btn btn-outline-danger btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.6rem"
-                                            @onclick="() => RemoveDownload(rec)" title="Remove">&#x2717;</button>
-                                </div>
-                                <div class="progress mt-1" style="height:4px;">
-                                    <div class="progress-bar @(dl.Status == DownloadStatus.Paused ? "bg-warning" : "bg-info")"
-                                         role="progressbar"
-                                         style="width:@(pct)%"
-                                         aria-valuenow="@pct" aria-valuemin="0" aria-valuemax="100"></div>
-                                </div>
-                                <div class="d-flex justify-content-between mt-1" style="font-size:0.6rem;">
-                                    <span class="text-muted">@Formatters.FormatSize((ulong)dl.DownloadedSize) / @Formatters.FormatSize((ulong)dl.TotalSize)</span>
-                                    <span class="text-muted text-truncate ms-2" title="@dl.RemotePath">@dl.RemotePath</span>
-                                </div>
-                            </div>
+                            <span class="spinner-border spinner-border-sm flex-shrink-0" style="width:0.8rem;height:0.8rem;"></span>
+                            <span class="badge bg-info text-dark py-0 flex-shrink-0" style="font-size:0.6rem">@pct%</span>
+                            @if (dl.SpeedBytesPerSec > 0)
+                            {
+                                <span class="text-muted flex-shrink-0" style="font-size:0.6rem">@Formatters.FormatSpeed(dl.SpeedBytesPerSec)</span>
+                            }
+                            <button class="btn btn-outline-warning btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.6rem"
+                                    @onclick="() => PauseDownload(rec)" title="Pause">&#x23F8;</button>
                         }
+                        else if (dl.Status == DownloadStatus.Queued)
+                        {
+                            <span class="badge bg-secondary py-0 flex-shrink-0" style="font-size:0.6rem">QUEUED</span>
+                            <button class="btn btn-outline-warning btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.6rem"
+                                    @onclick="() => BumpPriority(rec, -1)" title="Higher priority">&#x25B2;</button>
+                            <button class="btn btn-outline-secondary btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.6rem"
+                                    @onclick="() => BumpPriority(rec, 1)" title="Lower priority">&#x25BC;</button>
+                        }
+                        else if (dl.Status == DownloadStatus.Paused)
+                        {
+                            <span class="badge bg-warning text-dark py-0 flex-shrink-0" style="font-size:0.6rem">PAUSED @pct%</span>
+                            <button class="btn btn-outline-success btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.6rem"
+                                    @onclick="() => ResumeDownload(rec)" disabled="@(_resuming.Contains(rec.Id))" title="Resume">&#x25B6;</button>
+                        }
+                        <button class="btn btn-outline-danger btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.6rem"
+                                @onclick="() => RemoveDownload(rec)" title="Remove">&#x2717;</button>
+                    </div>
+                    <div class="progress mt-1" style="height:4px;">
+                        <div class="progress-bar @(dl.Status == DownloadStatus.Paused ? "bg-warning" : dl.Status == DownloadStatus.Queued ? "bg-secondary" : "bg-info")"
+                             role="progressbar"
+                             style="width:@(pct)%"
+                             aria-valuenow="@pct" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-1" style="font-size:0.6rem;">
+                        <span class="text-muted">@Formatters.FormatSize((ulong)dl.DownloadedSize) / @Formatters.FormatSize((ulong)dl.TotalSize)</span>
+                        <span class="text-muted text-truncate ms-2" title="@dl.RemotePath">@dl.RemotePath</span>
                     </div>
                 </div>
             }
@@ -92,17 +99,12 @@
 </div>
 
 @code {
+    [Parameter] public string? AgentUuid { get; set; }
+    [Parameter] public string? AgentName { get; set; }
+
     private List<DownloadRecord> activeRecords = new();
-    private List<AgentGroup> groupedRecords = new();
     private bool confirmClear;
     private readonly HashSet<int> _resuming = new();
-
-    private class AgentGroup
-    {
-        public string AgentUuid { get; init; } = "";
-        public string AgentName { get; init; } = "";
-        public List<DownloadRecord> Records { get; init; } = new();
-    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -122,27 +124,35 @@
         });
     }
 
+    private bool HasActiveSyncs =>
+        activeRecords.Any(r => r.Status is DownloadStatus.Downloading or DownloadStatus.Queued);
+
+    private async Task StopAllSyncs()
+    {
+        var active = activeRecords.FirstOrDefault(r => r.Status == DownloadStatus.Downloading);
+        if (active is not null)
+            Downloads.CancelCts(active.Id);
+        var queued = activeRecords.Where(r => r.Status == DownloadStatus.Queued).ToList();
+        foreach (var dl in queued)
+            await Downloads.PauseAsync(dl.Id);
+    }
+
     private void Refresh()
     {
-        activeRecords = Downloads.GetActive();
-        groupedRecords = activeRecords
-            .GroupBy(r => r.AgentUuid)
-            .Select(g => new AgentGroup
-            {
-                AgentUuid = g.Key,
-                AgentName = ResolveAgentName(g.Key),
-                Records = g.OrderBy(r => r.Status == DownloadStatus.Downloading ? 0 : 1)
-                           .ThenBy(r => r.FileName)
-                           .ToList()
-            })
-            .OrderBy(g => g.AgentName)
+        var all = Downloads.GetActive();
+        activeRecords = string.IsNullOrEmpty(AgentUuid)
+            ? all
+            : all.Where(r => r.AgentUuid == AgentUuid).ToList();
+        activeRecords = activeRecords
+            .OrderBy(r => r.Status == DownloadStatus.Downloading ? 0 : r.Status == DownloadStatus.Queued ? 1 : 2)
+            .ThenBy(r => r.Priority)
+            .ThenBy(r => r.CreatedAt)
             .ToList();
     }
 
-    private string ResolveAgentName(string agentUuid)
+    private async Task BumpPriority(DownloadRecord dl, int delta)
     {
-        var agent = AgentDb.Agents.Values.FirstOrDefault(a => a.Uuid == agentUuid);
-        return agent?.Name ?? agentUuid;
+        await Downloads.SetPriorityAsync(dl.Id, dl.Priority + delta);
     }
 
     private void PauseDownload(DownloadRecord dl)
@@ -153,18 +163,16 @@
     private async Task ResumeDownload(DownloadRecord dl)
     {
         if (_resuming.Contains(dl.Id)) return;
-        if (Downloads.HasActiveCts(dl.Id)) return; // already being auto-resumed
+        if (Downloads.HasActiveCts(dl.Id)) return;
         _resuming.Add(dl.Id);
         StateHasChanged();
 
         RelaySocket? relay = null;
         try
         {
-            // Ensure stores are loaded
             await AgentDb.LoadAsync();
             await RelayDb.LoadAsync();
 
-            // Find agent info to get relay URL
             var agent = AgentDb.GetByUuid(dl.AgentUuid);
             if (agent is null) { Msg.Error("Agent not found"); return; }
 
@@ -175,7 +183,6 @@
             relay = await RelaySvc.CreateRelay(agent.AgentId, relayUrl);
             if (relay is null) return;
 
-            // Set up cancellation via shared store
             var cts = Downloads.RegisterCts(dl.Id);
 
             try
@@ -191,7 +198,7 @@
                 if (success)
                     await Downloads.CompleteAsync(dl.Id);
                 else
-                    await Downloads.FailAsync(dl.Id, "Download returned failure");
+                    await Downloads.FailAsync(dl.Id, "Sync returned failure");
             }
             catch (OperationCanceledException)
             {
@@ -204,7 +211,7 @@
                 else
                 {
                     await Downloads.FailAsync(dl.Id, ex.Message);
-                    Msg.Error($"Download failed: {ex.Message}");
+                    Msg.Error($"Sync failed: {ex.Message}");
                 }
             }
             finally
@@ -218,7 +225,6 @@
         }
         finally
         {
-            // Disconnect relay only if we created it (not reused from a window)
             if (relay is not null && !Wm.Windows.Any(w => w.Relay == relay))
                 await relay.Disconnect();
 

@@ -7,6 +7,8 @@
 @inject AgentStore AgentDb
 @inject RelayStore RelayDb
 @inject MessageService Msg
+@inject WindowManager Wm
+@inject IJSRuntime Js
 @implements IDisposable
 
 <div>
@@ -64,7 +66,10 @@
                             <span class="text-muted ms-1">(@entries.Count)</span>
                         }
                     </small>
-                    <button class="btn btn-outline-secondary btn-sm py-0 px-1" @onclick="() => NavigateTo(currentPath)" disabled="@(loading || (!IsConnected && !HasCache))">&#x21bb;</button>
+                    <div class="d-flex gap-1">
+                        <button class="btn btn-outline-primary btn-sm py-0 px-1" style="font-size:0.65rem" @onclick="OpenSyncManagerWindow" title="Open Sync Manager">SYNC</button>
+                        <button class="btn btn-outline-secondary btn-sm py-0 px-1" @onclick="() => NavigateTo(currentPath)" disabled="@(loading || (!IsConnected && !HasCache))">&#x21bb;</button>
+                    </div>
                 </div>
                 <div class="list-group list-group-flush" style="max-height:50vh;overflow-y:auto;">
                     @if (entries is not null)
@@ -94,8 +99,6 @@
                                     }
                                     else
                                     {
-                                        <button class="btn btn-outline-secondary btn-sm px-1 py-0" style="font-size:0.7rem"
-                                                @onclick:stopPropagation="true" @onclick="() => ViewFile(e.Name)" title="View file" disabled="@(!IsConnected)">VIEW</button>
                                         @if (Cache.HasDirectory)
                                         {
                                             var dl = GetDownloadRecord(e.Name);
@@ -122,9 +125,18 @@
                                                             @onclick:stopPropagation="true" @onclick="() => ResumeDownload(e)" title="Resume" disabled="@(!IsConnected && !IsAgentOnline)">&#x25B6;</button>
                                                 </span>
                                             }
+                                            else if (dl?.Status == DownloadStatus.Queued)
+                                            {
+                                                <span class="badge bg-secondary py-0" style="font-size:0.6rem" title="Queued for sync">QUEUED</span>
+                                            }
                                             else if (dl?.Status == DownloadStatus.Completed)
                                             {
-                                                <span class="badge bg-success py-0" style="font-size:0.6rem" title="@Formatters.FormatSize((ulong)dl.TotalSize) cached">&#x2713;</span>
+                                                <span class="d-flex align-items-center gap-1" style="font-size:0.6rem;">
+                                                    <button class="btn btn-outline-secondary btn-sm px-1 py-0" style="font-size:0.6rem"
+                                                            @onclick:stopPropagation="true" @onclick="() => ViewFile(e.Name)" title="View file">VIEW</button>
+                                                    <button class="btn btn-outline-primary btn-sm px-1 py-0" style="font-size:0.6rem"
+                                                            @onclick:stopPropagation="true" @onclick="() => SaveToBrowser(dl)" title="Save to browser downloads">SAVE</button>
+                                                </span>
                                             }
                                             else if (dl?.Status == DownloadStatus.Failed)
                                             {
@@ -137,7 +149,7 @@
                                             else
                                             {
                                                 <button class="btn btn-outline-success btn-sm px-1 py-0" style="font-size:0.7rem"
-                                                        @onclick:stopPropagation="true" @onclick="() => DownloadToCache(e)" title="Download to cache" disabled="@(!IsConnected)">DL</button>
+                                                        @onclick:stopPropagation="true" @onclick="() => EnqueueSync(e)" title="Sync to cache" disabled="@(!IsConnected)">SYNC</button>
                                             }
                                         }
                                     }
@@ -225,6 +237,7 @@
     // Cache tracking
     private bool _syncing;
     private readonly HashSet<int> _ownedDownloads = new();
+
 
     private bool viewingFile;
     private string viewingFileName = "";
@@ -551,9 +564,9 @@
         return Downloads.Find(AgentUuid, remotePath);
     }
 
-    private async Task DownloadToCache(DirEntry entry, long resumeOffset = 0)
+    private async Task EnqueueSync(DirEntry entry)
     {
-        if (Relay is null || !Relay.IsConnected || !Cache.HasDirectory || string.IsNullOrEmpty(AgentUuid)) return;
+        if (!Cache.HasDirectory || string.IsNullOrEmpty(AgentUuid)) return;
 
         var remotePath = currentPath + entry.Name;
         var parentRemotePath = currentPath.TrimEnd('\\', '/');
@@ -565,23 +578,59 @@
 
         // Find existing or create download record
         var record = Downloads.Find(AgentUuid, remotePath);
-        if (record is null || record.Status == DownloadStatus.Completed)
+        if (record is null || record.Status == DownloadStatus.Completed || record.Status == DownloadStatus.Failed)
         {
             record = await Downloads.AddAsync(
                 AgentUuid, AgentName ?? "", remotePath, entry.Name, vfsFile.Id, totalSize);
         }
+        else if (record.Status == DownloadStatus.Paused)
+        {
+            await Downloads.QueueAsync(record.Id);
+        }
 
-        // Set up cancellation via shared store
+        StateHasChanged();
+        _ = ProcessQueue();
+    }
+
+    private bool _processingQueue;
+
+    private async Task ProcessQueue()
+    {
+        if (_processingQueue) return;
+        if (string.IsNullOrEmpty(AgentUuid)) return;
+        if (Relay is null || !Relay.IsConnected) return;
+        if (Downloads.HasActiveDownload(AgentUuid)) return;
+
+        var next = Downloads.GetNextQueued(AgentUuid);
+        if (next is null) return;
+
+        _processingQueue = true;
+        try
+        {
+            await SyncRecord(next);
+        }
+        finally
+        {
+            _processingQueue = false;
+            // Check if there's another queued item
+            if (!Downloads.HasActiveDownload(AgentUuid))
+                _ = ProcessQueue();
+        }
+    }
+
+    private async Task SyncRecord(DownloadRecord record)
+    {
+        if (Relay is null || !Relay.IsConnected) return;
+
         var cts = Downloads.RegisterCts(record.Id);
         _ownedDownloads.Add(record.Id);
-
         StateHasChanged();
 
         try
         {
             var success = await Cache.DownloadFromAgentAsync(
-                Relay, remotePath, vfsFile.Id,
-                resumeOffset, cts.Token,
+                Relay, record.RemotePath, record.CacheSubPath,
+                record.DownloadedSize, cts.Token,
                 async (downloaded, _) =>
                 {
                     await Downloads.UpdateProgressAsync(record.Id, downloaded);
@@ -590,7 +639,7 @@
             if (success)
                 await Downloads.CompleteAsync(record.Id);
             else
-                await Downloads.FailAsync(record.Id, "Download returned failure");
+                await Downloads.FailAsync(record.Id, "Sync returned failure");
         }
         catch (OperationCanceledException)
         {
@@ -598,13 +647,12 @@
         }
         catch (Exception ex)
         {
-            // If CTS was cancelled (e.g. panel closed), treat as pause not failure
             if (cts.IsCancellationRequested)
                 await Downloads.PauseAsync(record.Id);
             else
             {
                 await Downloads.FailAsync(record.Id, ex.Message);
-                Msg.Error($"Download failed: {ex.Message}");
+                Msg.Error($"Sync failed: {ex.Message}");
             }
         }
         finally
@@ -630,67 +678,11 @@
         var remotePath = currentPath + entry.Name;
         var record = Downloads.Find(AgentUuid, remotePath);
         if (record is null) return;
-        if (Downloads.HasActiveCts(record.Id)) return; // already being auto-resumed
+        if (Downloads.HasActiveCts(record.Id)) return;
 
-        // If component relay is connected, use the normal path
-        if (IsConnected)
-        {
-            await DownloadToCache(entry, record.DownloadedSize);
-            return;
-        }
-
-        // Otherwise, create a relay via the service
-        if (string.IsNullOrEmpty(AgentId)) return;
-        await AgentDb.LoadAsync();
-        await RelayDb.LoadAsync();
-        var agentRecord = AgentDb.GetByUuid(AgentUuid);
-        if (agentRecord is null) return;
-        var relayEntry = !string.IsNullOrEmpty(agentRecord.RelayStoreId) ? RelayDb.GetById(agentRecord.RelayStoreId) : null;
-        var relayUrl = relayEntry?.Url;
-        if (string.IsNullOrEmpty(relayUrl)) return;
-
-        var relay = await RelaySvc.CreateRelay(AgentId, relayUrl);
-        if (relay is null) return;
-
-        var cts = Downloads.RegisterCts(record.Id);
-        _ownedDownloads.Add(record.Id);
-        StateHasChanged();
-
-        try
-        {
-            var success = await Cache.DownloadFromAgentAsync(
-                relay, record.RemotePath, record.CacheSubPath,
-                record.DownloadedSize, cts.Token,
-                async (downloaded, _) =>
-                {
-                    await Downloads.UpdateProgressAsync(record.Id, downloaded);
-                });
-
-            if (success)
-                await Downloads.CompleteAsync(record.Id);
-            else
-                await Downloads.FailAsync(record.Id, "Download returned failure");
-        }
-        catch (OperationCanceledException)
-        {
-            await Downloads.PauseAsync(record.Id);
-        }
-        catch (Exception ex)
-        {
-            if (cts.IsCancellationRequested)
-                await Downloads.PauseAsync(record.Id);
-            else
-            {
-                await Downloads.FailAsync(record.Id, ex.Message);
-                Msg.Error($"Download failed: {ex.Message}");
-            }
-        }
-        finally
-        {
-            _ownedDownloads.Remove(record.Id);
-            Downloads.RemoveCts(record.Id);
-            StateHasChanged();
-        }
+        // Re-queue the paused download
+        await Downloads.QueueAsync(record.Id);
+        _ = ProcessQueue();
     }
 
     private async Task RetryDownload(DirEntry entry)
@@ -700,7 +692,28 @@
         var existing = Downloads.Find(AgentUuid, remotePath);
         if (existing is not null)
             await Downloads.RemoveAsync(existing.Id);
-        await DownloadToCache(entry);
+        await EnqueueSync(entry);
+    }
+
+    private void OpenSyncManagerWindow()
+    {
+        if (!string.IsNullOrEmpty(AgentId))
+            Wm.OpenAgentWindow("Sync Manager", AgentId, agentName: AgentName, agentUuid: AgentUuid);
+        else
+            Wm.OpenWindow("Sync Manager");
+    }
+
+    private async Task SaveToBrowser(DownloadRecord dl)
+    {
+        try
+        {
+            if (!await Cache.BlobExistsAsync(dl.CacheSubPath)) { Msg.Error("File not found in cache"); return; }
+            await Js.InvokeVoidAsync("ccSaveFile", dl.FileName, dl.CacheSubPath);
+        }
+        catch (Exception ex)
+        {
+            Msg.Error($"Save failed: {ex.Message}");
+        }
     }
 
     // --- WebSocket ---
@@ -728,7 +741,14 @@
     {
         if (entry.IsDirectory || entry.IsDrive)
             await OpenAsDirectory(entry.Name);
-        else
+        else if (IsFileSynced(entry.Name))
             await ViewFile(entry.Name);
+    }
+
+    private bool IsFileSynced(string fileName)
+    {
+        if (string.IsNullOrEmpty(AgentUuid)) return false;
+        var dl = Downloads.Find(AgentUuid, currentPath + fileName);
+        return dl?.Status == DownloadStatus.Completed;
     }
 }

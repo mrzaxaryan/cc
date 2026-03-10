@@ -141,7 +141,7 @@ public class RelayConnectionService : IAsyncDisposable
     private async Task ResetStaleDownloads()
     {
         var stale = _downloads.Downloads
-            .Where(r => r.Status == DownloadStatus.Downloading && !_downloads.HasActiveCts(r.Id))
+            .Where(r => (r.Status == DownloadStatus.Downloading || r.Status == DownloadStatus.Queued) && !_downloads.HasActiveCts(r.Id))
             .ToList();
         foreach (var dl in stale)
             await _downloads.PauseAsync(dl.Id);
@@ -193,51 +193,58 @@ public class RelayConnectionService : IAsyncDisposable
         if (!_cache.HasDirectory) return;
         await _downloads.LoadAsync();
 
+        // Queue all paused downloads for this agent
         var paused = _downloads.GetByAgent(uuid)
             .Where(r => r.Status == DownloadStatus.Paused)
             .ToList();
+        foreach (var dl in paused)
+            await _downloads.QueueAsync(dl.Id);
+
         if (paused.Count == 0) return;
 
+        // Process queue one at a time
         RelaySocket? relay = null;
         try
         {
             relay = await CreateRelay(agentId, relayUrl);
             if (relay is null) return;
 
-            foreach (var dl in paused)
+            while (!_disposing)
             {
-                if (_disposing) break;
+                if (_downloads.HasActiveDownload(uuid)) break; // another processor is handling it
+                var next = _downloads.GetNextQueued(uuid);
+                if (next is null) break;
 
-                var cts = _downloads.RegisterCts(dl.Id);
+                var cts = _downloads.RegisterCts(next.Id);
                 try
                 {
                     var success = await _cache.DownloadFromAgentAsync(
-                        relay, dl.RemotePath, dl.CacheSubPath,
-                        dl.DownloadedSize, cts.Token,
+                        relay, next.RemotePath, next.CacheSubPath,
+                        next.DownloadedSize, cts.Token,
                         async (downloaded, _) =>
                         {
-                            await _downloads.UpdateProgressAsync(dl.Id, downloaded);
+                            await _downloads.UpdateProgressAsync(next.Id, downloaded);
                         });
 
                     if (success)
-                        await _downloads.CompleteAsync(dl.Id);
+                        await _downloads.CompleteAsync(next.Id);
                     else
-                        await _downloads.FailAsync(dl.Id, "Download returned failure");
+                        await _downloads.FailAsync(next.Id, "Sync returned failure");
                 }
                 catch (OperationCanceledException)
                 {
-                    await _downloads.PauseAsync(dl.Id);
+                    await _downloads.PauseAsync(next.Id);
                 }
                 catch (Exception ex)
                 {
                     if (cts.IsCancellationRequested)
-                        await _downloads.PauseAsync(dl.Id);
+                        await _downloads.PauseAsync(next.Id);
                     else
-                        await _downloads.FailAsync(dl.Id, ex.Message);
+                        await _downloads.FailAsync(next.Id, ex.Message);
                 }
                 finally
                 {
-                    _downloads.RemoveCts(dl.Id);
+                    _downloads.RemoveCts(next.Id);
                 }
             }
         }

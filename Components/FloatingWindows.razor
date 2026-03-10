@@ -57,9 +57,9 @@
             {
                 <CommandsPanel Relay="win.Relay" />
             }
-            else if (win.Panel == "Downloads")
+            else if (win.Panel == "Sync Manager")
             {
-                <DownloadManagerPanel />
+                <DownloadManagerPanel AgentUuid="@win.AgentUuid" AgentName="@win.AgentName" />
             }
         </div>
         @if (!win.Maximized)
