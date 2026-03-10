@@ -612,6 +612,10 @@ public class RelayConnectionService : IAsyncDisposable
                         Connections = list.ToArray()
                     };
 
+                    var uuid = _agentDb.GetUuidByAgentId(agent.Id);
+                    if (uuid is not null)
+                        _ = _agentDb.RemoveAsync(uuid);
+
                     if (_wm.ConnectedAgentIds.Contains(agent.Id))
                     {
                         _ = _wm.DisconnectAgent(agent.Id);

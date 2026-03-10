@@ -24,11 +24,11 @@
                     <div class="rp-add-row">
                         <div class="rp-add-field">
                             <label class="rp-label">Name</label>
-                            <CcInput @bind-Value="newName" Placeholder="My Relay" />
+                            <CcInput @bind-Value="newName" BindOnInput Placeholder="My Relay" />
                         </div>
                         <div class="rp-add-field rp-add-field-wide">
                             <label class="rp-label">URL</label>
-                            <CcInput @bind-Value="newUrl" Placeholder="wss://relay.example.com" Monospace />
+                            <CcInput @bind-Value="newUrl" BindOnInput Placeholder="wss://relay.example.com" Monospace />
                         </div>
                         <div class="rp-add-action">
                             <CcBtn Variant="BtnVariant.Success" OnClick="AddRelay"
