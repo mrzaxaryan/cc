@@ -46,26 +46,26 @@
         }
     </HeaderRight>
     <Toolbar>
-        <div class="sp-stats">
-            <div class="sp-stat">
-                <span class="sp-stat-value sp-stat-active">@SyncDownloading</span>
-                <span class="sp-stat-label">Uploading</span>
+        <div class="panel-stats">
+            <div class="panel-stat">
+                <span class="panel-stat-value panel-stat-active">@SyncDownloading</span>
+                <span class="panel-stat-label">Uploading</span>
             </div>
-            <div class="sp-stat">
-                <span class="sp-stat-value">@SyncQueued</span>
-                <span class="sp-stat-label">Queued</span>
+            <div class="panel-stat">
+                <span class="panel-stat-value">@SyncQueued</span>
+                <span class="panel-stat-label">Queued</span>
             </div>
-            <div class="sp-stat">
-                <span class="sp-stat-value">@SyncPaused</span>
-                <span class="sp-stat-label">Paused</span>
+            <div class="panel-stat">
+                <span class="panel-stat-value">@SyncPaused</span>
+                <span class="panel-stat-label">Paused</span>
             </div>
-            <div class="sp-stat">
-                <span class="sp-stat-value sp-stat-done">@SyncCompleted</span>
-                <span class="sp-stat-label">Done</span>
+            <div class="panel-stat">
+                <span class="panel-stat-value panel-stat-done">@SyncCompleted</span>
+                <span class="panel-stat-label">Done</span>
             </div>
-            <div class="sp-stat">
-                <span class="sp-stat-value sp-stat-fail">@SyncFailed</span>
-                <span class="sp-stat-label">Failed</span>
+            <div class="panel-stat">
+                <span class="panel-stat-value panel-stat-fail">@SyncFailed</span>
+                <span class="panel-stat-label">Failed</span>
             </div>
         </div>
     </Toolbar>
@@ -211,7 +211,7 @@
 
             @if (Downloads.Downloads.Count == 0)
             {
-                <div class="sp-empty">No upload activity. Add files from the File Manager to start uploading.</div>
+                <div class="panel-empty">No upload activity. Add files from the File Manager to start uploading.</div>
             }
         </div>
     </Body>

@@ -1,58 +1,5 @@
 /* Upload Manager — panel-specific styles */
 
-.sm-agent {
-    font-size: 0.7rem;
-    color: var(--cc-accent-blue);
-    font-weight: 600;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 160px;
-}
-
-/* Remove button hover state */
-.sm-remove-btn:hover:not(:disabled) {
-    color: var(--cc-accent-red) !important;
-}
-
-/* Tabs */
-.sm-tabs {
-    display: flex;
-    gap: 1px;
-    border-bottom: 1px solid var(--cc-border);
-}
-
-.sm-tab {
-    background: none;
-    border: none;
-    border-bottom: 2px solid transparent;
-    color: var(--cc-text-dim);
-    font-size: 0.7rem;
-    font-weight: 500;
-    padding: 0.3rem 0.6rem;
-    cursor: pointer;
-    transition: color 0.15s, border-color 0.15s;
-}
-
-.sm-tab:hover {
-    color: var(--cc-text-muted);
-}
-
-.sm-tab.active {
-    color: var(--cc-accent-blue);
-    border-bottom-color: var(--cc-accent-blue);
-}
-
-.sm-tab-count {
-    font-size: 0.6rem;
-    color: var(--cc-text-dim);
-    margin-left: 0.2rem;
-}
-
-.sm-tab.active .sm-tab-count {
-    color: var(--cc-accent-blue);
-}
-
 /* List */
 .sm-list {
     display: flex;
@@ -160,13 +107,3 @@
     color: var(--cc-text-dim);
 }
 
-/* Empty state */
-.sm-empty {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2.5rem 1rem;
-    color: var(--cc-text-dim);
-    font-size: 0.8rem;
-    font-style: italic;
-}

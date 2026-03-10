@@ -836,6 +836,123 @@ a:hover {
     to   { opacity: 1; transform: scale(1); }
 }
 
+/* ===== Shared Panel Patterns ===== */
+
+/* Tabs — used by Downloads, FileSearch, Settings */
+.panel-tabs {
+    display: flex;
+    gap: 1px;
+    border-bottom: 1px solid var(--cc-border);
+}
+
+.panel-tab {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--cc-text-dim);
+    font-size: 0.7rem;
+    font-weight: 500;
+    padding: 0.3rem 0.6rem;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.panel-tab:hover {
+    color: var(--cc-text-muted);
+}
+
+.panel-tab.active {
+    color: var(--cc-accent-blue);
+    border-bottom-color: var(--cc-accent-blue);
+}
+
+.panel-tab-count {
+    font-size: 0.6rem;
+    color: var(--cc-text-dim);
+    margin-left: 0.2rem;
+}
+
+.panel-tab.active .panel-tab-count {
+    color: var(--cc-accent-blue);
+}
+
+/* Empty state — used by all panels */
+.panel-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem 1rem;
+    color: var(--cc-text-dim);
+    font-size: 0.8rem;
+    font-style: italic;
+    text-align: center;
+}
+
+/* Agent label in header — used by Downloads, FileSearch */
+.panel-agent-label {
+    font-size: 0.7rem;
+    color: var(--cc-accent-blue);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 160px;
+}
+
+/* Stats bar — used by SearchJobs, Uploads */
+.panel-stats {
+    display: flex;
+    gap: 0;
+}
+
+.panel-stat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.1rem;
+}
+
+.panel-stat-value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--cc-text);
+}
+
+.panel-stat-label {
+    font-size: 0.6rem;
+    color: var(--cc-text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.panel-stat-active { color: var(--cc-accent-blue); }
+.panel-stat-done { color: var(--cc-accent-green); }
+.panel-stat-fail { color: var(--cc-accent-red); }
+
+/* Status dot — used by Agents, SearchJobs, Uploads */
+.status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.dot-on {
+    background: var(--cc-accent-green);
+    box-shadow: 0 0 4px var(--cc-accent-green);
+}
+
+.dot-off {
+    background: var(--cc-text-dim);
+}
+
+/* Remove button hover — used by Downloads, FileSearch */
+.panel-remove-btn:hover:not(:disabled) {
+    color: var(--cc-accent-red) !important;
+}
+
 /* ===== Mobile / Touch Responsive ===== */
 @media (max-width: 768px) {
     :root {

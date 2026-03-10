@@ -20,9 +20,9 @@
         }
     </HeaderRight>
     <Toolbar>
-        <div class="cm-tabs">
-            <button class="cm-tab @(tab == Tab.Cache ? "active" : "")" @onclick="() => tab = Tab.Cache">Storage</button>
-            <button class="cm-tab @(tab == Tab.IndexedDB ? "active" : "")" @onclick="() => { tab = Tab.IndexedDB; _ = LoadDbStats(); }">IndexedDB</button>
+        <div class="panel-tabs">
+            <button class="panel-tab @(tab == Tab.Cache ? "active" : "")" @onclick="() => tab = Tab.Cache">Storage</button>
+            <button class="panel-tab @(tab == Tab.IndexedDB ? "active" : "")" @onclick="() => { tab = Tab.IndexedDB; _ = LoadDbStats(); }">IndexedDB</button>
         </div>
     </Toolbar>
     <Body>
@@ -95,7 +95,7 @@
                     }
                     else if (agentStats.Count == 0)
                     {
-                        <div class="cm-empty"><em>No cached data</em></div>
+                        <div class="panel-empty"><em>No cached data</em></div>
                     }
                     else
                     {
@@ -142,7 +142,7 @@
                         }
                         @if (childDirs.Count == 0 && childFiles.Count == 0)
                         {
-                            <div class="cm-empty"><em>Empty</em></div>
+                            <div class="panel-empty"><em>Empty</em></div>
                         }
                     }
                 }

@@ -1,10 +1,5 @@
 /* Agents Panel */
 
-.ap-empty {
-    color: var(--cc-text-dim);
-    font-size: 0.85rem;
-    padding: 0.5rem;
-}
 
 /* Relay filter bar */
 .ap-relay-bar {

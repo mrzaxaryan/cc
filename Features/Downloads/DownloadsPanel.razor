@@ -8,7 +8,7 @@
     <HeaderLeft>
         @if (!string.IsNullOrEmpty(AgentName))
         {
-            <span class="sm-agent">@AgentName</span>
+            <span class="panel-agent-label">@AgentName</span>
         }
         @if (IsAgentServicePaused)
         {
@@ -43,25 +43,25 @@
         <CcBtn Size="Size.Xs" OnClick="Refresh" Title="Refresh">&#x21bb;</CcBtn>
     </HeaderRight>
     <Toolbar>
-        <div class="sm-tabs">
-            <button class="sm-tab @(filter == Filter.All ? "active" : "")" @onclick="() => SetFilter(Filter.All)">
-                All <span class="sm-tab-count">@activeRecords.Count</span>
+        <div class="panel-tabs">
+            <button class="panel-tab @(filter == Filter.All ? "active" : "")" @onclick="() => SetFilter(Filter.All)">
+                All <span class="panel-tab-count">@activeRecords.Count</span>
             </button>
-            <button class="sm-tab @(filter == Filter.Active ? "active" : "")" @onclick="() => SetFilter(Filter.Active)">
-                Active <span class="sm-tab-count">@CountByFilter(Filter.Active)</span>
+            <button class="panel-tab @(filter == Filter.Active ? "active" : "")" @onclick="() => SetFilter(Filter.Active)">
+                Active <span class="panel-tab-count">@CountByFilter(Filter.Active)</span>
             </button>
-            <button class="sm-tab @(filter == Filter.Paused ? "active" : "")" @onclick="() => SetFilter(Filter.Paused)">
-                Paused <span class="sm-tab-count">@CountByFilter(Filter.Paused)</span>
+            <button class="panel-tab @(filter == Filter.Paused ? "active" : "")" @onclick="() => SetFilter(Filter.Paused)">
+                Paused <span class="panel-tab-count">@CountByFilter(Filter.Paused)</span>
             </button>
-            <button class="sm-tab @(filter == Filter.Done ? "active" : "")" @onclick="() => SetFilter(Filter.Done)">
-                Done <span class="sm-tab-count">@CountByFilter(Filter.Done)</span>
+            <button class="panel-tab @(filter == Filter.Done ? "active" : "")" @onclick="() => SetFilter(Filter.Done)">
+                Done <span class="panel-tab-count">@CountByFilter(Filter.Done)</span>
             </button>
         </div>
     </Toolbar>
     <Body>
         @if (filteredRecords.Count == 0)
         {
-            <div class="sm-empty">
+            <div class="panel-empty">
                 @if (activeRecords.Count == 0)
                 {
                     <span>No active syncs</span>
@@ -123,7 +123,7 @@
                                         <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@dl.Error">FAILED</CcBadge>
                                         break;
                                 }
-                                <CcBtn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => RemoveDownload(rec)" Title="Remove" CssClass="sm-remove-btn">&#x2715;</CcBtn>
+                                <CcBtn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => RemoveDownload(rec)" Title="Remove" CssClass="panel-remove-btn">&#x2715;</CcBtn>
                             </div>
                         </div>
                         @if (dl.Status is DownloadStatus.Downloading or DownloadStatus.Queued or DownloadStatus.Paused)

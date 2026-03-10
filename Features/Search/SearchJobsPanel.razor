@@ -46,26 +46,26 @@
         }
     </HeaderRight>
     <Toolbar>
-        <div class="sg-stats">
-            <div class="sg-stat">
-                <span class="sg-stat-value sg-stat-active">@TotalScanning</span>
-                <span class="sg-stat-label">Searching</span>
+        <div class="panel-stats">
+            <div class="panel-stat">
+                <span class="panel-stat-value panel-stat-active">@TotalScanning</span>
+                <span class="panel-stat-label">Searching</span>
             </div>
-            <div class="sg-stat">
-                <span class="sg-stat-value">@TotalPaused</span>
-                <span class="sg-stat-label">Paused</span>
+            <div class="panel-stat">
+                <span class="panel-stat-value">@TotalPaused</span>
+                <span class="panel-stat-label">Paused</span>
             </div>
-            <div class="sg-stat">
-                <span class="sg-stat-value sg-stat-done">@TotalCompleted</span>
-                <span class="sg-stat-label">Done</span>
+            <div class="panel-stat">
+                <span class="panel-stat-value panel-stat-done">@TotalCompleted</span>
+                <span class="panel-stat-label">Done</span>
             </div>
-            <div class="sg-stat">
-                <span class="sg-stat-value sg-stat-fail">@TotalFailed</span>
-                <span class="sg-stat-label">Failed</span>
+            <div class="panel-stat">
+                <span class="panel-stat-value panel-stat-fail">@TotalFailed</span>
+                <span class="panel-stat-label">Failed</span>
             </div>
-            <div class="sg-stat">
-                <span class="sg-stat-value">@TotalFilesFound</span>
-                <span class="sg-stat-label">Files</span>
+            <div class="panel-stat">
+                <span class="panel-stat-value">@TotalFilesFound</span>
+                <span class="panel-stat-label">Files</span>
             </div>
         </div>
     </Toolbar>
@@ -192,7 +192,7 @@
 
             @if (Scans.Searches.Count == 0)
             {
-                <div class="sg-empty">No search activity. Use the SEARCH button on directories in the File Manager.</div>
+                <div class="panel-empty">No search activity. Use the SEARCH button on directories in the File Manager.</div>
             }
         </div>
     </Body>

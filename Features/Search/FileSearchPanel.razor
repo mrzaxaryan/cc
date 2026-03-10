@@ -11,7 +11,7 @@
     <HeaderLeft>
         @if (!string.IsNullOrEmpty(AgentName))
         {
-            <span class="scan-agent">@AgentName</span>
+            <span class="panel-agent-label">@AgentName</span>
         }
         @if (IsAgentServicePaused)
         {
@@ -98,22 +98,22 @@
         }
 
         @* Active scans *@
-        <div class="scan-tabs">
-            <button class="scan-tab @(filter == Filter.All ? "active" : "")" @onclick="() => SetFilter(Filter.All)">
-                All <span class="scan-tab-count">@allRecords.Count</span>
+        <div class="panel-tabs">
+            <button class="panel-tab @(filter == Filter.All ? "active" : "")" @onclick="() => SetFilter(Filter.All)">
+                All <span class="panel-tab-count">@allRecords.Count</span>
             </button>
-            <button class="scan-tab @(filter == Filter.Active ? "active" : "")" @onclick="() => SetFilter(Filter.Active)">
-                Active <span class="scan-tab-count">@CountByFilter(Filter.Active)</span>
+            <button class="panel-tab @(filter == Filter.Active ? "active" : "")" @onclick="() => SetFilter(Filter.Active)">
+                Active <span class="panel-tab-count">@CountByFilter(Filter.Active)</span>
             </button>
-            <button class="scan-tab @(filter == Filter.Done ? "active" : "")" @onclick="() => SetFilter(Filter.Done)">
-                Done <span class="scan-tab-count">@CountByFilter(Filter.Done)</span>
+            <button class="panel-tab @(filter == Filter.Done ? "active" : "")" @onclick="() => SetFilter(Filter.Done)">
+                Done <span class="panel-tab-count">@CountByFilter(Filter.Done)</span>
             </button>
         </div>
     </Toolbar>
     <Body>
         @if (filteredRecords.Count == 0)
         {
-            <div class="scan-empty">
+            <div class="panel-empty">
                 @if (allRecords.Count == 0)
                 {
                     <span>No searches yet. Click NEW SEARCH to start.</span>
@@ -160,7 +160,7 @@
                                         <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@s.Error">FAILED</CcBadge>
                                         break;
                                 }
-                                <CcBtn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => RemoveScan(s)" Title="Remove" CssClass="scan-remove-btn">&#x2715;</CcBtn>
+                                <CcBtn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => RemoveScan(s)" Title="Remove" CssClass="panel-remove-btn">&#x2715;</CcBtn>
                             </div>
                         </div>
                         <div class="scan-item-stats">

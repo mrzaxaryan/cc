@@ -2,45 +2,6 @@
     animation: cc-pulse 1.5s ease-in-out infinite;
 }
 
-/* Stats bar */
-.sg-stats {
-    display: flex;
-    gap: 0;
-}
-
-.sg-stat {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.1rem;
-}
-
-.sg-stat-value {
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--cc-text);
-}
-
-.sg-stat-active {
-    color: var(--cc-accent-blue);
-}
-
-.sg-stat-done {
-    color: var(--cc-accent-green);
-}
-
-.sg-stat-fail {
-    color: var(--cc-accent-red);
-}
-
-.sg-stat-label {
-    font-size: 0.6rem;
-    color: var(--cc-text-dim);
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-}
-
 /* Agent list */
 .sg-agents {
     display: flex;
@@ -185,14 +146,3 @@
     opacity: 0.6;
 }
 
-/* Empty state */
-.sg-empty {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2.5rem 1rem;
-    color: var(--cc-text-dim);
-    font-size: 0.8rem;
-    font-style: italic;
-    text-align: center;
-}

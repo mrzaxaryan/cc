@@ -6,34 +6,6 @@
     font-weight: 500;
 }
 
-/* Tabs */
-.cm-tabs {
-    display: flex;
-    gap: 2px;
-    border-bottom: 1px solid var(--cc-border);
-    flex-shrink: 0;
-}
-
-.cm-tab {
-    background: none;
-    border: none;
-    color: var(--cc-text-muted);
-    font-size: 0.75rem;
-    font-weight: 500;
-    padding: 0.4rem 0.8rem;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: color 0.15s, border-color 0.15s;
-}
-
-.cm-tab:hover {
-    color: var(--cc-text);
-}
-
-.cm-tab.active {
-    color: var(--cc-accent-blue);
-    border-bottom-color: var(--cc-accent-blue);
-}
 
 .cm-toolbar {
     display: flex;
@@ -177,12 +149,6 @@
     padding: 1.5rem;
 }
 
-.cm-empty {
-    padding: 1.5rem;
-    text-align: center;
-    color: var(--cc-text-dim);
-    font-size: 0.8rem;
-}
 
 /* IndexedDB tab */
 .cm-db-section {
