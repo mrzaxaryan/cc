@@ -210,6 +210,10 @@
     private List<DbTable> dbTables = new();
     private bool dbLoading;
 
+    // Debounce
+    private Timer? _debounceTimer;
+    private bool _refreshing;
+
     protected override async Task OnInitializedAsync()
     {
         Cache.OnChanged += OnCacheChanged;
@@ -217,18 +221,20 @@
         await Refresh();
     }
 
-    private async void OnCacheChanged()
+    private void OnCacheChanged()
     {
-        await InvokeAsync(async () =>
+        _debounceTimer?.Dispose();
+        _debounceTimer = new Timer(async _ =>
         {
-            await Refresh();
-            StateHasChanged();
-        });
+            if (_refreshing) return;
+            await InvokeAsync(Refresh);
+        }, null, 300, Timeout.Infinite);
     }
 
     private async Task Refresh()
     {
-        if (!Cache.HasDirectory) return;
+        if (!Cache.HasDirectory || _refreshing) return;
+        _refreshing = true;
         loading = true;
         StateHasChanged();
 
@@ -263,6 +269,7 @@
         finally
         {
             loading = false;
+            _refreshing = false;
             StateHasChanged();
         }
     }
@@ -415,6 +422,7 @@
 
     public void Dispose()
     {
+        _debounceTimer?.Dispose();
         Cache.OnChanged -= OnCacheChanged;
         Vfs.OnChanged -= OnCacheChanged;
     }

@@ -81,6 +81,14 @@
             {
                 <SyncPanel />
             }
+            else if (win.Panel == "Scanner")
+            {
+                <ScanConfigPanel AgentUuid="@win.AgentUuid" AgentName="@win.AgentName" InitialPath="@win.ScanPath" />
+            }
+            else if (win.Panel == "Scan")
+            {
+                <ScanGlobalPanel />
+            }
         </div>
         @if (!win.Maximized)
         {
@@ -167,6 +175,8 @@
         "File Manager" => "folder",
         "Sync Manager" => "sync",
         "Sync" => "sync",
+        "Scanner" => "search",
+        "Scan" => "search",
         _ => "monitor"
     };
 

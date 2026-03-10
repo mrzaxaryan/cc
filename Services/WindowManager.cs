@@ -45,22 +45,25 @@ public class WindowManager
             Title = panel,
             X = 100 + offset,
             Y = 80 + offset,
-            Width = panel switch { "File Manager" => 800, "Settings" => 650, "Relay" => 900, "Agents" => 950, "Sync Manager" => 600, _ => 700 },
+            Width = panel switch { "File Manager" => 800, "Settings" => 650, "Relay" => 900, "Agents" => 950, "Sync Manager" => 600, "Scan" => 700, _ => 700 },
             Height = 500,
             ZIndex = _topZ
         });
         OnChanged?.Invoke();
     }
 
-    public void OpenAgentWindow(string panel, string agentId, RelaySocket? relay = null, string? agentName = null, string? agentUuid = null)
+    public void OpenAgentWindow(string panel, string agentId, RelaySocket? relay = null, string? agentName = null, string? agentUuid = null, string? scanPath = null)
     {
-        // Reuse existing window for same panel + agent
-        var existing = Windows.FirstOrDefault(w => w.Panel == panel && w.AgentId == agentId);
-        if (existing is not null)
+        // For Scanner, don't reuse — each scan path gets its own window
+        if (panel != "Scanner")
         {
-            existing.Minimized = false;
-            BringToFront(existing);
-            return;
+            var existing = Windows.FirstOrDefault(w => w.Panel == panel && w.AgentId == agentId);
+            if (existing is not null)
+            {
+                existing.Minimized = false;
+                BringToFront(existing);
+                return;
+            }
         }
 
         _topZ++;
@@ -74,9 +77,10 @@ public class WindowManager
             AgentName = agentName,
             AgentUuid = agentUuid,
             Relay = relay,
+            ScanPath = scanPath,
             X = 100 + offset,
             Y = 80 + offset,
-            Width = panel switch { "File Manager" => 800, _ => 700 },
+            Width = panel switch { "File Manager" => 800, "Scanner" => 600, _ => 700 },
             Height = 500,
             ZIndex = _topZ
         });

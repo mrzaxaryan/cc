@@ -96,6 +96,7 @@
                                 @if (isDir)
                                 {
                                     <CcBtn Size="Size.Xs" OnClick="() => OpenAsDirectory(e.Name)" Title="Open" Disabled="@(!IsConnected && !HasCache)">OPEN</CcBtn>
+                                    <CcBtn Size="Size.Xs" Variant="BtnVariant.Primary" OnClick="() => OpenScanWindow(e.Name)" Title="Scan directory" Disabled="@(!IsConnected)">SCAN</CcBtn>
                                 }
                                 else if (Cache.HasDirectory)
                                 {
@@ -484,6 +485,13 @@
     {
         if (!string.IsNullOrEmpty(AgentId)) Wm.OpenAgentWindow("Sync Manager", AgentId, agentName: AgentName, agentUuid: AgentUuid);
         else Wm.OpenWindow("Sync Manager");
+    }
+
+    private void OpenScanWindow(string dirName)
+    {
+        if (string.IsNullOrEmpty(AgentId)) return;
+        var scanPath = currentPath + dirName;
+        Wm.OpenAgentWindow("Scanner", AgentId, agentName: AgentName, agentUuid: AgentUuid, scanPath: scanPath);
     }
 
     private async Task SaveToBrowser(DownloadRecord dl)

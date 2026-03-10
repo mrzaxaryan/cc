@@ -1,0 +1,264 @@
+@inject ScanStore Scans
+@inject DownloadStore Downloads
+@inject VfsStore Vfs
+@inject AgentStore AgentDb
+@inject MessageService Msg
+@implements IDisposable
+
+<div class="scan">
+    @* Header *@
+    <div class="scan-header">
+        <div class="scan-header-left">
+            <span class="scan-title">File Scanner</span>
+            @if (!string.IsNullOrEmpty(AgentName))
+            {
+                <span class="scan-agent">@AgentName</span>
+            }
+        </div>
+        <div class="scan-header-right">
+            <CcBtn Size="Size.Xs" OnClick="Refresh" Title="Refresh">&#x21bb;</CcBtn>
+        </div>
+    </div>
+
+    @* New scan form *@
+    @if (showNewScan)
+    {
+        <div class="scan-form">
+            <div class="scan-form-row">
+                <label class="scan-label">Directory</label>
+                <CcInput @bind-Value="newScanPath" Placeholder="C:\Users" Monospace />
+            </div>
+            <div class="scan-form-row">
+                <label class="scan-label">Extensions (comma-separated)</label>
+                <CcInput @bind-Value="newScanExtensions" Placeholder=".txt,.pdf,.doc,.xls" Monospace />
+            </div>
+            <div class="scan-form-row scan-form-check">
+                <label>
+                    <input type="checkbox" @bind="newScanAutoDownload" />
+                    Auto-download matching files
+                </label>
+            </div>
+            <div class="scan-form-actions">
+                <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="StartScan" Disabled="@(string.IsNullOrWhiteSpace(newScanPath) || string.IsNullOrWhiteSpace(newScanExtensions))">START SCAN</CcBtn>
+                <CcBtn Size="Size.Xs" OnClick="() => showNewScan = false">CANCEL</CcBtn>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="scan-new-btn">
+            <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="() => showNewScan = true">NEW SCAN</CcBtn>
+        </div>
+    }
+
+    @* Active scans *@
+    <div class="scan-tabs">
+        <button class="scan-tab @(filter == Filter.All ? "active" : "")" @onclick="() => SetFilter(Filter.All)">
+            All <span class="scan-tab-count">@allRecords.Count</span>
+        </button>
+        <button class="scan-tab @(filter == Filter.Active ? "active" : "")" @onclick="() => SetFilter(Filter.Active)">
+            Active <span class="scan-tab-count">@CountByFilter(Filter.Active)</span>
+        </button>
+        <button class="scan-tab @(filter == Filter.Done ? "active" : "")" @onclick="() => SetFilter(Filter.Done)">
+            Done <span class="scan-tab-count">@CountByFilter(Filter.Done)</span>
+        </button>
+    </div>
+
+    @if (filteredRecords.Count == 0)
+    {
+        <div class="scan-empty">
+            @if (allRecords.Count == 0)
+            {
+                <span>No scans yet. Click NEW SCAN to start.</span>
+            }
+            else
+            {
+                <span>No @filter.ToString().ToLower() scans</span>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="scan-list">
+            @foreach (var scan in filteredRecords)
+            {
+                var s = scan;
+                var pct = s.DirsTotal > 0 ? (int)(s.DirsScanned * 100 / s.DirsTotal) : 0;
+                <div class="scan-item @StatusClass(s.Status)">
+                    <div class="scan-item-row">
+                        <span class="scan-item-icon">@StatusIcon(s.Status)</span>
+                        <div class="scan-item-info">
+                            <span class="scan-item-path" title="@s.RootPath">@s.RootPath</span>
+                            <span class="scan-item-meta">
+                                @s.Extensions
+                                @if (!string.IsNullOrEmpty(s.AgentName) && string.IsNullOrEmpty(AgentUuid))
+                                {
+                                    <span class="scan-item-agent">@s.AgentName</span>
+                                }
+                            </span>
+                        </div>
+                        <div class="scan-item-status">
+                            @switch (s.Status)
+                            {
+                                case ScanStatus.Scanning:
+                                    <CcBtn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseScan(s)" Title="Pause">&#x23F8;</CcBtn>
+                                    break;
+                                case ScanStatus.Paused:
+                                    <CcBtn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeScan(s)" Title="Resume">&#x25B6;</CcBtn>
+                                    break;
+                                case ScanStatus.Completed:
+                                    <CcBadge Variant="BadgeVariant.Success" Size="Size.Xs">DONE</CcBadge>
+                                    break;
+                                case ScanStatus.Failed:
+                                    <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@s.Error">FAILED</CcBadge>
+                                    break;
+                            }
+                            <CcBtn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => RemoveScan(s)" Title="Remove" CssClass="scan-remove-btn">&#x2715;</CcBtn>
+                        </div>
+                    </div>
+                    <div class="scan-item-stats">
+                        <span>Dirs: @s.DirsScanned / @s.DirsTotal</span>
+                        <span>Files found: @s.FilesFound</span>
+                        @if (s.AutoDownload)
+                        {
+                            <span>Queued: @s.FilesQueued</span>
+                        }
+                    </div>
+                    @if (s.Status is ScanStatus.Scanning or ScanStatus.Paused)
+                    {
+                        <CcProgress Size="Size.Xs" Variant="@ProgressVariant(s.Status)" Percent="@pct" />
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string? AgentUuid { get; set; }
+    [Parameter] public string? AgentName { get; set; }
+    [Parameter] public string? InitialPath { get; set; }
+
+    private enum Filter { All, Active, Done }
+
+    private List<ScanRecord> allRecords = new();
+    private List<ScanRecord> filteredRecords = new();
+    private Filter filter = Filter.All;
+
+    private bool showNewScan;
+    private string newScanPath = "";
+    private string newScanExtensions = ".txt,.pdf,.doc,.docx,.xls,.xlsx";
+    private bool newScanAutoDownload = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Scans.OnChanged += OnScansChanged;
+        await Scans.LoadAsync();
+        await Downloads.LoadAsync();
+
+        if (!string.IsNullOrEmpty(InitialPath))
+        {
+            newScanPath = InitialPath;
+            showNewScan = true;
+        }
+
+        Refresh();
+    }
+
+    private void OnScansChanged()
+    {
+        _ = InvokeAsync(() =>
+        {
+            Refresh();
+            StateHasChanged();
+        });
+    }
+
+    private void SetFilter(Filter f) { filter = f; ApplyFilter(); }
+
+    private void ApplyFilter()
+    {
+        filteredRecords = filter switch
+        {
+            Filter.Active => allRecords.Where(r => r.Status is ScanStatus.Scanning or ScanStatus.Paused).ToList(),
+            Filter.Done => allRecords.Where(r => r.Status is ScanStatus.Completed or ScanStatus.Failed).ToList(),
+            _ => allRecords.ToList()
+        };
+    }
+
+    private int CountByFilter(Filter f) => f switch
+    {
+        Filter.Active => allRecords.Count(r => r.Status is ScanStatus.Scanning or ScanStatus.Paused),
+        Filter.Done => allRecords.Count(r => r.Status is ScanStatus.Completed or ScanStatus.Failed),
+        _ => allRecords.Count
+    };
+
+    private void Refresh()
+    {
+        allRecords = string.IsNullOrEmpty(AgentUuid)
+            ? Scans.Scans.ToList()
+            : Scans.GetByAgent(AgentUuid);
+        allRecords = allRecords
+            .OrderBy(r => r.Status == ScanStatus.Scanning ? 0 : r.Status == ScanStatus.Paused ? 1 : 2)
+            .ThenByDescending(r => r.CreatedAt)
+            .ToList();
+        ApplyFilter();
+    }
+
+    private async Task StartScan()
+    {
+        if (string.IsNullOrEmpty(AgentUuid) || string.IsNullOrWhiteSpace(newScanPath) || string.IsNullOrWhiteSpace(newScanExtensions))
+            return;
+
+        var extensions = string.Join(",", newScanExtensions.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(e => e.StartsWith(".") ? e.ToLowerInvariant() : $".{e.ToLowerInvariant()}"));
+
+        var path = newScanPath.TrimEnd('\\', '/');
+        if (!string.IsNullOrEmpty(path) && !path.EndsWith(@"\"))
+            path += @"\";
+
+        await Scans.AddAsync(AgentUuid, AgentName ?? "", path, extensions, newScanAutoDownload);
+        showNewScan = false;
+        Refresh();
+    }
+
+    private void PauseScan(ScanRecord scan) => Scans.CancelCts(scan.Id);
+
+    private async Task ResumeScan(ScanRecord scan)
+    {
+        if (Scans.HasActiveCts(scan.Id)) return;
+        await Scans.ResumeAsync(scan.Id);
+    }
+
+    private async Task RemoveScan(ScanRecord scan)
+    {
+        Scans.CancelCts(scan.Id);
+        await Scans.RemoveAsync(scan.Id);
+    }
+
+    private static string StatusIcon(string s) => s switch
+    {
+        ScanStatus.Scanning => "\u25CF",
+        ScanStatus.Paused => "\u25A0",
+        ScanStatus.Completed => "\u2713",
+        ScanStatus.Failed => "\u2717",
+        _ => "\u25CB"
+    };
+
+    private static string StatusClass(string s) => s switch
+    {
+        ScanStatus.Scanning => "scan-item-active",
+        ScanStatus.Completed => "scan-item-done",
+        ScanStatus.Failed => "scan-item-failed",
+        _ => ""
+    };
+
+    private static ProgressVariant ProgressVariant(string s) => s switch
+    {
+        ScanStatus.Scanning => cc.Components.Shared.ProgressVariant.Info,
+        ScanStatus.Paused => cc.Components.Shared.ProgressVariant.Warning,
+        _ => cc.Components.Shared.ProgressVariant.Muted
+    };
+
+    public void Dispose() => Scans.OnChanged -= OnScansChanged;
+}

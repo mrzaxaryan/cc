@@ -1,0 +1,269 @@
+@inject ScanStore Scans
+@inject DownloadStore Downloads
+@inject AgentStore AgentDb
+@inject RelayConnectionService RelaySvc
+@inject MessageService Msg
+@implements IDisposable
+
+<div class="sg">
+    @* Global status header *@
+    <div class="sg-header">
+        <div class="sg-header-left">
+            <span class="sg-title">File Scans</span>
+            @if (IsGloballyRunning)
+            {
+                <CcBadge Variant="BadgeVariant.Success" Size="Size.Xs">
+                    <CcIcon Name="search" Size="Size.Xs" CssClass="sg-spinning" /> Scanning
+                </CcBadge>
+            }
+            else if (TotalPaused > 0)
+            {
+                <CcBadge Variant="BadgeVariant.Warning" Size="Size.Xs">Paused</CcBadge>
+            }
+            else
+            {
+                <CcBadge Variant="BadgeVariant.Muted" Size="Size.Xs">Idle</CcBadge>
+            }
+        </div>
+        <div class="sg-header-right">
+            @if (TotalScanning > 0)
+            {
+                <CcBtn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="StopAll" Title="Stop all scans">STOP ALL</CcBtn>
+            }
+            @if (TotalPaused > 0)
+            {
+                <CcBtn Variant="BtnVariant.Success" Size="Size.Xs" OnClick="ResumeAll" Title="Resume all paused">RESUME ALL</CcBtn>
+            }
+        </div>
+    </div>
+
+    @* Global stats *@
+    <div class="sg-stats">
+        <div class="sg-stat">
+            <span class="sg-stat-value sg-stat-active">@TotalScanning</span>
+            <span class="sg-stat-label">Scanning</span>
+        </div>
+        <div class="sg-stat">
+            <span class="sg-stat-value">@TotalPaused</span>
+            <span class="sg-stat-label">Paused</span>
+        </div>
+        <div class="sg-stat">
+            <span class="sg-stat-value sg-stat-done">@TotalCompleted</span>
+            <span class="sg-stat-label">Done</span>
+        </div>
+        <div class="sg-stat">
+            <span class="sg-stat-value sg-stat-fail">@TotalFailed</span>
+            <span class="sg-stat-label">Failed</span>
+        </div>
+        <div class="sg-stat">
+            <span class="sg-stat-value">@TotalFilesFound</span>
+            <span class="sg-stat-label">Files</span>
+        </div>
+    </div>
+
+    @* Per-agent breakdown *@
+    <div class="sg-agents">
+        @foreach (var group in GetAgentGroups())
+        {
+            var isOnline = RelaySvc.GetAllAgents().Any(a => AgentDb.GetUuidByAgentId(a.Agent.Id) == group.Uuid);
+            <div class="sg-agent-card">
+                <div class="sg-agent-header">
+                    <span class="status-dot @(isOnline ? "dot-on" : "dot-off")"></span>
+                    <span class="sg-agent-name">@group.Name</span>
+                    <span class="sg-agent-summary">
+                        @if (group.Scanning > 0) { <span class="sg-count-active">@group.Scanning&#x25CF;</span> }
+                        @if (group.Paused > 0) { <span class="sg-count-paused">@group.Paused&#x25A0;</span> }
+                        <span class="sg-count-done">@group.Completed&#x2713;</span>
+                        @if (group.Failed > 0) { <span class="sg-count-fail">@group.Failed&#x2717;</span> }
+                    </span>
+                </div>
+
+                @* Active scans *@
+                @foreach (var scan in GetAgentScans(group.Uuid, ScanStatus.Scanning))
+                {
+                    var pct = scan.DirsTotal > 0 ? (int)(scan.DirsScanned * 100 / scan.DirsTotal) : 0;
+                    <div class="sg-scan">
+                        <div class="sg-scan-row">
+                            <span class="sg-scan-icon sg-icon-active">&#x25CF;</span>
+                            <div class="sg-scan-info">
+                                <span class="sg-scan-path" title="@scan.RootPath">@scan.RootPath</span>
+                                <span class="sg-scan-meta">@scan.Extensions</span>
+                            </div>
+                            <span class="sg-scan-status">
+                                <span class="sg-scan-stats-inline">@scan.DirsScanned/@scan.DirsTotal dirs &middot; @scan.FilesFound files</span>
+                                <CcBtn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseScan(scan)" Title="Pause">&#x23F8;</CcBtn>
+                            </span>
+                        </div>
+                        <CcProgress Size="Size.Xs" Variant="ProgressVariant.Info" Percent="@pct" />
+                    </div>
+                }
+
+                @* Paused *@
+                @foreach (var scan in GetAgentScans(group.Uuid, ScanStatus.Paused))
+                {
+                    var pctP = scan.DirsTotal > 0 ? (int)(scan.DirsScanned * 100 / scan.DirsTotal) : 0;
+                    <div class="sg-scan">
+                        <div class="sg-scan-row">
+                            <span class="sg-scan-icon">&#x25A0;</span>
+                            <div class="sg-scan-info">
+                                <span class="sg-scan-path" title="@scan.RootPath">@scan.RootPath</span>
+                                <span class="sg-scan-meta">@scan.Extensions &middot; @scan.FilesFound files found</span>
+                            </div>
+                            <span class="sg-scan-status">
+                                <CcBadge Variant="BadgeVariant.Warning" Size="Size.Xs">@pctP%</CcBadge>
+                                <CcBtn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeScan(scan)" Title="Resume">&#x25B6;</CcBtn>
+                            </span>
+                        </div>
+                    </div>
+                }
+
+                @* Failed *@
+                @foreach (var scan in GetAgentScans(group.Uuid, ScanStatus.Failed))
+                {
+                    <div class="sg-scan">
+                        <div class="sg-scan-row">
+                            <span class="sg-scan-icon sg-icon-fail">&#x2717;</span>
+                            <div class="sg-scan-info">
+                                <span class="sg-scan-path" title="@scan.RootPath">@scan.RootPath</span>
+                                <span class="sg-scan-meta">@scan.Extensions &middot; @scan.FilesFound files found</span>
+                            </div>
+                            <span class="sg-scan-status">
+                                <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@scan.Error">FAILED</CcBadge>
+                                <CcBtn Size="Size.Xs" OnClick="() => ResumeScan(scan)" Title="Retry">&#x21bb;</CcBtn>
+                            </span>
+                        </div>
+                    </div>
+                }
+
+                @* Completed (collapsed summary) *@
+                @if (group.Completed > 0)
+                {
+                    <div class="sg-scan sg-scan-done-summary" @onclick="() => ToggleCompleted(group.Uuid)">
+                        <div class="sg-scan-row">
+                            <span class="sg-scan-icon sg-icon-done">&#x2713;</span>
+                            <span class="sg-scan-path">@group.Completed completed scans (@group.TotalFiles files found)</span>
+                            <span class="sg-scan-status">
+                                <span class="sg-expand">@(expandedAgents.Contains(group.Uuid) ? "&#x25B2;" : "&#x25BC;")</span>
+                            </span>
+                        </div>
+                    </div>
+                    @if (expandedAgents.Contains(group.Uuid))
+                    {
+                        @foreach (var scan in GetAgentScans(group.Uuid, ScanStatus.Completed))
+                        {
+                            <div class="sg-scan sg-scan-done">
+                                <div class="sg-scan-row">
+                                    <span class="sg-scan-icon sg-icon-done">&#x2713;</span>
+                                    <div class="sg-scan-info">
+                                        <span class="sg-scan-path" title="@scan.RootPath">@scan.RootPath</span>
+                                        <span class="sg-scan-meta">@scan.Extensions &middot; @scan.DirsScanned dirs &middot; @scan.FilesFound files</span>
+                                    </div>
+                                    <span class="sg-scan-status">
+                                        <CcBtn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => RemoveScan(scan)" Title="Remove">&#x2715;</CcBtn>
+                                    </span>
+                                </div>
+                            </div>
+                        }
+                    }
+                }
+            </div>
+        }
+
+        @if (Scans.Scans.Count == 0)
+        {
+            <div class="sg-empty">No scan activity. Use the SCAN button on directories in the File Manager.</div>
+        }
+    </div>
+</div>
+
+@code {
+    private readonly HashSet<string> expandedAgents = new();
+
+    private int TotalScanning => Scans.Scans.Count(r => r.Status == ScanStatus.Scanning);
+    private int TotalPaused => Scans.Scans.Count(r => r.Status == ScanStatus.Paused);
+    private int TotalCompleted => Scans.Scans.Count(r => r.Status == ScanStatus.Completed);
+    private int TotalFailed => Scans.Scans.Count(r => r.Status == ScanStatus.Failed);
+    private int TotalFilesFound => Scans.Scans.Sum(r => r.FilesFound);
+    private bool IsGloballyRunning => TotalScanning > 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Scans.OnChanged += OnChanged;
+        RelaySvc.OnChanged += OnChanged;
+        await AgentDb.LoadAsync();
+        await Scans.LoadAsync();
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    private record AgentGroup(string Uuid, string Name, int Scanning, int Paused, int Completed, int Failed, int TotalFiles);
+
+    private List<AgentGroup> GetAgentGroups()
+    {
+        return Scans.Scans
+            .GroupBy(r => r.AgentUuid)
+            .Select(g =>
+            {
+                var uuid = g.Key;
+                var agent = AgentDb.GetByUuid(uuid);
+                var name = agent?.Name ?? uuid[..Math.Min(8, uuid.Length)];
+                return new AgentGroup(
+                    uuid, name,
+                    g.Count(r => r.Status == ScanStatus.Scanning),
+                    g.Count(r => r.Status == ScanStatus.Paused),
+                    g.Count(r => r.Status == ScanStatus.Completed),
+                    g.Count(r => r.Status == ScanStatus.Failed),
+                    g.Sum(r => r.FilesFound)
+                );
+            })
+            .OrderByDescending(g => g.Scanning)
+            .ThenByDescending(g => g.Paused)
+            .ThenBy(g => g.Name)
+            .ToList();
+    }
+
+    private List<ScanRecord> GetAgentScans(string uuid, string status)
+    {
+        return Scans.Scans
+            .Where(r => r.AgentUuid == uuid && r.Status == status)
+            .OrderByDescending(r => r.CreatedAt)
+            .ToList();
+    }
+
+    private void ToggleCompleted(string uuid)
+    {
+        if (!expandedAgents.Remove(uuid))
+            expandedAgents.Add(uuid);
+    }
+
+    private void PauseScan(ScanRecord scan) => Scans.CancelCts(scan.Id);
+
+    private async Task ResumeScan(ScanRecord scan)
+    {
+        if (Scans.HasActiveCts(scan.Id)) return;
+        await Scans.ResumeAsync(scan.Id);
+    }
+
+    private async Task RemoveScan(ScanRecord scan) => await Scans.RemoveAsync(scan.Id);
+
+    private async Task StopAll()
+    {
+        Scans.CancelAll();
+        var scanning = Scans.Scans.Where(r => r.Status == ScanStatus.Scanning).ToList();
+        foreach (var s in scanning)
+            await Scans.PauseAsync(s.Id);
+    }
+
+    private async Task ResumeAll()
+    {
+        var paused = Scans.Scans.Where(r => r.Status == ScanStatus.Paused).ToList();
+        foreach (var s in paused)
+            await Scans.ResumeAsync(s.Id);
+    }
+
+    public void Dispose()
+    {
+        Scans.OnChanged -= OnChanged;
+        RelaySvc.OnChanged -= OnChanged;
+    }
+}

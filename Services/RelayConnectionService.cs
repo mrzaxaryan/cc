@@ -12,12 +12,15 @@ public class RelayConnectionService : IAsyncDisposable
     private readonly RelayStore _relayStore;
     private readonly AgentStore _agentDb;
     private readonly DownloadStore _downloads;
+    private readonly ScanStore _scans;
+    private readonly VfsStore _vfs;
     private readonly CacheManager _cache;
     private readonly WindowManager _wm;
     private readonly MessageService _msg;
 
     private readonly Dictionary<string, RelayState> _relayStates = new();
     private readonly HashSet<string> _processingAgents = new();
+    private readonly HashSet<string> _scanningAgents = new();
     private bool _started;
     private bool _disposing;
 
@@ -39,11 +42,14 @@ public class RelayConnectionService : IAsyncDisposable
 
     public RelayConnectionService(
         RelayStore relayStore, AgentStore agentDb, DownloadStore downloads,
+        ScanStore scans, VfsStore vfs,
         CacheManager cache, WindowManager wm, MessageService msg)
     {
         _relayStore = relayStore;
         _agentDb = agentDb;
         _downloads = downloads;
+        _scans = scans;
+        _vfs = vfs;
         _cache = cache;
         _wm = wm;
         _msg = msg;
@@ -57,9 +63,12 @@ public class RelayConnectionService : IAsyncDisposable
         await _relayStore.LoadAsync();
         await _agentDb.LoadAsync();
         await _downloads.LoadAsync();
+        await _scans.LoadAsync();
         await ResetStaleDownloads();
+        await ResetStaleScans();
         _relayStore.OnChanged += OnRelayStoreChanged;
         _downloads.OnItemQueued += OnItemQueued;
+        _scans.OnItemQueued += OnScanItemQueued;
         SyncRelays();
     }
 
@@ -172,6 +181,7 @@ public class RelayConnectionService : IAsyncDisposable
                     await _agentDb.UpsertAsync(uuid, agent, relayEntry?.Id ?? "");
                     NotifyChanged();
                     _ = AutoResumeDownloads(uuid, agent.Id, relayUrl);
+                    _ = AutoResumeScans(uuid, agent.Id, relayUrl);
                 }
             }
         }
@@ -190,7 +200,10 @@ public class RelayConnectionService : IAsyncDisposable
             if (existingUuid is null)
                 _ = FetchUuid(agent, relayUrl);
             else
+            {
                 _ = AutoResumeDownloads(existingUuid, agent.Id, relayUrl);
+                _ = AutoResumeScans(existingUuid, agent.Id, relayUrl);
+            }
         }
     }
 
@@ -287,6 +300,172 @@ public class RelayConnectionService : IAsyncDisposable
             if (relay is not null && !_wm.Windows.Any(w => w.Relay == relay))
                 await relay.Disconnect();
         }
+    }
+
+    // --- Scan processing ---
+
+    private async Task ResetStaleScans()
+    {
+        var stale = _scans.Scans
+            .Where(r => r.Status == ScanStatus.Scanning && !_scans.HasActiveCts(r.Id))
+            .ToList();
+        foreach (var s in stale)
+            await _scans.PauseAsync(s.Id);
+    }
+
+    private void OnScanItemQueued(string agentUuid)
+    {
+        if (_disposing) return;
+
+        var agent = _agentDb.GetByUuid(agentUuid);
+        if (agent is null) return;
+
+        var relayEntry = !string.IsNullOrEmpty(agent.RelayStoreId) ? _relayStore.GetById(agent.RelayStoreId) : null;
+        if (relayEntry is null) return;
+
+        var online = GetAllAgents().Any(a => a.Agent.Id == agent.AgentId);
+        if (!online) return;
+
+        _ = TryProcessScanQueue(agentUuid, agent.AgentId, relayEntry.Url);
+    }
+
+    private async Task AutoResumeScans(string uuid, string agentId, string relayUrl)
+    {
+        await _scans.LoadAsync();
+        var paused = _scans.GetByAgent(uuid)
+            .Where(r => r.Status == ScanStatus.Paused)
+            .ToList();
+        foreach (var s in paused)
+            await _scans.ResumeAsync(s.Id);
+
+        await TryProcessScanQueue(uuid, agentId, relayUrl);
+    }
+
+    private async Task TryProcessScanQueue(string uuid, string agentId, string relayUrl)
+    {
+        if (_scanningAgents.Contains(uuid)) return;
+        if (_scans.GetNextPending(uuid) is null) return;
+
+        _scanningAgents.Add(uuid);
+        RelaySocket? relay = null;
+        try
+        {
+            relay = await CreateRelay(agentId, relayUrl);
+            if (relay is null) return;
+
+            while (!_disposing)
+            {
+                var scan = _scans.GetNextPending(uuid);
+                if (scan is null) break;
+
+                var cts = _scans.RegisterCts(scan.Id);
+                try
+                {
+                    await ProcessScan(relay, scan, cts.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    await _scans.PauseAsync(scan.Id);
+                }
+                catch (Exception ex)
+                {
+                    if (cts.IsCancellationRequested)
+                        await _scans.PauseAsync(scan.Id);
+                    else
+                        await _scans.FailAsync(scan.Id, ex.Message);
+                }
+                finally
+                {
+                    _scans.RemoveCts(scan.Id);
+                }
+            }
+        }
+        catch { }
+        finally
+        {
+            _scanningAgents.Remove(uuid);
+            if (relay is not null && !_wm.Windows.Any(w => w.Relay == relay))
+                await relay.Disconnect();
+        }
+    }
+
+    private async Task ProcessScan(RelaySocket relay, ScanRecord scan, CancellationToken ct)
+    {
+        var extensionSet = scan.Extensions
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(e => e.ToLowerInvariant())
+            .ToHashSet();
+
+        while (true)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var pending = scan.PendingDirs;
+            if (pending.Count == 0) break;
+
+            var dir = pending[0];
+            pending.RemoveAt(0);
+            scan.PendingDirs = pending;
+
+            // List directory via relay
+            var payload = RelaySocket.BuildPathCommand(0x01, dir);
+            var response = await relay.SendAndReceive(payload);
+            if (response is null || response.Length < 4) continue;
+
+            var (entries, error) = Models.DirEntry.ParseDirectoryResponse(response);
+            if (error is not null) continue;
+
+            // Resolve parent directory in VFS for this listing
+            var parentRemotePath = dir.TrimEnd('\\', '/');
+            var parentId = await _vfs.ResolveOrCreatePathAsync(scan.AgentUuid, parentRemotePath);
+
+            foreach (var entry in entries)
+            {
+                ct.ThrowIfCancellationRequested();
+
+                var entryRemotePath = parentRemotePath + @"\" + entry.Name;
+
+                if (entry.IsDirectory || entry.IsDrive)
+                {
+                    // Cache directory in VFS
+                    await _vfs.PutDirectoryAsync(scan.AgentUuid, parentId, entry.Name, entryRemotePath.Replace('\\', '/'), entry.IsDrive);
+
+                    var subDir = entryRemotePath + @"\";
+                    pending = scan.PendingDirs;
+                    pending.Add(subDir);
+                    scan.PendingDirs = pending;
+                    scan.DirsTotal++;
+                }
+                else
+                {
+                    // Cache every file in VFS
+                    var vfsFile = await _vfs.PutFileAsync(scan.AgentUuid, parentId, entry.Name, entryRemotePath.Replace('\\', '/'), (long)entry.Size);
+
+                    // Check extension filter for scan stats + auto-download
+                    var ext = System.IO.Path.GetExtension(entry.Name)?.ToLowerInvariant();
+                    if (!string.IsNullOrEmpty(ext) && extensionSet.Contains(ext))
+                    {
+                        scan.FilesFound++;
+
+                        // Auto-download if enabled
+                        if (scan.AutoDownload && _cache.HasDirectory)
+                        {
+                            var existing = _downloads.Find(scan.AgentUuid, entryRemotePath);
+                            if (existing is null || existing.Status == DownloadStatus.Failed)
+                            {
+                                await _downloads.AddAsync(scan.AgentUuid, scan.AgentName, entryRemotePath, entry.Name, vfsFile.Id, (long)entry.Size);
+                                scan.FilesQueued++;
+                            }
+                        }
+                    }
+                }
+            }
+
+            scan.DirsScanned++;
+            await _scans.UpdateAsync(scan);
+        }
+
+        await _scans.CompleteAsync(scan.Id);
     }
 
     // --- Events WebSocket ---
@@ -486,6 +665,7 @@ public class RelayConnectionService : IAsyncDisposable
         _disposing = true;
         _relayStore.OnChanged -= OnRelayStoreChanged;
         _downloads.OnItemQueued -= OnItemQueued;
+        _scans.OnItemQueued -= OnScanItemQueued;
         foreach (var rs in _relayStates.Values)
         {
             rs.Cts?.Cancel();

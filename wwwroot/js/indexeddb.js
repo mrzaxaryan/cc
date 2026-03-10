@@ -1,13 +1,14 @@
 // IndexedDB CRUD for agents, relays, and virtual filesystem
 (function () {
     const DB_NAME = 'cc-agents';
-    const DB_VERSION = 5;
+    const DB_VERSION = 6;
     const AGENTS_STORE = 'agents';
     const RELAYS_STORE = 'relays';
     const DOWNLOADS_STORE = 'downloads';
     const DIRECTORIES_STORE = 'directories';
     const FILES_STORE = 'files';
     const NOTIFICATIONS_STORE = 'notifications';
+    const SCANS_STORE = 'scans';
 
     function openDb() {
         return new Promise((resolve, reject) => {
@@ -42,6 +43,11 @@
                 if (!db.objectStoreNames.contains(NOTIFICATIONS_STORE)) {
                     const notifStore = db.createObjectStore(NOTIFICATIONS_STORE, { keyPath: 'id', autoIncrement: true });
                     notifStore.createIndex('created', 'created', { unique: false });
+                }
+                if (!db.objectStoreNames.contains(SCANS_STORE)) {
+                    const scanStore = db.createObjectStore(SCANS_STORE, { keyPath: 'id', autoIncrement: true });
+                    scanStore.createIndex('agentUuid', 'agentUuid', { unique: false });
+                    scanStore.createIndex('status', 'status', { unique: false });
                 }
             };
             req.onsuccess = () => resolve(req.result);
@@ -178,6 +184,26 @@
                 };
                 return new Promise((resolve, reject) => {
                     t.oncomplete = () => resolve();
+                    t.onerror = () => reject(t.error);
+                });
+            });
+        }
+    };
+
+    window.ccScanDb = {
+        getAll: () => run(SCANS_STORE, 'readonly', s => s.getAll()),
+        get: id => run(SCANS_STORE, 'readonly', s => s.get(id)),
+        put: record => run(SCANS_STORE, 'readwrite', s => s.put(record)),
+        remove: id => run(SCANS_STORE, 'readwrite', s => s.delete(id)),
+        clear: () => run(SCANS_STORE, 'readwrite', s => s.clear()),
+        getByAgent: agentUuid => {
+            return openDb().then(db => {
+                const t = db.transaction(SCANS_STORE, 'readonly');
+                const store = t.objectStore(SCANS_STORE);
+                const idx = store.index('agentUuid');
+                const req = idx.getAll(agentUuid);
+                return new Promise((resolve, reject) => {
+                    t.oncomplete = () => resolve(req.result);
                     t.onerror = () => reject(t.error);
                 });
             });
