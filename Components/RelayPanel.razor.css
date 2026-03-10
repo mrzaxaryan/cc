@@ -1,0 +1,7 @@
+.user-agent-cell {
+    max-width: 300px;
+}
+
+.relay-add-form {
+    background: var(--cc-bg-surface);
+}

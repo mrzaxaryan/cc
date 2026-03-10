@@ -19,7 +19,7 @@
     <div class="card-body p-0">
         @if (showAdd)
         {
-            <div class="p-3 border-bottom bg-light">
+            <div class="p-3 border-bottom relay-add-form">
                 <div class="row g-2 align-items-end">
                     <div class="col-md-4">
                         <label class="form-label small mb-1">Name</label>
@@ -242,7 +242,7 @@ else
                             <td><code>@listener.Id</code></td>
                             <td><code>@listener.Ip</code></td>
                             <td>@Formatters.FormatListenerLocation(listener)</td>
-                            <td class="text-truncate" style="max-width:300px" title="@listener.UserAgent">@listener.UserAgent</td>
+                            <td class="text-truncate user-agent-cell" title="@listener.UserAgent">@listener.UserAgent</td>
                             <td>@Formatters.FormatTimestamp(listener.ConnectedAt)</td>
                         </tr>
                     }

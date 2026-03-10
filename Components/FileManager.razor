@@ -67,11 +67,11 @@
                         }
                     </small>
                     <div class="d-flex gap-1">
-                        <button class="btn btn-outline-primary btn-sm py-0 px-1" style="font-size:0.65rem" @onclick="OpenSyncManagerWindow" title="Open Sync Manager">SYNC</button>
+                        <button class="btn btn-outline-primary btn-sm btn-tiny2" @onclick="OpenSyncManagerWindow" title="Open Sync Manager">SYNC</button>
                         <button class="btn btn-outline-secondary btn-sm py-0 px-1" @onclick="() => NavigateTo(currentPath)" disabled="@(loading || (!IsConnected && !HasCache))">&#x21bb;</button>
                     </div>
                 </div>
-                <div class="list-group list-group-flush" style="max-height:50vh;overflow-y:auto;">
+                <div class="list-group list-group-flush scrollable-list">
                     @if (entries is not null)
                     {
                         @if (pathSegments.Length > 0)
@@ -85,7 +85,7 @@
                             <button class="list-group-item list-group-item-action py-1 font-monospace small d-flex align-items-center gap-1 @(selectedEntry == e ? "active" : "")"
                                     @onclick="() => selectedEntry = e"
                                     @ondblclick="() => OnEntryDoubleClick(e)">
-                                <span class="flex-shrink-0 me-1" style="width:1.2em;text-align:center;">@(e.IsDirectory || e.IsDrive ? "\ud83d\udcc1" : "\ud83d\udcc4")</span>
+                                <span class="entry-icon me-1">@(e.IsDirectory || e.IsDrive ? "\ud83d\udcc1" : "\ud83d\udcc4")</span>
                                 <span class="flex-grow-1 text-truncate">@e.Name</span>
                                 @if (!e.IsDirectory && !e.IsDrive)
                                 {
@@ -94,7 +94,7 @@
                                 <span class="d-flex gap-1 flex-shrink-0">
                                     @if (e.IsDirectory || e.IsDrive)
                                     {
-                                        <button class="btn btn-outline-primary btn-sm px-1 py-0" style="font-size:0.7rem"
+                                        <button class="btn btn-outline-primary btn-sm btn-action"
                                                 @onclick:stopPropagation="true" @onclick="() => OpenAsDirectory(e.Name)" title="Open folder" disabled="@(!IsConnected && !HasCache)">OPEN</button>
                                     }
                                     else
@@ -105,50 +105,50 @@
                                             @if (dl?.Status == DownloadStatus.Downloading)
                                             {
                                                 var pct = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
-                                                <span class="d-flex align-items-center gap-1" style="font-size:0.6rem;">
-                                                    <span class="spinner-border spinner-border-sm" style="width:0.8rem;height:0.8rem;"></span>
+                                                <span class="d-flex align-items-center gap-1 dl-status">
+                                                    <span class="spinner-border spinner-border-sm dl-spinner"></span>
                                                     <span class="text-muted">@pct%</span>
                                                     @if (dl.SpeedBytesPerSec > 0)
                                                     {
                                                         <span class="text-muted">@Formatters.FormatSpeed(dl.SpeedBytesPerSec)</span>
                                                     }
-                                                    <button class="btn btn-outline-warning btn-sm px-1 py-0" style="font-size:0.6rem"
+                                                    <button class="btn btn-outline-warning btn-sm btn-tiny"
                                                             @onclick:stopPropagation="true" @onclick="() => PauseDownload(e)" title="Pause">&#x23F8;</button>
                                                 </span>
                                             }
                                             else if (dl?.Status == DownloadStatus.Paused)
                                             {
                                                 var pctPaused = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
-                                                <span class="d-flex align-items-center gap-1" style="font-size:0.6rem;">
-                                                    <span class="badge bg-warning text-dark py-0" style="font-size:0.55rem;">@pctPaused%</span>
-                                                    <button class="btn btn-outline-success btn-sm px-1 py-0" style="font-size:0.6rem"
+                                                <span class="d-flex align-items-center gap-1 dl-status">
+                                                    <span class="badge bg-warning text-dark py-0 text-xxs">@pctPaused%</span>
+                                                    <button class="btn btn-outline-success btn-sm btn-tiny"
                                                             @onclick:stopPropagation="true" @onclick="() => ResumeDownload(e)" title="Resume" disabled="@(!IsConnected && !IsAgentOnline)">&#x25B6;</button>
                                                 </span>
                                             }
                                             else if (dl?.Status == DownloadStatus.Queued)
                                             {
-                                                <span class="badge bg-secondary py-0" style="font-size:0.6rem" title="Queued for sync">QUEUED</span>
+                                                <span class="badge bg-secondary py-0 text-xs" title="Queued for sync">QUEUED</span>
                                             }
                                             else if (dl?.Status == DownloadStatus.Completed)
                                             {
-                                                <span class="d-flex align-items-center gap-1" style="font-size:0.6rem;">
-                                                    <button class="btn btn-outline-secondary btn-sm px-1 py-0" style="font-size:0.6rem"
+                                                <span class="d-flex align-items-center gap-1 dl-status">
+                                                    <button class="btn btn-outline-secondary btn-sm btn-tiny"
                                                             @onclick:stopPropagation="true" @onclick="() => ViewFile(e.Name)" title="View file">VIEW</button>
-                                                    <button class="btn btn-outline-primary btn-sm px-1 py-0" style="font-size:0.6rem"
+                                                    <button class="btn btn-outline-primary btn-sm btn-tiny"
                                                             @onclick:stopPropagation="true" @onclick="() => SaveToBrowser(dl)" title="Save to browser downloads">SAVE</button>
                                                 </span>
                                             }
                                             else if (dl?.Status == DownloadStatus.Failed)
                                             {
                                                 <span class="d-flex align-items-center gap-1">
-                                                    <span class="badge bg-danger py-0" style="font-size:0.6rem" title="@dl.Error">&#x2717;</span>
-                                                    <button class="btn btn-outline-warning btn-sm px-1 py-0" style="font-size:0.6rem"
+                                                    <span class="badge bg-danger py-0 text-xs" title="@dl.Error">&#x2717;</span>
+                                                    <button class="btn btn-outline-warning btn-sm btn-tiny"
                                                             @onclick:stopPropagation="true" @onclick="() => RetryDownload(e)" title="Retry" disabled="@(!IsConnected)">&#x21bb;</button>
                                                 </span>
                                             }
                                             else
                                             {
-                                                <button class="btn btn-outline-success btn-sm px-1 py-0" style="font-size:0.7rem"
+                                                <button class="btn btn-outline-success btn-sm btn-action"
                                                         @onclick:stopPropagation="true" @onclick="() => EnqueueSync(e)" title="Sync to cache" disabled="@(!IsConnected)">SYNC</button>
                                             }
                                         }
@@ -207,7 +207,7 @@
                                     }
                                 </div>
                             </div>
-                            <pre class="bg-dark text-light p-3 m-0 rounded-0" style="max-height:45vh;overflow:auto;white-space:pre-wrap;word-break:break-all;font-size:0.8rem;">@fileContent</pre>
+                            <pre class="bg-dark text-light p-3 m-0 rounded-0 file-preview">@fileContent</pre>
                         }
                     </div>
                 </div>

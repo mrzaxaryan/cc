@@ -21,24 +21,24 @@ else
                             <span class="badge @(rs.Connected ? "bg-success" : "bg-danger") badge-sm">@(rs.Connected ? "Live" : "Off")</span>
                             <span class="badge bg-dark badge-sm">@GetProtocolShort(rs.Url)</span>
                         </div>
-                        <code class="small text-muted text-truncate" title="@rs.Url" style="font-size:.7rem">@GetHostFromUrl(rs.Url)</code>
+                        <code class="small text-muted text-truncate relay-host" title="@rs.Url">@GetHostFromUrl(rs.Url)</code>
                         @if (rs.Connected)
                         {
-                            <small class="text-muted" style="font-size:.65rem">
+                            <small class="text-muted reconnect-text">
                                 @(rs.Agents?.Count ?? 0) agent@(rs.Agents?.Count != 1 ? "s" : "") connected
                             </small>
                         }
                         else if (rs.ReconnectAt is not null)
                         {
                             var secs = Math.Max(0, (int)Math.Ceiling((rs.ReconnectAt.Value - DateTime.UtcNow).TotalSeconds));
-                            <small class="text-warning" style="font-size:.65rem">
+                            <small class="text-warning reconnect-text">
                                 Reconnecting in @(secs)s...
-                                <button class="btn btn-link btn-sm p-0 text-success" style="font-size:.65rem;vertical-align:baseline" @onclick="() => Relay.ForceReconnect(rs.Url)">Connect now</button>
+                                <button class="btn btn-link btn-sm p-0 text-success reconnect-btn" @onclick="() => Relay.ForceReconnect(rs.Url)">Connect now</button>
                             </small>
                         }
                         else
                         {
-                            <small class="text-danger" style="font-size:.65rem">Disconnected</small>
+                            <small class="text-danger reconnect-text">Disconnected</small>
                         }
                     </div>
                 </div>
@@ -54,7 +54,7 @@ else
     else
     {
         <div class="table-responsive">
-            <table class="table table-striped mb-0" style="table-layout:fixed">
+            <table class="table table-striped mb-0 table-fixed">
                 <colgroup>
                     <col style="width:80px" />
                     <col style="width:14%" />
@@ -80,8 +80,7 @@ else
                 <tbody>
                     @foreach (var row in rows)
                     {
-                        <tr class="@(row.IsOnline && Wm.ConnectedAgentIds.Contains(row.AgentId) ? "table-active" : "") @(!row.IsOnline ? "opacity-50" : "")"
-                            style="cursor:context-menu"
+                        <tr class="ctx-row @(row.IsOnline && Wm.ConnectedAgentIds.Contains(row.AgentId) ? "table-active" : "") @(!row.IsOnline ? "opacity-50" : "")"
                             @oncontextmenu="(e) => ShowContextMenu(e, row.AgentId, row.RelayUrl, row.IsOnline)"
                             @oncontextmenu:preventDefault="true">
                             <td>
@@ -97,7 +96,7 @@ else
                             <td>
                                 @if (renamingUuid == row.Uuid)
                                 {
-                                    <input class="form-control form-control-sm py-0" style="font-size:.8rem" @bind="renameValue"
+                                    <input class="form-control form-control-sm py-0 rename-input" @bind="renameValue"
                                            @onkeydown="OnRenameKeyDown" @onblur="CancelRename" />
                                 }
                                 else
@@ -109,11 +108,11 @@ else
                             <td>
                                 @if (row.IsOnline && row.RelayUsed)
                                 {
-                                    <span class="badge bg-success" style="font-size:0.65rem">Used</span>
+                                    <span class="badge bg-success relay-use-badge">Used</span>
                                 }
                                 else if (row.IsOnline)
                                 {
-                                    <span class="badge bg-secondary" style="font-size:0.65rem">Unused</span>
+                                    <span class="badge bg-secondary relay-use-badge">Unused</span>
                                 }
                                 else
                                 {

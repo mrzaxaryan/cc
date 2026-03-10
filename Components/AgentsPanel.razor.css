@@ -1,0 +1,24 @@
+.relay-host {
+    font-size: 0.7rem;
+}
+
+.reconnect-text {
+    font-size: 0.65rem;
+}
+
+.reconnect-btn {
+    font-size: 0.65rem;
+    vertical-align: baseline;
+}
+
+.rename-input {
+    font-size: 0.8rem;
+}
+
+.relay-use-badge {
+    font-size: 0.65rem;
+}
+
+.ctx-row {
+    cursor: context-menu;
+}

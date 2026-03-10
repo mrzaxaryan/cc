@@ -434,13 +434,6 @@ pre {
     background: var(--cc-scrollbar-thumb-hover);
 }
 
-/* Welcome overlay */
-.welcome-card {
-    background: var(--cc-bg-base) !important;
-    color: var(--cc-text);
-    border: 1px solid var(--cc-border);
-}
-
 /* ===== Toast Notifications ===== */
 .toast-container {
     position: fixed;
@@ -516,6 +509,64 @@ pre {
 .toast-dismiss:hover {
     opacity: 1;
 }
+
+/* ===== Utility classes ===== */
+.text-xxs { font-size: 0.55rem; }
+.text-xs  { font-size: 0.6rem; }
+.text-xs2 { font-size: 0.65rem; }
+.text-sm  { font-size: 0.7rem; }
+.text-sm2 { font-size: 0.8rem; }
+
+.btn-tiny {
+    font-size: 0.6rem;
+    padding: 0 0.25rem;
+    line-height: 1.4;
+}
+
+.btn-tiny2 {
+    font-size: 0.65rem;
+    padding: 0 0.25rem;
+    line-height: 1.4;
+}
+
+.btn-action {
+    font-size: 0.7rem;
+    padding: 0 0.25rem;
+    line-height: 1.5;
+}
+
+.scrollable-list {
+    max-height: 50vh;
+    overflow-y: auto;
+}
+
+.scrollable-list-lg {
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.entry-icon {
+    width: 1.2em;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.file-preview {
+    max-height: 45vh;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-size: 0.8rem;
+}
+
+.output-pre {
+    max-height: 300px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    font-size: 0.8rem;
+}
+
+.table-fixed { table-layout: fixed; }
 
 /* ===== Theme toggle ===== */
 .theme-toggle {

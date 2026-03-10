@@ -77,30 +77,6 @@
     </div>
 </div>
 
-<style>
-    .welcome-overlay {
-        position: fixed;
-        inset: 0;
-        z-index: 10000;
-        background: var(--cc-overlay-bg);
-        backdrop-filter: blur(4px);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    .welcome-card {
-        background: var(--cc-bg-base);
-        color: var(--cc-text);
-        border: 1px solid var(--cc-border);
-        border-radius: 12px;
-        padding: 2.5rem;
-        max-width: 480px;
-        width: 90%;
-        text-align: center;
-        box-shadow: 0 8px 40px var(--cc-shadow);
-    }
-</style>
-
 @code {
     [Parameter] public EventCallback OnComplete { get; set; }
 

@@ -28,23 +28,23 @@
             <div class="row text-center small">
                 <div class="col">
                     <div class="fw-bold">@stats.agentCount</div>
-                    <div class="text-muted" style="font-size:0.7rem">Agents</div>
+                    <div class="text-muted stat-label">Agents</div>
                 </div>
                 <div class="col">
                     <div class="fw-bold">@stats.dirCount</div>
-                    <div class="text-muted" style="font-size:0.7rem">Dirs</div>
+                    <div class="text-muted stat-label">Dirs</div>
                 </div>
                 <div class="col">
                     <div class="fw-bold">@stats.fileCount</div>
-                    <div class="text-muted" style="font-size:0.7rem">Files</div>
+                    <div class="text-muted stat-label">Files</div>
                 </div>
                 <div class="col">
                     <div class="fw-bold">@Formatters.FormatSize((ulong)stats.totalSize)</div>
-                    <div class="text-muted" style="font-size:0.7rem">Metadata</div>
+                    <div class="text-muted stat-label">Metadata</div>
                 </div>
                 <div class="col">
                     <div class="fw-bold">@Formatters.FormatSize((ulong)blobSize)</div>
-                    <div class="text-muted" style="font-size:0.7rem">On Disk</div>
+                    <div class="text-muted stat-label">On Disk</div>
                 </div>
             </div>
         </div>
@@ -79,7 +79,7 @@
     @* Agent list at root *@
     @if (currentDirId == VfsStore.RootParentId && currentAgentUuid is null)
     {
-        <div class="list-group list-group-flush" style="max-height:50vh;overflow-y:auto;">
+        <div class="list-group list-group-flush scrollable-list">
             @if (loading)
             {
                 <div class="list-group-item text-center py-3">
@@ -92,16 +92,16 @@
                 {
                     <div class="list-group-item py-1 small d-flex align-items-center gap-1">
                         <a href="javascript:void(0)" class="flex-grow-1 text-truncate font-monospace" @onclick="() => NavigateToAgent(agent.uuid)" @onclick:preventDefault>@agent.name</a>
-                        <small class="text-muted flex-shrink-0" style="font-size:0.65rem">@agent.dirs d / @agent.files f</small>
-                        <small class="text-muted flex-shrink-0" style="font-size:0.65rem">@Formatters.FormatSize((ulong)agent.size)</small>
+                        <small class="text-muted flex-shrink-0 agent-meta">@agent.dirs d / @agent.files f</small>
+                        <small class="text-muted flex-shrink-0 agent-meta">@Formatters.FormatSize((ulong)agent.size)</small>
                         @if (confirmDeleteId == agent.uuid)
                         {
-                            <button class="btn btn-danger btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.6rem" @onclick="() => DeleteAgentCache(agent.uuid)">YES</button>
-                            <button class="btn btn-outline-secondary btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.6rem" @onclick="() => confirmDeleteId = null">NO</button>
+                            <button class="btn btn-danger btn-sm btn-tiny flex-shrink-0" @onclick="() => DeleteAgentCache(agent.uuid)">YES</button>
+                            <button class="btn btn-outline-secondary btn-sm btn-tiny flex-shrink-0" @onclick="() => confirmDeleteId = null">NO</button>
                         }
                         else
                         {
-                            <button class="btn btn-outline-danger btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.6rem"
+                            <button class="btn btn-outline-danger btn-sm btn-tiny flex-shrink-0"
                                     @onclick="() => confirmDeleteId = agent.uuid" title="Delete agent cache">DEL</button>
                         }
                     </div>
@@ -116,7 +116,7 @@
     else
     {
         @* Directory/file listing *@
-        <div class="list-group list-group-flush" style="max-height:50vh;overflow-y:auto;">
+        <div class="list-group list-group-flush scrollable-list">
             @if (loading)
             {
                 <div class="list-group-item text-center py-3">
@@ -130,16 +130,16 @@
                 @foreach (var dir in childDirs)
                 {
                     <div class="list-group-item py-1 font-monospace small d-flex align-items-center gap-1">
-                        <span class="flex-shrink-0 me-1" style="width:1.2em;text-align:center;">&#x1f4c1;</span>
+                        <span class="entry-icon me-1">&#x1f4c1;</span>
                         <a href="javascript:void(0)" class="flex-grow-1 text-truncate" @onclick="() => NavigateToDirectory(dir.Id)" @onclick:preventDefault>@dir.Name</a>
                         @if (confirmDeleteId == dir.Id)
                         {
-                            <button class="btn btn-danger btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.6rem" @onclick="() => DeleteDir(dir)">YES</button>
-                            <button class="btn btn-outline-secondary btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.6rem" @onclick="() => confirmDeleteId = null">NO</button>
+                            <button class="btn btn-danger btn-sm btn-tiny flex-shrink-0" @onclick="() => DeleteDir(dir)">YES</button>
+                            <button class="btn btn-outline-secondary btn-sm btn-tiny flex-shrink-0" @onclick="() => confirmDeleteId = null">NO</button>
                         }
                         else
                         {
-                            <button class="btn btn-outline-danger btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.65rem"
+                            <button class="btn btn-outline-danger btn-sm btn-tiny2 flex-shrink-0"
                                     @onclick="() => confirmDeleteId = dir.Id" title="Delete">DEL</button>
                         }
                     </div>
@@ -147,17 +147,17 @@
                 @foreach (var file in childFiles)
                 {
                     <div class="list-group-item py-1 font-monospace small d-flex align-items-center gap-1">
-                        <span class="flex-shrink-0 me-1" style="width:1.2em;text-align:center;">&#x1f4c4;</span>
+                        <span class="entry-icon me-1">&#x1f4c4;</span>
                         <span class="flex-grow-1 text-truncate">@file.Name</span>
                         <small class="text-muted flex-shrink-0">@Formatters.FormatSize((ulong)file.Size)</small>
                         @if (confirmDeleteId == file.Id)
                         {
-                            <button class="btn btn-danger btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.6rem" @onclick="() => DeleteFile(file)">YES</button>
-                            <button class="btn btn-outline-secondary btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.6rem" @onclick="() => confirmDeleteId = null">NO</button>
+                            <button class="btn btn-danger btn-sm btn-tiny flex-shrink-0" @onclick="() => DeleteFile(file)">YES</button>
+                            <button class="btn btn-outline-secondary btn-sm btn-tiny flex-shrink-0" @onclick="() => confirmDeleteId = null">NO</button>
                         }
                         else
                         {
-                            <button class="btn btn-outline-danger btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.65rem"
+                            <button class="btn btn-outline-danger btn-sm btn-tiny2 flex-shrink-0"
                                     @onclick="() => confirmDeleteId = file.Id" title="Delete">DEL</button>
                         }
                     </div>

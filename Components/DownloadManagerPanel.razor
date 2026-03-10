@@ -19,7 +19,7 @@
         <div class="d-flex gap-1 ms-auto">
             @if (HasActiveSyncs)
             {
-                <button class="btn btn-outline-danger btn-sm py-0 px-1" style="font-size:0.65rem" @onclick="StopAllSyncs" title="Pause all syncs">STOP ALL</button>
+                <button class="btn btn-outline-danger btn-sm btn-tiny2" @onclick="StopAllSyncs" title="Pause all syncs">STOP ALL</button>
             }
             @if (activeRecords.Count > 0)
             {
@@ -45,50 +45,50 @@
     }
     else
     {
-        <div style="max-height:60vh;overflow-y:auto;">
+        <div class="scrollable-list-lg">
             @foreach (var dl in activeRecords)
             {
                 var rec = dl;
                 var pct = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
                 <div class="list-group-item py-1 small">
                     <div class="d-flex align-items-center gap-1">
-                        <span class="flex-shrink-0" style="width:1.2em;text-align:center;">&#x1f4c4;</span>
+                        <span class="entry-icon">&#x1f4c4;</span>
                         <span class="flex-grow-1 text-truncate font-monospace" title="@dl.RemotePath">@dl.FileName</span>
                         @if (dl.Status == DownloadStatus.Downloading)
                         {
-                            <span class="spinner-border spinner-border-sm flex-shrink-0" style="width:0.8rem;height:0.8rem;"></span>
-                            <span class="badge bg-info text-dark py-0 flex-shrink-0" style="font-size:0.6rem">@pct%</span>
+                            <span class="spinner-border spinner-border-sm flex-shrink-0 dl-spinner"></span>
+                            <span class="badge bg-info text-dark py-0 flex-shrink-0 text-xs">@pct%</span>
                             @if (dl.SpeedBytesPerSec > 0)
                             {
-                                <span class="text-muted flex-shrink-0" style="font-size:0.6rem">@Formatters.FormatSpeed(dl.SpeedBytesPerSec)</span>
+                                <span class="text-muted flex-shrink-0 text-xs">@Formatters.FormatSpeed(dl.SpeedBytesPerSec)</span>
                             }
-                            <button class="btn btn-outline-warning btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.6rem"
+                            <button class="btn btn-outline-warning btn-sm btn-tiny flex-shrink-0"
                                     @onclick="() => PauseDownload(rec)" title="Pause">&#x23F8;</button>
                         }
                         else if (dl.Status == DownloadStatus.Queued)
                         {
-                            <span class="badge bg-secondary py-0 flex-shrink-0" style="font-size:0.6rem">QUEUED</span>
-                            <button class="btn btn-outline-warning btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.6rem"
+                            <span class="badge bg-secondary py-0 flex-shrink-0 text-xs">QUEUED</span>
+                            <button class="btn btn-outline-warning btn-sm btn-tiny flex-shrink-0"
                                     @onclick="() => BumpPriority(rec, -1)" title="Higher priority">&#x25B2;</button>
-                            <button class="btn btn-outline-secondary btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.6rem"
+                            <button class="btn btn-outline-secondary btn-sm btn-tiny flex-shrink-0"
                                     @onclick="() => BumpPriority(rec, 1)" title="Lower priority">&#x25BC;</button>
                         }
                         else if (dl.Status == DownloadStatus.Paused)
                         {
-                            <span class="badge bg-warning text-dark py-0 flex-shrink-0" style="font-size:0.6rem">PAUSED @pct%</span>
-                            <button class="btn btn-outline-success btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.6rem"
+                            <span class="badge bg-warning text-dark py-0 flex-shrink-0 text-xs">PAUSED @pct%</span>
+                            <button class="btn btn-outline-success btn-sm btn-tiny flex-shrink-0"
                                     @onclick="() => ResumeDownload(rec)" disabled="@(_resuming.Contains(rec.Id))" title="Resume">&#x25B6;</button>
                         }
-                        <button class="btn btn-outline-danger btn-sm px-1 py-0 flex-shrink-0" style="font-size:0.6rem"
+                        <button class="btn btn-outline-danger btn-sm btn-tiny flex-shrink-0"
                                 @onclick="() => RemoveDownload(rec)" title="Remove">&#x2717;</button>
                     </div>
-                    <div class="progress mt-1" style="height:4px;">
+                    <div class="progress mt-1 progress-thin">
                         <div class="progress-bar @(dl.Status == DownloadStatus.Paused ? "bg-warning" : dl.Status == DownloadStatus.Queued ? "bg-secondary" : "bg-info")"
                              role="progressbar"
                              style="width:@(pct)%"
                              aria-valuenow="@pct" aria-valuemin="0" aria-valuemax="100"></div>
                     </div>
-                    <div class="d-flex justify-content-between mt-1" style="font-size:0.6rem;">
+                    <div class="d-flex justify-content-between mt-1 dl-meta">
                         <span class="text-muted">@Formatters.FormatSize((ulong)dl.DownloadedSize) / @Formatters.FormatSize((ulong)dl.TotalSize)</span>
                         <span class="text-muted text-truncate ms-2" title="@dl.RemotePath">@dl.RemotePath</span>
                     </div>
