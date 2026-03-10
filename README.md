@@ -1,17 +1,24 @@
 # cc
 
-Real-time dashboard for monitoring [Position-Independent-Agent](https://github.com/mrzaxaryan/Position-Independent-Agent) connections. Built with Blazor WebAssembly (.NET 10).
+Real-time command center for monitoring and managing [Position-Independent-Agent](https://github.com/mrzaxaryan/Position-Independent-Agent) connections. Built with Blazor WebAssembly (.NET 10).
 
 ## Overview
 
-**cc** is a command center that connects to the [relay](https://github.com/mrzaxaryan/relay) service and displays live status of connected agents and relay pairings. Data auto-refreshes every 5 seconds.
+**cc** connects to the [relay](https://github.com/mrzaxaryan/relay) service over WebSocket and provides a desktop-like interface for live agent monitoring, remote file management, and search — all running in the browser as a PWA with offline support.
 
 ### Features
 
-- Live client and relay connection counts
-- Client details: ID, IP, location, connection time, message count, relay status
-- Relay details: ID, paired client ID, connection time
-- Auto-refresh with loading and error states
+- **Real-time monitoring** — live agent/relay connection status via WebSocket events
+- **Multi-window UI** — draggable, resizable floating windows per agent
+- **Remote file browser** — navigate agent file systems through a binary WebSocket protocol
+- **Download queue** — queue and track file downloads from agents with progress and auto-resume
+- **Upload queue** — upload files to agents with pause/resume support
+- **File search** — recursive search across agents with extension group filtering and auto-download
+- **Offline cache** — browser FileSystem API + IndexedDB for local file storage
+- **Extension groups** — user-defined file type categories for filtering
+- **Dark/light theme** — toggle with localStorage persistence
+- **Setup wizard** — guided onboarding for first-time configuration
+- **PWA** — installable with service worker for offline access
 
 ## Architecture
 
@@ -35,31 +42,10 @@ Real-time dashboard for monitoring [Position-Independent-Agent](https://github.c
 
 | Component | Description | Repo |
 |-----------|-------------|------|
-| **PIR** | C++23 position-independent runtime -- cryptography, networking, TLS 1.3, all without libc or CRT | [Position-Independent-Runtime](https://github.com/mrzaxaryan/Position-Independent-Runtime) |
-| **Agent** | Cross-platform remote agent built on PIR -- file system, hashing, binary command protocol over WebSocket | [Position-Independent-Agent](https://github.com/mrzaxaryan/Position-Independent-Agent) |
-| **Relay** | WebSocket relay on Cloudflare Workers -- pairs agents with relay connections 1:1 via Durable Objects | [relay](https://github.com/mrzaxaryan/relay) |
-| **cc** | This project -- Blazor WebAssembly dashboard that polls the relay for live connection data | [cc](https://github.com/mrzaxaryan/cc) |
-
-## Data Source
-
-Fetches from [`https://relay.nostdlib.workers.dev/status`](https://relay.nostdlib.workers.dev/status) which returns:
-
-```json
-{
-  "agents": {
-    "count": 1,
-    "connections": [{ "id": "...", "connectedAt": 0, "paired": false, "pairedRelayId": null, "messagesForwarded": 0, "lastActiveAt": 0, "ip": "...", "country": "...", "city": "..." }]
-  },
-  "relays": {
-    "count": 0,
-    "connections": []
-  },
-  "eventListeners": {
-    "count": 0,
-    "connections": []
-  }
-}
-```
+| **PIR** | C++23 position-independent runtime — cryptography, networking, TLS 1.3, all without libc or CRT | [Position-Independent-Runtime](https://github.com/mrzaxaryan/Position-Independent-Runtime) |
+| **Agent** | Cross-platform remote agent built on PIR — file system, hashing, binary command protocol over WebSocket | [Position-Independent-Agent](https://github.com/mrzaxaryan/Position-Independent-Agent) |
+| **Relay** | WebSocket relay on Cloudflare Workers — pairs agents with relay connections 1:1 via Durable Objects | [relay](https://github.com/mrzaxaryan/relay) |
+| **cc** | This project — Blazor WebAssembly command center with real-time WebSocket monitoring and remote file management | [cc](https://github.com/mrzaxaryan/cc) |
 
 ## Development
 
@@ -81,50 +67,77 @@ Starts on `http://localhost:5057` / `https://localhost:7104`.
 ├── Features/
 │   ├── Agents/                 # Agent monitoring and metadata
 │   │   ├── AgentsPanel.razor   # Agent list UI
-│   │   └── AgentStore.cs       # Agent persistence
+│   │   └── AgentStore.cs       # Agent persistence (IndexedDB)
 │   ├── Relay/                  # Relay server connectivity
 │   │   ├── RelayPanel.razor    # Relay config UI
-│   │   ├── RelayConnectionService.cs  # Central orchestrator
-│   │   ├── RelaySocket.cs      # Binary WebSocket protocol
+│   │   ├── RelayConnectionService.cs  # Central orchestrator + event publisher
+│   │   ├── RelaySocket.cs      # Binary WebSocket protocol to agents
 │   │   ├── RelayStore.cs       # Relay server persistence
 │   │   └── RelayModels.cs      # Agent/relay data models
-│   ├── FileManager/            # Remote file browsing, downloads, cache
-│   │   ├── FileManager.razor   # Remote file browser
-│   │   ├── SyncPanel.razor     # Upload queue
-│   │   ├── DownloadManagerPanel.razor  # Download progress
-│   │   ├── CacheManagerPanel.razor     # Storage setup
-│   │   ├── DownloadStore.cs    # Download queue + state
-│   │   ├── VfsStore.cs         # Virtual filesystem metadata
-│   │   ├── CacheManager.cs     # Browser FileSystem API
-│   │   └── DirEntry.cs         # Binary directory parser
+│   ├── FileManager/            # Remote file browsing and cache
+│   │   ├── FileManager.razor   # Remote file browser UI
+│   │   ├── SyncPanel.razor     # Upload queue panel
+│   │   ├── VfsStore.cs         # Virtual filesystem metadata (IndexedDB)
+│   │   ├── CacheManager.cs     # Browser FileSystem API wrapper
+│   │   └── DirEntry.cs         # Binary directory response parser
+│   ├── Downloads/              # File download management
+│   │   ├── DownloadsPanel.razor    # Download progress UI
+│   │   ├── DownloadService.cs      # Queue processor with auto-resume
+│   │   └── DownloadStore.cs        # Download queue + state persistence
+│   ├── Uploads/                # File upload management
+│   │   └── UploadsPanel.razor      # Upload queue UI
 │   ├── Search/                 # File search across agents
-│   │   ├── SearchGlobalPanel.razor   # Global search UI
-│   │   ├── SearchConfigPanel.razor   # Per-agent search
-│   │   └── SearchStore.cs      # Search queue + state
+│   │   ├── FileSearchPanel.razor   # Per-agent search UI
+│   │   ├── SearchJobsPanel.razor   # Global search job history
+│   │   ├── SearchService.cs        # Recursive search executor
+│   │   └── SearchStore.cs          # Search queue + results persistence
 │   ├── Extensions/             # File type filtering
-│   │   ├── ExtensionGroupPanel.razor  # Group management UI
-│   │   └── ExtensionGroupStore.cs     # Extension groups
-│   ├── Shell/                  # Desktop window system
-│   │   ├── FloatingWindows.razor      # Multi-window shell
-│   │   ├── SetupWizard.razor   # Onboarding flow
-│   │   ├── MainLayout.razor    # Menu bar + content layout
-│   │   ├── WindowManager.cs    # Window state management
-│   │   └── WindowState.cs      # Window data model
-│   └── Notifications/          # Toast + notification history
+│   │   ├── ExtensionGroupsPanel.razor  # Group management UI
+│   │   └── ExtensionGroupStore.cs      # Extension group definitions
+│   ├── Storage/                # Cache and settings
+│   │   ├── SettingsPanel.razor     # Settings and storage config UI
+│   │   └── CacheManager.cs        # Browser FileSystem API wrapper
+│   ├── Workspace/              # Desktop window system
+│   │   ├── MainLayout.razor        # Menu bar + desktop container
+│   │   ├── FloatingWindows.razor   # Draggable/resizable window renderer
+│   │   ├── SetupWizard.razor       # Onboarding flow
+│   │   ├── WindowManager.cs        # Window state management
+│   │   └── WindowState.cs          # Window data model
+│   └── Notifications/          # Toast notification system
 │       └── NotificationStore.cs
-├── Shared/                     # Reusable UI components (CcBtn, CcCard, ...)
+├── Shared/                     # Reusable UI components
+│   ├── CcBtn.razor             # Button
+│   ├── CcCard.razor            # Card container
+│   ├── CcDialog.razor          # Modal dialog
+│   ├── CcDropdown.razor        # Dropdown menu
+│   ├── CcInput.razor           # Text input
+│   ├── CcTable.razor           # Table layout
+│   ├── CcTr.razor              # Table row
+│   ├── CcProgress.razor        # Progress bar
+│   ├── CcSpinner.razor         # Loading spinner
+│   ├── CcIcon.razor            # Icon
+│   ├── CcBadge.razor           # Badge/label
+│   └── CcConfirmBtn.razor      # Confirmation button
 ├── Infrastructure/             # Cross-cutting services
-│   ├── ThemeService.cs         # Dark/light theme
-│   ├── LocalStorageService.cs  # Browser localStorage
-│   ├── MessageService.cs       # Toast pub/sub
-│   ├── ServiceStateStore.cs    # Pause/resume states
-│   ├── CtsManager.cs           # Cancellation tokens
-│   └── Formatters.cs           # Display utilities
-└── wwwroot/                    # Static assets (CSS, index.html)
+│   ├── ThemeService.cs         # Dark/light theme toggle
+│   ├── LocalStorageService.cs  # Browser localStorage wrapper
+│   ├── MessageService.cs       # Toast notification dispatcher
+│   ├── ServiceStateStore.cs    # Pause/resume state (IndexedDB)
+│   ├── CtsManager.cs           # Cancellation token lifecycle
+│   └── Formatters.cs           # Display utilities (sizes, timestamps, etc.)
+└── wwwroot/                    # Static assets
+    ├── index.html              # Entry point + service worker registration
+    ├── manifest.webmanifest    # PWA manifest
+    ├── css/app.css             # Stylesheet with dark/light theme system
+    └── js/
+        ├── interop.js          # C# ↔ JS interop helpers
+        ├── filesystem.js       # File System Access API wrapper
+        └── indexeddb.js        # IndexedDB wrapper for offline storage
 ```
 
 ## Tech Stack
 
 - .NET 10.0 / Blazor WebAssembly
 - Bootstrap 5
+- IndexedDB + File System Access API for offline storage
 - C# with nullable reference types
