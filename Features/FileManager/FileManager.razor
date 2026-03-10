@@ -66,7 +66,7 @@
                 {
                     <CcSpinner Size="Size.Xs" />
                 }
-                <span class="fm-listing-title">@(string.IsNullOrEmpty(currentPath) ? "Drives" : currentPath)</span>
+                <span class="fm-listing-title">@(currentPath == RootPath ? (IsWindowsAgent ? "Drives" : "/") : currentPath)</span>
                 @if (entries is not null)
                 {
                     <span class="fm-count">@entries.Count items</span>
@@ -177,6 +177,26 @@
     private bool IsAgentOnline => AgentId is not null && RelaySvc.GetAllAgents().Any(a => a.Agent.Id == AgentId);
     private bool HasCache => Cache.HasDirectory && !string.IsNullOrEmpty(AgentUuid);
 
+    /// <summary>True when the agent runs Windows (has drive letters); false for Linux, UEFI, macOS, etc.</summary>
+    private bool IsWindowsAgent
+    {
+        get
+        {
+            // Try live connection first
+            var os = RelaySvc.GetAllAgents()
+                .Where(a => a.Agent.Id == AgentId)
+                .Select(a => a.Agent.Os)
+                .FirstOrDefault();
+            // Fall back to persisted record
+            if (string.IsNullOrEmpty(os) && !string.IsNullOrEmpty(AgentUuid))
+                os = AgentDb.GetByUuid(AgentUuid)?.Os;
+            return string.Equals(os, "Windows", StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    /// <summary>The root path to send: empty string for Windows (drive listing), "/" for everything else.</summary>
+    private string RootPath => IsWindowsAgent ? "" : "/";
+
     private string currentPath = "";
     private string[] pathSegments = [];
     private List<DirEntry>? entries;
@@ -198,6 +218,10 @@
     {
         if (entries is not null) return;
         await Downloads.LoadAsync();
+
+        // Ensure initial path matches the agent's OS
+        if (string.IsNullOrEmpty(currentPath))
+            currentPath = RootPath;
 
         if (IsConnected)
             await NavigateTo(currentPath);
@@ -221,7 +245,7 @@
 
     public void Reset()
     {
-        currentPath = "";
+        currentPath = RootPath;
         pathSegments = [];
         entries = null;
         selectedEntry = null;
@@ -282,8 +306,8 @@
         }
     };
 
-    private bool IsUnixPath => currentPath.StartsWith('/');
-    private string PathSep => IsUnixPath ? "/" : @"\";
+    private bool IsUnixAgent => !IsWindowsAgent;
+    private string PathSep => IsUnixAgent ? "/" : @"\";
 
     private void UpdatePathSegments()
     {
@@ -294,13 +318,13 @@
 
     private async Task NavigateTo(string path)
     {
+        if (loading) return;
         if (!IsConnected) { if (HasCache) await NavigateFromCache(path); return; }
 
-        var isUnix = path.StartsWith('/');
         currentPath = path.TrimEnd('\\', '/');
-        if (isUnix && string.IsNullOrEmpty(currentPath)) currentPath = "/";
-        if (!string.IsNullOrEmpty(currentPath))
-            currentPath += isUnix ? "/" : @"\";
+        if (IsUnixAgent && string.IsNullOrEmpty(currentPath)) currentPath = "/";
+        if (!string.IsNullOrEmpty(currentPath) && currentPath != "/")
+            currentPath += IsUnixAgent ? "/" : @"\";
 
         UpdatePathSegments();
         loading = true; entries = null; StateHasChanged();
@@ -323,11 +347,12 @@
 
     private async Task NavigateFromCache(string path)
     {
-        var isUnix = path.StartsWith('/');
+        if (loading) return;
+
         currentPath = path.TrimEnd('\\', '/');
-        if (isUnix && string.IsNullOrEmpty(currentPath)) currentPath = "/";
-        if (!string.IsNullOrEmpty(currentPath))
-            currentPath += isUnix ? "/" : @"\";
+        if (IsUnixAgent && string.IsNullOrEmpty(currentPath)) currentPath = "/";
+        if (!string.IsNullOrEmpty(currentPath) && currentPath != "/")
+            currentPath += IsUnixAgent ? "/" : @"\";
 
         UpdatePathSegments();
         loading = true; entries = null; StateHasChanged();
@@ -357,17 +382,17 @@
 
     private async Task NavigateUp()
     {
-        if (pathSegments.Length <= 1) { await NavigateTo(IsUnixPath ? "/" : ""); return; }
+        if (pathSegments.Length <= 1) { await NavigateTo(RootPath); return; }
         var parent = string.Join(PathSep, pathSegments.Take(pathSegments.Length - 1));
-        if (IsUnixPath) parent = "/" + parent;
+        if (IsUnixAgent) parent = "/" + parent;
         await NavigateTo(parent);
     }
 
-    private async Task NavigateToRoot() => await NavigateTo("");
+    private async Task NavigateToRoot() => await NavigateTo(RootPath);
     private async Task NavigateToBreadcrumb(int index)
     {
         var joined = string.Join(PathSep, pathSegments.Take(index + 1));
-        if (IsUnixPath) joined = "/" + joined;
+        if (IsUnixAgent) joined = "/" + joined;
         await NavigateTo(joined);
     }
     private async Task OnPathKeyDown(KeyboardEventArgs e) { if (e.Key == "Enter") await NavigateTo(currentPath); }
