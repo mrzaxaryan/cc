@@ -4,6 +4,8 @@
 @inject RelayConnectionService RelaySvc
 @inject WindowManager Wm
 @inject ThemeService Theme
+@inject MessageService Msg
+@inject NotificationStore Notif
 @implements IDisposable
 
 <div class="mdi-menubar">
@@ -13,6 +15,47 @@
     <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Agents")'>Agents</button>
     <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Settings")'>Settings</button>
     <div class="mdi-spacer"></div>
+
+    <div class="notif-wrapper" @onfocusout="OnFocusOut" tabindex="-1">
+        <button class="notif-bell" @onclick="ToggleDropdown" title="Notifications">
+            <span>&#128276;</span>
+            @if (Notif.UnreadCount > 0)
+            {
+                <span class="notif-badge">@(Notif.UnreadCount > 99 ? "99+" : Notif.UnreadCount.ToString())</span>
+            }
+        </button>
+
+        @if (dropdownOpen)
+        {
+            <div class="notif-dropdown">
+                <div class="notif-header">
+                    <span>Notifications</span>
+                    @if (Notif.Items.Count > 0)
+                    {
+                        <button class="notif-clear-all" @onclick="ClearAll">Clear all</button>
+                    }
+                </div>
+                <div class="notif-list">
+                    @if (Notif.Items.Count == 0)
+                    {
+                        <div class="notif-empty">No notifications</div>
+                    }
+                    else
+                    {
+                        @foreach (var n in Notif.Items)
+                        {
+                            <div class="notif-item notif-@n.Type" @key="n.Id">
+                                <span class="notif-text">@n.Text</span>
+                                <span class="notif-time">@FormatTime(n.Created)</span>
+                                <button class="notif-remove" @onclick="() => RemoveOne(n.Id)" title="Dismiss">&times;</button>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
     <button class="theme-toggle" @onclick="ToggleTheme" title="Toggle theme">
         @if (Theme.Current == cc.Services.Theme.Dark)
         {
@@ -28,7 +71,6 @@
 <div class="mdi-workspace"></div>
 
 <FloatingWindows />
-<ToastContainer />
 
 @if (showWelcome)
 {
@@ -38,11 +80,14 @@
 @code {
     private bool showWelcome;
     private bool initialized;
+    private bool dropdownOpen;
 
     protected override void OnInitialized()
     {
         Wm.OnChanged += OnWmChanged;
         Theme.OnChanged += OnThemeChanged;
+        Msg.OnNotification += OnNotification;
+        Notif.OnChanged += OnNotifChanged;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -53,20 +98,63 @@
             await Theme.InitializeAsync();
             await Cache.InitializeAsync();
             await Relay.LoadAsync();
+            await Notif.LoadAsync();
             await RelaySvc.StartAsync();
             if (Cache.SetupRequired || Cache.NeedsPermission || Relay.SetupRequired)
             {
                 showWelcome = true;
-                StateHasChanged();
             }
+            StateHasChanged();
         }
     }
 
+    private async void OnNotification(string text, MessageType type)
+    {
+        await InvokeAsync(async () =>
+        {
+            await Notif.AddAsync(text, type);
+            StateHasChanged();
+        });
+    }
+
+    private void ToggleDropdown()
+    {
+        dropdownOpen = !dropdownOpen;
+        if (dropdownOpen)
+            Notif.MarkAllRead();
+    }
+
+    private void OnFocusOut()
+    {
+        // Close dropdown when focus leaves the wrapper
+        dropdownOpen = false;
+    }
+
+    private async Task RemoveOne(int id)
+    {
+        await Notif.RemoveAsync(id);
+    }
+
+    private async Task ClearAll()
+    {
+        await Notif.ClearAsync();
+        dropdownOpen = false;
+    }
+
+    private static string FormatTime(double epochMs)
+    {
+        var dt = DateTimeOffset.FromUnixTimeMilliseconds((long)epochMs).LocalDateTime;
+        var diff = DateTime.Now - dt;
+        if (diff.TotalMinutes < 1) return "now";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h ago";
+        return dt.ToString("MMM d");
+    }
+
     private async Task ToggleTheme() => await Theme.Toggle();
-
     private void OnThemeChanged() => InvokeAsync(StateHasChanged);
-
     private void OnWmChanged() => InvokeAsync(StateHasChanged);
+    private void OnNotifChanged() => InvokeAsync(StateHasChanged);
 
     private void OnWelcomeComplete()
     {
@@ -78,5 +166,7 @@
     {
         Wm.OnChanged -= OnWmChanged;
         Theme.OnChanged -= OnThemeChanged;
+        Msg.OnNotification -= OnNotification;
+        Notif.OnChanged -= OnNotifChanged;
     }
 }
