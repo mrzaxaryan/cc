@@ -1,0 +1,48 @@
+/* Base input */
+.cc-input {
+    width: 100%;
+    background: var(--cc-bg-deep);
+    border: 1px solid var(--cc-border);
+    color: var(--cc-text);
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.cc-input:focus {
+    border-color: var(--cc-accent-blue);
+    box-shadow: 0 0 0 2px rgba(137, 180, 250, 0.15);
+}
+
+.cc-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.cc-input::placeholder {
+    color: var(--cc-text-dim);
+}
+
+/* Monospace */
+.cc-input-mono {
+    font-family: monospace;
+}
+
+/* Sizes */
+.cc-input-xs {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.35rem;
+}
+
+.cc-input-md {
+    font-size: 0.85rem;
+    padding: 0.35rem 0.65rem;
+}
+
+.cc-input-lg {
+    font-size: 0.95rem;
+    padding: 0.45rem 0.8rem;
+    border-radius: 6px;
+}

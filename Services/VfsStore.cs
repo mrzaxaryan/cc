@@ -90,14 +90,16 @@ public class VfsStore
     {
         if (string.IsNullOrEmpty(remotePath)) return RootParentId;
 
-        var segments = remotePath.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var normalized = remotePath.Replace('\\', '/');
+        var isAbsolute = normalized.StartsWith('/');
+        var segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
         var currentParent = RootParentId;
         var pathSoFar = "";
 
         for (int i = 0; i < segments.Length; i++)
         {
             var seg = segments[i];
-            pathSoFar = i == 0 ? seg : $"{pathSoFar}/{seg}";
+            pathSoFar = i == 0 ? (isAbsolute ? $"/{seg}" : seg) : $"{pathSoFar}/{seg}";
             var isDrive = i == 0 && seg.EndsWith(":");
             var dir = await PutDirectoryAsync(agentUuid, currentParent, seg, pathSoFar, isDrive);
             currentParent = dir.Id;

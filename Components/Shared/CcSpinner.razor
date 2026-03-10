@@ -1,0 +1,18 @@
+@inherits Microsoft.AspNetCore.Components.ComponentBase
+
+<span class="cc-spinner @SizeClass @CssClass"></span>
+
+@code {
+    [Parameter] public string? CssClass { get; set; }
+
+    /// <summary>
+    /// Size: sm (default), xs
+    /// </summary>
+    [Parameter] public string Size { get; set; } = "sm";
+
+    private string SizeClass => Size switch
+    {
+        "xs" => "cc-spinner-xs",
+        _ => ""
+    };
+}

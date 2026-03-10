@@ -1,0 +1,55 @@
+@inherits Microsoft.AspNetCore.Components.ComponentBase
+
+<button class="cc-btn @VariantClass @SizeClass @CssClass"
+        @onclick="OnClick"
+        @onclick:stopPropagation="StopPropagation"
+        disabled="@Disabled"
+        title="@Title"
+        type="button">
+    @if (Loading)
+    {
+        <span class="cc-btn-spinner"></span>
+    }
+    @ChildContent
+</button>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool Loading { get; set; }
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public string? CssClass { get; set; }
+    [Parameter] public bool StopPropagation { get; set; }
+
+    /// <summary>
+    /// Variant: default, primary, success, danger, warning, ghost, link
+    /// </summary>
+    [Parameter] public string Variant { get; set; } = "default";
+
+    /// <summary>
+    /// Size: sm (default), md, lg, xs, icon
+    /// </summary>
+    [Parameter] public string Size { get; set; } = "sm";
+
+    private string VariantClass => Variant switch
+    {
+        "primary" => "cc-btn-primary",
+        "success" => "cc-btn-success",
+        "danger" => "cc-btn-danger",
+        "danger-solid" => "cc-btn-danger-solid",
+        "warning" => "cc-btn-warning",
+        "ghost" => "cc-btn-ghost",
+        "link" => "cc-btn-link",
+        _ => ""
+    };
+
+    private string SizeClass => Size switch
+    {
+        "xs" => "cc-btn-xs",
+        "md" => "cc-btn-md",
+        "lg" => "cc-btn-lg",
+        "icon" => "cc-btn-icon",
+        _ => ""
+    };
+}

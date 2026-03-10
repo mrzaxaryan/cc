@@ -1,45 +1,50 @@
 @using System.Text
 @inject MessageService Msg
 
-<div>
-    <div class="mb-3">
-        <button class="btn btn-outline-primary btn-sm me-2" @onclick="SendGetUUID" disabled="@sending">GetUUID</button>
+<div class="cp">
+    <div class="cp-section">
+        <CcBtn Variant="primary" OnClick="SendGetUUID" Disabled="@sending">GetUUID</CcBtn>
     </div>
 
-    <div class="mb-3">
-        <label class="form-label">Path</label>
-        <input class="form-control form-control-sm" @bind="commandPath" />
+    <div class="cp-section">
+        <label class="cp-label">Path</label>
+        <CcInput @bind-Value="commandPath" Monospace />
     </div>
 
-    <div class="d-flex gap-2 flex-wrap mb-3">
-        <button class="btn btn-outline-primary btn-sm" @onclick="SendGetDirectoryContent" disabled="@sending">GetDirectoryContent</button>
+    <div class="cp-commands">
+        <CcBtn Variant="primary" OnClick="SendGetDirectoryContent" Disabled="@sending">GetDirectoryContent</CcBtn>
 
-        <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-outline-primary btn-sm" @onclick="SendGetFileContent" disabled="@sending">GetFileContent</button>
-            <input class="form-control form-control-sm cmd-input" @bind="readCount" placeholder="Size" type="number" />
-            <input class="form-control form-control-sm cmd-input" @bind="fileOffset" placeholder="Offset" type="number" />
+        <div class="cp-cmd-group">
+            <CcBtn Variant="primary" OnClick="SendGetFileContent" Disabled="@sending">GetFileContent</CcBtn>
+            <CcInput @bind-Value="readCountStr" Type="number" Placeholder="Size" CssClass="cp-narrow" Monospace />
+            <CcInput @bind-Value="fileOffsetStr" Type="number" Placeholder="Offset" CssClass="cp-narrow" Monospace />
         </div>
 
-        <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-outline-primary btn-sm" @onclick="SendGetFileChunkHash" disabled="@sending">GetFileChunkHash</button>
-            <input class="form-control form-control-sm cmd-input" @bind="chunkSize" placeholder="Chunk" type="number" />
-            <input class="form-control form-control-sm cmd-input" @bind="hashOffset" placeholder="Offset" type="number" />
+        <div class="cp-cmd-group">
+            <CcBtn Variant="primary" OnClick="SendGetFileChunkHash" Disabled="@sending">GetFileChunkHash</CcBtn>
+            <CcInput @bind-Value="chunkSizeStr" Type="number" Placeholder="Chunk" CssClass="cp-narrow" Monospace />
+            <CcInput @bind-Value="hashOffsetStr" Type="number" Placeholder="Offset" CssClass="cp-narrow" Monospace />
         </div>
     </div>
 
-    <pre class="p-3 rounded output-pre">@output</pre>
+    <pre class="cp-output">@output</pre>
 </div>
 
 @code {
     [Parameter] public RelaySocket? Relay { get; set; }
 
     private string commandPath = "";
-    private long readCount = 4096;
-    private long fileOffset;
-    private long chunkSize = 4096;
-    private long hashOffset;
+    private string readCountStr = "4096";
+    private string fileOffsetStr = "0";
+    private string chunkSizeStr = "4096";
+    private string hashOffsetStr = "0";
     private string output = "";
     private bool sending;
+
+    private long readCount => long.TryParse(readCountStr, out var v) ? v : 4096;
+    private long fileOffset => long.TryParse(fileOffsetStr, out var v) ? v : 0;
+    private long chunkSize => long.TryParse(chunkSizeStr, out var v) ? v : 4096;
+    private long hashOffset => long.TryParse(hashOffsetStr, out var v) ? v : 0;
 
     private async Task SendGetUUID()
     {

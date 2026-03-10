@@ -5,170 +5,159 @@
 @inject MessageService Msg
 @implements IDisposable
 
-<div>
+<div class="cm">
     @* Header *@
-    <div class="d-flex align-items-center gap-2 mb-2">
-        <span class="badge bg-primary">@(Cache.DirectoryName ?? "No folder")</span>
-        <button class="btn btn-outline-secondary btn-sm py-0 px-1 ms-auto" @onclick="Refresh" disabled="@loading" title="Refresh">&#x21bb;</button>
-        @if (confirmPrune)
-        {
-            <button class="btn btn-danger btn-sm py-0 px-1" @onclick="ConfirmPrune" disabled="@loading">YES</button>
-            <button class="btn btn-outline-secondary btn-sm py-0 px-1" @onclick="() => confirmPrune = false">NO</button>
-        }
-        else
-        {
-            <button class="btn btn-outline-danger btn-sm py-0 px-1" @onclick="() => confirmPrune = true" disabled="@(loading || stats.fileCount == 0)" title="Prune file system">PRUNE</button>
-        }
-        <button class="btn btn-outline-warning btn-sm py-0 px-1" @onclick="ChangeFolder" title="Change folder">&#x1f4c1;</button>
-    </div>
-
-    @* Global stats *@
-    <div class="card mb-2">
-        <div class="card-body p-2">
-            <div class="row text-center small">
-                <div class="col">
-                    <div class="fw-bold">@stats.agentCount</div>
-                    <div class="text-muted stat-label">Agents</div>
-                </div>
-                <div class="col">
-                    <div class="fw-bold">@stats.dirCount</div>
-                    <div class="text-muted stat-label">Dirs</div>
-                </div>
-                <div class="col">
-                    <div class="fw-bold">@stats.fileCount</div>
-                    <div class="text-muted stat-label">Files</div>
-                </div>
-                <div class="col">
-                    <div class="fw-bold">@Formatters.FormatSize((ulong)stats.totalSize)</div>
-                    <div class="text-muted stat-label">Metadata</div>
-                </div>
-                <div class="col">
-                    <div class="fw-bold">@Formatters.FormatSize((ulong)blobSize)</div>
-                    <div class="text-muted stat-label">On Disk</div>
-                </div>
-            </div>
+    <div class="cm-toolbar">
+        <CcBadge Variant="info">@(Cache.DirectoryName ?? "No folder")</CcBadge>
+        <div class="cm-toolbar-actions">
+            <CcBtn OnClick="Refresh" Disabled="@loading" Title="Refresh">&#x21bb;</CcBtn>
+            @if (confirmPrune)
+            {
+                <CcBtn Variant="danger-solid" OnClick="ConfirmPrune" Disabled="@loading">YES</CcBtn>
+                <CcBtn OnClick="() => confirmPrune = false">NO</CcBtn>
+            }
+            else
+            {
+                <CcBtn Variant="danger" OnClick="() => confirmPrune = true" Disabled="@(loading || stats.fileCount == 0)" Title="Prune">PRUNE</CcBtn>
+            }
+            <CcBtn Variant="warning" OnClick="ChangeFolder" Title="Change folder">&#x1f4c1;</CcBtn>
         </div>
     </div>
+
+    @* Stats *@
+    <CcCard Compact CssClass="cm-stats-card">
+        <div class="cm-stats">
+            <div class="cm-stat">
+                <span class="cm-stat-value">@stats.agentCount</span>
+                <span class="cm-stat-label">Agents</span>
+            </div>
+            <div class="cm-stat">
+                <span class="cm-stat-value">@stats.dirCount</span>
+                <span class="cm-stat-label">Dirs</span>
+            </div>
+            <div class="cm-stat">
+                <span class="cm-stat-value">@stats.fileCount</span>
+                <span class="cm-stat-label">Files</span>
+            </div>
+            <div class="cm-stat">
+                <span class="cm-stat-value">@Formatters.FormatSize((ulong)stats.totalSize)</span>
+                <span class="cm-stat-label">Metadata</span>
+            </div>
+            <div class="cm-stat">
+                <span class="cm-stat-value">@Formatters.FormatSize((ulong)blobSize)</span>
+                <span class="cm-stat-label">On Disk</span>
+            </div>
+        </div>
+    </CcCard>
 
     @* Breadcrumb *@
     @if (breadcrumbs.Count > 0)
     {
-        <nav aria-label="breadcrumb" class="mb-2">
-            <ol class="breadcrumb mb-0 small">
-                <li class="breadcrumb-item">
-                    <a href="javascript:void(0)" @onclick="NavigateToRoot" @onclick:preventDefault>Root</a>
-                </li>
-                @{ var lastCrumb = breadcrumbs.LastOrDefault(); }
-                @foreach (var crumb in breadcrumbs)
+        <div class="cm-breadcrumb">
+            <a href="javascript:void(0)" class="cm-crumb" @onclick="NavigateToRoot" @onclick:preventDefault>Root</a>
+            @{ var lastCrumb = breadcrumbs.LastOrDefault(); }
+            @foreach (var crumb in breadcrumbs)
+            {
+                <span class="cm-crumb-sep">/</span>
+                @if (crumb == lastCrumb)
                 {
-                    if (crumb == lastCrumb)
-                    {
-                        <li class="breadcrumb-item active">@crumb.Name</li>
-                    }
-                    else
-                    {
-                        <li class="breadcrumb-item">
-                            <a href="javascript:void(0)" @onclick="() => NavigateToDirectory(crumb.Id)" @onclick:preventDefault>@crumb.Name</a>
-                        </li>
-                    }
+                    <span class="cm-crumb-active">@crumb.Name</span>
                 }
-            </ol>
-        </nav>
+                else
+                {
+                    <a href="javascript:void(0)" class="cm-crumb" @onclick="() => NavigateToDirectory(crumb.Id)" @onclick:preventDefault>@crumb.Name</a>
+                }
+            }
+        </div>
     }
 
-    @* Agent list at root *@
-    @if (currentDirId == VfsStore.RootParentId && currentAgentUuid is null)
-    {
-        <div class="list-group list-group-flush scrollable-list">
+    @* Content *@
+    <div class="cm-list">
+        @if (currentDirId == VfsStore.RootParentId && currentAgentUuid is null)
+        {
+            @* Agent list at root *@
             @if (loading)
             {
-                <div class="list-group-item text-center py-3">
-                    <span class="spinner-border spinner-border-sm"></span>
-                </div>
+                <div class="cm-list-loading"><CcSpinner /></div>
+            }
+            else if (agentStats.Count == 0)
+            {
+                <div class="cm-empty"><em>No cached data</em></div>
             }
             else
             {
                 @foreach (var agent in agentStats)
                 {
-                    <div class="list-group-item py-1 small d-flex align-items-center gap-1">
-                        <a href="javascript:void(0)" class="flex-grow-1 text-truncate font-monospace" @onclick="() => NavigateToAgent(agent.uuid)" @onclick:preventDefault>@agent.name</a>
-                        <small class="text-muted flex-shrink-0 agent-meta">@agent.dirs d / @agent.files f</small>
-                        <small class="text-muted flex-shrink-0 agent-meta">@Formatters.FormatSize((ulong)agent.size)</small>
+                    <div class="cm-item">
+                        <a href="javascript:void(0)" class="cm-item-name" @onclick="() => NavigateToAgent(agent.uuid)" @onclick:preventDefault>@agent.name</a>
+                        <span class="cm-item-meta">@agent.dirs d / @agent.files f</span>
+                        <span class="cm-item-meta">@Formatters.FormatSize((ulong)agent.size)</span>
                         @if (confirmDeleteId == agent.uuid)
                         {
-                            <button class="btn btn-danger btn-sm btn-tiny flex-shrink-0" @onclick="() => DeleteAgentCache(agent.uuid)">YES</button>
-                            <button class="btn btn-outline-secondary btn-sm btn-tiny flex-shrink-0" @onclick="() => confirmDeleteId = null">NO</button>
+                            <CcBtn Variant="danger-solid" Size="xs" OnClick="() => DeleteAgentCache(agent.uuid)">YES</CcBtn>
+                            <CcBtn Size="xs" OnClick="() => confirmDeleteId = null">NO</CcBtn>
                         }
                         else
                         {
-                            <button class="btn btn-outline-danger btn-sm btn-tiny flex-shrink-0"
-                                    @onclick="() => confirmDeleteId = agent.uuid" title="Delete agent cache">DEL</button>
+                            <CcBtn Variant="danger" Size="xs" OnClick="() => confirmDeleteId = agent.uuid" Title="Delete">DEL</CcBtn>
                         }
                     </div>
                 }
-                @if (agentStats.Count == 0)
-                {
-                    <div class="list-group-item text-muted small"><em>No cached data</em></div>
-                }
             }
-        </div>
-    }
-    else
-    {
-        @* Directory/file listing *@
-        <div class="list-group list-group-flush scrollable-list">
+        }
+        else
+        {
+            @* Directory/file listing *@
             @if (loading)
             {
-                <div class="list-group-item text-center py-3">
-                    <span class="spinner-border spinner-border-sm"></span>
-                </div>
+                <div class="cm-list-loading"><CcSpinner /></div>
             }
             else
             {
-                <button class="list-group-item list-group-item-action py-1 font-monospace small"
-                        @onclick="NavigateUp">..</button>
+                <button class="cm-item cm-item-nav" @onclick="NavigateUp">
+                    <span class="cm-item-icon">&#x2191;</span>
+                    <span class="cm-item-name">..</span>
+                </button>
                 @foreach (var dir in childDirs)
                 {
-                    <div class="list-group-item py-1 font-monospace small d-flex align-items-center gap-1">
-                        <span class="entry-icon me-1">&#x1f4c1;</span>
-                        <a href="javascript:void(0)" class="flex-grow-1 text-truncate" @onclick="() => NavigateToDirectory(dir.Id)" @onclick:preventDefault>@dir.Name</a>
+                    <div class="cm-item">
+                        <span class="cm-item-icon">&#x1f4c1;</span>
+                        <a href="javascript:void(0)" class="cm-item-name" @onclick="() => NavigateToDirectory(dir.Id)" @onclick:preventDefault>@dir.Name</a>
                         @if (confirmDeleteId == dir.Id)
                         {
-                            <button class="btn btn-danger btn-sm btn-tiny flex-shrink-0" @onclick="() => DeleteDir(dir)">YES</button>
-                            <button class="btn btn-outline-secondary btn-sm btn-tiny flex-shrink-0" @onclick="() => confirmDeleteId = null">NO</button>
+                            <CcBtn Variant="danger-solid" Size="xs" OnClick="() => DeleteDir(dir)">YES</CcBtn>
+                            <CcBtn Size="xs" OnClick="() => confirmDeleteId = null">NO</CcBtn>
                         }
                         else
                         {
-                            <button class="btn btn-outline-danger btn-sm btn-tiny2 flex-shrink-0"
-                                    @onclick="() => confirmDeleteId = dir.Id" title="Delete">DEL</button>
+                            <CcBtn Variant="danger" Size="xs" OnClick="() => confirmDeleteId = dir.Id" Title="Delete">DEL</CcBtn>
                         }
                     </div>
                 }
                 @foreach (var file in childFiles)
                 {
-                    <div class="list-group-item py-1 font-monospace small d-flex align-items-center gap-1">
-                        <span class="entry-icon me-1">&#x1f4c4;</span>
-                        <span class="flex-grow-1 text-truncate">@file.Name</span>
-                        <small class="text-muted flex-shrink-0">@Formatters.FormatSize((ulong)file.Size)</small>
+                    <div class="cm-item">
+                        <span class="cm-item-icon">&#x1f4c4;</span>
+                        <span class="cm-item-name">@file.Name</span>
+                        <span class="cm-item-meta">@Formatters.FormatSize((ulong)file.Size)</span>
                         @if (confirmDeleteId == file.Id)
                         {
-                            <button class="btn btn-danger btn-sm btn-tiny flex-shrink-0" @onclick="() => DeleteFile(file)">YES</button>
-                            <button class="btn btn-outline-secondary btn-sm btn-tiny flex-shrink-0" @onclick="() => confirmDeleteId = null">NO</button>
+                            <CcBtn Variant="danger-solid" Size="xs" OnClick="() => DeleteFile(file)">YES</CcBtn>
+                            <CcBtn Size="xs" OnClick="() => confirmDeleteId = null">NO</CcBtn>
                         }
                         else
                         {
-                            <button class="btn btn-outline-danger btn-sm btn-tiny2 flex-shrink-0"
-                                    @onclick="() => confirmDeleteId = file.Id" title="Delete">DEL</button>
+                            <CcBtn Variant="danger" Size="xs" OnClick="() => confirmDeleteId = file.Id" Title="Delete">DEL</CcBtn>
                         }
                     </div>
                 }
                 @if (childDirs.Count == 0 && childFiles.Count == 0)
                 {
-                    <div class="list-group-item text-muted small"><em>Empty</em></div>
+                    <div class="cm-empty"><em>Empty</em></div>
                 }
             }
-        </div>
-    }
+        }
+    </div>
 </div>
 
 @code {
@@ -323,7 +312,6 @@
             loading = true;
             StateHasChanged();
             await Vfs.ClearAgentAsync(agentUuid);
-            // Clear download records for this agent
             foreach (var dl in Downloads.GetByAgent(agentUuid))
                 await Downloads.RemoveAsync(dl.Id);
             await Refresh();

@@ -1,0 +1,50 @@
+/* Base badge */
+.cc-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    line-height: 1.4;
+}
+
+/* Variants */
+.cc-badge-success {
+    background: rgba(166, 227, 161, 0.15);
+    color: var(--cc-accent-green);
+}
+
+.cc-badge-danger {
+    background: rgba(243, 139, 168, 0.15);
+    color: var(--cc-accent-red);
+}
+
+.cc-badge-warning {
+    background: rgba(249, 226, 175, 0.15);
+    color: var(--cc-accent-yellow);
+}
+
+.cc-badge-info {
+    background: rgba(137, 180, 250, 0.15);
+    color: var(--cc-accent-blue);
+}
+
+.cc-badge-muted {
+    background: var(--cc-bg-active);
+    color: var(--cc-text-muted);
+}
+
+.cc-badge-dark {
+    background: var(--cc-bg-deep);
+    color: var(--cc-text-dim);
+}
+
+/* Sizes */
+.cc-badge-xs {
+    font-size: 0.55rem;
+    padding: 0.05rem 0.3rem;
+    border-radius: 3px;
+}

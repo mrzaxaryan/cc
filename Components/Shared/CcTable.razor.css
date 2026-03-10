@@ -1,0 +1,60 @@
+/* Table wrapper */
+.cc-table-wrap {
+    overflow-x: auto;
+}
+
+/* Table */
+.cc-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+    color: var(--cc-text);
+}
+
+.cc-table th {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--cc-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid var(--cc-border);
+    background: var(--cc-bg-deep);
+    text-align: left;
+    white-space: nowrap;
+}
+
+.cc-table td {
+    padding: 0.35rem 0.6rem;
+    border-bottom: 1px solid var(--cc-border);
+    vertical-align: middle;
+}
+
+.cc-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Striped */
+.cc-table-striped tbody tr:nth-child(even) {
+    background: var(--cc-bg-surface);
+}
+
+/* Hover */
+.cc-table-hover tbody tr:hover {
+    background: var(--cc-bg-overlay);
+}
+
+/* Fixed layout */
+.cc-table-fixed {
+    table-layout: fixed;
+}
+
+/* Active row */
+.cc-table tbody tr.cc-row-active {
+    background: rgba(137, 180, 250, 0.08);
+}
+
+/* Dimmed row */
+.cc-table tbody tr.cc-row-dim {
+    opacity: 0.5;
+}

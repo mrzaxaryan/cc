@@ -1,0 +1,37 @@
+/* Dropdown backdrop */
+.cc-dropdown-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+}
+
+/* Dropdown menu */
+.cc-dropdown {
+    position: fixed;
+    z-index: 1051;
+    min-width: 140px;
+    background: var(--cc-bg-base);
+    border: 1px solid var(--cc-border-light);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px var(--cc-shadow);
+    padding: 0.25rem 0;
+    overflow: hidden;
+}
+
+/* Dropdown items - use as class on children */
+::deep .cc-dropdown-item {
+    display: block;
+    width: 100%;
+    background: none;
+    border: none;
+    color: var(--cc-text);
+    font-size: 0.78rem;
+    padding: 0.35rem 0.75rem;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.1s;
+}
+
+::deep .cc-dropdown-item:hover {
+    background: var(--cc-bg-highlight);
+}

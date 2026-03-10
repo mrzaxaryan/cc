@@ -2,76 +2,59 @@
 @inject RelayStore Relay
 @inject MessageService Msg
 
-<div class="welcome-overlay">
-    <div class="welcome-card">
-        <h2 class="mb-3">Welcome to CC</h2>
+<div class="wc-overlay">
+    <div class="wc-card">
+        <h2 class="wc-title">Welcome to CC</h2>
 
         @if (step == Step.Cache)
         {
             @if (!Cache.IsSupported)
             {
-                <p class="text-muted">Your browser does not support the File System Access API. Please use a Chromium-based browser (Chrome, Edge, Brave) for local file caching.</p>
-                <button class="btn btn-secondary" @onclick="SkipCache">Continue without cache</button>
+                <p class="wc-desc">Your browser does not support the File System Access API. Please use a Chromium-based browser (Chrome, Edge, Brave) for local file caching.</p>
+                <CcBtn Size="md" OnClick="SkipCache">Continue without cache</CcBtn>
             }
             else if (Cache.NeedsPermission)
             {
-                <p class="text-muted">Your previously selected cache folder needs permission to be re-granted. Click below to allow access.</p>
-
-                <button class="btn btn-primary btn-lg me-2" @onclick="ReGrantPermission" disabled="@picking">
-                    @if (picking)
-                    {
-                        <span class="spinner-border spinner-border-sm me-1"></span>
-                    }
-                    Grant Access
-                </button>
-                <button class="btn btn-outline-secondary" @onclick="PickFolder" disabled="@picking">Pick Different Folder</button>
+                <p class="wc-desc">Your previously selected cache folder needs permission to be re-granted.</p>
+                <div class="wc-actions">
+                    <CcBtn Variant="primary" Size="lg" OnClick="ReGrantPermission" Disabled="@picking" Loading="@picking">Grant Access</CcBtn>
+                    <CcBtn Size="md" OnClick="PickFolder" Disabled="@picking">Pick Different Folder</CcBtn>
+                </div>
             }
             else
             {
-                <p class="text-muted">Select a folder on your device to use as the local file cache. Files downloaded from agents will be stored here.</p>
-
-                <button class="btn btn-primary btn-lg" @onclick="PickFolder" disabled="@picking">
-                    @if (picking)
-                    {
-                        <span class="spinner-border spinner-border-sm me-1"></span>
-                    }
-                    Select Cache Folder
-                </button>
-
-                <p class="text-muted small mt-3 mb-0">You can change this later in the Cache Manager.</p>
+                <p class="wc-desc">Select a folder on your device to use as the local file cache. Files downloaded from agents will be stored here.</p>
+                <CcBtn Variant="primary" Size="lg" OnClick="PickFolder" Disabled="@picking" Loading="@picking">Select Cache Folder</CcBtn>
+                <p class="wc-hint">You can change this later in the Cache Manager.</p>
             }
         }
         else if (step == Step.Relay)
         {
-            <p class="text-muted">Configure the default relay server for agent connections.</p>
+            <p class="wc-desc">Configure the default relay server for agent connections.</p>
 
-            <div class="mb-3 text-start">
-                <label class="form-label fw-semibold">Relay Name</label>
-                <input type="text" class="form-control" @bind="relayName" placeholder="My Relay" />
-            </div>
-            <div class="mb-3 text-start">
-                <label class="form-label fw-semibold">Relay URL</label>
-                <input type="text" class="form-control" @bind="relayUrl" placeholder="wss://relay.example.com" />
-            </div>
-
-            <div class="d-flex justify-content-center gap-2">
-                <button class="btn btn-primary btn-lg" @onclick="SaveRelay" disabled="@saving">
-                    @if (saving)
-                    {
-                        <span class="spinner-border spinner-border-sm me-1"></span>
-                    }
-                    Save & Continue
-                </button>
-                <button class="btn btn-outline-secondary" @onclick="SkipRelay">Use Default</button>
+            <div class="wc-form">
+                <div class="wc-field">
+                    <label class="wc-label">Relay Name</label>
+                    <CcInput @bind-Value="relayName" Size="md" Placeholder="My Relay" />
+                </div>
+                <div class="wc-field">
+                    <label class="wc-label">Relay URL</label>
+                    <CcInput @bind-Value="relayUrl" Size="md" Placeholder="wss://relay.example.com" Monospace />
+                </div>
             </div>
 
-            <p class="text-muted small mt-3 mb-0">You can add more relays later on the Relay page.</p>
+            <div class="wc-actions">
+                <CcBtn Variant="primary" Size="lg" OnClick="SaveRelay" Disabled="@saving" Loading="@saving">Save & Continue</CcBtn>
+                <CcBtn Size="md" OnClick="SkipRelay">Use Default</CcBtn>
+            </div>
+
+            <p class="wc-hint">You can add more relays later on the Relay page.</p>
         }
 
         @if (totalSteps > 1)
         {
-            <div class="mt-3">
-                <small class="text-muted">Step @currentStepNumber of @totalSteps</small>
+            <div class="wc-step-indicator">
+                Step @currentStepNumber of @totalSteps
             </div>
         }
     </div>
@@ -101,7 +84,6 @@
 
         step = needsCache ? Step.Cache : Step.Relay;
 
-        // Pre-fill with current relay values
         var active = Relay.Relays.FirstOrDefault(r => r.Url == Relay.ActiveUrl);
         relayName = active?.Name ?? "";
         relayUrl = active?.Url ?? "";
@@ -152,13 +134,9 @@
         {
             var success = await Cache.PickDirectoryAsync();
             if (success)
-            {
                 AdvanceFromCache();
-            }
             else
-            {
                 Msg.Warn("No folder selected. Please try again.");
-            }
         }
         catch (Exception ex)
         {
@@ -200,16 +178,13 @@
 
         try
         {
-            // Update the default relay entry with user values
             var existing = Relay.Relays.FirstOrDefault(r => r.Url == Relay.ActiveUrl);
             if (existing != null && existing.Url == url)
             {
-                // Same URL, just update the name and persist
                 await Relay.UpdateRelayName(url, name);
             }
             else
             {
-                // Different URL - add new and set active
                 await Relay.AddRelay(name, url);
                 await Relay.SetActive(url);
             }

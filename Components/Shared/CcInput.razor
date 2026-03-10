@@ -1,0 +1,51 @@
+@inherits Microsoft.AspNetCore.Components.ComponentBase
+
+<input class="cc-input @SizeClass @CssClass @(Monospace ? "cc-input-mono" : "")"
+       type="@Type"
+       value="@Value"
+       @onchange="OnValueChanged"
+       @oninput="OnInputEvent"
+       @onkeydown="OnKeyDown"
+       @onblur="OnBlur"
+       placeholder="@Placeholder"
+       disabled="@Disabled"
+       spellcheck="@Spellcheck" />
+
+@code {
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public EventCallback<KeyboardEventArgs> OnKeyDown { get; set; }
+    [Parameter] public EventCallback OnBlur { get; set; }
+    [Parameter] public string Type { get; set; } = "text";
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool Monospace { get; set; }
+    [Parameter] public string? Spellcheck { get; set; }
+    [Parameter] public string? CssClass { get; set; }
+    [Parameter] public bool BindOnInput { get; set; }
+
+    /// <summary>
+    /// Size: sm (default), md, lg, xs
+    /// </summary>
+    [Parameter] public string Size { get; set; } = "sm";
+
+    private string SizeClass => Size switch
+    {
+        "xs" => "cc-input-xs",
+        "md" => "cc-input-md",
+        "lg" => "cc-input-lg",
+        _ => ""
+    };
+
+    private async Task OnValueChanged(ChangeEventArgs e)
+    {
+        if (!BindOnInput)
+            await ValueChanged.InvokeAsync(e.Value?.ToString());
+    }
+
+    private async Task OnInputEvent(ChangeEventArgs e)
+    {
+        if (BindOnInput)
+            await ValueChanged.InvokeAsync(e.Value?.ToString());
+    }
+}

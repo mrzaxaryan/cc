@@ -1,0 +1,35 @@
+@inherits Microsoft.AspNetCore.Components.ComponentBase
+
+<div class="cc-progress @SizeClass @CssClass">
+    <div class="cc-progress-fill @VariantClass" style="width:@Percent%"></div>
+</div>
+
+@code {
+    [Parameter] public int Percent { get; set; }
+    [Parameter] public string? CssClass { get; set; }
+
+    /// <summary>
+    /// Variant: info (default), success, warning, danger, muted
+    /// </summary>
+    [Parameter] public string Variant { get; set; } = "info";
+
+    /// <summary>
+    /// Size: sm (default), xs
+    /// </summary>
+    [Parameter] public string Size { get; set; } = "sm";
+
+    private string VariantClass => Variant switch
+    {
+        "success" => "cc-progress-success",
+        "warning" => "cc-progress-warning",
+        "danger" => "cc-progress-danger",
+        "muted" => "cc-progress-muted",
+        _ => "cc-progress-info"
+    };
+
+    private string SizeClass => Size switch
+    {
+        "xs" => "cc-progress-xs",
+        _ => ""
+    };
+}

@@ -1,24 +1,76 @@
-.relay-host {
-    font-size: 0.7rem;
+/* Agents Panel */
+.ap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
 }
 
-.reconnect-text {
-    font-size: 0.65rem;
+.ap-empty {
+    color: var(--cc-text-dim);
+    font-size: 0.85rem;
 }
 
-.reconnect-btn {
-    font-size: 0.65rem;
-    vertical-align: baseline;
+/* Relay cards */
+.ap-relays {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
 }
 
-.rename-input {
+.ap-relay-card {
+    flex: 1;
+    min-width: 200px;
+}
+
+.ap-relay-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.ap-relay-header {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+}
+
+.ap-relay-name {
+    font-weight: 600;
     font-size: 0.8rem;
+    color: var(--cc-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.relay-use-badge {
+.ap-relay-host {
+    font-size: 0.68rem;
+    color: var(--cc-text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ap-relay-meta {
     font-size: 0.65rem;
+    color: var(--cc-text-muted);
 }
 
-.ctx-row {
+.ap-relay-warn {
+    color: var(--cc-accent-yellow);
+}
+
+.ap-relay-err {
+    color: var(--cc-accent-red);
+}
+
+/* Agent table */
+.ap-agent-row {
     cursor: context-menu;
+}
+
+.ap-dim {
+    color: var(--cc-text-dim);
 }

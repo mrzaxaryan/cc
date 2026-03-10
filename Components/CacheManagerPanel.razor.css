@@ -1,7 +1,154 @@
-.stat-label {
-    font-size: 0.7rem;
+/* Cache Manager */
+.cm {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
 }
 
-.agent-meta {
+.cm-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.cm-toolbar-actions {
+    display: flex;
+    gap: 2px;
+    margin-left: auto;
+}
+
+/* Stats */
+.cm-stats-card {
+    margin-bottom: 0.25rem;
+}
+
+.cm-stats {
+    display: flex;
+    gap: 0.5rem;
+    text-align: center;
+}
+
+.cm-stat {
+    flex: 1;
+}
+
+.cm-stat-value {
+    display: block;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--cc-text);
+}
+
+.cm-stat-label {
     font-size: 0.65rem;
+    color: var(--cc-text-dim);
+}
+
+/* Breadcrumb */
+.cm-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+    font-size: 0.7rem;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+
+.cm-crumb {
+    color: var(--cc-accent-blue);
+    text-decoration: none;
+    padding: 0.1rem 0.2rem;
+    border-radius: 3px;
+}
+
+.cm-crumb:hover {
+    background: var(--cc-bg-overlay);
+}
+
+.cm-crumb-sep {
+    color: var(--cc-text-dim);
+    font-size: 0.65rem;
+}
+
+.cm-crumb-active {
+    color: var(--cc-text);
+    font-weight: 600;
+}
+
+/* List */
+.cm-list {
+    border: 1px solid var(--cc-border);
+    border-radius: 6px;
+    overflow-y: auto;
+    max-height: 55vh;
+    background: var(--cc-bg-surface);
+}
+
+.cm-item {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.6rem;
+    font-family: monospace;
+    font-size: 0.75rem;
+    border-bottom: 1px solid var(--cc-border);
+    color: var(--cc-text);
+    background: none;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    width: 100%;
+    text-align: left;
+}
+
+.cm-item:last-child {
+    border-bottom: none;
+}
+
+.cm-item-nav {
+    cursor: pointer;
+    transition: background 0.1s;
+}
+
+.cm-item-nav:hover {
+    background: var(--cc-bg-overlay);
+}
+
+.cm-item-icon {
+    width: 1.2em;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.cm-item-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--cc-accent-blue);
+    text-decoration: none;
+}
+
+.cm-item-name:hover {
+    text-decoration: underline;
+}
+
+.cm-item-meta {
+    font-size: 0.6rem;
+    color: var(--cc-text-dim);
+    flex-shrink: 0;
+}
+
+/* States */
+.cm-list-loading {
+    display: flex;
+    justify-content: center;
+    padding: 1.5rem;
+}
+
+.cm-empty {
+    padding: 1.5rem;
+    text-align: center;
+    color: var(--cc-text-dim);
+    font-size: 0.8rem;
 }

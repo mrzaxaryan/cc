@@ -1,0 +1,31 @@
+/* Card */
+.cc-card {
+    border: 1px solid var(--cc-border);
+    border-radius: 6px;
+    background: var(--cc-bg-surface);
+    overflow: hidden;
+}
+
+.cc-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.4rem 0.6rem;
+    background: var(--cc-bg-deep);
+    border-bottom: 1px solid var(--cc-border);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--cc-text);
+}
+
+.cc-card-body {
+    padding: 0.75rem;
+}
+
+.cc-card-flush {
+    padding: 0;
+}
+
+.cc-card-compact {
+    padding: 0.4rem 0.6rem;
+}
