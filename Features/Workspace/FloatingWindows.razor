@@ -70,6 +70,7 @@
                 case "SearchJobs":        <SearchJobsPanel /> break;
                 case "ExtensionGroups":   <ExtensionGroupsPanel /> break;
                 case "AgentInfo":         <AgentInfoPanel AgentId="@win.AgentId" AgentUuid="@win.AgentUuid" /> break;
+                case "Shell":            <ShellPanel Relay="win.Relay" AgentId="@win.AgentId" AgentName="@win.AgentName" AgentUuid="@win.AgentUuid" /> break;
             }
         </div>
         @if (!win.Maximized)
@@ -153,6 +154,7 @@
         "FileSearch" => "search",
         "SearchJobs" => "search",
         "ExtensionGroups" => "database",
+        "Shell" => "monitor",
         _ => "monitor"
     };
 

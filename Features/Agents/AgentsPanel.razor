@@ -171,6 +171,7 @@
         </div>
     }
     <CcDropdownItem OnClick="CtxOpenFiles" Disabled="@(!ctxIsOnline)">File Manager</CcDropdownItem>
+    <CcDropdownItem OnClick="CtxOpenShell" Disabled="@(!ctxIsOnline)">Shell</CcDropdownItem>
     <CcDropdownItem OnClick="CtxStartRename" Disabled="@(!ctxIsOnline)">Rename</CcDropdownItem>
 </CcDropdown>
 
@@ -398,6 +399,13 @@
         HideContextMenu();
         if (ctxAgentId is not null && ctxRelayUrl is not null)
             await OpenAgentWindow("FileManager", ctxAgentId, ctxRelayUrl);
+    }
+
+    private async Task CtxOpenShell()
+    {
+        HideContextMenu();
+        if (ctxAgentId is not null && ctxRelayUrl is not null)
+            await OpenAgentWindow("Shell", ctxAgentId, ctxRelayUrl);
     }
 
     private async Task OpenAgentWindow(string panel, string agentId, string relayUrl)
