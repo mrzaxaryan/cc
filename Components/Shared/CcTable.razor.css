@@ -55,7 +55,7 @@
 
 /* Hover */
 .cc-table-hover tbody tr {
-    transition: background 0.1s;
+    transition: background 0.15s;
 }
 
 .cc-table-hover tbody tr:hover {

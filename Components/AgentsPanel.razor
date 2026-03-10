@@ -59,7 +59,9 @@
                     <col style="width:90px" />
                     <col style="width:80px" />
                     <col style="width:120px" />
-                    <col style="width:18%" />
+                    <col style="width:90px" />
+                    <col style="width:80px" />
+                    <col style="width:16%" />
                     <col />
                     <col style="width:110px" />
                 </colgroup>
@@ -70,6 +72,8 @@
                         <th>UUID</th>
                         <th>Relay Use</th>
                         <th>IP</th>
+                        <th>OS</th>
+                        <th>Arch</th>
                         <th>Location</th>
                         <th>Network</th>
                         <th>Last Seen</th>
@@ -120,6 +124,8 @@
                                 }
                             </td>
                             <td><code>@row.Ip</code></td>
+                            <td>@row.Os</td>
+                            <td>@row.Arch</td>
                             <td>@row.Location</td>
                             <td>@row.Network</td>
                             <td>@row.LastSeen</td>
@@ -169,6 +175,8 @@
         public string RelayName { get; set; } = "";
         public bool RelayUsed { get; set; }
         public string Ip { get; set; } = "";
+        public string Os { get; set; } = "";
+        public string Arch { get; set; } = "";
         public string Location { get; set; } = "";
         public string Network { get; set; } = "";
         public string LastSeen { get; set; } = "";
@@ -197,6 +205,8 @@
                 RelayName = relayName,
                 RelayUsed = Wm.ConnectedAgentIds.Contains(agent.Id),
                 Ip = agent.Ip,
+                Os = !string.IsNullOrEmpty(agent.Os) ? agent.Os : "—",
+                Arch = !string.IsNullOrEmpty(agent.Arch) ? agent.Arch : "—",
                 Location = Formatters.FormatLocation(agent),
                 Network = Formatters.FormatNetwork(agent),
                 LastSeen = "Now"
@@ -219,6 +229,8 @@
                 RelayUrl = relayEntry?.Url ?? "",
                 RelayName = relayName,
                 Ip = record.Ip,
+                Os = !string.IsNullOrEmpty(record.Os) ? record.Os : "—",
+                Arch = !string.IsNullOrEmpty(record.Arch) ? record.Arch : "—",
                 Location = FormatStoredLocation(record),
                 Network = FormatStoredNetwork(record),
                 LastSeen = Formatters.FormatTimestamp(record.LastSeen)

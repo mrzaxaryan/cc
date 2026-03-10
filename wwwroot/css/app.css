@@ -63,13 +63,30 @@
 }
 
 /* ===== Base Reset ===== */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 0.85rem;
+    line-height: 1.5;
     overflow: hidden;
     height: 100%;
     margin: 0;
     background: var(--cc-bg-base);
     color: var(--cc-text);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+    background: rgba(137, 180, 250, 0.25);
+    color: var(--cc-text);
+}
+
+[data-theme="light"] ::selection {
+    background: rgba(30, 102, 245, 0.2);
 }
 
 h1:focus {
@@ -256,12 +273,21 @@ a:hover {
     padding: 0.2rem 0.4rem;
     border-radius: 4px;
     cursor: pointer;
-    transition: background 0.15s, color 0.15s;
+    transition: background 0.15s, color 0.15s, transform 0.1s;
 }
 
 .app-window-btn:hover {
     background: rgba(255, 255, 255, 0.1);
     color: var(--cc-text);
+}
+
+.app-window-btn:active {
+    transform: scale(0.92);
+}
+
+.app-window-btn:focus-visible {
+    outline: 2px solid var(--cc-accent-blue);
+    outline-offset: 1px;
 }
 
 .app-window-btn.close-btn:hover {
@@ -339,6 +365,15 @@ a:hover {
     color: var(--cc-text);
 }
 
+.mdi-taskbar-item:focus-visible {
+    outline: 2px solid var(--cc-accent-blue);
+    outline-offset: -1px;
+}
+
+.mdi-taskbar-item:active {
+    transform: scale(0.97);
+}
+
 .mdi-taskbar-item.active {
     background: var(--cc-bg-active);
     color: var(--cc-text);
@@ -362,16 +397,21 @@ a:hover {
 ::-webkit-scrollbar-thumb {
     background: var(--cc-scrollbar-thumb);
     border-radius: 4px;
+    transition: background 0.15s;
 }
 
 ::-webkit-scrollbar-thumb:hover {
     background: var(--cc-scrollbar-thumb-hover);
 }
 
+::-webkit-scrollbar-corner {
+    background: var(--cc-bg-base);
+}
+
 /* ===== Toast Notifications ===== */
 .toast-container {
     position: fixed;
-    bottom: 1rem;
+    bottom: 2.75rem;
     right: 1rem;
     z-index: 11000;
     display: flex;
@@ -434,14 +474,17 @@ a:hover {
     color: inherit;
     font-size: 1.1rem;
     line-height: 1;
-    padding: 0;
+    padding: 0.1rem 0.2rem;
     cursor: pointer;
-    opacity: 0.6;
+    opacity: 0.5;
     flex-shrink: 0;
+    border-radius: 3px;
+    transition: opacity 0.15s, background 0.15s;
 }
 
 .toast-dismiss:hover {
     opacity: 1;
+    background: rgba(255, 255, 255, 0.08);
 }
 
 /* ===== Theme toggle ===== */

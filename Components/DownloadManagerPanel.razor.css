@@ -56,8 +56,18 @@
     padding: 0.15rem 0.4rem;
     border-radius: 3px;
     cursor: pointer;
-    transition: background 0.15s, color 0.15s;
+    transition: background 0.15s, color 0.15s, transform 0.1s;
     letter-spacing: 0.03em;
+    user-select: none;
+}
+
+.sm-btn:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.sm-btn:focus-visible {
+    outline: 2px solid var(--cc-accent-blue);
+    outline-offset: 1px;
 }
 
 .sm-btn:hover:not(:disabled) {
@@ -176,7 +186,7 @@
 .sm-item {
     padding: 0.4rem 0.5rem;
     border-bottom: 1px solid var(--cc-border);
-    transition: background 0.1s;
+    transition: background 0.15s;
 }
 
 .sm-item:last-child {

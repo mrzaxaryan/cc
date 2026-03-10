@@ -23,6 +23,11 @@
 
 .cc-input::placeholder {
     color: var(--cc-text-dim);
+    transition: color 0.15s;
+}
+
+.cc-input:focus::placeholder {
+    color: var(--cc-text-muted);
 }
 
 /* Monospace */

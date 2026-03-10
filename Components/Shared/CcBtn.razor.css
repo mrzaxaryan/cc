@@ -12,9 +12,10 @@
     border-radius: 4px;
     cursor: pointer;
     white-space: nowrap;
-    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.1s;
     letter-spacing: 0.02em;
     line-height: 1.4;
+    user-select: none;
 }
 
 .cc-btn:hover:not(:disabled) {
@@ -134,9 +135,3 @@
     background: var(--cc-bg-overlay);
 }
 
-/* Inline spinner (shared animation from CcSpinner) */
-.cc-spinner-inline {
-    width: 0.75em;
-    height: 0.75em;
-    border-width: 1.5px;
-}

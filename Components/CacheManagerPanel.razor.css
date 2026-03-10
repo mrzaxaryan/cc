@@ -107,7 +107,7 @@
 
 .cm-item-nav {
     cursor: pointer;
-    transition: background 0.1s;
+    transition: background 0.15s;
 }
 
 .cm-item-nav:hover {

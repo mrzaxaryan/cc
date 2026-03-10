@@ -20,6 +20,12 @@
     width: 90%;
     text-align: center;
     box-shadow: 0 8px 40px var(--cc-shadow);
+    animation: wc-fade-in 0.25s ease-out;
+}
+
+@keyframes wc-fade-in {
+    from { opacity: 0; transform: scale(0.96); }
+    to   { opacity: 1; transform: scale(1); }
 }
 
 .wc-title {

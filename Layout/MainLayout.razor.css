@@ -37,13 +37,23 @@
     padding: 0.3rem 0.7rem;
     cursor: pointer;
     border-radius: 4px;
-    transition: background 0.15s, color 0.15s;
+    transition: background 0.15s, color 0.15s, transform 0.1s;
     font-weight: 500;
+    user-select: none;
 }
 
 .mdi-menu-item:hover {
     background: var(--cc-bg-highlight);
     color: var(--cc-text);
+}
+
+.mdi-menu-item:active {
+    transform: scale(0.97);
+}
+
+.mdi-menu-item:focus-visible {
+    outline: 2px solid var(--cc-accent-blue);
+    outline-offset: -1px;
 }
 
 .mdi-spacer {
@@ -59,12 +69,19 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    transition: background 0.3s, color 0.3s, border-color 0.3s;
 }
 
 .mdi-status.connected {
     color: var(--cc-accent-green);
     background: rgba(166, 227, 161, 0.1);
     border: 1px solid rgba(166, 227, 161, 0.25);
+}
+
+.mdi-status.disconnected {
+    color: var(--cc-text-dim);
+    background: var(--cc-bg-overlay);
+    border: 1px solid var(--cc-border);
 }
 
 .mdi-workspace {

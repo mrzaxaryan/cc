@@ -9,6 +9,8 @@
     letter-spacing: 0.03em;
     white-space: nowrap;
     line-height: 1.4;
+    user-select: none;
+    transition: opacity 0.15s;
 }
 
 /* Variants */

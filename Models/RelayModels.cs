@@ -36,6 +36,8 @@ public class AgentConnection
     public string Protocol { get; set; } = "";
     public string TlsVersion { get; set; } = "";
     public string HttpVersion { get; set; } = "";
+    public string Os { get; set; } = "";
+    public string Arch { get; set; } = "";
 }
 
 public class RelayConnection

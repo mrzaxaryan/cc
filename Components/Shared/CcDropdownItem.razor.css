@@ -9,7 +9,8 @@
     padding: 0.35rem 0.75rem;
     text-align: left;
     cursor: pointer;
-    transition: background 0.1s;
+    transition: background 0.15s, color 0.15s;
+    user-select: none;
 }
 
 .cc-dropdown-item:hover:not(:disabled) {

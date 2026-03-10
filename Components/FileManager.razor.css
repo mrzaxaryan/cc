@@ -45,8 +45,18 @@
     border-radius: 4px;
     cursor: pointer;
     white-space: nowrap;
-    transition: background 0.15s, color 0.15s;
+    transition: background 0.15s, color 0.15s, transform 0.1s;
     flex-shrink: 0;
+    user-select: none;
+}
+
+.fm-toolbar-btn:active:not(:disabled) {
+    transform: scale(0.97);
+}
+
+.fm-toolbar-btn:focus-visible {
+    outline: 2px solid var(--cc-accent-blue);
+    outline-offset: 1px;
 }
 
 .fm-toolbar-btn:hover:not(:disabled) {
@@ -209,7 +219,7 @@
     font-family: monospace;
     cursor: pointer;
     text-align: left;
-    transition: background 0.1s;
+    transition: background 0.15s;
 }
 
 .fm-entry:last-child {
@@ -261,8 +271,18 @@
     padding: 0.1rem 0.35rem;
     border-radius: 3px;
     cursor: pointer;
-    transition: background 0.15s, color 0.15s;
+    transition: background 0.15s, color 0.15s, transform 0.1s;
     letter-spacing: 0.03em;
+    user-select: none;
+}
+
+.fm-action-btn:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.fm-action-btn:focus-visible {
+    outline: 2px solid var(--cc-accent-blue);
+    outline-offset: 1px;
 }
 
 .fm-action-btn:hover:not(:disabled) {
@@ -393,12 +413,12 @@
 }
 
 .fm-close-btn {
-    color: var(--cc-accent-red) !important;
+    color: var(--cc-accent-red);
 }
 
 .fm-close-btn:hover {
-    background: var(--cc-accent-red) !important;
-    color: var(--cc-bg-base) !important;
+    background: var(--cc-accent-red);
+    color: var(--cc-bg-base);
 }
 
 .fm-viewer-loading {

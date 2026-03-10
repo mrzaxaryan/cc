@@ -21,6 +21,8 @@ public class AgentRecord
     [JsonPropertyName("userAgent")] public string UserAgent { get; set; } = "";
     [JsonPropertyName("protocol")] public string Protocol { get; set; } = "";
     [JsonPropertyName("tlsVersion")] public string TlsVersion { get; set; } = "";
+    [JsonPropertyName("os")] public string Os { get; set; } = "";
+    [JsonPropertyName("arch")] public string Arch { get; set; } = "";
     [JsonPropertyName("relayId")] public string? RelayId { get; set; }
     [JsonPropertyName("firstSeen")] public double FirstSeen { get; set; }
     [JsonPropertyName("lastSeen")] public double LastSeen { get; set; }
@@ -76,6 +78,8 @@ public class AgentStore
             UserAgent = agent.UserAgent,
             Protocol = agent.Protocol,
             TlsVersion = agent.TlsVersion,
+            Os = agent.Os,
+            Arch = agent.Arch,
             RelayId = agent.RelayId,
             FirstSeen = now,
             LastSeen = now

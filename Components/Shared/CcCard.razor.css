@@ -4,6 +4,7 @@
     border-radius: 6px;
     background: var(--cc-bg-surface);
     overflow: hidden;
+    transition: border-color 0.15s;
 }
 
 .cc-card-header {
