@@ -6,6 +6,7 @@
 @inject ThemeService Theme
 @inject MessageService Msg
 @inject NotificationStore Notif
+@inject IJSRuntime JS
 @implements IDisposable
 
 <div class="mdi-menubar">
@@ -47,6 +48,10 @@
                             <div class="notif-item notif-@n.Type" @key="n.Id">
                                 <span class="notif-text">@n.Text</span>
                                 <span class="notif-time">@FormatTime(n.Created)</span>
+                                @if (n.Type == "error")
+                                {
+                                    <button class="notif-copy" @onclick="() => CopyText(n.Text)" title="Copy">&#128203;</button>
+                                }
                                 <button class="notif-remove" @onclick="() => RemoveOne(n.Id)" title="Dismiss">&times;</button>
                             </div>
                         }
@@ -133,6 +138,11 @@
     private async Task RemoveOne(int id)
     {
         await Notif.RemoveAsync(id);
+    }
+
+    private async Task CopyText(string text)
+    {
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", text);
     }
 
     private async Task ClearAll()
