@@ -45,7 +45,7 @@ public class WindowManager
             Title = panel,
             X = 100 + offset,
             Y = 80 + offset,
-            Width = panel switch { "File Manager" => 800, "Cache Manager" => 600, "Relay" => 900, "Agents" => 950, "Sync Manager" => 600, _ => 700 },
+            Width = panel switch { "File Manager" => 800, "Settings" => 650, "Relay" => 900, "Agents" => 950, "Sync Manager" => 600, _ => 700 },
             Height = 500,
             ZIndex = _topZ
         });

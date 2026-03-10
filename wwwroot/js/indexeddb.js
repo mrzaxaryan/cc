@@ -1,12 +1,13 @@
 // IndexedDB CRUD for agents, relays, and virtual filesystem
 (function () {
     const DB_NAME = 'cc-agents';
-    const DB_VERSION = 4;
+    const DB_VERSION = 5;
     const AGENTS_STORE = 'agents';
     const RELAYS_STORE = 'relays';
     const DOWNLOADS_STORE = 'downloads';
     const DIRECTORIES_STORE = 'directories';
     const FILES_STORE = 'files';
+    const NOTIFICATIONS_STORE = 'notifications';
 
     function openDb() {
         return new Promise((resolve, reject) => {
@@ -37,6 +38,10 @@
                     fileStore.createIndex('directoryId', 'directoryId', { unique: false });
                     fileStore.createIndex('agentUuid', 'agentUuid', { unique: false });
                     fileStore.createIndex('agentUuid_directoryId', ['agentUuid', 'directoryId'], { unique: false });
+                }
+                if (!db.objectStoreNames.contains(NOTIFICATIONS_STORE)) {
+                    const notifStore = db.createObjectStore(NOTIFICATIONS_STORE, { keyPath: 'id', autoIncrement: true });
+                    notifStore.createIndex('created', 'created', { unique: false });
                 }
             };
             req.onsuccess = () => resolve(req.result);
@@ -175,6 +180,31 @@
                     t.oncomplete = () => resolve();
                     t.onerror = () => reject(t.error);
                 });
+            });
+        }
+    };
+
+    window.ccNotificationDb = {
+        getAll: () => run(NOTIFICATIONS_STORE, 'readonly', s => s.getAll()),
+        put: record => run(NOTIFICATIONS_STORE, 'readwrite', s => s.put(record)),
+        remove: id => run(NOTIFICATIONS_STORE, 'readwrite', s => s.delete(id)),
+        clear: () => run(NOTIFICATIONS_STORE, 'readwrite', s => s.clear()),
+        count: () => run(NOTIFICATIONS_STORE, 'readonly', s => s.count())
+    };
+
+    window.ccDbInfo = {
+        getTableStats: () => {
+            return openDb().then(db => {
+                const names = Array.from(db.objectStoreNames);
+                const t = db.transaction(names, 'readonly');
+                const promises = names.map(name => {
+                    const store = t.objectStore(name);
+                    const req = store.count();
+                    return new Promise(resolve => {
+                        req.onsuccess = () => resolve({ name, count: req.result });
+                    });
+                });
+                return Promise.all(promises);
             });
         }
     };

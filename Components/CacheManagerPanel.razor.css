@@ -1,10 +1,39 @@
-/* Cache Manager */
+/* Settings Panel */
 .cm {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
     height: 100%;
     min-height: 0;
+}
+
+/* Tabs */
+.cm-tabs {
+    display: flex;
+    gap: 2px;
+    border-bottom: 1px solid var(--cc-border);
+    flex-shrink: 0;
+}
+
+.cm-tab {
+    background: none;
+    border: none;
+    color: var(--cc-text-muted);
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.4rem 0.8rem;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.cm-tab:hover {
+    color: var(--cc-text);
+}
+
+.cm-tab.active {
+    color: var(--cc-accent-blue);
+    border-bottom-color: var(--cc-accent-blue);
 }
 
 .cm-toolbar {
@@ -154,4 +183,31 @@
     text-align: center;
     color: var(--cc-text-dim);
     font-size: 0.8rem;
+}
+
+/* IndexedDB tab */
+.cm-db-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+    min-height: 0;
+}
+
+.cm-db-version {
+    font-size: 0.65rem;
+    color: var(--cc-text-dim);
+    font-family: monospace;
+}
+
+.cm-db-key {
+    font-size: 0.68rem;
+    color: var(--cc-text-dim);
+}
+
+.cm-db-total {
+    font-size: 0.7rem;
+    color: var(--cc-text-muted);
+    padding: 0.4rem 0;
+    text-align: right;
 }

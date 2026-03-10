@@ -3,140 +3,197 @@
 @inject AgentStore AgentDb
 @inject DownloadStore Downloads
 @inject MessageService Msg
+@inject IJSRuntime Js
 @implements IDisposable
 
 <div class="cm">
-    @* Header *@
-    <div class="cm-toolbar">
-        <CcBadge Variant="BadgeVariant.Info">@(Cache.DirectoryName ?? "No folder")</CcBadge>
-        <div class="cm-toolbar-actions">
-            <CcBtn OnClick="Refresh" Disabled="@loading" Title="Refresh">&#x21bb;</CcBtn>
-            @if (confirmPrune)
-            {
-                <CcBtn Variant="BtnVariant.DangerSolid" OnClick="ConfirmPrune" Disabled="@loading">YES</CcBtn>
-                <CcBtn OnClick="() => confirmPrune = false">NO</CcBtn>
-            }
-            else
-            {
-                <CcBtn Variant="BtnVariant.Danger" OnClick="() => confirmPrune = true" Disabled="@(loading || stats.fileCount == 0)" Title="Prune">PRUNE</CcBtn>
-            }
-            <CcBtn Variant="BtnVariant.Warning" OnClick="ChangeFolder" Title="Change folder">&#x1f4c1;</CcBtn>
-        </div>
+    @* Tabs *@
+    <div class="cm-tabs">
+        <button class="cm-tab @(tab == Tab.Cache ? "active" : "")" @onclick="() => tab = Tab.Cache">Cache</button>
+        <button class="cm-tab @(tab == Tab.IndexedDB ? "active" : "")" @onclick="() => { tab = Tab.IndexedDB; _ = LoadDbStats(); }">IndexedDB</button>
     </div>
 
-    @* Stats *@
-    <CcCard Compact CssClass="cm-stats-card">
-        <div class="cm-stats">
-            <div class="cm-stat">
-                <span class="cm-stat-value">@stats.agentCount</span>
-                <span class="cm-stat-label">Agents</span>
-            </div>
-            <div class="cm-stat">
-                <span class="cm-stat-value">@stats.dirCount</span>
-                <span class="cm-stat-label">Dirs</span>
-            </div>
-            <div class="cm-stat">
-                <span class="cm-stat-value">@stats.fileCount</span>
-                <span class="cm-stat-label">Files</span>
-            </div>
-            <div class="cm-stat">
-                <span class="cm-stat-value">@Formatters.FormatSize((ulong)stats.totalSize)</span>
-                <span class="cm-stat-label">Metadata</span>
-            </div>
-            <div class="cm-stat">
-                <span class="cm-stat-value">@Formatters.FormatSize((ulong)blobSize)</span>
-                <span class="cm-stat-label">On Disk</span>
-            </div>
-        </div>
-    </CcCard>
-
-    @* Breadcrumb *@
-    @if (breadcrumbs.Count > 0)
+    @if (tab == Tab.Cache)
     {
-        <div class="cm-breadcrumb">
-            <a href="javascript:void(0)" class="cm-crumb" @onclick="NavigateToRoot" @onclick:preventDefault>Root</a>
-            @{ var lastCrumb = breadcrumbs.LastOrDefault(); }
-            @foreach (var crumb in breadcrumbs)
-            {
-                <span class="cm-crumb-sep">/</span>
-                @if (crumb == lastCrumb)
+        @* Header *@
+        <div class="cm-toolbar">
+            <CcBadge Variant="BadgeVariant.Info">@(Cache.DirectoryName ?? "No folder")</CcBadge>
+            <div class="cm-toolbar-actions">
+                <CcBtn OnClick="Refresh" Disabled="@loading" Title="Refresh">&#x21bb;</CcBtn>
+                @if (confirmPrune)
                 {
-                    <span class="cm-crumb-active">@crumb.Name</span>
+                    <CcBtn Variant="BtnVariant.DangerSolid" OnClick="ConfirmPrune" Disabled="@loading">YES</CcBtn>
+                    <CcBtn OnClick="() => confirmPrune = false">NO</CcBtn>
                 }
                 else
                 {
-                    <a href="javascript:void(0)" class="cm-crumb" @onclick="() => NavigateToDirectory(crumb.Id)" @onclick:preventDefault>@crumb.Name</a>
+                    <CcBtn Variant="BtnVariant.Danger" OnClick="() => confirmPrune = true" Disabled="@(loading || stats.fileCount == 0)" Title="Prune">PRUNE</CcBtn>
+                }
+                <CcBtn Variant="BtnVariant.Warning" OnClick="ChangeFolder" Title="Change folder">&#x1f4c1;</CcBtn>
+            </div>
+        </div>
+
+        @* Stats *@
+        <CcCard Compact CssClass="cm-stats-card">
+            <div class="cm-stats">
+                <div class="cm-stat">
+                    <span class="cm-stat-value">@stats.agentCount</span>
+                    <span class="cm-stat-label">Agents</span>
+                </div>
+                <div class="cm-stat">
+                    <span class="cm-stat-value">@stats.dirCount</span>
+                    <span class="cm-stat-label">Dirs</span>
+                </div>
+                <div class="cm-stat">
+                    <span class="cm-stat-value">@stats.fileCount</span>
+                    <span class="cm-stat-label">Files</span>
+                </div>
+                <div class="cm-stat">
+                    <span class="cm-stat-value">@Formatters.FormatSize((ulong)stats.totalSize)</span>
+                    <span class="cm-stat-label">Metadata</span>
+                </div>
+                <div class="cm-stat">
+                    <span class="cm-stat-value">@Formatters.FormatSize((ulong)blobSize)</span>
+                    <span class="cm-stat-label">On Disk</span>
+                </div>
+            </div>
+        </CcCard>
+
+        @* Breadcrumb *@
+        @if (breadcrumbs.Count > 0)
+        {
+            <div class="cm-breadcrumb">
+                <a href="javascript:void(0)" class="cm-crumb" @onclick="NavigateToRoot" @onclick:preventDefault>Root</a>
+                @{ var lastCrumb = breadcrumbs.LastOrDefault(); }
+                @foreach (var crumb in breadcrumbs)
+                {
+                    <span class="cm-crumb-sep">/</span>
+                    @if (crumb == lastCrumb)
+                    {
+                        <span class="cm-crumb-active">@crumb.Name</span>
+                    }
+                    else
+                    {
+                        <a href="javascript:void(0)" class="cm-crumb" @onclick="() => NavigateToDirectory(crumb.Id)" @onclick:preventDefault>@crumb.Name</a>
+                    }
+                }
+            </div>
+        }
+
+        @* Content *@
+        <div class="cm-list">
+            @if (currentDirId == VfsStore.RootParentId && currentAgentUuid is null)
+            {
+                @* Agent list at root *@
+                @if (loading)
+                {
+                    <div class="cm-list-loading"><CcSpinner /></div>
+                }
+                else if (agentStats.Count == 0)
+                {
+                    <div class="cm-empty"><em>No cached data</em></div>
+                }
+                else
+                {
+                    @foreach (var agent in agentStats)
+                    {
+                        <div class="cm-item">
+                            <a href="javascript:void(0)" class="cm-item-name" @onclick="() => NavigateToAgent(agent.uuid)" @onclick:preventDefault>@agent.name</a>
+                            <span class="cm-item-meta">@agent.dirs d / @agent.files f</span>
+                            <span class="cm-item-meta">@Formatters.FormatSize((ulong)agent.size)</span>
+                            <CcConfirmBtn OnConfirm="() => DeleteAgentCache(agent.uuid)" Title="Delete agent cache">DEL</CcConfirmBtn>
+                        </div>
+                    }
+                }
+            }
+            else
+            {
+                @* Directory/file listing *@
+                @if (loading)
+                {
+                    <div class="cm-list-loading"><CcSpinner /></div>
+                }
+                else
+                {
+                    <button class="cm-item cm-item-nav" @onclick="NavigateUp">
+                        <span class="cm-item-icon">&#x2191;</span>
+                        <span class="cm-item-name">..</span>
+                    </button>
+                    @foreach (var dir in childDirs)
+                    {
+                        <div class="cm-item">
+                            <span class="cm-item-icon">&#x1f4c1;</span>
+                            <a href="javascript:void(0)" class="cm-item-name" @onclick="() => NavigateToDirectory(dir.Id)" @onclick:preventDefault>@dir.Name</a>
+                            <CcConfirmBtn OnConfirm="() => DeleteDir(dir)" Title="Delete">DEL</CcConfirmBtn>
+                        </div>
+                    }
+                    @foreach (var file in childFiles)
+                    {
+                        <div class="cm-item">
+                            <span class="cm-item-icon">&#x1f4c4;</span>
+                            <span class="cm-item-name">@file.Name</span>
+                            <span class="cm-item-meta">@Formatters.FormatSize((ulong)file.Size)</span>
+                            <CcConfirmBtn OnConfirm="() => DeleteFile(file)" Title="Delete">DEL</CcConfirmBtn>
+                        </div>
+                    }
+                    @if (childDirs.Count == 0 && childFiles.Count == 0)
+                    {
+                        <div class="cm-empty"><em>Empty</em></div>
+                    }
                 }
             }
         </div>
     }
-
-    @* Content *@
-    <div class="cm-list">
-        @if (currentDirId == VfsStore.RootParentId && currentAgentUuid is null)
-        {
-            @* Agent list at root *@
-            @if (loading)
-            {
-                <div class="cm-list-loading"><CcSpinner /></div>
-            }
-            else if (agentStats.Count == 0)
-            {
-                <div class="cm-empty"><em>No cached data</em></div>
-            }
-            else
-            {
-                @foreach (var agent in agentStats)
-                {
-                    <div class="cm-item">
-                        <a href="javascript:void(0)" class="cm-item-name" @onclick="() => NavigateToAgent(agent.uuid)" @onclick:preventDefault>@agent.name</a>
-                        <span class="cm-item-meta">@agent.dirs d / @agent.files f</span>
-                        <span class="cm-item-meta">@Formatters.FormatSize((ulong)agent.size)</span>
-                        <CcConfirmBtn OnConfirm="() => DeleteAgentCache(agent.uuid)" Title="Delete agent cache">DEL</CcConfirmBtn>
-                    </div>
-                }
-            }
-        }
-        else
-        {
-            @* Directory/file listing *@
-            @if (loading)
+    else if (tab == Tab.IndexedDB)
+    {
+        <div class="cm-db-section">
+            <div class="cm-toolbar">
+                <CcBadge Variant="BadgeVariant.Dark">cc-agents</CcBadge>
+                <span class="cm-db-version">v4</span>
+                <div class="cm-toolbar-actions">
+                    <CcBtn OnClick="LoadDbStats" Disabled="@dbLoading" Title="Refresh">&#x21bb;</CcBtn>
+                </div>
+            </div>
+            @if (dbLoading)
             {
                 <div class="cm-list-loading"><CcSpinner /></div>
             }
             else
             {
-                <button class="cm-item cm-item-nav" @onclick="NavigateUp">
-                    <span class="cm-item-icon">&#x2191;</span>
-                    <span class="cm-item-name">..</span>
-                </button>
-                @foreach (var dir in childDirs)
+                <CcTable Hover>
+                    <thead>
+                        <tr>
+                            <th>Object Store</th>
+                            <th>Key</th>
+                            <th style="text-align:right">Records</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var t in dbTables)
+                        {
+                            <tr>
+                                <td><code>@t.Name</code></td>
+                                <td><code class="cm-db-key">@GetKeyPath(t.Name)</code></td>
+                                <td style="text-align:right;font-weight:600">@t.Count</td>
+                            </tr>
+                        }
+                    </tbody>
+                </CcTable>
+                @if (dbTables.Count > 0)
                 {
-                    <div class="cm-item">
-                        <span class="cm-item-icon">&#x1f4c1;</span>
-                        <a href="javascript:void(0)" class="cm-item-name" @onclick="() => NavigateToDirectory(dir.Id)" @onclick:preventDefault>@dir.Name</a>
-                        <CcConfirmBtn OnConfirm="() => DeleteDir(dir)" Title="Delete">DEL</CcConfirmBtn>
+                    <div class="cm-db-total">
+                        Total: @dbTables.Sum(t => t.Count) records across @dbTables.Count stores
                     </div>
-                }
-                @foreach (var file in childFiles)
-                {
-                    <div class="cm-item">
-                        <span class="cm-item-icon">&#x1f4c4;</span>
-                        <span class="cm-item-name">@file.Name</span>
-                        <span class="cm-item-meta">@Formatters.FormatSize((ulong)file.Size)</span>
-                        <CcConfirmBtn OnConfirm="() => DeleteFile(file)" Title="Delete">DEL</CcConfirmBtn>
-                    </div>
-                }
-                @if (childDirs.Count == 0 && childFiles.Count == 0)
-                {
-                    <div class="cm-empty"><em>Empty</em></div>
                 }
             }
-        }
-    </div>
+        </div>
+    }
 </div>
 
 @code {
+    private enum Tab { Cache, IndexedDB }
+    private Tab tab = Tab.Cache;
+
     private string currentDirId = VfsStore.RootParentId;
     private string? currentAgentUuid;
     private List<(string uuid, string name, int dirs, int files, long size)> agentStats = new();
@@ -147,6 +204,11 @@
     private long blobSize;
     private bool loading;
     private bool confirmPrune;
+
+    // IndexedDB tab
+    private record DbTable(string Name, int Count);
+    private List<DbTable> dbTables = new();
+    private bool dbLoading;
 
     protected override async Task OnInitializedAsync()
     {
@@ -323,6 +385,33 @@
         var name = AgentDb.Agents.Values.FirstOrDefault(a => a.Uuid == currentAgentUuid)?.Name ?? currentAgentUuid!;
         return new VfsDirectory { Id = VfsStore.RootParentId, Name = name };
     }
+
+    // IndexedDB
+
+    private async Task LoadDbStats()
+    {
+        dbLoading = true;
+        StateHasChanged();
+        try
+        {
+            var results = await Js.InvokeAsync<DbTableResult[]>("ccDbInfo.getTableStats");
+            dbTables = results.Select(r => new DbTable(r.Name, r.Count)).ToList();
+        }
+        catch (Exception ex) { Msg.Error($"Failed to read IndexedDB: {ex.Message}"); }
+        finally { dbLoading = false; StateHasChanged(); }
+    }
+
+    private record DbTableResult(string Name, int Count);
+
+    private static string GetKeyPath(string store) => store switch
+    {
+        "agents" => "uuid",
+        "relays" => "url",
+        "downloads" => "id (auto)",
+        "directories" => "id",
+        "files" => "id",
+        _ => "—"
+    };
 
     public void Dispose()
     {
