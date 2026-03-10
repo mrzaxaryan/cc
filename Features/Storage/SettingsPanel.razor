@@ -23,6 +23,7 @@
         <div class="panel-tabs">
             <button class="panel-tab @(tab == Tab.Cache ? "active" : "")" @onclick="() => tab = Tab.Cache">Storage</button>
             <button class="panel-tab @(tab == Tab.IndexedDB ? "active" : "")" @onclick="() => { tab = Tab.IndexedDB; _ = LoadDbStats(); }">IndexedDB</button>
+            <button class="panel-tab @(tab == Tab.About ? "active" : "")" @onclick="() => tab = Tab.About">About</button>
         </div>
     </Toolbar>
     <Body>
@@ -192,11 +193,37 @@
                 }
             </div>
         }
+        else if (tab == Tab.About)
+        {
+            <div class="cm-about">
+                <div class="cm-about-brand">cc</div>
+                <CcCard Compact>
+                    <div class="cm-about-rows">
+                        <div class="cm-about-row">
+                            <span class="cm-about-label">Build</span>
+                            <code class="cm-about-value">@BuildMeta.Version</code>
+                        </div>
+                        <div class="cm-about-row">
+                            <span class="cm-about-label">Date</span>
+                            <code class="cm-about-value">@BuildMeta.Date</code>
+                        </div>
+                        <div class="cm-about-row">
+                            <span class="cm-about-label">Hash</span>
+                            <code class="cm-about-value">@BuildMeta.Hash</code>
+                        </div>
+                        <div class="cm-about-row">
+                            <span class="cm-about-label">Runtime</span>
+                            <code class="cm-about-value">@System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription</code>
+                        </div>
+                    </div>
+                </CcCard>
+            </div>
+        }
     </Body>
 </PanelLayout>
 
 @code {
-    private enum Tab { Cache, IndexedDB }
+    private enum Tab { Cache, IndexedDB, About }
     private Tab tab = Tab.Cache;
 
     private string currentDirId = VfsStore.RootParentId;

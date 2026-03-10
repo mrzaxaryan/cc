@@ -8,6 +8,30 @@
     <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
   </PropertyGroup>
 
+  <Target Name="GenerateBuildInfo" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <BuildDate>$([System.DateTime]::UtcNow.ToString("yyyy-MM-dd"))</BuildDate>
+      <BuildHash>$([System.Guid]::NewGuid().ToString("N").Substring(0, 8))</BuildHash>
+    </PropertyGroup>
+    <ItemGroup>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>BuildDate</_Parameter1>
+        <_Parameter2>$(BuildDate)</_Parameter2>
+      </AssemblyAttribute>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>BuildHash</_Parameter1>
+        <_Parameter2>$(BuildHash)</_Parameter2>
+      </AssemblyAttribute>
+    </ItemGroup>
+    <WriteLinesToFile
+      File="$(IntermediateOutputPath)BuildMeta.g.cs"
+      Overwrite="true"
+      Lines="namespace cc%3B&#10;&#10;public static class BuildMeta&#10;{&#10;    public const string Date = &quot;$(BuildDate)&quot;%3B&#10;    public const string Hash = &quot;$(BuildHash)&quot;%3B&#10;    public const string Version = &quot;$(BuildDate)+$(BuildHash)&quot;%3B&#10;}" />
+    <ItemGroup>
+      <Compile Include="$(IntermediateOutputPath)BuildMeta.g.cs" />
+    </ItemGroup>
+  </Target>
+
   <ItemGroup>
     <ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" />
   </ItemGroup>

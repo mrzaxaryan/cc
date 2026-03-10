@@ -177,6 +177,48 @@
     text-align: right;
 }
 
+/* About tab */
+.cm-about {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem 0;
+}
+
+.cm-about-brand {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.05em;
+    color: var(--cc-text);
+}
+
+.cm-about-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    min-width: 260px;
+}
+
+.cm-about-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.cm-about-label {
+    font-size: 0.7rem;
+    color: var(--cc-text-dim);
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.cm-about-value {
+    font-size: 0.75rem;
+    color: var(--cc-text);
+}
+
 /* ===== Mobile ===== */
 @media (max-width: 768px) {
     .cm-item {

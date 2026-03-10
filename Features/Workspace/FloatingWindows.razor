@@ -1,8 +1,9 @@
 
 @inherits EventSubscriber
 @inject WindowManager Wm
+@inject IJSRuntime Js
 
-@* Drag overlay — captures pointer events globally during drag *@
+@* Drag overlay — captures pointer events globally during drag (mouse only; touch uses implicit capture on titlebar) *@
 @if (_dragging is not null)
 {
     <div style="position:fixed;inset:0;z-index:9999;cursor:grabbing;touch-action:none;"
@@ -35,6 +36,10 @@
         <div class="app-window-titlebar"
              style="touch-action:none;"
              @onpointerdown="(e) => OnDragStart(e, win)"
+             @onpointermove="OnDragMove"
+             @onpointerup="OnDragEnd"
+             @onpointercancel="OnDragEnd"
+             @onpointermove:preventDefault="true"
              @ondblclick="() => Wm.ToggleMaximize(win)">
             <span class="app-window-icon"><CcIcon Name="@PanelIcon(win.Panel)" Size="Size.Xs" /></span>
             <span class="app-window-title">@win.Title</span>
@@ -107,6 +112,8 @@
 @code {
     private DragState? _dragging;
     private EdgeResizeState? _edgeResizing;
+    private double _vpWidth;
+    private double _vpHeight;
 
     private enum Edge { N, S, E, W, NW, NE, SW, SE }
 
@@ -166,10 +173,13 @@
 
     // --- Drag ---
 
-    private void OnDragStart(PointerEventArgs e, WindowState win)
+    private async Task OnDragStart(PointerEventArgs e, WindowState win)
     {
         if (win.Maximized) return;
         Wm.BringToFront(win);
+        var vp = await Js.InvokeAsync<ViewportSize>("ccInterop.getViewport");
+        _vpWidth = vp.Width;
+        _vpHeight = vp.Height;
         _dragging = new DragState
         {
             Window = win,
@@ -181,18 +191,27 @@
     private void OnDragMove(PointerEventArgs e)
     {
         if (_dragging is null) return;
-        _dragging.Window.X = Math.Max(0, _dragging.StartWinX + (e.ClientX - _dragging.StartMouseX));
-        _dragging.Window.Y = Math.Max(36, _dragging.StartWinY + (e.ClientY - _dragging.StartMouseY));
+        var win = _dragging.Window;
+        var newX = _dragging.StartWinX + (e.ClientX - _dragging.StartMouseX);
+        var newY = _dragging.StartWinY + (e.ClientY - _dragging.StartMouseY);
+
+        // Clamp: keep at least 80px visible on each edge
+        const double grab = 80;
+        win.X = Math.Clamp(newX, -(win.Width - grab), _vpWidth - grab);
+        win.Y = Math.Clamp(newY, 36, _vpHeight - grab);
     }
 
     private void OnDragEnd(PointerEventArgs e) => _dragging = null;
 
     // --- Edge Resize ---
 
-    private void OnEdgeResizeStart(PointerEventArgs e, WindowState win, Edge edge)
+    private async Task OnEdgeResizeStart(PointerEventArgs e, WindowState win, Edge edge)
     {
         if (win.Maximized) return;
         Wm.BringToFront(win);
+        var vp = await Js.InvokeAsync<ViewportSize>("ccInterop.getViewport");
+        _vpWidth = vp.Width;
+        _vpHeight = vp.Height;
         _edgeResizing = new EdgeResizeState
         {
             Window = win, Edge = edge,
@@ -210,19 +229,27 @@
         var dy = e.ClientY - r.StartMouseY;
         var edge = r.Edge;
 
-        // East
+        // East — don't extend past viewport right
         if (edge is Edge.E or Edge.NE or Edge.SE)
-            r.Window.Width = Math.Max(320, r.StartWidth + dx);
+        {
+            var maxW = _vpWidth - r.Window.X;
+            r.Window.Width = Math.Clamp(r.StartWidth + dx, 320, maxW > 320 ? maxW : 320);
+        }
 
-        // South
+        // South — don't extend past viewport bottom
         if (edge is Edge.S or Edge.SW or Edge.SE)
-            r.Window.Height = Math.Max(120, r.StartHeight + dy);
+        {
+            var maxH = _vpHeight - r.Window.Y;
+            r.Window.Height = Math.Clamp(r.StartHeight + dy, 120, maxH > 120 ? maxH : 120);
+        }
 
         // West
         if (edge is Edge.W or Edge.NW or Edge.SW)
         {
             var newW = Math.Max(320, r.StartWidth - dx);
-            r.Window.X = r.StartX + (r.StartWidth - newW);
+            var newX = r.StartX + (r.StartWidth - newW);
+            if (newX < 0) { newW += newX; newX = 0; newW = Math.Max(320, newW); }
+            r.Window.X = newX;
             r.Window.Width = newW;
         }
 
@@ -245,6 +272,8 @@
         Edge.NE or Edge.SW => "nesw-resize",
         _ => "default"
     };
+
+    private record ViewportSize(double Width, double Height);
 
     public override void Dispose() => base.Dispose();
 }

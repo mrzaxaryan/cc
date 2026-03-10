@@ -6,6 +6,9 @@ window.ccInterop = {
         document.documentElement.setAttribute('data-bs-theme', name);
         const meta = document.querySelector('meta[name="theme-color"]');
         if (meta) meta.content = name === 'light' ? '#eff1f5' : '#1e1e2e';
+    },
+    getViewport() {
+        return { width: window.innerWidth, height: window.innerHeight };
     }
 };
 

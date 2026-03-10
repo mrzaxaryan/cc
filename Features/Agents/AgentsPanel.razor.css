@@ -263,19 +263,8 @@
     color: var(--cc-text-muted);
 }
 
-/* ===== Tablet: hide less important columns ===== */
+/* ===== Tablet: switch to card view ===== */
 @media (max-width: 1024px) {
-    .ap-col-net {
-        display: none;
-    }
-
-    .ap-net-cell {
-        max-width: 140px;
-    }
-}
-
-/* ===== Mobile: switch to card view ===== */
-@media (max-width: 768px) {
     .ap-table-view {
         display: none;
     }

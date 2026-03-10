@@ -63,7 +63,7 @@ else
                     @if (updateAvailable)
                     {
                         <div class="notif-update">
-                            <span>A new version is available.</span>
+                            <span>Update available — current build <code>@BuildMeta.Hash</code></span>
                             <button class="notif-reload" @onclick="ReloadApp">Reload</button>
                         </div>
                     }

@@ -67,7 +67,7 @@
         }
         else
         {
-            @* Desktop/Tablet: table view *@
+            @* Desktop: table view (hidden ≤1024px) *@
             <div class="ap-table-view">
                 <CcTable Striped Hover>
                     <thead>
@@ -122,7 +122,7 @@
                 </CcTable>
             </div>
 
-            @* Mobile: card view *@
+            @* Tablet/Mobile: card view (shown ≤1024px) *@
             <div class="ap-card-view">
                 @foreach (var row in filtered)
                 {
