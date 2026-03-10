@@ -9,11 +9,11 @@
     @* Global status header *@
     <div class="sg-header">
         <div class="sg-header-left">
-            <span class="sg-title">File Scans</span>
+            <span class="sg-title">File Search</span>
             @if (IsGloballyRunning)
             {
                 <CcBadge Variant="BadgeVariant.Success" Size="Size.Xs">
-                    <CcIcon Name="search" Size="Size.Xs" CssClass="sg-spinning" /> Scanning
+                    <CcIcon Name="search" Size="Size.Xs" CssClass="sg-spinning" /> Searching
                 </CcBadge>
             }
             else if (TotalPaused > 0)
@@ -28,11 +28,11 @@
         <div class="sg-header-right">
             @if (TotalScanning > 0)
             {
-                <CcBtn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="StopAll" Title="Stop all scans">STOP ALL</CcBtn>
+                <CcBtn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="StopAll" Title="Stop all searches">STOP ALL</CcBtn>
             }
             @if (TotalPaused > 0)
             {
-                <CcBtn Variant="BtnVariant.Success" Size="Size.Xs" OnClick="ResumeAll" Title="Resume all paused">RESUME ALL</CcBtn>
+                <CcBtn Variant="BtnVariant.Success" Size="Size.Xs" OnClick="ResumeAll" Title="Resume all paused searches">RESUME ALL</CcBtn>
             }
         </div>
     </div>
@@ -41,7 +41,7 @@
     <div class="sg-stats">
         <div class="sg-stat">
             <span class="sg-stat-value sg-stat-active">@TotalScanning</span>
-            <span class="sg-stat-label">Scanning</span>
+            <span class="sg-stat-label">Searching</span>
         </div>
         <div class="sg-stat">
             <span class="sg-stat-value">@TotalPaused</span>
@@ -86,7 +86,7 @@
                         <div class="sg-scan-row">
                             <span class="sg-scan-icon sg-icon-active">&#x25CF;</span>
                             <div class="sg-scan-info">
-                                <span class="sg-scan-path" title="@scan.RootPath">@scan.RootPath</span>
+                                <span class="sg-scan-path" title="@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)">@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)</span>
                                 <span class="sg-scan-meta">@scan.Extensions</span>
                             </div>
                             <span class="sg-scan-status">
@@ -106,7 +106,7 @@
                         <div class="sg-scan-row">
                             <span class="sg-scan-icon">&#x25A0;</span>
                             <div class="sg-scan-info">
-                                <span class="sg-scan-path" title="@scan.RootPath">@scan.RootPath</span>
+                                <span class="sg-scan-path" title="@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)">@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)</span>
                                 <span class="sg-scan-meta">@scan.Extensions &middot; @scan.FilesFound files found</span>
                             </div>
                             <span class="sg-scan-status">
@@ -124,7 +124,7 @@
                         <div class="sg-scan-row">
                             <span class="sg-scan-icon sg-icon-fail">&#x2717;</span>
                             <div class="sg-scan-info">
-                                <span class="sg-scan-path" title="@scan.RootPath">@scan.RootPath</span>
+                                <span class="sg-scan-path" title="@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)">@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)</span>
                                 <span class="sg-scan-meta">@scan.Extensions &middot; @scan.FilesFound files found</span>
                             </div>
                             <span class="sg-scan-status">
@@ -141,7 +141,7 @@
                     <div class="sg-scan sg-scan-done-summary" @onclick="() => ToggleCompleted(group.Uuid)">
                         <div class="sg-scan-row">
                             <span class="sg-scan-icon sg-icon-done">&#x2713;</span>
-                            <span class="sg-scan-path">@group.Completed completed scans (@group.TotalFiles files found)</span>
+                            <span class="sg-scan-path">@group.Completed completed searches (@group.TotalFiles files found)</span>
                             <span class="sg-scan-status">
                                 <span class="sg-expand">@(expandedAgents.Contains(group.Uuid) ? "&#x25B2;" : "&#x25BC;")</span>
                             </span>
@@ -155,7 +155,7 @@
                                 <div class="sg-scan-row">
                                     <span class="sg-scan-icon sg-icon-done">&#x2713;</span>
                                     <div class="sg-scan-info">
-                                        <span class="sg-scan-path" title="@scan.RootPath">@scan.RootPath</span>
+                                        <span class="sg-scan-path" title="@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)">@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)</span>
                                         <span class="sg-scan-meta">@scan.Extensions &middot; @scan.DirsScanned dirs &middot; @scan.FilesFound files</span>
                                     </div>
                                     <span class="sg-scan-status">
@@ -171,7 +171,7 @@
 
         @if (Scans.Scans.Count == 0)
         {
-            <div class="sg-empty">No scan activity. Use the SCAN button on directories in the File Manager.</div>
+            <div class="sg-empty">No search activity. Use the SEARCH button on directories in the File Manager.</div>
         }
     </div>
 </div>

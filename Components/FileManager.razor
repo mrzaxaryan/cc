@@ -29,6 +29,9 @@
         <div class="fm-path-bar">
             <CcInput @bind-Value="currentPath" OnKeyDown="OnPathKeyDown" Monospace />
         </div>
+        <CcBtn Variant="BtnVariant.Primary" OnClick="OpenFullSearchWindow" Disabled="@(!IsConnected)" Title="Search entire filesystem">
+            <span class="fm-icon">&#x1F50D;</span> SEARCH
+        </CcBtn>
         <CcBtn Variant="BtnVariant.Primary" OnClick="OpenSyncManagerWindow" Title="Sync Manager">
             <span class="fm-icon">&#x21C5;</span> SYNC
         </CcBtn>
@@ -96,7 +99,7 @@
                                 @if (isDir)
                                 {
                                     <CcBtn Size="Size.Xs" OnClick="() => OpenAsDirectory(e.Name)" Title="Open" Disabled="@(!IsConnected && !HasCache)">OPEN</CcBtn>
-                                    <CcBtn Size="Size.Xs" Variant="BtnVariant.Primary" OnClick="() => OpenScanWindow(e.Name)" Title="Scan directory" Disabled="@(!IsConnected)">SCAN</CcBtn>
+                                    <CcBtn Size="Size.Xs" Variant="BtnVariant.Primary" OnClick="() => OpenScanWindow(e.Name)" Title="Search directory" Disabled="@(!IsConnected)">SEARCH</CcBtn>
                                 }
                                 else if (Cache.HasDirectory)
                                 {
@@ -492,6 +495,12 @@
         if (string.IsNullOrEmpty(AgentId)) return;
         var scanPath = currentPath + dirName;
         Wm.OpenAgentWindow("Scanner", AgentId, agentName: AgentName, agentUuid: AgentUuid, scanPath: scanPath);
+    }
+
+    private void OpenFullSearchWindow()
+    {
+        if (string.IsNullOrEmpty(AgentId)) return;
+        Wm.OpenAgentWindow("Scanner", AgentId, agentName: AgentName, agentUuid: AgentUuid);
     }
 
     private async Task SaveToBrowser(DownloadRecord dl)

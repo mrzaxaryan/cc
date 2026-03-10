@@ -9,7 +9,7 @@
     @* Header *@
     <div class="scan-header">
         <div class="scan-header-left">
-            <span class="scan-title">File Scanner</span>
+            <span class="scan-title">File Search</span>
             @if (!string.IsNullOrEmpty(AgentName))
             {
                 <span class="scan-agent">@AgentName</span>
@@ -20,14 +20,17 @@
         </div>
     </div>
 
-    @* New scan form *@
+    @* New search form *@
     @if (showNewScan)
     {
         <div class="scan-form">
-            <div class="scan-form-row">
-                <label class="scan-label">Directory</label>
-                <CcInput @bind-Value="newScanPath" Placeholder="C:\Users" Monospace />
-            </div>
+            @if (!fullScanMode)
+            {
+                <div class="scan-form-row">
+                    <label class="scan-label">Directory</label>
+                    <CcInput @bind-Value="newScanPath" Placeholder="C:\Users" Monospace />
+                </div>
+            }
             <div class="scan-form-row">
                 <label class="scan-label">Extensions (comma-separated)</label>
                 <CcInput @bind-Value="newScanExtensions" Placeholder=".txt,.pdf,.doc,.xls" Monospace />
@@ -39,16 +42,23 @@
                 </label>
             </div>
             <div class="scan-form-actions">
-                <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="StartScan" Disabled="@(string.IsNullOrWhiteSpace(newScanPath) || string.IsNullOrWhiteSpace(newScanExtensions))">START SCAN</CcBtn>
-                <CcBtn Size="Size.Xs" OnClick="() => showNewScan = false">CANCEL</CcBtn>
+                @if (fullScanMode)
+                {
+                    <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="StartFullScan" Disabled="@(string.IsNullOrWhiteSpace(newScanExtensions))">START FULL SEARCH</CcBtn>
+                }
+                else
+                {
+                    <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="StartScan" Disabled="@(string.IsNullOrWhiteSpace(newScanPath) || string.IsNullOrWhiteSpace(newScanExtensions))">START SEARCH</CcBtn>
+                }
+                <CcBtn Size="Size.Xs" OnClick="CancelForm">CANCEL</CcBtn>
             </div>
         </div>
     }
     else
     {
         <div class="scan-new-btn">
-            <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="() => showNewScan = true">NEW SCAN</CcBtn>
-            <CcBtn Size="Size.Xs" OnClick="StartFullScan" Disabled="@(string.IsNullOrWhiteSpace(newScanExtensions))">FULL SCAN</CcBtn>
+            <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="ShowNewScan">NEW SEARCH</CcBtn>
+            <CcBtn Size="Size.Xs" OnClick="ShowFullScan">FULL SEARCH</CcBtn>
         </div>
     }
 
@@ -70,11 +80,11 @@
         <div class="scan-empty">
             @if (allRecords.Count == 0)
             {
-                <span>No scans yet. Click NEW SCAN to start.</span>
+                <span>No searches yet. Click NEW SEARCH to start.</span>
             }
             else
             {
-                <span>No @filter.ToString().ToLower() scans</span>
+                <span>No @filter.ToString().ToLower() searches</span>
             }
         </div>
     }
@@ -147,6 +157,7 @@
     private Filter filter = Filter.All;
 
     private bool showNewScan;
+    private bool fullScanMode;
     private string newScanPath = "";
     private string newScanExtensions = ".txt,.pdf,.doc,.docx,.xls,.xlsx";
     private bool newScanAutoDownload = true;
@@ -229,8 +240,14 @@
 
         var extensions = NormalizeExtensions(newScanExtensions);
         await Scans.AddAsync(AgentUuid, AgentName ?? "", "", extensions, newScanAutoDownload);
+        showNewScan = false;
+        fullScanMode = false;
         Refresh();
     }
+
+    private void ShowNewScan() { fullScanMode = false; showNewScan = true; }
+    private void ShowFullScan() { fullScanMode = true; showNewScan = true; }
+    private void CancelForm() { showNewScan = false; fullScanMode = false; }
 
     private static string NormalizeExtensions(string raw) =>
         string.Join(",", raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
