@@ -8,90 +8,127 @@
 @inject WindowManager Wm
 @implements IDisposable
 
-<div>
-    <div class="d-flex align-items-center gap-2 mb-2">
-        <span class="badge bg-primary">Sync Manager</span>
-        @if (!string.IsNullOrEmpty(AgentName))
-        {
-            <small class="fw-bold text-truncate">@AgentName</small>
-        }
-        <small class="text-muted">@activeRecords.Count active</small>
-        <div class="d-flex gap-1 ms-auto">
+<div class="sm">
+    @* Header *@
+    <div class="sm-header">
+        <div class="sm-header-left">
+            <span class="sm-title">Sync Manager</span>
+            @if (!string.IsNullOrEmpty(AgentName))
+            {
+                <span class="sm-agent">@AgentName</span>
+            }
+        </div>
+        <div class="sm-header-right">
             @if (HasActiveSyncs)
             {
-                <button class="btn btn-outline-danger btn-sm btn-tiny2" @onclick="StopAllSyncs" title="Pause all syncs">STOP ALL</button>
+                <button class="sm-btn sm-btn-danger" @onclick="StopAllSyncs" title="Pause all">STOP ALL</button>
             }
             @if (activeRecords.Count > 0)
             {
                 @if (confirmClear)
                 {
-                    <button class="btn btn-danger btn-sm py-0 px-1" @onclick="ClearPaused">YES</button>
-                    <button class="btn btn-outline-secondary btn-sm py-0 px-1" @onclick="() => confirmClear = false">NO</button>
+                    <button class="sm-btn sm-btn-danger-solid" @onclick="ClearPaused">YES</button>
+                    <button class="sm-btn" @onclick="() => confirmClear = false">NO</button>
                 }
                 else
                 {
-                    <button class="btn btn-outline-danger btn-sm py-0 px-1" @onclick="() => confirmClear = true" title="Clear paused">CLEAR</button>
+                    <button class="sm-btn sm-btn-danger" @onclick="() => confirmClear = true" title="Clear paused/failed">CLEAR</button>
                 }
             }
-            <button class="btn btn-outline-secondary btn-sm py-0 px-1" @onclick="Refresh" title="Refresh">&#x21bb;</button>
+            <button class="sm-btn" @onclick="Refresh" title="Refresh">&#x21bb;</button>
         </div>
     </div>
 
-    @if (activeRecords.Count == 0)
+    @* Filter tabs *@
+    <div class="sm-tabs">
+        <button class="sm-tab @(filter == Filter.All ? "active" : "")" @onclick="() => SetFilter(Filter.All)">
+            All <span class="sm-tab-count">@activeRecords.Count</span>
+        </button>
+        <button class="sm-tab @(filter == Filter.Active ? "active" : "")" @onclick="() => SetFilter(Filter.Active)">
+            Active <span class="sm-tab-count">@CountByFilter(Filter.Active)</span>
+        </button>
+        <button class="sm-tab @(filter == Filter.Paused ? "active" : "")" @onclick="() => SetFilter(Filter.Paused)">
+            Paused <span class="sm-tab-count">@CountByFilter(Filter.Paused)</span>
+        </button>
+        <button class="sm-tab @(filter == Filter.Done ? "active" : "")" @onclick="() => SetFilter(Filter.Done)">
+            Done <span class="sm-tab-count">@CountByFilter(Filter.Done)</span>
+        </button>
+    </div>
+
+    @* Records list *@
+    @if (filteredRecords.Count == 0)
     {
-        <div class="text-muted small text-center py-4">
-            <em>No active syncs</em>
+        <div class="sm-empty">
+            @if (activeRecords.Count == 0)
+            {
+                <span>No active syncs</span>
+            }
+            else
+            {
+                <span>No @filter.ToString().ToLower() items</span>
+            }
         </div>
     }
     else
     {
-        <div class="scrollable-list-lg">
-            @foreach (var dl in activeRecords)
+        <div class="sm-list">
+            @foreach (var dl in filteredRecords)
             {
                 var rec = dl;
                 var pct = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
-                <div class="list-group-item py-1 small">
-                    <div class="d-flex align-items-center gap-1">
-                        <span class="entry-icon">&#x1f4c4;</span>
-                        <span class="flex-grow-1 text-truncate font-monospace" title="@dl.RemotePath">@dl.FileName</span>
-                        @if (dl.Status == DownloadStatus.Downloading)
-                        {
-                            <span class="spinner-border spinner-border-sm flex-shrink-0 dl-spinner"></span>
-                            <span class="badge bg-info text-dark py-0 flex-shrink-0 text-xs">@pct%</span>
-                            @if (dl.SpeedBytesPerSec > 0)
+                <div class="sm-item @StatusClass(dl.Status)">
+                    <div class="sm-item-row">
+                        <span class="sm-item-icon">@StatusIcon(dl.Status)</span>
+                        <div class="sm-item-info">
+                            <span class="sm-item-name" title="@dl.RemotePath">@dl.FileName</span>
+                            <span class="sm-item-meta">
+                                @Formatters.FormatSize((ulong)dl.DownloadedSize) / @Formatters.FormatSize((ulong)dl.TotalSize)
+                                @if (!string.IsNullOrEmpty(dl.AgentName) && string.IsNullOrEmpty(AgentUuid))
+                                {
+                                    <span class="sm-item-agent">@dl.AgentName</span>
+                                }
+                            </span>
+                        </div>
+                        <div class="sm-item-status">
+                            @switch (dl.Status)
                             {
-                                <span class="text-muted flex-shrink-0 text-xs">@Formatters.FormatSpeed(dl.SpeedBytesPerSec)</span>
+                                case DownloadStatus.Downloading:
+                                    <span class="sm-pct">@pct%</span>
+                                    @if (dl.SpeedBytesPerSec > 0)
+                                    {
+                                        <span class="sm-speed">@Formatters.FormatSpeed(dl.SpeedBytesPerSec)</span>
+                                    }
+                                    <button class="sm-btn sm-btn-warn" @onclick="() => PauseDownload(rec)" title="Pause">&#x23F8;</button>
+                                    break;
+
+                                case DownloadStatus.Queued:
+                                    <span class="sm-badge">QUEUED</span>
+                                    <button class="sm-btn-icon" @onclick="() => BumpPriority(rec, -1)" title="Higher priority">&#x25B2;</button>
+                                    <button class="sm-btn-icon" @onclick="() => BumpPriority(rec, 1)" title="Lower priority">&#x25BC;</button>
+                                    break;
+
+                                case DownloadStatus.Paused:
+                                    <span class="sm-badge sm-badge-warn">PAUSED @pct%</span>
+                                    <button class="sm-btn sm-btn-ok" @onclick="() => ResumeDownload(rec)" disabled="@(_resuming.Contains(rec.Id))" title="Resume">&#x25B6;</button>
+                                    break;
+
+                                case DownloadStatus.Completed:
+                                    <span class="sm-badge sm-badge-ok">DONE</span>
+                                    break;
+
+                                case DownloadStatus.Failed:
+                                    <span class="sm-badge sm-badge-err" title="@dl.Error">FAILED</span>
+                                    break;
                             }
-                            <button class="btn btn-outline-warning btn-sm btn-tiny flex-shrink-0"
-                                    @onclick="() => PauseDownload(rec)" title="Pause">&#x23F8;</button>
-                        }
-                        else if (dl.Status == DownloadStatus.Queued)
-                        {
-                            <span class="badge bg-secondary py-0 flex-shrink-0 text-xs">QUEUED</span>
-                            <button class="btn btn-outline-warning btn-sm btn-tiny flex-shrink-0"
-                                    @onclick="() => BumpPriority(rec, -1)" title="Higher priority">&#x25B2;</button>
-                            <button class="btn btn-outline-secondary btn-sm btn-tiny flex-shrink-0"
-                                    @onclick="() => BumpPriority(rec, 1)" title="Lower priority">&#x25BC;</button>
-                        }
-                        else if (dl.Status == DownloadStatus.Paused)
-                        {
-                            <span class="badge bg-warning text-dark py-0 flex-shrink-0 text-xs">PAUSED @pct%</span>
-                            <button class="btn btn-outline-success btn-sm btn-tiny flex-shrink-0"
-                                    @onclick="() => ResumeDownload(rec)" disabled="@(_resuming.Contains(rec.Id))" title="Resume">&#x25B6;</button>
-                        }
-                        <button class="btn btn-outline-danger btn-sm btn-tiny flex-shrink-0"
-                                @onclick="() => RemoveDownload(rec)" title="Remove">&#x2717;</button>
+                            <button class="sm-btn-icon sm-btn-icon-danger" @onclick="() => RemoveDownload(rec)" title="Remove">&#x2715;</button>
+                        </div>
                     </div>
-                    <div class="progress mt-1 progress-thin">
-                        <div class="progress-bar @(dl.Status == DownloadStatus.Paused ? "bg-warning" : dl.Status == DownloadStatus.Queued ? "bg-secondary" : "bg-info")"
-                             role="progressbar"
-                             style="width:@(pct)%"
-                             aria-valuenow="@pct" aria-valuemin="0" aria-valuemax="100"></div>
-                    </div>
-                    <div class="d-flex justify-content-between mt-1 dl-meta">
-                        <span class="text-muted">@Formatters.FormatSize((ulong)dl.DownloadedSize) / @Formatters.FormatSize((ulong)dl.TotalSize)</span>
-                        <span class="text-muted text-truncate ms-2" title="@dl.RemotePath">@dl.RemotePath</span>
-                    </div>
+                    @if (dl.Status is DownloadStatus.Downloading or DownloadStatus.Queued or DownloadStatus.Paused)
+                    {
+                        <div class="sm-progress">
+                            <div class="sm-progress-fill @ProgressClass(dl.Status)" style="width:@pct%"></div>
+                        </div>
+                    }
                 </div>
             }
         </div>
@@ -102,7 +139,11 @@
     [Parameter] public string? AgentUuid { get; set; }
     [Parameter] public string? AgentName { get; set; }
 
+    private enum Filter { All, Active, Paused, Done }
+
     private List<DownloadRecord> activeRecords = new();
+    private List<DownloadRecord> filteredRecords = new();
+    private Filter filter = Filter.All;
     private bool confirmClear;
     private readonly HashSet<int> _resuming = new();
 
@@ -127,6 +168,56 @@
     private bool HasActiveSyncs =>
         activeRecords.Any(r => r.Status is DownloadStatus.Downloading or DownloadStatus.Queued);
 
+    private void SetFilter(Filter f)
+    {
+        filter = f;
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        filteredRecords = filter switch
+        {
+            Filter.Active => activeRecords.Where(r => r.Status is DownloadStatus.Downloading or DownloadStatus.Queued).ToList(),
+            Filter.Paused => activeRecords.Where(r => r.Status is DownloadStatus.Paused or DownloadStatus.Failed).ToList(),
+            Filter.Done => activeRecords.Where(r => r.Status == DownloadStatus.Completed).ToList(),
+            _ => activeRecords.ToList()
+        };
+    }
+
+    private int CountByFilter(Filter f) => f switch
+    {
+        Filter.Active => activeRecords.Count(r => r.Status is DownloadStatus.Downloading or DownloadStatus.Queued),
+        Filter.Paused => activeRecords.Count(r => r.Status is DownloadStatus.Paused or DownloadStatus.Failed),
+        Filter.Done => activeRecords.Count(r => r.Status == DownloadStatus.Completed),
+        _ => activeRecords.Count
+    };
+
+    private static string StatusIcon(string s) => s switch
+    {
+        DownloadStatus.Downloading => "\u25CF",
+        DownloadStatus.Queued => "\u25CB",
+        DownloadStatus.Paused => "\u25A0",
+        DownloadStatus.Completed => "\u2713",
+        DownloadStatus.Failed => "\u2717",
+        _ => "\u25CB"
+    };
+
+    private static string StatusClass(string s) => s switch
+    {
+        DownloadStatus.Downloading => "sm-item-active",
+        DownloadStatus.Completed => "sm-item-done",
+        DownloadStatus.Failed => "sm-item-failed",
+        _ => ""
+    };
+
+    private static string ProgressClass(string s) => s switch
+    {
+        DownloadStatus.Downloading => "sm-progress-active",
+        DownloadStatus.Paused => "sm-progress-paused",
+        _ => "sm-progress-queued"
+    };
+
     private async Task StopAllSyncs()
     {
         var active = activeRecords.FirstOrDefault(r => r.Status == DownloadStatus.Downloading);
@@ -144,10 +235,11 @@
             ? all
             : all.Where(r => r.AgentUuid == AgentUuid).ToList();
         activeRecords = activeRecords
-            .OrderBy(r => r.Status == DownloadStatus.Downloading ? 0 : r.Status == DownloadStatus.Queued ? 1 : 2)
+            .OrderBy(r => r.Status == DownloadStatus.Downloading ? 0 : r.Status == DownloadStatus.Queued ? 1 : r.Status == DownloadStatus.Paused ? 2 : r.Status == DownloadStatus.Failed ? 3 : 4)
             .ThenBy(r => r.Priority)
             .ThenBy(r => r.CreatedAt)
             .ToList();
+        ApplyFilter();
     }
 
     private async Task BumpPriority(DownloadRecord dl, int delta)
@@ -242,7 +334,7 @@
     private async Task ClearPaused()
     {
         confirmClear = false;
-        var toRemove = activeRecords.Where(r => r.Status == DownloadStatus.Paused).ToList();
+        var toRemove = activeRecords.Where(r => r.Status is DownloadStatus.Paused or DownloadStatus.Failed).ToList();
         foreach (var dl in toRemove)
             await Downloads.RemoveAsync(dl.Id);
     }

@@ -11,206 +11,151 @@
 @inject IJSRuntime Js
 @implements IDisposable
 
-<div>
+<div class="fm">
     @if (!IsConnected)
     {
-        <div class="alert alert-warning py-1 px-2 mb-2 small d-flex align-items-center gap-1">
-            <span class="badge bg-danger">Offline</span>
-            <span>Agent disconnected — browsing cached data only.</span>
+        <div class="fm-offline">
+            <span class="fm-offline-dot"></span>
+            Agent disconnected — browsing cached data only.
         </div>
     }
+
+    @* Toolbar *@
+    <div class="fm-toolbar">
+        <button class="fm-toolbar-btn" @onclick="NavigateUp" disabled="@(loading || (!IsConnected && !HasCache))" title="Up">
+            <span class="fm-icon">&#x2191;</span>
+        </button>
+        <button class="fm-toolbar-btn" @onclick="() => NavigateTo(currentPath)" disabled="@(loading || (!IsConnected && !HasCache))" title="Refresh">&#x21bb;</button>
+        <div class="fm-path-bar">
+            <input class="fm-path-input" @bind="currentPath" @onkeydown="OnPathKeyDown" spellcheck="false" />
+        </div>
+        <button class="fm-toolbar-btn fm-toolbar-accent" @onclick="OpenSyncManagerWindow" title="Sync Manager">
+            <span class="fm-icon">&#x21C5;</span> SYNC
+        </button>
+    </div>
+
     @* Breadcrumb *@
-    <nav aria-label="breadcrumb" class="mb-2">
-        <ol class="breadcrumb mb-0 small">
-            <li class="breadcrumb-item">
-                <a href="javascript:void(0)" @onclick="NavigateToRoot" @onclick:preventDefault>Root</a>
-            </li>
+    @if (pathSegments.Length > 0)
+    {
+        <div class="fm-breadcrumb">
+            <a href="javascript:void(0)" class="fm-crumb" @onclick="NavigateToRoot" @onclick:preventDefault>Root</a>
             @for (int i = 0; i < pathSegments.Length; i++)
             {
                 var idx = i;
-                var segment = pathSegments[idx];
-                if (idx == pathSegments.Length - 1)
+                <span class="fm-crumb-sep">/</span>
+                @if (idx == pathSegments.Length - 1)
                 {
-                    <li class="breadcrumb-item active">@segment</li>
+                    <span class="fm-crumb-active">@pathSegments[idx]</span>
                 }
                 else
                 {
-                    <li class="breadcrumb-item">
-                        <a href="javascript:void(0)" @onclick="() => NavigateToBreadcrumb(idx)" @onclick:preventDefault>@segment</a>
-                    </li>
+                    <a href="javascript:void(0)" class="fm-crumb" @onclick="() => NavigateToBreadcrumb(idx)" @onclick:preventDefault>@pathSegments[idx]</a>
                 }
             }
-        </ol>
-    </nav>
+        </div>
+    }
 
-    @* Path bar *@
-    <div class="input-group input-group-sm mb-3">
-        <input class="form-control font-monospace" @bind="currentPath" @onkeydown="OnPathKeyDown" />
-        <button class="btn btn-outline-primary" @onclick="() => NavigateTo(currentPath)" disabled="@(loading || (!IsConnected && !HasCache))">Go</button>
-        <button class="btn btn-outline-secondary" @onclick="NavigateUp" disabled="@(loading || (!IsConnected && !HasCache))">Up</button>
-    </div>
-
-    <div class="row g-3">
+    <div class="fm-content @(viewingFile ? "fm-split" : "")">
         @* Directory listing *@
-        <div class="@(viewingFile ? "col-md-5" : "col-12")">
-            <div class="card">
-                <div class="card-header d-flex align-items-center justify-content-between py-1">
-                    <small>
-                        @if (loading)
-                        {
-                            <span class="spinner-border spinner-border-sm me-1"></span>
-                        }
-                        @currentPath
-                        @if (entries is not null)
-                        {
-                            <span class="text-muted ms-1">(@entries.Count)</span>
-                        }
-                    </small>
-                    <div class="d-flex gap-1">
-                        <button class="btn btn-outline-primary btn-sm btn-tiny2" @onclick="OpenSyncManagerWindow" title="Open Sync Manager">SYNC</button>
-                        <button class="btn btn-outline-secondary btn-sm py-0 px-1" @onclick="() => NavigateTo(currentPath)" disabled="@(loading || (!IsConnected && !HasCache))">&#x21bb;</button>
-                    </div>
-                </div>
-                <div class="list-group list-group-flush scrollable-list">
-                    @if (entries is not null)
+        <div class="fm-listing">
+            <div class="fm-listing-header">
+                @if (loading)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                <span class="fm-listing-title">@(string.IsNullOrEmpty(currentPath) ? "Drives" : currentPath)</span>
+                @if (entries is not null)
+                {
+                    <span class="fm-count">@entries.Count items</span>
+                }
+            </div>
+            <div class="fm-entries">
+                @if (entries is not null)
+                {
+                    @if (pathSegments.Length > 0)
                     {
-                        @if (pathSegments.Length > 0)
-                        {
-                            <button class="list-group-item list-group-item-action py-1 font-monospace small"
-                                    @onclick="NavigateUp" disabled="@(!IsConnected && !HasCache)">..</button>
-                        }
-                        @foreach (var entry in entries)
-                        {
-                            var e = entry;
-                            <button class="list-group-item list-group-item-action py-1 font-monospace small d-flex align-items-center gap-1 @(selectedEntry == e ? "active" : "")"
-                                    @onclick="() => selectedEntry = e"
-                                    @ondblclick="() => OnEntryDoubleClick(e)">
-                                <span class="entry-icon me-1">@(e.IsDirectory || e.IsDrive ? "\ud83d\udcc1" : "\ud83d\udcc4")</span>
-                                <span class="flex-grow-1 text-truncate">@e.Name</span>
-                                @if (!e.IsDirectory && !e.IsDrive)
+                        <button class="fm-entry" @onclick="NavigateUp" disabled="@(!IsConnected && !HasCache)">
+                            <span class="fm-entry-icon">&#x2191;</span>
+                            <span class="fm-entry-name">..</span>
+                        </button>
+                    }
+                    @foreach (var entry in entries)
+                    {
+                        var e = entry;
+                        var isDir = e.IsDirectory || e.IsDrive;
+                        <button class="fm-entry @(selectedEntry == e ? "selected" : "") @(isDir ? "fm-entry-dir" : "")"
+                                @onclick="() => selectedEntry = e"
+                                @ondblclick="() => OnEntryDoubleClick(e)">
+                            <span class="fm-entry-icon">@(isDir ? "\ud83d\udcc1" : "\ud83d\udcc4")</span>
+                            <span class="fm-entry-name">@e.Name</span>
+                            @if (!isDir)
+                            {
+                                <span class="fm-entry-size">@Formatters.FormatSize(e.Size)</span>
+                            }
+                            <span class="fm-entry-actions" @onclick:stopPropagation="true">
+                                @if (isDir)
                                 {
-                                    <small class="text-muted flex-shrink-0">@Formatters.FormatSize(e.Size)</small>
+                                    <button class="fm-action-btn" @onclick="() => OpenAsDirectory(e.Name)" title="Open" disabled="@(!IsConnected && !HasCache)">OPEN</button>
                                 }
-                                <span class="d-flex gap-1 flex-shrink-0">
-                                    @if (e.IsDirectory || e.IsDrive)
-                                    {
-                                        <button class="btn btn-outline-primary btn-sm btn-action"
-                                                @onclick:stopPropagation="true" @onclick="() => OpenAsDirectory(e.Name)" title="Open folder" disabled="@(!IsConnected && !HasCache)">OPEN</button>
-                                    }
-                                    else
-                                    {
-                                        @if (Cache.HasDirectory)
-                                        {
-                                            var dl = GetDownloadRecord(e.Name);
-                                            @if (dl?.Status == DownloadStatus.Downloading)
-                                            {
-                                                var pct = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
-                                                <span class="d-flex align-items-center gap-1 dl-status">
-                                                    <span class="spinner-border spinner-border-sm dl-spinner"></span>
-                                                    <span class="text-muted">@pct%</span>
-                                                    @if (dl.SpeedBytesPerSec > 0)
-                                                    {
-                                                        <span class="text-muted">@Formatters.FormatSpeed(dl.SpeedBytesPerSec)</span>
-                                                    }
-                                                    <button class="btn btn-outline-warning btn-sm btn-tiny"
-                                                            @onclick:stopPropagation="true" @onclick="() => PauseDownload(e)" title="Pause">&#x23F8;</button>
-                                                </span>
-                                            }
-                                            else if (dl?.Status == DownloadStatus.Paused)
-                                            {
-                                                var pctPaused = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
-                                                <span class="d-flex align-items-center gap-1 dl-status">
-                                                    <span class="badge bg-warning text-dark py-0 text-xxs">@pctPaused%</span>
-                                                    <button class="btn btn-outline-success btn-sm btn-tiny"
-                                                            @onclick:stopPropagation="true" @onclick="() => ResumeDownload(e)" title="Resume" disabled="@(!IsConnected && !IsAgentOnline)">&#x25B6;</button>
-                                                </span>
-                                            }
-                                            else if (dl?.Status == DownloadStatus.Queued)
-                                            {
-                                                <span class="badge bg-secondary py-0 text-xs" title="Queued for sync">QUEUED</span>
-                                            }
-                                            else if (dl?.Status == DownloadStatus.Completed)
-                                            {
-                                                <span class="d-flex align-items-center gap-1 dl-status">
-                                                    <button class="btn btn-outline-secondary btn-sm btn-tiny"
-                                                            @onclick:stopPropagation="true" @onclick="() => ViewFile(e.Name)" title="View file">VIEW</button>
-                                                    <button class="btn btn-outline-primary btn-sm btn-tiny"
-                                                            @onclick:stopPropagation="true" @onclick="() => SaveToBrowser(dl)" title="Save to browser downloads">SAVE</button>
-                                                </span>
-                                            }
-                                            else if (dl?.Status == DownloadStatus.Failed)
-                                            {
-                                                <span class="d-flex align-items-center gap-1">
-                                                    <span class="badge bg-danger py-0 text-xs" title="@dl.Error">&#x2717;</span>
-                                                    <button class="btn btn-outline-warning btn-sm btn-tiny"
-                                                            @onclick:stopPropagation="true" @onclick="() => RetryDownload(e)" title="Retry" disabled="@(!IsConnected)">&#x21bb;</button>
-                                                </span>
-                                            }
-                                            else
-                                            {
-                                                <button class="btn btn-outline-success btn-sm btn-action"
-                                                        @onclick:stopPropagation="true" @onclick="() => EnqueueSync(e)" title="Sync to cache" disabled="@(!IsConnected)">SYNC</button>
-                                            }
-                                        }
-                                    }
-                                </span>
-                            </button>
-                        }
+                                else if (Cache.HasDirectory)
+                                {
+                                    @RenderFileActions(e)
+                                }
+                            </span>
+                        </button>
                     }
-                    else if (!loading)
-                    {
-                        <div class="list-group-item text-muted small"><em>Enter a path and press Go.</em></div>
-                    }
-                </div>
+                }
+                else if (!loading)
+                {
+                    <div class="fm-empty">Enter a path and press Enter or click a drive.</div>
+                }
             </div>
         </div>
 
         @* File viewer *@
         @if (viewingFile)
         {
-            <div class="col-md-7">
-                <div class="card">
-                    <div class="card-header d-flex align-items-center justify-content-between py-1">
-                        <small class="text-truncate font-monospace">@viewingFileName</small>
-                        <div class="d-flex gap-1">
-                            @if (!fileLoading)
-                            {
-                                <button class="btn btn-outline-secondary btn-sm py-0 px-1" @onclick="HashFile" title="SHA-256" disabled="@(!IsConnected)">#</button>
-                            }
-                            <button class="btn btn-outline-danger btn-sm py-0 px-1" @onclick="CloseFileViewer">X</button>
-                        </div>
-                    </div>
-                    <div class="card-body p-0">
-                        @if (fileLoading)
+            <div class="fm-viewer">
+                <div class="fm-viewer-header">
+                    <span class="fm-viewer-title" title="@viewingFilePath">@viewingFileName</span>
+                    <div class="fm-viewer-actions">
+                        @if (!fileLoading)
                         {
-                            <div class="p-3"><span class="spinner-border spinner-border-sm me-1"></span> Loading...</div>
+                            <button class="fm-toolbar-btn" @onclick="HashFile" title="SHA-256" disabled="@(!IsConnected)">SHA</button>
                         }
-                        else
-                        {
-                            @if (fileHash is not null)
-                            {
-                                <div class="px-3 pt-2">
-                                    <small class="text-muted">SHA-256:</small>
-                                    <code class="user-select-all small">@fileHash</code>
-                                </div>
-                            }
-                            <div class="d-flex align-items-center gap-2 px-3 pt-2">
-                                <small class="text-muted">@fileBytesRead bytes (offset @fileViewOffset)</small>
-                                <div class="ms-auto d-flex gap-1">
-                                    @if (fileViewOffset > 0)
-                                    {
-                                        <button class="btn btn-outline-secondary btn-sm py-0" @onclick="PrevPage" disabled="@(!IsConnected)">Prev</button>
-                                    }
-                                    @if (fileBytesRead >= PageSize)
-                                    {
-                                        <button class="btn btn-outline-secondary btn-sm py-0" @onclick="NextPage" disabled="@(!IsConnected)">Next</button>
-                                    }
-                                </div>
-                            </div>
-                            <pre class="bg-dark text-light p-3 m-0 rounded-0 file-preview">@fileContent</pre>
-                        }
+                        <button class="fm-toolbar-btn fm-close-btn" @onclick="CloseFileViewer">&#x2715;</button>
                     </div>
                 </div>
+                @if (fileLoading)
+                {
+                    <div class="fm-viewer-loading">
+                        <span class="spinner-border spinner-border-sm"></span> Loading...
+                    </div>
+                }
+                else
+                {
+                    @if (fileHash is not null)
+                    {
+                        <div class="fm-hash">
+                            <span class="fm-hash-label">SHA-256</span>
+                            <code class="fm-hash-value">@fileHash</code>
+                        </div>
+                    }
+                    <div class="fm-viewer-meta">
+                        <span>@fileBytesRead bytes (offset @fileViewOffset)</span>
+                        <div class="fm-viewer-pager">
+                            @if (fileViewOffset > 0)
+                            {
+                                <button class="fm-toolbar-btn" @onclick="PrevPage" disabled="@(!IsConnected)">&#x25C0; Prev</button>
+                            }
+                            @if (fileBytesRead >= PageSize)
+                            {
+                                <button class="fm-toolbar-btn" @onclick="NextPage" disabled="@(!IsConnected)">Next &#x25B6;</button>
+                            }
+                        </div>
+                    </div>
+                    <pre class="fm-code">@fileContent</pre>
+                }
             </div>
         }
     </div>
@@ -234,10 +179,8 @@
     private DirEntry? selectedEntry;
     private bool loading;
 
-    // Cache tracking
     private bool _syncing;
     private readonly HashSet<int> _ownedDownloads = new();
-
 
     private bool viewingFile;
     private string viewingFileName = "";
@@ -254,13 +197,9 @@
         await Downloads.LoadAsync();
 
         if (IsConnected)
-        {
             await NavigateTo(currentPath);
-        }
         else if (HasCache)
-        {
             await NavigateFromCache(currentPath);
-        }
     }
 
     protected override void OnInitialized()
@@ -275,18 +214,13 @@
             _ = SyncCacheAsync();
     }
 
-    private void OnDownloadsChanged()
-    {
-        _ = InvokeAsync(StateHasChanged);
-    }
+    private void OnDownloadsChanged() => _ = InvokeAsync(StateHasChanged);
 
     public void Dispose()
     {
-        // Pause active downloads before relay disconnects, so they stay as Paused (not Failed)
         foreach (var id in _ownedDownloads)
             Downloads.CancelCts(id);
         _ownedDownloads.Clear();
-
         Cache.OnChanged -= OnCacheChanged;
         Downloads.OnChanged -= OnDownloadsChanged;
     }
@@ -302,6 +236,61 @@
         fileHash = null;
     }
 
+    // --- Render helpers ---
+
+    private RenderFragment RenderFileActions(DirEntry e) => __builder =>
+    {
+        var dl = GetDownloadRecord(e.Name);
+        if (dl is null || (dl.Status != DownloadStatus.Downloading && dl.Status != DownloadStatus.Paused
+            && dl.Status != DownloadStatus.Queued && dl.Status != DownloadStatus.Completed && dl.Status != DownloadStatus.Failed))
+        {
+            <button class="fm-action-btn fm-action-sync" @onclick="() => EnqueueSync(e)" title="Sync to cache" disabled="@(!IsConnected)">SYNC</button>
+            return;
+        }
+
+        switch (dl.Status)
+        {
+            case DownloadStatus.Downloading:
+                var pct = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
+                <span class="fm-dl-status">
+                    <span class="spinner-border spinner-border-sm fm-dl-spinner"></span>
+                    <span class="fm-dl-pct">@pct%</span>
+                    @if (dl.SpeedBytesPerSec > 0)
+                    {
+                        <span class="fm-dl-speed">@Formatters.FormatSpeed(dl.SpeedBytesPerSec)</span>
+                    }
+                    <button class="fm-action-btn fm-action-warn" @onclick="() => PauseDownload(e)" title="Pause">&#x23F8;</button>
+                </span>
+                break;
+
+            case DownloadStatus.Paused:
+                var pctP = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
+                <span class="fm-dl-status">
+                    <span class="fm-badge fm-badge-warn">@pctP%</span>
+                    <button class="fm-action-btn fm-action-ok" @onclick="() => ResumeDownload(e)" title="Resume" disabled="@(!IsConnected && !IsAgentOnline)">&#x25B6;</button>
+                </span>
+                break;
+
+            case DownloadStatus.Queued:
+                <span class="fm-badge fm-badge-muted">QUEUED</span>
+                break;
+
+            case DownloadStatus.Completed:
+                <span class="fm-dl-status">
+                    <button class="fm-action-btn" @onclick="() => ViewFile(e.Name)" title="View">VIEW</button>
+                    <button class="fm-action-btn fm-action-sync" @onclick="() => SaveToBrowser(dl)" title="Save">SAVE</button>
+                </span>
+                break;
+
+            case DownloadStatus.Failed:
+                <span class="fm-dl-status">
+                    <span class="fm-badge fm-badge-err" title="@dl.Error">&#x2717;</span>
+                    <button class="fm-action-btn fm-action-warn" @onclick="() => RetryDownload(e)" title="Retry" disabled="@(!IsConnected)">&#x21bb;</button>
+                </span>
+                break;
+        }
+    };
+
     // --- Navigation ---
 
     private void UpdatePathSegments()
@@ -315,8 +304,7 @@
     {
         if (!IsConnected)
         {
-            if (HasCache)
-                await NavigateFromCache(path);
+            if (HasCache) await NavigateFromCache(path);
             return;
         }
 
@@ -529,7 +517,6 @@
         try
         {
             var parentId = await Vfs.ResolveOrCreatePathAsync(AgentUuid, remotePath);
-
             foreach (var entry in snapshot)
             {
                 try
@@ -538,13 +525,9 @@
                         ? entry.Name : $"{remotePath}/{entry.Name}";
 
                     if (entry.IsDirectory || entry.IsDrive)
-                    {
                         await Vfs.PutDirectoryAsync(AgentUuid, parentId, entry.Name, entryRemotePath, entry.IsDrive);
-                    }
                     else
-                    {
                         await Vfs.PutFileAsync(AgentUuid, parentId, entry.Name, entryRemotePath, (long)entry.Size);
-                    }
                 }
                 catch { }
             }
@@ -560,8 +543,7 @@
     private DownloadRecord? GetDownloadRecord(string fileName)
     {
         if (string.IsNullOrEmpty(AgentUuid)) return null;
-        var remotePath = currentPath + fileName;
-        return Downloads.Find(AgentUuid, remotePath);
+        return Downloads.Find(AgentUuid, currentPath + fileName);
     }
 
     private async Task EnqueueSync(DirEntry entry)
@@ -572,11 +554,9 @@
         var parentRemotePath = currentPath.TrimEnd('\\', '/');
         var totalSize = (long)entry.Size;
 
-        // Ensure file record exists in VFS and get its GUID
         var parentId = await Vfs.ResolveOrCreatePathAsync(AgentUuid, parentRemotePath);
         var vfsFile = await Vfs.PutFileAsync(AgentUuid, parentId, entry.Name, remotePath.Replace('\\', '/'), totalSize);
 
-        // Find existing or create download record
         var record = Downloads.Find(AgentUuid, remotePath);
         if (record is null || record.Status == DownloadStatus.Completed || record.Status == DownloadStatus.Failed)
         {
@@ -612,7 +592,6 @@
         finally
         {
             _processingQueue = false;
-            // Check if there's another queued item
             if (!Downloads.HasActiveDownload(AgentUuid))
                 _ = ProcessQueue();
         }
@@ -666,21 +645,16 @@
     private void PauseDownload(DirEntry entry)
     {
         if (string.IsNullOrEmpty(AgentUuid)) return;
-        var remotePath = currentPath + entry.Name;
-        var record = Downloads.Find(AgentUuid, remotePath);
-        if (record is not null)
-            Downloads.CancelCts(record.Id);
+        var record = Downloads.Find(AgentUuid, currentPath + entry.Name);
+        if (record is not null) Downloads.CancelCts(record.Id);
     }
 
     private async Task ResumeDownload(DirEntry entry)
     {
         if (string.IsNullOrEmpty(AgentUuid)) return;
-        var remotePath = currentPath + entry.Name;
-        var record = Downloads.Find(AgentUuid, remotePath);
-        if (record is null) return;
-        if (Downloads.HasActiveCts(record.Id)) return;
+        var record = Downloads.Find(AgentUuid, currentPath + entry.Name);
+        if (record is null || Downloads.HasActiveCts(record.Id)) return;
 
-        // Re-queue the paused download
         await Downloads.QueueAsync(record.Id);
         _ = ProcessQueue();
     }
@@ -688,10 +662,8 @@
     private async Task RetryDownload(DirEntry entry)
     {
         if (string.IsNullOrEmpty(AgentUuid)) return;
-        var remotePath = currentPath + entry.Name;
-        var existing = Downloads.Find(AgentUuid, remotePath);
-        if (existing is not null)
-            await Downloads.RemoveAsync(existing.Id);
+        var existing = Downloads.Find(AgentUuid, currentPath + entry.Name);
+        if (existing is not null) await Downloads.RemoveAsync(existing.Id);
         await EnqueueSync(entry);
     }
 

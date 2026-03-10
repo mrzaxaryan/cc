@@ -1,12 +1,345 @@
-.dl-spinner {
-    width: 0.8rem;
-    height: 0.8rem;
+/* Sync Manager */
+.sm {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 0;
 }
 
-.progress-thin {
-    height: 4px;
+/* Header */
+.sm-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    gap: 0.5rem;
 }
 
-.dl-meta {
+.sm-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.sm-header-right {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.sm-title {
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: var(--cc-text);
+    letter-spacing: 0.02em;
+}
+
+.sm-agent {
+    font-size: 0.7rem;
+    color: var(--cc-accent-blue);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 160px;
+}
+
+/* Buttons */
+.sm-btn {
+    background: var(--cc-bg-overlay);
+    border: 1px solid var(--cc-border);
+    color: var(--cc-text-muted);
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    letter-spacing: 0.03em;
+}
+
+.sm-btn:hover:not(:disabled) {
+    background: var(--cc-bg-highlight);
+    color: var(--cc-text);
+}
+
+.sm-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.sm-btn-danger {
+    color: var(--cc-accent-red);
+    border-color: rgba(243, 139, 168, 0.3);
+}
+
+.sm-btn-danger:hover:not(:disabled) {
+    background: var(--cc-accent-red);
+    color: var(--cc-bg-base);
+}
+
+.sm-btn-danger-solid {
+    background: var(--cc-accent-red);
+    border: 1px solid var(--cc-accent-red);
+    color: var(--cc-bg-base);
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.sm-btn-warn {
+    color: var(--cc-accent-yellow);
+    border-color: rgba(249, 226, 175, 0.3);
+}
+
+.sm-btn-ok {
+    color: var(--cc-accent-green);
+    border-color: rgba(166, 227, 161, 0.3);
+}
+
+.sm-btn-ok:hover:not(:disabled) {
+    background: var(--cc-accent-green);
+    color: var(--cc-bg-base);
+}
+
+.sm-btn-icon {
+    background: none;
+    border: none;
+    color: var(--cc-text-dim);
     font-size: 0.6rem;
+    padding: 0.1rem 0.25rem;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: color 0.15s, background 0.15s;
+}
+
+.sm-btn-icon:hover {
+    color: var(--cc-text);
+    background: var(--cc-bg-overlay);
+}
+
+.sm-btn-icon-danger:hover {
+    color: var(--cc-accent-red);
+}
+
+/* Tabs */
+.sm-tabs {
+    display: flex;
+    gap: 1px;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid var(--cc-border);
+}
+
+.sm-tab {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--cc-text-dim);
+    font-size: 0.7rem;
+    font-weight: 500;
+    padding: 0.3rem 0.6rem;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.sm-tab:hover {
+    color: var(--cc-text-muted);
+}
+
+.sm-tab.active {
+    color: var(--cc-accent-blue);
+    border-bottom-color: var(--cc-accent-blue);
+}
+
+.sm-tab-count {
+    font-size: 0.6rem;
+    color: var(--cc-text-dim);
+    margin-left: 0.2rem;
+}
+
+.sm-tab.active .sm-tab-count {
+    color: var(--cc-accent-blue);
+}
+
+/* List */
+.sm-list {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+/* Item */
+.sm-item {
+    padding: 0.4rem 0.5rem;
+    border-bottom: 1px solid var(--cc-border);
+    transition: background 0.1s;
+}
+
+.sm-item:last-child {
+    border-bottom: none;
+}
+
+.sm-item:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.sm-item-active {
+    background: rgba(137, 180, 250, 0.04);
+}
+
+.sm-item-done {
+    opacity: 0.6;
+}
+
+.sm-item-failed {
+    background: rgba(243, 139, 168, 0.04);
+}
+
+.sm-item-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.sm-item-icon {
+    width: 1em;
+    text-align: center;
+    flex-shrink: 0;
+    font-size: 0.7rem;
+}
+
+.sm-item-active .sm-item-icon {
+    color: var(--cc-accent-blue);
+    animation: sm-pulse 1.5s ease-in-out infinite;
+}
+
+.sm-item-done .sm-item-icon {
+    color: var(--cc-accent-green);
+}
+
+.sm-item-failed .sm-item-icon {
+    color: var(--cc-accent-red);
+}
+
+@keyframes sm-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+.sm-item-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.sm-item-name {
+    font-family: monospace;
+    font-size: 0.75rem;
+    color: var(--cc-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sm-item-meta {
+    font-size: 0.6rem;
+    color: var(--cc-text-dim);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.sm-item-agent {
+    color: var(--cc-accent-purple);
+    font-weight: 500;
+}
+
+.sm-item-status {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+}
+
+.sm-pct {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--cc-accent-blue);
+}
+
+.sm-speed {
+    font-size: 0.6rem;
+    color: var(--cc-text-dim);
+}
+
+/* Badges */
+.sm-badge {
+    display: inline-block;
+    font-size: 0.55rem;
+    font-weight: 600;
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    background: var(--cc-bg-active);
+    color: var(--cc-text-muted);
+    letter-spacing: 0.04em;
+}
+
+.sm-badge-warn {
+    background: rgba(249, 226, 175, 0.12);
+    color: var(--cc-accent-yellow);
+}
+
+.sm-badge-ok {
+    background: rgba(166, 227, 161, 0.12);
+    color: var(--cc-accent-green);
+}
+
+.sm-badge-err {
+    background: rgba(243, 139, 168, 0.12);
+    color: var(--cc-accent-red);
+}
+
+/* Progress bar */
+.sm-progress {
+    height: 3px;
+    background: var(--cc-bg-overlay);
+    border-radius: 2px;
+    margin-top: 0.35rem;
+    overflow: hidden;
+}
+
+.sm-progress-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+.sm-progress-active {
+    background: var(--cc-accent-blue);
+    box-shadow: 0 0 6px rgba(137, 180, 250, 0.4);
+}
+
+.sm-progress-paused {
+    background: var(--cc-accent-yellow);
+}
+
+.sm-progress-queued {
+    background: var(--cc-bg-active);
+}
+
+/* Empty state */
+.sm-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem 1rem;
+    color: var(--cc-text-dim);
+    font-size: 0.8rem;
+    font-style: italic;
 }
