@@ -423,7 +423,9 @@ public class RelayConnectionService : IAsyncDisposable
             {
                 ct.ThrowIfCancellationRequested();
 
-                var entryRemotePath = parentRemotePath + @"\" + entry.Name;
+                var entryRemotePath = string.IsNullOrEmpty(parentRemotePath)
+                    ? entry.Name
+                    : parentRemotePath + @"\" + entry.Name;
 
                 if (entry.IsDirectory || entry.IsDrive)
                 {

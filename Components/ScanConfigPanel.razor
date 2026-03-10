@@ -48,6 +48,7 @@
     {
         <div class="scan-new-btn">
             <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="() => showNewScan = true">NEW SCAN</CcBtn>
+            <CcBtn Size="Size.Xs" OnClick="StartFullScan" Disabled="@(string.IsNullOrWhiteSpace(newScanExtensions))">FULL SCAN</CcBtn>
         </div>
     }
 
@@ -88,7 +89,7 @@
                     <div class="scan-item-row">
                         <span class="scan-item-icon">@StatusIcon(s.Status)</span>
                         <div class="scan-item-info">
-                            <span class="scan-item-path" title="@s.RootPath">@s.RootPath</span>
+                            <span class="scan-item-path" title="@(string.IsNullOrEmpty(s.RootPath) ? "Full filesystem" : s.RootPath)">@(string.IsNullOrEmpty(s.RootPath) ? "Full filesystem" : s.RootPath)</span>
                             <span class="scan-item-meta">
                                 @s.Extensions
                                 @if (!string.IsNullOrEmpty(s.AgentName) && string.IsNullOrEmpty(AgentUuid))
@@ -210,8 +211,7 @@
         if (string.IsNullOrEmpty(AgentUuid) || string.IsNullOrWhiteSpace(newScanPath) || string.IsNullOrWhiteSpace(newScanExtensions))
             return;
 
-        var extensions = string.Join(",", newScanExtensions.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(e => e.StartsWith(".") ? e.ToLowerInvariant() : $".{e.ToLowerInvariant()}"));
+        var extensions = NormalizeExtensions(newScanExtensions);
 
         var path = newScanPath.TrimEnd('\\', '/');
         if (!string.IsNullOrEmpty(path) && !path.EndsWith(@"\"))
@@ -221,6 +221,20 @@
         showNewScan = false;
         Refresh();
     }
+
+    private async Task StartFullScan()
+    {
+        if (string.IsNullOrEmpty(AgentUuid) || string.IsNullOrWhiteSpace(newScanExtensions))
+            return;
+
+        var extensions = NormalizeExtensions(newScanExtensions);
+        await Scans.AddAsync(AgentUuid, AgentName ?? "", "", extensions, newScanAutoDownload);
+        Refresh();
+    }
+
+    private static string NormalizeExtensions(string raw) =>
+        string.Join(",", raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(e => e.StartsWith(".") ? e.ToLowerInvariant() : $".{e.ToLowerInvariant()}"));
 
     private void PauseScan(ScanRecord scan) => Scans.CancelCts(scan.Id);
 
