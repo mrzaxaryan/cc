@@ -2,24 +2,26 @@
 @inject WindowManager Wm
 @implements IDisposable
 
-@* Drag overlay — captures mouse events globally during drag *@
+@* Drag overlay — captures pointer events globally during drag *@
 @if (_dragging is not null)
 {
     <div class="position-fixed top-0 start-0 w-100 h-100"
-         style="z-index:9999;cursor:grabbing;"
-         @onmousemove="OnDragMove"
-         @onmouseup="OnDragEnd"
-         @onmousemove:preventDefault="true"></div>
+         style="z-index:9999;cursor:grabbing;touch-action:none;"
+         @onpointermove="OnDragMove"
+         @onpointerup="OnDragEnd"
+         @onpointercancel="OnDragEnd"
+         @onpointermove:preventDefault="true"></div>
 }
 
-@* Resize overlay — captures mouse events globally during resize *@
+@* Resize overlay — captures pointer events globally during resize *@
 @if (_resizing is not null)
 {
     <div class="position-fixed top-0 start-0 w-100 h-100"
-         style="z-index:9999;cursor:nwse-resize;"
-         @onmousemove="OnResizeMove"
-         @onmouseup="OnResizeEnd"
-         @onmousemove:preventDefault="true"></div>
+         style="z-index:9999;cursor:nwse-resize;touch-action:none;"
+         @onpointermove="OnResizeMove"
+         @onpointerup="OnResizeEnd"
+         @onpointercancel="OnResizeEnd"
+         @onpointermove:preventDefault="true"></div>
 }
 
 @* Floating windows *@
@@ -29,12 +31,15 @@
     var w = win;
     <div @key="win.Id" class="app-window @(win.Maximized ? "maximized" : "")"
          style="@(win.Maximized ? "" : $"left:{win.X}px;top:{win.Y}px;width:{win.Width}px;height:{win.Height}px;z-index:{win.ZIndex};")"
-         @onmousedown="() => Wm.BringToFront(w)">
-        <div class="app-window-titlebar" @onmousedown="(e) => OnDragStart(e, win)">
+         @onpointerdown="() => Wm.BringToFront(w)">
+        <div class="app-window-titlebar"
+             style="touch-action:none;"
+             @onpointerdown="(e) => OnDragStart(e, win)"
+             @ondblclick="() => Wm.ToggleMaximize(win)">
             <span class="app-window-title">@win.Title</span>
-            <button class="app-window-btn" @onclick="() => Wm.ToggleMinimize(win)" @onmousedown:stopPropagation="true" title="Minimize">&minus;</button>
-            <button class="app-window-btn" @onclick="() => Wm.ToggleMaximize(win)" @onmousedown:stopPropagation="true" title="@(win.Maximized ? "Restore" : "Maximize")">@(win.Maximized ? "\u25a1" : "\u29c9")</button>
-            <button class="app-window-btn close-btn" @onclick="async () => await Wm.CloseWindow(win)" @onmousedown:stopPropagation="true" title="Close">&times;</button>
+            <button class="app-window-btn" @onclick="() => Wm.ToggleMinimize(win)" @onpointerdown:stopPropagation="true" title="Minimize">&minus;</button>
+            <button class="app-window-btn" @onclick="() => Wm.ToggleMaximize(win)" @onpointerdown:stopPropagation="true" title="@(win.Maximized ? "Restore" : "Maximize")">@(win.Maximized ? "\u25a1" : "\u29c9")</button>
+            <button class="app-window-btn close-btn" @onclick="async () => await Wm.CloseWindow(win)" @onpointerdown:stopPropagation="true" title="Close">&times;</button>
         </div>
         <div class="app-window-body">
             @if (win.Panel == "File Manager")
@@ -60,7 +65,10 @@
         </div>
         @if (!win.Maximized)
         {
-            <div class="app-window-resize" @onmousedown="(e) => OnResizeStart(e, win)" @onmousedown:stopPropagation="true"></div>
+            <div class="app-window-resize"
+                 style="touch-action:none;"
+                 @onpointerdown="(e) => OnResizeStart(e, win)"
+                 @onpointerdown:stopPropagation="true"></div>
         }
     </div>
 }
@@ -82,10 +90,7 @@
 }
 
 @code {
-    // Drag state
     private DragState? _dragging;
-
-    // Resize state
     private ResizeState? _resizing;
 
     private class DragState
@@ -124,23 +129,22 @@
     {
         if (win.Minimized)
         {
-            // Restore minimized window
             win.Minimized = false;
             Wm.BringToFront(win);
         }
         else if (IsTopWindow(win))
         {
-            // Already focused — minimize it
             Wm.ToggleMinimize(win);
         }
         else
         {
-            // Bring to front
             Wm.BringToFront(win);
         }
     }
 
-    private void OnDragStart(MouseEventArgs e, WindowState win)
+    // --- Drag ---
+
+    private void OnDragStart(PointerEventArgs e, WindowState win)
     {
         if (win.Maximized) return;
         Wm.BringToFront(win);
@@ -154,16 +158,18 @@
         };
     }
 
-    private void OnDragMove(MouseEventArgs e)
+    private void OnDragMove(PointerEventArgs e)
     {
         if (_dragging is null) return;
         _dragging.Window.X = Math.Max(0, _dragging.StartWinX + (e.ClientX - _dragging.StartMouseX));
         _dragging.Window.Y = Math.Max(36, _dragging.StartWinY + (e.ClientY - _dragging.StartMouseY));
     }
 
-    private void OnDragEnd(MouseEventArgs e) => _dragging = null;
+    private void OnDragEnd(PointerEventArgs e) => _dragging = null;
 
-    private void OnResizeStart(MouseEventArgs e, WindowState win)
+    // --- Resize ---
+
+    private void OnResizeStart(PointerEventArgs e, WindowState win)
     {
         if (win.Maximized) return;
         Wm.BringToFront(win);
@@ -177,14 +183,14 @@
         };
     }
 
-    private void OnResizeMove(MouseEventArgs e)
+    private void OnResizeMove(PointerEventArgs e)
     {
         if (_resizing is null) return;
         _resizing.Window.Width = Math.Max(320, _resizing.StartWidth + (e.ClientX - _resizing.StartMouseX));
         _resizing.Window.Height = Math.Max(120, _resizing.StartHeight + (e.ClientY - _resizing.StartMouseY));
     }
 
-    private void OnResizeEnd(MouseEventArgs e) => _resizing = null;
+    private void OnResizeEnd(PointerEventArgs e) => _resizing = null;
 
     public void Dispose()
     {

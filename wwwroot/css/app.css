@@ -69,6 +69,7 @@
     --cc-hover-subtle: rgba(255, 255, 255, 0.02);
     --cc-blue-glow: rgba(137, 180, 250, 0.3);
     --cc-blue-glow-strong: rgba(137, 180, 250, 0.4);
+    --cc-taskbar-h: 32px;
 
     color-scheme: dark;
 }
@@ -300,7 +301,7 @@ a:hover {
     left: 0 !important;
     top: 36px !important;
     width: 100vw !important;
-    height: calc(100vh - 36px - 32px) !important;
+    height: calc(100vh - 36px - var(--cc-taskbar-h, 32px)) !important;
     border-radius: 0;
     border: none;
     z-index: 1045 !important;
@@ -586,4 +587,100 @@ a:hover {
 @keyframes cc-fade-in {
     from { opacity: 0; transform: scale(0.96); }
     to   { opacity: 1; transform: scale(1); }
+}
+
+/* ===== Mobile / Touch Responsive ===== */
+@media (max-width: 768px) {
+    :root { --cc-taskbar-h: 40px; }
+
+    /* Force windows to fill the screen on small devices */
+    .app-window:not(.minimized) {
+        left: 0 !important;
+        top: 36px !important;
+        width: 100vw !important;
+        height: calc(100vh - 36px - 40px) !important;
+        border-radius: 0;
+        border: none;
+        z-index: 1045 !important;
+    }
+
+    /* Hide resize handle on mobile — windows are always full-screen */
+    .app-window-resize {
+        display: none;
+    }
+
+    /* Larger touch targets for titlebar buttons */
+    .app-window-btn {
+        padding: 0.4rem 0.6rem;
+        font-size: 1rem;
+        min-width: 36px;
+        min-height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .app-window-titlebar {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.85rem;
+    }
+
+    /* Taller taskbar with larger items */
+    .mdi-taskbar {
+        height: 40px;
+        padding: 0 0.35rem;
+        gap: 3px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .mdi-taskbar-item {
+        font-size: 0.75rem;
+        padding: 0.35rem 0.7rem;
+        min-height: 32px;
+    }
+
+    /* Larger menu items for touch */
+    .mdi-menu-item {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.82rem;
+        min-height: 32px;
+    }
+
+    /* Adjust workspace for taller mobile taskbar */
+    .mdi-workspace {
+        bottom: 40px;
+    }
+
+    /* Toast container above mobile taskbar */
+    .toast-container {
+        bottom: 3.25rem;
+        left: 0.5rem;
+        right: 0.5rem;
+        max-width: none;
+    }
+}
+
+/* Touch-friendly: prevent text selection during drag on touch devices */
+@media (pointer: coarse) {
+    .app-window-titlebar {
+        -webkit-user-select: none;
+        user-select: none;
+    }
+
+    .app-window-btn {
+        min-width: 36px;
+        min-height: 36px;
+    }
+
+    .app-window-resize {
+        width: 24px;
+        height: 24px;
+    }
+
+    .app-window-resize::after {
+        right: 4px;
+        bottom: 4px;
+        width: 12px;
+        height: 12px;
+    }
 }

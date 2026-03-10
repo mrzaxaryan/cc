@@ -92,7 +92,7 @@
     top: 36px;
     left: 0;
     right: 0;
-    bottom: 32px;
+    bottom: var(--cc-taskbar-h, 32px);
     background:
         radial-gradient(ellipse at 20% 50%, var(--cc-workspace-grad1) 0%, transparent 50%),
         radial-gradient(ellipse at 80% 20%, var(--cc-workspace-grad2) 0%, transparent 50%),
