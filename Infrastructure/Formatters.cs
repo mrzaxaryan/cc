@@ -1,10 +1,5 @@
 using cc.Features.Relay;
-
-using cc.Features.Workspace;
 using cc.Features.Agents;
-using cc.Features.Search;
-using cc.Features.Extensions;
-using cc.Features.Notifications;
 
 namespace cc.Infrastructure;
 

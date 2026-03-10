@@ -15,12 +15,14 @@ builder.Services.AddScoped<cc.Infrastructure.ThemeService>();
 
 // Features
 builder.Services.AddScoped<cc.Features.Agents.AgentStore>();
+builder.Services.AddScoped<cc.Features.Downloads.DownloadService>();
 builder.Services.AddScoped<cc.Features.Downloads.DownloadStore>();
 builder.Services.AddScoped<cc.Features.Extensions.ExtensionGroupStore>();
 builder.Services.AddScoped<cc.Features.FileManager.VfsStore>();
 builder.Services.AddScoped<cc.Features.Notifications.NotificationStore>();
 builder.Services.AddScoped<cc.Features.Relay.RelayConnectionService>();
 builder.Services.AddScoped<cc.Features.Relay.RelayStore>();
+builder.Services.AddScoped<cc.Features.Search.SearchService>();
 builder.Services.AddScoped<cc.Features.Search.SearchStore>();
 builder.Services.AddScoped<cc.Features.Storage.CacheManager>();
 builder.Services.AddSingleton<cc.Features.Workspace.WindowManager>();

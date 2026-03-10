@@ -1,4 +1,5 @@
 @inject DownloadStore Downloads
+@inject DownloadService DownloadSvc
 @inject AgentStore AgentDb
 @inject RelayConnectionService RelaySvc
 @inject ServiceStateStore SvcState
@@ -77,7 +78,7 @@
     <div class="sp-agents">
         @foreach (var group in GetAgentGroups())
         {
-            var isProcessing = RelaySvc.ProcessingAgents.Contains(group.Uuid);
+            var isProcessing = DownloadSvc.ProcessingAgents.Contains(group.Uuid);
             var isOnline = RelaySvc.GetAllAgents().Any(a => AgentDb.GetUuidByAgentId(a.Agent.Id) == group.Uuid);
             var isAgentPaused = SvcState.IsPaused(ServiceName.Upload, group.Uuid);
             <div class="sp-agent-card">
@@ -228,7 +229,7 @@
     private int SyncPaused => Downloads.Downloads.Count(r => r.Status == DownloadStatus.Paused);
     private int SyncCompleted => Downloads.Downloads.Count(r => r.Status == DownloadStatus.Completed);
     private int SyncFailed => Downloads.Downloads.Count(r => r.Status == DownloadStatus.Failed);
-    private bool IsGloballyRunning => RelaySvc.ProcessingAgents.Count > 0 || SyncDownloading > 0;
+    private bool IsGloballyRunning => DownloadSvc.ProcessingAgents.Count > 0 || SyncDownloading > 0;
     private bool IsGlobalServicePaused => SvcState.IsPaused(ServiceName.Upload, "global");
 
     protected override async Task OnInitializedAsync()

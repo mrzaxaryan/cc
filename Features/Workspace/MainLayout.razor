@@ -2,6 +2,8 @@
 @inject CacheManager Cache
 @inject RelayStore Relay
 @inject RelayConnectionService RelaySvc
+@inject DownloadService DownloadSvc
+@inject SearchService SearchSvc
 @inject WindowManager Wm
 @inject ThemeService Theme
 @inject MessageService Msg
@@ -10,11 +12,19 @@
 @inject IJSRuntime JS
 @implements IDisposable
 
-@if (showSetup)
+@if (!initialized)
+{
+    <div class="cc-loading">
+        <span class="cc-loading-brand">cc</span>
+        <div class="cc-loading-spinner"></div>
+        <div class="cc-loading-text"></div>
+    </div>
+}
+else if (showSetup)
 {
     <SetupWizard OnComplete="OnSetupComplete" />
 }
-else if (initialized)
+else
 {
     <div class="mdi-menubar">
         <span class="mdi-brand">cc</span>
@@ -130,19 +140,18 @@ else if (initialized)
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !initialized)
+        if (firstRender)
         {
-            initialized = true;
             await Theme.InitializeAsync();
             await Cache.InitializeAsync();
             await Relay.LoadAsync();
             await Notif.LoadAsync();
             await ExtGroups.LoadAsync();
             await RelaySvc.StartAsync();
-            if (Cache.SetupRequired || Cache.NeedsPermission || Relay.SetupRequired || ExtGroups.SetupRequired)
-            {
-                showSetup = true;
-            }
+            await DownloadSvc.StartAsync();
+            await SearchSvc.StartAsync();
+            showSetup = Cache.SetupRequired || Cache.NeedsPermission || Relay.SetupRequired || ExtGroups.SetupRequired;
+            initialized = true;
             StateHasChanged();
 
             _updateTimer = new Timer(async _ =>
