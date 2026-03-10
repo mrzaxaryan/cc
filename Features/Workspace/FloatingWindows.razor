@@ -61,14 +61,14 @@
             @switch (win.Panel)
             {
                 case "FileManager":       <FileManager Relay="win.Relay" AgentId="@win.AgentId" AgentName="@win.AgentName" AgentUuid="@win.AgentUuid" /> break;
-                case "Settings":          <CacheManagerPanel /> break;
+                case "Settings":          <SettingsPanel /> break;
                 case "Relay":             <RelayPanel /> break;
                 case "Agents":            <AgentsPanel /> break;
-                case "Downloads":         <DownloadManagerPanel AgentUuid="@win.AgentUuid" AgentName="@win.AgentName" /> break;
-                case "Uploads":           <SyncPanel /> break;
-                case "FileSearch":        <SearchConfigPanel AgentUuid="@win.AgentUuid" AgentName="@win.AgentName" InitialPath="@win.SearchPath" /> break;
-                case "SearchJobs":        <SearchGlobalPanel /> break;
-                case "ExtensionGroups":   <ExtensionGroupPanel /> break;
+                case "Downloads":         <DownloadsPanel AgentUuid="@win.AgentUuid" AgentName="@win.AgentName" /> break;
+                case "Uploads":           <UploadsPanel /> break;
+                case "FileSearch":        <FileSearchPanel AgentUuid="@win.AgentUuid" AgentName="@win.AgentName" InitialPath="@win.SearchPath" /> break;
+                case "SearchJobs":        <SearchJobsPanel /> break;
+                case "ExtensionGroups":   <ExtensionGroupsPanel /> break;
             }
         </div>
         @if (!win.Maximized)

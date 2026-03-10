@@ -1,6 +1,6 @@
 using cc.Features.Relay;
 
-namespace cc.Features.Shell;
+namespace cc.Features.Workspace;
 
 public class WindowState
 {
