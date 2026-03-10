@@ -60,15 +60,15 @@
         <div class="app-window-body">
             @switch (win.Panel)
             {
-                case "File Manager":    <FileManager Relay="win.Relay" AgentId="@win.AgentId" AgentName="@win.AgentName" AgentUuid="@win.AgentUuid" /> break;
-                case "Settings":        <CacheManagerPanel /> break;
-                case "Relay":           <RelayPanel /> break;
-                case "Agents":          <AgentsPanel /> break;
-                case "Sync Manager":    <DownloadManagerPanel AgentUuid="@win.AgentUuid" AgentName="@win.AgentName" /> break;
-                case "Sync":            <SyncPanel /> break;
-                case "Scanner":         <SearchConfigPanel AgentUuid="@win.AgentUuid" AgentName="@win.AgentName" InitialPath="@win.ScanPath" /> break;
-                case "Scan":            <SearchGlobalPanel /> break;
-                case "Extensions":      <ExtensionGroupPanel /> break;
+                case "FileManager":       <FileManager Relay="win.Relay" AgentId="@win.AgentId" AgentName="@win.AgentName" AgentUuid="@win.AgentUuid" /> break;
+                case "Settings":          <CacheManagerPanel /> break;
+                case "Relay":             <RelayPanel /> break;
+                case "Agents":            <AgentsPanel /> break;
+                case "Downloads":         <DownloadManagerPanel AgentUuid="@win.AgentUuid" AgentName="@win.AgentName" /> break;
+                case "Uploads":           <SyncPanel /> break;
+                case "FileSearch":        <SearchConfigPanel AgentUuid="@win.AgentUuid" AgentName="@win.AgentName" InitialPath="@win.SearchPath" /> break;
+                case "SearchJobs":        <SearchGlobalPanel /> break;
+                case "ExtensionGroups":   <ExtensionGroupPanel /> break;
             }
         </div>
         @if (!win.Maximized)
@@ -146,12 +146,12 @@
         "Agents" => "agents",
         "Relay" => "server",
         "Settings" => "database",
-        "File Manager" => "folder",
-        "Sync Manager" => "sync",
-        "Sync" => "sync",
-        "Scanner" => "search",
-        "Scan" => "search",
-        "Extensions" => "database",
+        "FileManager" => "folder",
+        "Downloads" => "sync",
+        "Uploads" => "sync",
+        "FileSearch" => "search",
+        "SearchJobs" => "search",
+        "ExtensionGroups" => "database",
         _ => "monitor"
     };
 

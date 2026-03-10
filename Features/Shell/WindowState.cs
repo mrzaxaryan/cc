@@ -18,5 +18,5 @@ public class WindowState
     public string? AgentName { get; set; }
     public string? AgentUuid { get; set; }
     public RelaySocket? Relay { get; set; }
-    public string? ScanPath { get; set; }
+    public string? SearchPath { get; set; }
 }

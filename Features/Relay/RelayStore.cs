@@ -3,7 +3,7 @@ using Microsoft.JSInterop;
 
 namespace cc.Features.Relay;
 
-public class RelayEntry
+public class RelayRecord
 {
     [JsonPropertyName("id")] public string Id { get; set; } = "";
     [JsonPropertyName("url")] public string Url { get; set; } = "";
@@ -17,18 +17,18 @@ public class RelayStore
     private const string DefaultName = "Default";
 
     private readonly IJSRuntime _js;
-    private List<RelayEntry>? _relays;
+    private List<RelayRecord>? _relays;
     private bool _loaded;
 
     public event Action? OnChanged;
 
     public RelayStore(IJSRuntime js) => _js = js;
 
-    public IReadOnlyList<RelayEntry> Relays => _relays ?? [];
-    public IReadOnlyList<RelayEntry> EnabledRelays => _relays?.Where(r => r.Enabled).ToList() ?? [];
+    public IReadOnlyList<RelayRecord> Relays => _relays ?? [];
+    public IReadOnlyList<RelayRecord> EnabledRelays => _relays?.Where(r => r.Enabled).ToList() ?? [];
 
-    public RelayEntry? GetById(string id) => _relays?.FirstOrDefault(r => r.Id == id);
-    public RelayEntry? GetByUrl(string url) => _relays?.FirstOrDefault(r => r.Url == url);
+    public RelayRecord? GetById(string id) => _relays?.FirstOrDefault(r => r.Id == id);
+    public RelayRecord? GetByUrl(string url) => _relays?.FirstOrDefault(r => r.Url == url);
     public bool SetupRequired { get; private set; }
 
     public static string GetHttpBaseUrl(string wsUrl)
@@ -45,7 +45,7 @@ public class RelayStore
 
         try
         {
-            var entries = await _js.InvokeAsync<RelayEntry[]>("ccRelayDb.getAll");
+            var entries = await _js.InvokeAsync<RelayRecord[]>("ccRelayDb.getAll");
             _relays = entries?.ToList() ?? new();
         }
         catch
@@ -63,7 +63,7 @@ public class RelayStore
         if (_relays.Count == 0)
         {
             SetupRequired = true;
-            var entry = new RelayEntry { Id = Guid.NewGuid().ToString("N")[..8], Url = DefaultUrl, Name = DefaultName, Enabled = true };
+            var entry = new RelayRecord { Id = Guid.NewGuid().ToString("N")[..8], Url = DefaultUrl, Name = DefaultName, Enabled = true };
             _relays.Add(entry);
             await _js.InvokeVoidAsync("ccRelayDb.put", entry);
         }
@@ -73,7 +73,7 @@ public class RelayStore
     {
         url = url.TrimEnd('/');
         if (_relays!.Any(r => r.Url == url)) return;
-        var entry = new RelayEntry { Id = Guid.NewGuid().ToString("N")[..8], Url = url, Name = name };
+        var entry = new RelayRecord { Id = Guid.NewGuid().ToString("N")[..8], Url = url, Name = name };
         _relays!.Add(entry);
         await _js.InvokeVoidAsync("ccRelayDb.put", entry);
         OnChanged?.Invoke();

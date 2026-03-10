@@ -32,7 +32,7 @@
         <CcBtn Variant="BtnVariant.Primary" OnClick="OpenFullSearchWindow" Disabled="@(!IsConnected)" Title="Search entire filesystem">
             <span class="fm-icon">&#x1F50D;</span> SEARCH
         </CcBtn>
-        <CcBtn Variant="BtnVariant.Primary" OnClick="OpenSyncManagerWindow" Title="Upload Manager">
+        <CcBtn Variant="BtnVariant.Primary" OnClick="OpenDownloadsWindow" Title="Upload Manager">
             <span class="fm-icon">&#x21C5;</span> UPLOADS
         </CcBtn>
     </div>
@@ -99,7 +99,7 @@
                                 @if (isDir)
                                 {
                                     <CcBtn Size="Size.Xs" OnClick="() => OpenAsDirectory(e.Name)" Title="Open" Disabled="@(!IsConnected && !HasCache)">OPEN</CcBtn>
-                                    <CcBtn Size="Size.Xs" Variant="BtnVariant.Primary" OnClick="() => OpenScanWindow(e.Name)" Title="Search directory" Disabled="@(!IsConnected)">SEARCH</CcBtn>
+                                    <CcBtn Size="Size.Xs" Variant="BtnVariant.Primary" OnClick="() => OpenSearchWindow(e.Name)" Title="Search directory" Disabled="@(!IsConnected)">SEARCH</CcBtn>
                                 }
                                 else if (Cache.HasDirectory)
                                 {
@@ -483,23 +483,23 @@
         await EnqueueSync(entry);
     }
 
-    private void OpenSyncManagerWindow()
+    private void OpenDownloadsWindow()
     {
-        if (!string.IsNullOrEmpty(AgentId)) Wm.OpenAgentWindow("Sync Manager", AgentId, agentName: AgentName, agentUuid: AgentUuid);
-        else Wm.OpenWindow("Sync Manager");
+        if (!string.IsNullOrEmpty(AgentId)) Wm.OpenAgentWindow("Downloads", AgentId, agentName: AgentName, agentUuid: AgentUuid);
+        else Wm.OpenWindow("Downloads");
     }
 
-    private void OpenScanWindow(string dirName)
+    private void OpenSearchWindow(string dirName)
     {
         if (string.IsNullOrEmpty(AgentId)) return;
-        var scanPath = currentPath + dirName;
-        Wm.OpenAgentWindow("Scanner", AgentId, agentName: AgentName, agentUuid: AgentUuid, scanPath: scanPath);
+        var searchPath = currentPath + dirName;
+        Wm.OpenAgentWindow("FileSearch", AgentId, agentName: AgentName, agentUuid: AgentUuid, searchPath: searchPath);
     }
 
     private void OpenFullSearchWindow()
     {
         if (string.IsNullOrEmpty(AgentId)) return;
-        Wm.OpenAgentWindow("Scanner", AgentId, agentName: AgentName, agentUuid: AgentUuid);
+        Wm.OpenAgentWindow("FileSearch", AgentId, agentName: AgentName, agentUuid: AgentUuid);
     }
 
     private async Task SaveToBrowser(DownloadRecord dl)

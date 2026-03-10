@@ -260,7 +260,7 @@
     private bool saving;
     private string relayName = "";
     private string relayUrl = "";
-    private RelayEntry? editingRelay;
+    private RelayRecord? editingRelay;
     private HashSet<string> selectedExtGroups = new(ExtensionGroupStore.DefaultGroups.Keys);
     private HashSet<Step> completedSteps = new();
     private List<(string Name, string Extensions)> customGroups = new();
@@ -408,7 +408,7 @@
         finally { saving = false; }
     }
 
-    private void EditRelay(RelayEntry relay)
+    private void EditRelay(RelayRecord relay)
     {
         editingRelay = relay;
         relayName = relay.Name;
@@ -439,13 +439,13 @@
         relayUrl = "";
     }
 
-    private async Task ToggleRelay(RelayEntry relay)
+    private async Task ToggleRelay(RelayRecord relay)
     {
         await Relay.SetEnabled(relay.Url, !relay.Enabled);
         StateHasChanged();
     }
 
-    private async Task RemoveRelay(RelayEntry relay)
+    private async Task RemoveRelay(RelayRecord relay)
     {
         await Relay.RemoveRelay(relay.Url);
         if (editingRelay?.Url == relay.Url) CancelEditRelay();

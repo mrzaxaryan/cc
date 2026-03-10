@@ -47,17 +47,17 @@ public class WindowManager
             Title = DisplayTitle(panel),
             X = 100 + offset,
             Y = 80 + offset,
-            Width = panel switch { "File Manager" => 800, "Settings" => 650, "Relay" => 900, "Agents" => 950, "Sync Manager" => 600, "Scan" => 700, "Extensions" => 500, _ => 700 },
+            Width = panel switch { "FileManager" => 800, "Settings" => 650, "Relay" => 900, "Agents" => 950, "Downloads" => 600, "SearchJobs" => 700, "ExtensionGroups" => 500, _ => 700 },
             Height = 500,
             ZIndex = _topZ
         });
         OnChanged?.Invoke();
     }
 
-    public void OpenAgentWindow(string panel, string agentId, RelaySocket? relay = null, string? agentName = null, string? agentUuid = null, string? scanPath = null)
+    public void OpenAgentWindow(string panel, string agentId, RelaySocket? relay = null, string? agentName = null, string? agentUuid = null, string? searchPath = null)
     {
-        // For Scanner, don't reuse — each scan path gets its own window
-        if (panel != "Scanner")
+        // For FileSearch, don't reuse — each search path gets its own window
+        if (panel != "FileSearch")
         {
             var existing = Windows.FirstOrDefault(w => w.Panel == panel && w.AgentId == agentId);
             if (existing is not null)
@@ -79,10 +79,10 @@ public class WindowManager
             AgentName = agentName,
             AgentUuid = agentUuid,
             Relay = relay,
-            ScanPath = scanPath,
+            SearchPath = searchPath,
             X = 100 + offset,
             Y = 80 + offset,
-            Width = panel switch { "File Manager" => 800, "Scanner" => 600, _ => 700 },
+            Width = panel switch { "FileManager" => 800, "FileSearch" => 600, _ => 700 },
             Height = 500,
             ZIndex = _topZ
         });
@@ -124,11 +124,13 @@ public class WindowManager
 
     private static string DisplayTitle(string panel) => panel switch
     {
-        "Sync" => "File Uploads",
-        "Sync Manager" => "Upload Manager",
-        "Scanner" => "File Search",
-        "Scan" => "File Search",
-        "Extensions" => "Extension Groups",
+        "Uploads" => "File Uploads",
+        "Downloads" => "Download Manager",
+        "FileSearch" => "File Search",
+        "SearchJobs" => "Search Jobs",
+        "ExtensionGroups" => "Extension Groups",
+        "FileManager" => "File Manager",
+        "Settings" => "Settings",
         _ => panel
     };
 
