@@ -5,7 +5,7 @@
 <div class="rp">
     <div class="rp-toolbar">
         <h5 class="rp-title">Relay</h5>
-        <CcBtn Variant="BtnVariant.Primary" OnClick="LoadStatus" Disabled="@loading">
+        <CcBtn Variant="BtnVariant.Primary" OnClick="LoadAllStatus" Disabled="@loading">
             @(loading ? "Refreshing..." : "Refresh")
         </CcBtn>
     </div>
@@ -46,19 +46,19 @@
                         <th style="width:80px">ID</th>
                         <th>Name</th>
                         <th>URL</th>
-                        <th style="width:120px"></th>
+                        <th style="width:160px"></th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var relay in Store.Relays)
                     {
-                        var isActive = relay.Url == Store.ActiveUrl;
+                        var isEnabled = relay.Enabled;
                         var isEditing = editingUrl == relay.Url;
-                        <CcTr Active="@isActive">
+                        <CcTr Active="@isEnabled">
                             <td class="rp-active-cell">
-                                @if (isActive)
+                                @if (isEnabled)
                                 {
-                                    <span class="rp-active-dot" title="Active">&#9679;</span>
+                                    <span class="rp-active-dot" title="Enabled">&#9679;</span>
                                 }
                             </td>
                             <td><code class="rp-code">@relay.Id</code></td>
@@ -79,15 +79,15 @@
                                 <td><code class="rp-code">@relay.Url</code></td>
                                 <td class="rp-actions">
                                     <CcBtn OnClick="() => StartEdit(relay)" Title="Edit">&#9998;</CcBtn>
-                                    @if (!isActive)
+                                    @if (isEnabled)
                                     {
-                                        <CcBtn Variant="BtnVariant.Primary" OnClick="() => SelectRelay(relay.Url)" Title="Set as active">Use</CcBtn>
-                                        <CcBtn Variant="BtnVariant.Danger" OnClick="() => RemoveRelay(relay.Url)" Title="Remove">&times;</CcBtn>
+                                        <CcBtn Variant="BtnVariant.Warning" OnClick="() => ToggleEnabled(relay)" Title="Disable">Disable</CcBtn>
                                     }
                                     else
                                     {
-                                        <CcBadge Variant="BadgeVariant.Success">Active</CcBadge>
+                                        <CcBtn Variant="BtnVariant.Success" OnClick="() => ToggleEnabled(relay)" Title="Enable">Enable</CcBtn>
                                     }
+                                    <CcBtn Variant="BtnVariant.Danger" OnClick="() => RemoveRelay(relay.Url)" Title="Remove">&times;</CcBtn>
                                 </td>
                             }
                         </CcTr>
@@ -97,146 +97,176 @@
         </ChildContent>
     </CcCard>
 
-    @if (status is null)
+    @foreach (var relay in Store.Relays)
     {
-        <p class="rp-loading"><em>Loading...</em></p>
-    }
-    else
-    {
-        <div class="rp-stats">
-            <CcCard Compact>
-                <div class="rp-stat">
-                    <span class="rp-stat-value">@status.Agents.Count</span>
-                    <span class="rp-stat-label">Agents</span>
-                </div>
-            </CcCard>
-            <CcCard Compact>
-                <div class="rp-stat">
-                    <span class="rp-stat-value">@status.Relays.Count</span>
-                    <span class="rp-stat-label">Relays</span>
-                </div>
-            </CcCard>
-            <CcCard Compact>
-                <div class="rp-stat">
-                    <span class="rp-stat-value">@status.EventListeners.Count</span>
-                    <span class="rp-stat-label">Listeners</span>
-                </div>
-            </CcCard>
-        </div>
+        var httpUrl = RelayStore.GetHttpBaseUrl(relay.Url);
+        var hasStatus = relayHealth.TryGetValue(relay.Url, out var status);
+        var hasError = relayErrors.TryGetValue(relay.Url, out var error);
+        var isLoading = relayLoading.Contains(relay.Url);
 
-        <h6 class="rp-section-title">Agents</h6>
-        @if (status.Agents.Connections.Length == 0)
-        {
-            <p class="rp-empty"><em>No agents connected.</em></p>
-        }
-        else
-        {
-            <CcTable Striped>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>IP</th>
-                        <th>Location</th>
-                        <th>Network</th>
-                        <th>TLS</th>
-                        <th>Connected At</th>
-                        <th>Last Active</th>
-                        <th>Messages</th>
-                        <th>Relayed</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var agent in status.Agents.Connections)
+        <CcCard CssClass="rp-section">
+            <Header>
+                <span>@relay.Name</span>
+                @if (relay.Enabled)
+                {
+                    <CcBadge Variant="BadgeVariant.Success" Size="Size.Xs">Enabled</CcBadge>
+                }
+                else
+                {
+                    <CcBadge Variant="BadgeVariant.Muted" Size="Size.Xs">Disabled</CcBadge>
+                }
+            </Header>
+            <ChildContent>
+                @if (isLoading)
+                {
+                    <p class="rp-loading"><em>Loading...</em></p>
+                }
+                else if (hasError)
+                {
+                    <p class="rp-error"><em>@error</em></p>
+                }
+                else if (hasStatus && status is not null)
+                {
+                    <div class="rp-stats">
+                        <CcCard Compact>
+                            <div class="rp-stat">
+                                <span class="rp-stat-value">@status.Agents.Count</span>
+                                <span class="rp-stat-label">Agents</span>
+                            </div>
+                        </CcCard>
+                        <CcCard Compact>
+                            <div class="rp-stat">
+                                <span class="rp-stat-value">@status.Relays.Count</span>
+                                <span class="rp-stat-label">Relays</span>
+                            </div>
+                        </CcCard>
+                        <CcCard Compact>
+                            <div class="rp-stat">
+                                <span class="rp-stat-value">@status.EventListeners.Count</span>
+                                <span class="rp-stat-label">Listeners</span>
+                            </div>
+                        </CcCard>
+                    </div>
+
+                    <h6 class="rp-section-title">Agents</h6>
+                    @if (status.Agents.Connections.Length == 0)
                     {
-                        <tr>
-                            <td><code>@agent.Id</code></td>
-                            <td><code>@agent.Ip</code></td>
-                            <td title="@Formatters.FormatCoords(agent)">@Formatters.FormatLocation(agent)</td>
-                            <td>@Formatters.FormatNetwork(agent)</td>
-                            <td><code>@agent.TlsVersion</code></td>
-                            <td>@Formatters.FormatTimestamp(agent.ConnectedAt)</td>
-                            <td>@Formatters.FormatTimestamp(agent.LastActiveAt)</td>
-                            <td>@agent.MessageCount</td>
-                            <td>
-                                @if (agent.Relayed)
+                        <p class="rp-empty"><em>No agents connected.</em></p>
+                    }
+                    else
+                    {
+                        <CcTable Striped>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>IP</th>
+                                    <th>Location</th>
+                                    <th>Network</th>
+                                    <th>TLS</th>
+                                    <th>Connected At</th>
+                                    <th>Last Active</th>
+                                    <th>Messages</th>
+                                    <th>Relayed</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var agent in status.Agents.Connections)
                                 {
-                                    <CcBadge Variant="BadgeVariant.Success" Title="@agent.RelayId">Yes</CcBadge>
+                                    <tr>
+                                        <td><code>@agent.Id</code></td>
+                                        <td><code>@agent.Ip</code></td>
+                                        <td title="@Formatters.FormatCoords(agent)">@Formatters.FormatLocation(agent)</td>
+                                        <td>@Formatters.FormatNetwork(agent)</td>
+                                        <td><code>@agent.TlsVersion</code></td>
+                                        <td>@Formatters.FormatTimestamp(agent.ConnectedAt)</td>
+                                        <td>@Formatters.FormatTimestamp(agent.LastActiveAt)</td>
+                                        <td>@agent.MessageCount</td>
+                                        <td>
+                                            @if (agent.Relayed)
+                                            {
+                                                <CcBadge Variant="BadgeVariant.Success" Title="@agent.RelayId">Yes</CcBadge>
+                                            }
+                                            else
+                                            {
+                                                <CcBadge Variant="BadgeVariant.Muted">No</CcBadge>
+                                            }
+                                        </td>
+                                    </tr>
                                 }
-                                else
+                            </tbody>
+                        </CcTable>
+                    }
+
+                    <h6 class="rp-section-title">Relays</h6>
+                    @if (status.Relays.Connections.Length == 0)
+                    {
+                        <p class="rp-empty"><em>No active relays.</em></p>
+                    }
+                    else
+                    {
+                        <CcTable Striped>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Agent ID</th>
+                                    <th>Connected At</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var r in status.Relays.Connections)
                                 {
-                                    <CcBadge Variant="BadgeVariant.Muted">No</CcBadge>
+                                    <tr>
+                                        <td><code>@r.Id</code></td>
+                                        <td><code>@r.AgentId</code></td>
+                                        <td>@Formatters.FormatTimestamp(r.ConnectedAt)</td>
+                                    </tr>
                                 }
-                            </td>
-                        </tr>
+                            </tbody>
+                        </CcTable>
                     }
-                </tbody>
-            </CcTable>
-        }
 
-        <h6 class="rp-section-title">Relays</h6>
-        @if (status.Relays.Connections.Length == 0)
-        {
-            <p class="rp-empty"><em>No active relays.</em></p>
-        }
-        else
-        {
-            <CcTable Striped>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Agent ID</th>
-                        <th>Connected At</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var relay in status.Relays.Connections)
+                    <h6 class="rp-section-title">Event Listeners</h6>
+                    @if (status.EventListeners.Connections.Length == 0)
                     {
-                        <tr>
-                            <td><code>@relay.Id</code></td>
-                            <td><code>@relay.AgentId</code></td>
-                            <td>@Formatters.FormatTimestamp(relay.ConnectedAt)</td>
-                        </tr>
+                        <p class="rp-empty"><em>No event listeners connected.</em></p>
                     }
-                </tbody>
-            </CcTable>
-        }
-
-        <h6 class="rp-section-title">Event Listeners</h6>
-        @if (status.EventListeners.Connections.Length == 0)
-        {
-            <p class="rp-empty"><em>No event listeners connected.</em></p>
-        }
-        else
-        {
-            <CcTable Striped>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>IP</th>
-                        <th>Location</th>
-                        <th>User Agent</th>
-                        <th>Connected At</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var listener in status.EventListeners.Connections)
+                    else
                     {
-                        <tr>
-                            <td><code>@listener.Id</code></td>
-                            <td><code>@listener.Ip</code></td>
-                            <td>@Formatters.FormatListenerLocation(listener)</td>
-                            <td class="rp-ua-cell" title="@listener.UserAgent">@listener.UserAgent</td>
-                            <td>@Formatters.FormatTimestamp(listener.ConnectedAt)</td>
-                        </tr>
+                        <CcTable Striped>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>IP</th>
+                                    <th>Location</th>
+                                    <th>User Agent</th>
+                                    <th>Connected At</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var listener in status.EventListeners.Connections)
+                                {
+                                    <tr>
+                                        <td><code>@listener.Id</code></td>
+                                        <td><code>@listener.Ip</code></td>
+                                        <td>@Formatters.FormatListenerLocation(listener)</td>
+                                        <td class="rp-ua-cell" title="@listener.UserAgent">@listener.UserAgent</td>
+                                        <td>@Formatters.FormatTimestamp(listener.ConnectedAt)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </CcTable>
                     }
-                </tbody>
-            </CcTable>
-        }
+                }
+                else
+                {
+                    <p class="rp-loading"><em>No data loaded yet.</em></p>
+                }
+            </ChildContent>
+        </CcCard>
     }
 </div>
 
 @code {
-    private HealthStatus? status;
     private bool loading;
 
     private bool showAdd;
@@ -247,26 +277,51 @@
     private string editName = "";
     private string editUrl = "";
 
+    private readonly Dictionary<string, HealthStatus> relayHealth = new();
+    private readonly Dictionary<string, string> relayErrors = new();
+    private readonly HashSet<string> relayLoading = new();
+
     protected override async Task OnInitializedAsync()
     {
         await Store.LoadAsync();
-        await LoadStatus();
+        await LoadAllStatus();
     }
 
-    private async Task LoadStatus()
+    private async Task LoadAllStatus()
     {
         loading = true;
+        relayHealth.Clear();
+        relayErrors.Clear();
+        relayLoading.Clear();
+
+        foreach (var relay in Store.Relays)
+            relayLoading.Add(relay.Url);
+
+        StateHasChanged();
+
+        var tasks = Store.Relays.Select(relay => LoadRelayStatus(relay.Url)).ToArray();
+        await Task.WhenAll(tasks);
+
+        loading = false;
+    }
+
+    private async Task LoadRelayStatus(string relayUrl)
+    {
+        var httpUrl = RelayStore.GetHttpBaseUrl(relayUrl);
         try
         {
-            status = await Http.GetFromJsonAsync<HealthStatus>($"{Store.HttpBaseUrl}/health");
+            var status = await Http.GetFromJsonAsync<HealthStatus>($"{httpUrl}/health");
+            if (status is not null)
+                relayHealth[relayUrl] = status;
         }
         catch (Exception ex)
         {
-            Msg.Error($"Failed to load relay status: {ex.Message}");
+            relayErrors[relayUrl] = $"Failed to load: {ex.Message}";
         }
         finally
         {
-            loading = false;
+            relayLoading.Remove(relayUrl);
+            await InvokeAsync(StateHasChanged);
         }
     }
 
@@ -282,12 +337,13 @@
     private async Task RemoveRelay(string url)
     {
         await Store.RemoveRelay(url);
+        relayHealth.Remove(url);
+        relayErrors.Remove(url);
     }
 
-    private async Task SelectRelay(string url)
+    private async Task ToggleEnabled(RelayEntry relay)
     {
-        await Store.SetActive(url);
-        await LoadStatus();
+        await Store.SetEnabled(relay.Url, !relay.Enabled);
     }
 
     private void StartEdit(RelayEntry relay)

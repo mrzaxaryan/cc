@@ -21,6 +21,7 @@ public class WindowManager
 
     public void BringToFront(WindowState win)
     {
+        if (win.ZIndex == _topZ) return;
         _topZ++;
         win.ZIndex = _topZ;
         OnChanged?.Invoke();

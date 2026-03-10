@@ -84,9 +84,9 @@
 
         step = needsCache ? Step.Cache : Step.Relay;
 
-        var active = Relay.Relays.FirstOrDefault(r => r.Url == Relay.ActiveUrl);
-        relayName = active?.Name ?? "";
-        relayUrl = active?.Url ?? "";
+        var enabled = Relay.EnabledRelays.FirstOrDefault();
+        relayName = enabled?.Name ?? "";
+        relayUrl = enabled?.Url ?? "";
     }
 
     private void AdvanceFromCache()
@@ -178,7 +178,7 @@
 
         try
         {
-            var existing = Relay.Relays.FirstOrDefault(r => r.Url == Relay.ActiveUrl);
+            var existing = Relay.EnabledRelays.FirstOrDefault();
             if (existing != null && existing.Url == url)
             {
                 await Relay.UpdateRelayName(url, name);
@@ -186,7 +186,7 @@
             else
             {
                 await Relay.AddRelay(name, url);
-                await Relay.SetActive(url);
+                await Relay.SetEnabled(url, true);
             }
 
             await OnComplete.InvokeAsync();

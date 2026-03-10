@@ -82,9 +82,9 @@ public class RelayConnectionService : IAsyncDisposable
 
     private void SyncRelays()
     {
-        var currentUrls = _relayStore.Relays.Select(r => r.Url).ToHashSet();
+        var enabledUrls = _relayStore.EnabledRelays.Select(r => r.Url).ToHashSet();
 
-        foreach (var relay in _relayStore.Relays)
+        foreach (var relay in _relayStore.EnabledRelays)
         {
             if (!_relayStates.ContainsKey(relay.Url))
             {
@@ -97,7 +97,7 @@ public class RelayConnectionService : IAsyncDisposable
             }
         }
 
-        var removedUrls = _relayStates.Keys.Where(url => !currentUrls.Contains(url)).ToList();
+        var removedUrls = _relayStates.Keys.Where(url => !enabledUrls.Contains(url)).ToList();
         foreach (var url in removedUrls)
         {
             _ = DisconnectRelay(url);

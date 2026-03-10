@@ -29,8 +29,9 @@
     var w = win;
     var isFocused = IsTopWindow(w);
     <div @key="win.Id" class="app-window @(win.Maximized ? "maximized" : "") @(isFocused ? "focused" : "unfocused")"
-         style="@(win.Maximized ? "" : $"left:{win.X}px;top:{win.Y}px;width:{win.Width}px;height:{win.Height}px;z-index:{win.ZIndex};")"
-         @onpointerdown="() => Wm.BringToFront(w)">
+         style="@(win.Maximized ? $"z-index:{win.ZIndex};" : $"left:{win.X}px;top:{win.Y}px;width:{win.Width}px;height:{win.Height}px;z-index:{win.ZIndex};")"
+         @onpointerdown="() => Wm.BringToFront(w)"
+         @onmousedown="() => Wm.BringToFront(w)">
         <div class="app-window-titlebar"
              style="touch-action:none;"
              @onpointerdown="(e) => OnDragStart(e, win)"

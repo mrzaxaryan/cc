@@ -8,7 +8,7 @@ public class RelayEntry
     [JsonPropertyName("id")] public string Id { get; set; } = "";
     [JsonPropertyName("url")] public string Url { get; set; } = "";
     [JsonPropertyName("name")] public string Name { get; set; } = "";
-    [JsonPropertyName("active")] public bool Active { get; set; }
+    [JsonPropertyName("active")] public bool Enabled { get; set; }
 }
 
 public class RelayStore
@@ -25,24 +25,18 @@ public class RelayStore
     public RelayStore(IJSRuntime js) => _js = js;
 
     public IReadOnlyList<RelayEntry> Relays => _relays ?? [];
-    public string ActiveUrl => _relays?.FirstOrDefault(r => r.Active)?.Url ?? DefaultUrl;
+    public IReadOnlyList<RelayEntry> EnabledRelays => _relays?.Where(r => r.Enabled).ToList() ?? [];
 
     public RelayEntry? GetById(string id) => _relays?.FirstOrDefault(r => r.Id == id);
     public RelayEntry? GetByUrl(string url) => _relays?.FirstOrDefault(r => r.Url == url);
     public bool SetupRequired { get; private set; }
 
-    public string HttpBaseUrl
+    public static string GetHttpBaseUrl(string wsUrl)
     {
-        get
-        {
-            var url = ActiveUrl;
-            if (url.StartsWith("wss://")) return "https://" + url[6..];
-            if (url.StartsWith("ws://")) return "http://" + url[5..];
-            return url;
-        }
+        if (wsUrl.StartsWith("wss://")) return "https://" + wsUrl[6..];
+        if (wsUrl.StartsWith("ws://")) return "http://" + wsUrl[5..];
+        return wsUrl;
     }
-
-    public string WsBaseUrl => ActiveUrl;
 
     public async Task LoadAsync()
     {
@@ -69,15 +63,9 @@ public class RelayStore
         if (_relays.Count == 0)
         {
             SetupRequired = true;
-            var entry = new RelayEntry { Id = Guid.NewGuid().ToString("N")[..8], Url = DefaultUrl, Name = DefaultName, Active = true };
+            var entry = new RelayEntry { Id = Guid.NewGuid().ToString("N")[..8], Url = DefaultUrl, Name = DefaultName, Enabled = true };
             _relays.Add(entry);
             await _js.InvokeVoidAsync("ccRelayDb.put", entry);
-        }
-
-        if (!_relays.Any(r => r.Active) && _relays.Count > 0)
-        {
-            _relays[0].Active = true;
-            await _js.InvokeVoidAsync("ccRelayDb.put", _relays[0]);
         }
     }
 
@@ -93,27 +81,19 @@ public class RelayStore
 
     public async Task RemoveRelay(string url)
     {
-        var wasActive = _relays!.FirstOrDefault(r => r.Url == url)?.Active ?? false;
         _relays!.RemoveAll(r => r.Url == url);
         await _js.InvokeVoidAsync("ccRelayDb.remove", url);
-
-        if (wasActive && _relays.Count > 0)
-        {
-            _relays[0].Active = true;
-            await _js.InvokeVoidAsync("ccRelayDb.put", _relays[0]);
-        }
         OnChanged?.Invoke();
     }
 
-    public async Task SetActive(string url)
+    public async Task SetEnabled(string url, bool enabled)
     {
-        foreach (var r in _relays!)
-        {
-            var wasActive = r.Active;
-            r.Active = r.Url == url;
-            if (r.Active != wasActive)
-                await _js.InvokeVoidAsync("ccRelayDb.put", r);
-        }
+        var entry = _relays?.FirstOrDefault(r => r.Url == url);
+        if (entry is null) return;
+        if (entry.Enabled == enabled) return;
+        entry.Enabled = enabled;
+        await _js.InvokeVoidAsync("ccRelayDb.put", entry);
+        OnChanged?.Invoke();
     }
 
     public async Task UpdateRelayName(string url, string name)

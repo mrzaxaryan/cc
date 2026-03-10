@@ -5,46 +5,7 @@
 @implements IDisposable
 
 <div class="ap">
-    @if (Relay.RelayStates.Count == 0)
     {
-        <p class="ap-empty"><em>Connecting to events...</em></p>
-    }
-    else
-    {
-        <div class="ap-relays">
-            @foreach (var rs in Relay.RelayStates.Values)
-            {
-                <CcCard Compact CssClass="ap-relay-card">
-                    <div class="ap-relay-info">
-                        <div class="ap-relay-header">
-                            <span class="ap-relay-name">@rs.Name</span>
-                            <CcBadge Variant="@(rs.Connected ? BadgeVariant.Success : BadgeVariant.Danger)" Size="Size.Xs">@(rs.Connected ? "Live" : "Off")</CcBadge>
-                            <CcBadge Variant="BadgeVariant.Dark" Size="Size.Xs">@GetProtocolShort(rs.Url)</CcBadge>
-                        </div>
-                        <code class="ap-relay-host" title="@rs.Url">@GetHostFromUrl(rs.Url)</code>
-                        @if (rs.Connected)
-                        {
-                            <span class="ap-relay-meta">
-                                @(rs.Agents?.Count ?? 0) agent@(rs.Agents?.Count != 1 ? "s" : "") connected
-                            </span>
-                        }
-                        else if (rs.ReconnectAt is not null)
-                        {
-                            var secs = Math.Max(0, (int)Math.Ceiling((rs.ReconnectAt.Value - DateTime.UtcNow).TotalSeconds));
-                            <span class="ap-relay-meta ap-relay-warn">
-                                Reconnecting in @(secs)s...
-                                <CcBtn Variant="BtnVariant.Link" Size="Size.Xs" OnClick="() => Relay.ForceReconnect(rs.Url)">Connect now</CcBtn>
-                            </span>
-                        }
-                        else
-                        {
-                            <span class="ap-relay-meta ap-relay-err">Disconnected</span>
-                        }
-                    </div>
-                </CcCard>
-            }
-        </div>
-
         var rows = BuildAgentRows(Relay.GetAllAgents());
         @if (rows.Count == 0)
         {

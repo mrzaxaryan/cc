@@ -383,7 +383,6 @@ a:hover {
     height: calc(100vh - var(--cc-titlebar-h) - var(--cc-taskbar-h)) !important;
     border-radius: 0;
     border: none;
-    z-index: 1045 !important;
     animation: none;
 }
 
@@ -842,7 +841,6 @@ a:hover {
         height: calc(100vh - var(--cc-titlebar-h) - var(--cc-taskbar-h)) !important;
         border-radius: 0;
         border: none;
-        z-index: 1045 !important;
     }
 
     /* Hide edge resize handles on mobile */
