@@ -3,6 +3,8 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    height: 100%;
+    min-height: 0;
 }
 
 .cm-toolbar {
@@ -80,7 +82,8 @@
     border: 1px solid var(--cc-border);
     border-radius: 6px;
     overflow-y: auto;
-    max-height: 55vh;
+    flex: 1;
+    min-height: 0;
     background: var(--cc-bg-surface);
 }
 
