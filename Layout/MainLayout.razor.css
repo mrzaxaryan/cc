@@ -4,8 +4,8 @@
     align-items: center;
     height: 36px;
     background: var(--cc-bg-deep);
-    border-bottom: 1px solid var(--cc-bg-overlay);
-    padding: 0 0.5rem;
+    border-bottom: 1px solid var(--cc-border-subtle);
+    padding: 0 var(--cc-space-2);
     gap: 0;
     position: fixed;
     top: 0;
@@ -17,28 +17,32 @@
 
 .mdi-brand {
     font-weight: 700;
-    font-size: 1rem;
+    font-size: 0.95rem;
     color: var(--cc-text);
-    padding: 0 0.6rem;
+    padding: 0 var(--cc-space-3);
     letter-spacing: 0.05em;
 }
 
 .mdi-sep {
     width: 1px;
-    height: 18px;
+    height: 16px;
     background: var(--cc-bg-highlight);
-    margin: 0 0.35rem;
+    margin: 0 var(--cc-space-2);
+    flex-shrink: 0;
 }
 
 .mdi-menu-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     background: none;
     border: none;
     color: var(--cc-text-muted);
     font-size: 0.78rem;
-    padding: 0.3rem 0.7rem;
+    padding: 4px 10px;
     cursor: pointer;
-    border-radius: 4px;
-    transition: background 0.15s, color 0.15s, transform 0.1s;
+    border-radius: var(--cc-radius-sm);
+    transition: background var(--cc-transition-normal), color var(--cc-transition-normal), transform 0.1s;
     font-weight: 500;
     user-select: none;
 }
@@ -53,7 +57,7 @@
 }
 
 .mdi-menu-item:focus-visible {
-    outline: 2px solid var(--cc-accent-blue);
+    outline: 2px solid var(--cc-focus-ring);
     outline-offset: -1px;
 }
 
@@ -61,29 +65,79 @@
     flex: 1;
 }
 
-/* Status indicator */
-.mdi-status {
+/* Relay status pills */
+.mdi-relay-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     font-size: 0.7rem;
-    font-family: monospace;
-    padding: 0.15rem 0.5rem;
-    border-radius: 4px;
-    max-width: 200px;
+    color: var(--cc-text-muted);
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--cc-bg-overlay);
+    border: 1px solid var(--cc-border);
+    margin: 0 2px;
+    transition: border-color var(--cc-transition-normal);
+}
+
+.mdi-relay-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.mdi-relay-dot.dot-on {
+    background: var(--cc-accent-green);
+    box-shadow: 0 0 4px var(--cc-accent-green);
+}
+
+.mdi-relay-dot.dot-off {
+    background: var(--cc-text-dim);
+}
+
+.mdi-relay-name {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    transition: background 0.3s, color 0.3s, border-color 0.3s;
+    max-width: 90px;
 }
 
-.mdi-status.connected {
-    color: var(--cc-accent-green);
-    background: var(--cc-green-10);
-    border: 1px solid var(--cc-green-25);
+.mdi-relay-count {
+    font-weight: 600;
+    font-size: 0.65rem;
+    color: var(--cc-accent-blue);
+    background: var(--cc-blue-15);
+    padding: 0 4px;
+    border-radius: 6px;
+    min-width: 14px;
+    text-align: center;
 }
 
-.mdi-status.disconnected {
-    color: var(--cc-text-dim);
-    background: var(--cc-bg-overlay);
-    border: 1px solid var(--cc-border);
+/* Icon buttons (notifications, theme) */
+.mdi-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: none;
+    color: var(--cc-text-muted);
+    border-radius: var(--cc-radius-sm);
+    cursor: pointer;
+    transition: background var(--cc-transition-normal), color var(--cc-transition-normal);
+    position: relative;
+}
+
+.mdi-icon-btn:hover {
+    background: var(--cc-bg-highlight);
+    color: var(--cc-text);
+}
+
+.mdi-icon-btn:focus-visible {
+    outline: 2px solid var(--cc-focus-ring);
+    outline-offset: -1px;
 }
 
 /* Workspace */
@@ -97,4 +151,21 @@
         radial-gradient(ellipse at 20% 50%, var(--cc-workspace-grad1) 0%, transparent 50%),
         radial-gradient(ellipse at 80% 20%, var(--cc-workspace-grad2) 0%, transparent 50%),
         var(--cc-bg-base);
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    .mdi-menu-item {
+        padding: 6px 10px;
+        font-size: 0.82rem;
+        min-height: 32px;
+    }
+
+    .mdi-relay-status {
+        display: none;
+    }
+
+    .mdi-sep:nth-of-type(2) {
+        display: none;
+    }
 }

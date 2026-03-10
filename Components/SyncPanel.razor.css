@@ -1,0 +1,237 @@
+.sp {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 0;
+}
+
+/* Header */
+.sp-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--cc-border);
+    flex-shrink: 0;
+}
+
+.sp-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sp-header-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.sp-title {
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: var(--cc-text);
+}
+
+.sp-spinning {
+    animation: cc-pulse 1.5s ease-in-out infinite;
+}
+
+/* Stats bar */
+.sp-stats {
+    display: flex;
+    gap: 0;
+    padding: 0.4rem 0.75rem;
+    border-bottom: 1px solid var(--cc-border);
+    flex-shrink: 0;
+}
+
+.sp-stat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.1rem;
+}
+
+.sp-stat-value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--cc-text);
+}
+
+.sp-stat-active {
+    color: var(--cc-accent-blue);
+}
+
+.sp-stat-done {
+    color: var(--cc-accent-green);
+}
+
+.sp-stat-fail {
+    color: var(--cc-accent-red);
+}
+
+.sp-stat-label {
+    font-size: 0.6rem;
+    color: var(--cc-text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+/* Agent list */
+.sp-agents {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* Agent card */
+.sp-agent-card {
+    border: 1px solid var(--cc-border);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.sp-agent-header {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.6rem;
+    background: var(--cc-hover-subtle);
+    border-bottom: 1px solid var(--cc-border);
+}
+
+.sp-agent-name {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--cc-text);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sp-agent-summary {
+    display: flex;
+    gap: 0.4rem;
+    font-size: 0.65rem;
+    font-weight: 600;
+}
+
+.sp-count-active { color: var(--cc-accent-blue); }
+.sp-count-queued { color: var(--cc-text-dim); }
+.sp-count-paused { color: var(--cc-accent-yellow); }
+.sp-count-done { color: var(--cc-accent-green); }
+.sp-count-fail { color: var(--cc-accent-red); }
+
+/* File items */
+.sp-file {
+    padding: 0.3rem 0.6rem;
+    border-bottom: 1px solid var(--cc-border);
+}
+
+.sp-file:last-child {
+    border-bottom: none;
+}
+
+.sp-file-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.sp-file-icon {
+    width: 1em;
+    text-align: center;
+    flex-shrink: 0;
+    font-size: 0.65rem;
+    color: var(--cc-text-dim);
+}
+
+.sp-icon-active {
+    color: var(--cc-accent-blue);
+    animation: cc-pulse 1.5s ease-in-out infinite;
+}
+
+.sp-icon-done {
+    color: var(--cc-accent-green);
+}
+
+.sp-icon-fail {
+    color: var(--cc-accent-red);
+}
+
+.sp-file-name {
+    flex: 1;
+    font-family: monospace;
+    font-size: 0.72rem;
+    color: var(--cc-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sp-file-status {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.sp-file-size {
+    font-size: 0.65rem;
+    color: var(--cc-text-dim);
+}
+
+.sp-pct {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--cc-accent-blue);
+}
+
+.sp-speed {
+    font-size: 0.6rem;
+    color: var(--cc-text-dim);
+}
+
+/* Completed summary - clickable */
+.sp-file-done-summary {
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.sp-file-done-summary:hover {
+    background: var(--cc-hover-subtle);
+}
+
+.sp-file-done-summary .sp-file-name {
+    font-family: inherit;
+    color: var(--cc-text-dim);
+    font-size: 0.7rem;
+}
+
+.sp-expand {
+    font-size: 0.6rem;
+    color: var(--cc-text-dim);
+}
+
+/* Done items */
+.sp-file-done {
+    opacity: 0.6;
+}
+
+/* Empty state */
+.sp-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem 1rem;
+    color: var(--cc-text-dim);
+    font-size: 0.8rem;
+    font-style: italic;
+    text-align: center;
+}

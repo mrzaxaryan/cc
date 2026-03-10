@@ -5,22 +5,20 @@
 @* Drag overlay — captures pointer events globally during drag *@
 @if (_dragging is not null)
 {
-    <div class="position-fixed top-0 start-0 w-100 h-100"
-         style="z-index:9999;cursor:grabbing;touch-action:none;"
+    <div style="position:fixed;inset:0;z-index:9999;cursor:grabbing;touch-action:none;"
          @onpointermove="OnDragMove"
          @onpointerup="OnDragEnd"
          @onpointercancel="OnDragEnd"
          @onpointermove:preventDefault="true"></div>
 }
 
-@* Resize overlay — captures pointer events globally during resize *@
-@if (_resizing is not null)
+@* Edge resize overlay *@
+@if (_edgeResizing is not null)
 {
-    <div class="position-fixed top-0 start-0 w-100 h-100"
-         style="z-index:9999;cursor:nwse-resize;touch-action:none;"
-         @onpointermove="OnResizeMove"
-         @onpointerup="OnResizeEnd"
-         @onpointercancel="OnResizeEnd"
+    <div style="position:fixed;inset:0;z-index:9999;cursor:@EdgeCursor(_edgeResizing.Edge);touch-action:none;"
+         @onpointermove="OnEdgeResizeMove"
+         @onpointerup="OnEdgeResizeEnd"
+         @onpointercancel="OnEdgeResizeEnd"
          @onpointermove:preventDefault="true"></div>
 }
 
@@ -29,17 +27,34 @@
 {
     if (win.Minimized) continue;
     var w = win;
-    <div @key="win.Id" class="app-window @(win.Maximized ? "maximized" : "")"
+    var isFocused = IsTopWindow(w);
+    <div @key="win.Id" class="app-window @(win.Maximized ? "maximized" : "") @(isFocused ? "focused" : "unfocused")"
          style="@(win.Maximized ? "" : $"left:{win.X}px;top:{win.Y}px;width:{win.Width}px;height:{win.Height}px;z-index:{win.ZIndex};")"
          @onpointerdown="() => Wm.BringToFront(w)">
         <div class="app-window-titlebar"
              style="touch-action:none;"
              @onpointerdown="(e) => OnDragStart(e, win)"
              @ondblclick="() => Wm.ToggleMaximize(win)">
+            <span class="app-window-icon"><CcIcon Name="@PanelIcon(win.Panel)" Size="Size.Xs" /></span>
             <span class="app-window-title">@win.Title</span>
-            <button class="app-window-btn" @onclick="() => Wm.ToggleMinimize(win)" @onpointerdown:stopPropagation="true" title="Minimize">&minus;</button>
-            <button class="app-window-btn" @onclick="() => Wm.ToggleMaximize(win)" @onpointerdown:stopPropagation="true" title="@(win.Maximized ? "Restore" : "Maximize")">@(win.Maximized ? "\u25a1" : "\u29c9")</button>
-            <button class="app-window-btn close-btn" @onclick="async () => await Wm.CloseWindow(win)" @onpointerdown:stopPropagation="true" title="Close">&times;</button>
+            <div class="app-window-controls">
+                <button class="app-window-btn minimize-btn" @onclick="() => Wm.ToggleMinimize(win)" @onpointerdown:stopPropagation="true" title="Minimize">
+                    <svg width="10" height="10" viewBox="0 0 10 10"><line x1="2" y1="5" x2="8" y2="5" stroke="currentColor" stroke-width="1.5"/></svg>
+                </button>
+                <button class="app-window-btn maximize-btn" @onclick="() => Wm.ToggleMaximize(win)" @onpointerdown:stopPropagation="true" title="@(win.Maximized ? "Restore" : "Maximize")">
+                    @if (win.Maximized)
+                    {
+                        <svg width="10" height="10" viewBox="0 0 10 10"><rect x="1.5" y="3" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M3.5 3V2.5a1 1 0 0 1 1-1H8a1 1 0 0 1 1 1V6a1 1 0 0 1-1 1h-.5" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>
+                    }
+                    else
+                    {
+                        <svg width="10" height="10" viewBox="0 0 10 10"><rect x="1.5" y="1.5" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>
+                    }
+                </button>
+                <button class="app-window-btn close-btn" @onclick="async () => await Wm.CloseWindow(win)" @onpointerdown:stopPropagation="true" title="Close">
+                    <svg width="10" height="10" viewBox="0 0 10 10"><line x1="2" y1="2" x2="8" y2="8" stroke="currentColor" stroke-width="1.5"/><line x1="8" y1="2" x2="2" y2="8" stroke="currentColor" stroke-width="1.5"/></svg>
+                </button>
+            </div>
         </div>
         <div class="app-window-body">
             @if (win.Panel == "File Manager")
@@ -62,13 +77,30 @@
             {
                 <DownloadManagerPanel AgentUuid="@win.AgentUuid" AgentName="@win.AgentName" />
             }
+            else if (win.Panel == "Sync")
+            {
+                <SyncPanel />
+            }
         </div>
         @if (!win.Maximized)
         {
-            <div class="app-window-resize"
-                 style="touch-action:none;"
-                 @onpointerdown="(e) => OnResizeStart(e, win)"
-                 @onpointerdown:stopPropagation="true"></div>
+            @* Edge resize handles *@
+            <div class="app-window-resize-n" style="touch-action:none;"
+                 @onpointerdown="(e) => OnEdgeResizeStart(e, win, Edge.N)" @onpointerdown:stopPropagation="true"></div>
+            <div class="app-window-resize-s" style="touch-action:none;"
+                 @onpointerdown="(e) => OnEdgeResizeStart(e, win, Edge.S)" @onpointerdown:stopPropagation="true"></div>
+            <div class="app-window-resize-e" style="touch-action:none;"
+                 @onpointerdown="(e) => OnEdgeResizeStart(e, win, Edge.E)" @onpointerdown:stopPropagation="true"></div>
+            <div class="app-window-resize-w" style="touch-action:none;"
+                 @onpointerdown="(e) => OnEdgeResizeStart(e, win, Edge.W)" @onpointerdown:stopPropagation="true"></div>
+            <div class="app-window-resize-nw" style="touch-action:none;"
+                 @onpointerdown="(e) => OnEdgeResizeStart(e, win, Edge.NW)" @onpointerdown:stopPropagation="true"></div>
+            <div class="app-window-resize-ne" style="touch-action:none;"
+                 @onpointerdown="(e) => OnEdgeResizeStart(e, win, Edge.NE)" @onpointerdown:stopPropagation="true"></div>
+            <div class="app-window-resize-sw" style="touch-action:none;"
+                 @onpointerdown="(e) => OnEdgeResizeStart(e, win, Edge.SW)" @onpointerdown:stopPropagation="true"></div>
+            <div class="app-window-resize-se" style="touch-action:none;"
+                 @onpointerdown="(e) => OnEdgeResizeStart(e, win, Edge.SE)" @onpointerdown:stopPropagation="true"></div>
         }
     </div>
 }
@@ -83,7 +115,8 @@
             <button @key="win.Id"
                     class="mdi-taskbar-item @(IsTopWindow(w) ? "active" : "") @(w.Minimized ? "minimized" : "")"
                     @onclick="() => OnTaskbarClick(w)">
-                @win.Title
+                <CcIcon Name="@PanelIcon(win.Panel)" Size="Size.Xs" />
+                <span class="mdi-taskbar-label">@win.Title</span>
             </button>
         }
     </div>
@@ -91,7 +124,9 @@
 
 @code {
     private DragState? _dragging;
-    private ResizeState? _resizing;
+    private EdgeResizeState? _edgeResizing;
+
+    private enum Edge { N, S, E, W, NW, NE, SW, SE }
 
     private class DragState
     {
@@ -102,20 +137,19 @@
         public double StartWinY { get; init; }
     }
 
-    private class ResizeState
+    private class EdgeResizeState
     {
         public WindowState Window { get; init; } = null!;
+        public Edge Edge { get; init; }
         public double StartMouseX { get; init; }
         public double StartMouseY { get; init; }
+        public double StartX { get; init; }
+        public double StartY { get; init; }
         public double StartWidth { get; init; }
         public double StartHeight { get; init; }
     }
 
-    protected override void OnInitialized()
-    {
-        Wm.OnChanged += OnWmChanged;
-    }
-
+    protected override void OnInitialized() => Wm.OnChanged += OnWmChanged;
     private void OnWmChanged() => InvokeAsync(StateHasChanged);
 
     private bool IsTopWindow(WindowState win)
@@ -125,21 +159,22 @@
         return visible.Count > 0 && visible.MaxBy(w => w.ZIndex) == win;
     }
 
+    private static string PanelIcon(string panel) => panel switch
+    {
+        "Agents" => "agents",
+        "Relay" => "server",
+        "Settings" => "database",
+        "File Manager" => "folder",
+        "Sync Manager" => "sync",
+        "Sync" => "sync",
+        _ => "monitor"
+    };
+
     private void OnTaskbarClick(WindowState win)
     {
-        if (win.Minimized)
-        {
-            win.Minimized = false;
-            Wm.BringToFront(win);
-        }
-        else if (IsTopWindow(win))
-        {
-            Wm.ToggleMinimize(win);
-        }
-        else
-        {
-            Wm.BringToFront(win);
-        }
+        if (win.Minimized) { win.Minimized = false; Wm.BringToFront(win); }
+        else if (IsTopWindow(win)) Wm.ToggleMinimize(win);
+        else Wm.BringToFront(win);
     }
 
     // --- Drag ---
@@ -151,10 +186,8 @@
         _dragging = new DragState
         {
             Window = win,
-            StartMouseX = e.ClientX,
-            StartMouseY = e.ClientY,
-            StartWinX = win.X,
-            StartWinY = win.Y
+            StartMouseX = e.ClientX, StartMouseY = e.ClientY,
+            StartWinX = win.X, StartWinY = win.Y
         };
     }
 
@@ -167,33 +200,68 @@
 
     private void OnDragEnd(PointerEventArgs e) => _dragging = null;
 
-    // --- Resize ---
+    // --- Edge Resize ---
 
-    private void OnResizeStart(PointerEventArgs e, WindowState win)
+    private void OnEdgeResizeStart(PointerEventArgs e, WindowState win, Edge edge)
     {
         if (win.Maximized) return;
         Wm.BringToFront(win);
-        _resizing = new ResizeState
+        _edgeResizing = new EdgeResizeState
         {
-            Window = win,
-            StartMouseX = e.ClientX,
-            StartMouseY = e.ClientY,
-            StartWidth = win.Width,
-            StartHeight = win.Height
+            Window = win, Edge = edge,
+            StartMouseX = e.ClientX, StartMouseY = e.ClientY,
+            StartX = win.X, StartY = win.Y,
+            StartWidth = win.Width, StartHeight = win.Height
         };
     }
 
-    private void OnResizeMove(PointerEventArgs e)
+    private void OnEdgeResizeMove(PointerEventArgs e)
     {
-        if (_resizing is null) return;
-        _resizing.Window.Width = Math.Max(320, _resizing.StartWidth + (e.ClientX - _resizing.StartMouseX));
-        _resizing.Window.Height = Math.Max(120, _resizing.StartHeight + (e.ClientY - _resizing.StartMouseY));
+        if (_edgeResizing is null) return;
+        var r = _edgeResizing;
+        var dx = e.ClientX - r.StartMouseX;
+        var dy = e.ClientY - r.StartMouseY;
+        var edge = r.Edge;
+
+        // East
+        if (edge is Edge.E or Edge.NE or Edge.SE)
+            r.Window.Width = Math.Max(320, r.StartWidth + dx);
+
+        // South
+        if (edge is Edge.S or Edge.SW or Edge.SE)
+            r.Window.Height = Math.Max(120, r.StartHeight + dy);
+
+        // West
+        if (edge is Edge.W or Edge.NW or Edge.SW)
+        {
+            var newW = Math.Max(320, r.StartWidth - dx);
+            r.Window.X = r.StartX + (r.StartWidth - newW);
+            r.Window.Width = newW;
+        }
+
+        // North
+        if (edge is Edge.N or Edge.NW or Edge.NE)
+        {
+            var newH = Math.Max(120, r.StartHeight - dy);
+            r.Window.Y = Math.Max(36, r.StartY + (r.StartHeight - newH));
+            r.Window.Height = newH;
+        }
     }
 
-    private void OnResizeEnd(PointerEventArgs e) => _resizing = null;
+    private void OnEdgeResizeEnd(PointerEventArgs e) => _edgeResizing = null;
 
-    public void Dispose()
+    private static string EdgeCursor(Edge edge) => edge switch
     {
-        Wm.OnChanged -= OnWmChanged;
-    }
+        Edge.N => "ns-resize",
+        Edge.S => "ns-resize",
+        Edge.E => "ew-resize",
+        Edge.W => "ew-resize",
+        Edge.NW => "nwse-resize",
+        Edge.SE => "nwse-resize",
+        Edge.NE => "nesw-resize",
+        Edge.SW => "nesw-resize",
+        _ => "default"
+    };
+
+    public void Dispose() => Wm.OnChanged -= OnWmChanged;
 }

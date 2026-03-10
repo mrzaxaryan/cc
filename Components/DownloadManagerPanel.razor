@@ -1,11 +1,6 @@
 @inject DownloadStore Downloads
 @inject AgentStore AgentDb
-@inject RelayStore RelayDb
-@inject RelayConnectionService RelaySvc
-@inject CacheManager Cache
-@inject VfsStore Vfs
 @inject MessageService Msg
-@inject WindowManager Wm
 @implements IDisposable
 
 <div class="sm">
@@ -109,7 +104,7 @@
 
                                 case DownloadStatus.Paused:
                                     <CcBadge Variant="BadgeVariant.Warning" Size="Size.Xs">PAUSED @pct%</CcBadge>
-                                    <CcBtn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeDownload(rec)" Disabled="@(_resuming.Contains(rec.Id))" Title="Resume">&#x25B6;</CcBtn>
+                                    <CcBtn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeDownload(rec)" Disabled="@(Downloads.HasActiveCts(rec.Id))" Title="Resume">&#x25B6;</CcBtn>
                                     break;
 
                                 case DownloadStatus.Completed:
@@ -143,13 +138,11 @@
     private List<DownloadRecord> filteredRecords = new();
     private Filter filter = Filter.All;
     private bool confirmClear;
-    private readonly HashSet<int> _resuming = new();
 
     protected override async Task OnInitializedAsync()
     {
         Downloads.OnChanged += OnDownloadsChanged;
         await AgentDb.LoadAsync();
-        await RelayDb.LoadAsync();
         await Downloads.LoadAsync();
         Refresh();
     }
@@ -237,45 +230,8 @@
 
     private async Task ResumeDownload(DownloadRecord dl)
     {
-        if (_resuming.Contains(dl.Id) || Downloads.HasActiveCts(dl.Id)) return;
-        _resuming.Add(dl.Id); StateHasChanged();
-
-        RelaySocket? relay = null;
-        try
-        {
-            await AgentDb.LoadAsync();
-            await RelayDb.LoadAsync();
-            var agent = AgentDb.GetByUuid(dl.AgentUuid);
-            if (agent is null) { Msg.Error("Agent not found"); return; }
-            var relayEntry = !string.IsNullOrEmpty(agent.RelayStoreId) ? RelayDb.GetById(agent.RelayStoreId) : null;
-            var relayUrl = relayEntry?.Url;
-            if (string.IsNullOrEmpty(relayUrl)) { Msg.Error("No relay URL for agent"); return; }
-
-            relay = await RelaySvc.CreateRelay(agent.AgentId, relayUrl);
-            if (relay is null) return;
-            var cts = Downloads.RegisterCts(dl.Id);
-
-            try
-            {
-                var success = await Cache.DownloadFromAgentAsync(relay, dl.RemotePath, dl.CacheSubPath, dl.DownloadedSize, cts.Token,
-                    async (downloaded, _) => { await Downloads.UpdateProgressAsync(dl.Id, downloaded); });
-                if (success) await Downloads.CompleteAsync(dl.Id);
-                else await Downloads.FailAsync(dl.Id, "Sync returned failure");
-            }
-            catch (OperationCanceledException) { await Downloads.PauseAsync(dl.Id); }
-            catch (Exception ex)
-            {
-                if (cts.IsCancellationRequested) await Downloads.PauseAsync(dl.Id);
-                else { await Downloads.FailAsync(dl.Id, ex.Message); Msg.Error($"Sync failed: {ex.Message}"); }
-            }
-            finally { Downloads.RemoveCts(dl.Id); }
-        }
-        catch (Exception ex) { Msg.Error($"Resume failed: {ex.Message}"); }
-        finally
-        {
-            if (relay is not null && !Wm.Windows.Any(w => w.Relay == relay)) await relay.Disconnect();
-            _resuming.Remove(dl.Id); StateHasChanged();
-        }
+        if (Downloads.HasActiveCts(dl.Id)) return;
+        await Downloads.QueueAsync(dl.Id);
     }
 
     private async Task RemoveDownload(DownloadRecord dl) { Downloads.CancelCts(dl.Id); await Downloads.RemoveAsync(dl.Id); }

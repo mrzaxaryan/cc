@@ -17,12 +17,14 @@ public class RelayConnectionService : IAsyncDisposable
     private readonly MessageService _msg;
 
     private readonly Dictionary<string, RelayState> _relayStates = new();
+    private readonly HashSet<string> _processingAgents = new();
     private bool _started;
     private bool _disposing;
 
     public event Action? OnChanged;
 
     public IReadOnlyDictionary<string, RelayState> RelayStates => _relayStates;
+    public IReadOnlyCollection<string> ProcessingAgents => _processingAgents;
 
     public class RelayState
     {
@@ -57,6 +59,7 @@ public class RelayConnectionService : IAsyncDisposable
         await _downloads.LoadAsync();
         await ResetStaleDownloads();
         _relayStore.OnChanged += OnRelayStoreChanged;
+        _downloads.OnItemQueued += OnItemQueued;
         SyncRelays();
     }
 
@@ -203,9 +206,35 @@ public class RelayConnectionService : IAsyncDisposable
         foreach (var dl in paused)
             await _downloads.QueueAsync(dl.Id);
 
-        if (paused.Count == 0) return;
+        // Process all queued items (both freshly queued and previously queued)
+        await TryProcessQueue(uuid, agentId, relayUrl);
+    }
 
-        // Process queue one at a time
+    private void OnItemQueued(string agentUuid)
+    {
+        if (_disposing || !_cache.HasDirectory) return;
+
+        var agent = _agentDb.GetByUuid(agentUuid);
+        if (agent is null) return;
+
+        var relayEntry = !string.IsNullOrEmpty(agent.RelayStoreId) ? _relayStore.GetById(agent.RelayStoreId) : null;
+        if (relayEntry is null) return;
+
+        // Check the agent is actually online
+        var online = GetAllAgents().Any(a => a.Agent.Id == agent.AgentId);
+        if (!online) return;
+
+        _ = TryProcessQueue(agentUuid, agent.AgentId, relayEntry.Url);
+    }
+
+    private async Task TryProcessQueue(string uuid, string agentId, string relayUrl)
+    {
+        // Prevent concurrent processing loops for the same agent
+        if (_processingAgents.Contains(uuid)) return;
+        if (_downloads.HasActiveDownload(uuid)) return;
+        if (_downloads.GetNextQueued(uuid) is null) return;
+
+        _processingAgents.Add(uuid);
         RelaySocket? relay = null;
         try
         {
@@ -214,7 +243,7 @@ public class RelayConnectionService : IAsyncDisposable
 
             while (!_disposing)
             {
-                if (_downloads.HasActiveDownload(uuid)) break; // another processor is handling it
+                if (_downloads.HasActiveDownload(uuid)) break;
                 var next = _downloads.GetNextQueued(uuid);
                 if (next is null) break;
 
@@ -254,6 +283,7 @@ public class RelayConnectionService : IAsyncDisposable
         catch { }
         finally
         {
+            _processingAgents.Remove(uuid);
             if (relay is not null && !_wm.Windows.Any(w => w.Relay == relay))
                 await relay.Disconnect();
         }
@@ -455,6 +485,7 @@ public class RelayConnectionService : IAsyncDisposable
     {
         _disposing = true;
         _relayStore.OnChanged -= OnRelayStoreChanged;
+        _downloads.OnItemQueued -= OnItemQueued;
         foreach (var rs in _relayStates.Values)
         {
             rs.Cts?.Cancel();

@@ -47,6 +47,7 @@ public class DownloadStore
     private readonly Dictionary<int, CancellationTokenSource> _activeCts = new();
 
     public event Action? OnChanged;
+    public event Action<string>? OnItemQueued; // fires with agentUuid
 
     public DownloadStore(IJSRuntime js) => _js = js;
 
@@ -87,6 +88,7 @@ public class DownloadStore
         record.Id = id;
         _cache.Add(record);
         OnChanged?.Invoke();
+        OnItemQueued?.Invoke(record.AgentUuid);
         return record;
     }
 
@@ -98,6 +100,7 @@ public class DownloadStore
         record.Status = DownloadStatus.Queued;
         await _js.InvokeVoidAsync("ccDownloadDb.put", record);
         OnChanged?.Invoke();
+        OnItemQueued?.Invoke(record.AgentUuid);
     }
 
     public async Task UpdateProgressAsync(int id, long downloadedSize)

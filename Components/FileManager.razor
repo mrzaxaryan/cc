@@ -180,7 +180,6 @@
     private bool loading;
 
     private bool _syncing;
-    private readonly HashSet<int> _ownedDownloads = new();
 
     private bool viewingFile;
     private string viewingFileName = "";
@@ -218,9 +217,6 @@
 
     public void Dispose()
     {
-        foreach (var id in _ownedDownloads)
-            Downloads.CancelCts(id);
-        _ownedDownloads.Clear();
         Cache.OnChanged -= OnCacheChanged;
         Downloads.OnChanged -= OnDownloadsChanged;
     }
@@ -455,45 +451,10 @@
         var vfsFile = await Vfs.PutFileAsync(AgentUuid, parentId, entry.Name, remotePath.Replace('\\', '/'), totalSize);
         var record = Downloads.Find(AgentUuid, remotePath);
         if (record is null || record.Status == DownloadStatus.Completed || record.Status == DownloadStatus.Failed)
-            record = await Downloads.AddAsync(AgentUuid, AgentName ?? "", remotePath, entry.Name, vfsFile.Id, totalSize);
+            await Downloads.AddAsync(AgentUuid, AgentName ?? "", remotePath, entry.Name, vfsFile.Id, totalSize);
         else if (record.Status == DownloadStatus.Paused)
             await Downloads.QueueAsync(record.Id);
         StateHasChanged();
-        _ = ProcessQueue();
-    }
-
-    private bool _processingQueue;
-
-    private async Task ProcessQueue()
-    {
-        if (_processingQueue || string.IsNullOrEmpty(AgentUuid) || Relay is null || !Relay.IsConnected || Downloads.HasActiveDownload(AgentUuid)) return;
-        var next = Downloads.GetNextQueued(AgentUuid);
-        if (next is null) return;
-        _processingQueue = true;
-        try { await SyncRecord(next); }
-        finally { _processingQueue = false; if (!Downloads.HasActiveDownload(AgentUuid)) _ = ProcessQueue(); }
-    }
-
-    private async Task SyncRecord(DownloadRecord record)
-    {
-        if (Relay is null || !Relay.IsConnected) return;
-        var cts = Downloads.RegisterCts(record.Id);
-        _ownedDownloads.Add(record.Id);
-        StateHasChanged();
-        try
-        {
-            var success = await Cache.DownloadFromAgentAsync(Relay, record.RemotePath, record.CacheSubPath, record.DownloadedSize, cts.Token,
-                async (downloaded, _) => { await Downloads.UpdateProgressAsync(record.Id, downloaded); });
-            if (success) await Downloads.CompleteAsync(record.Id);
-            else await Downloads.FailAsync(record.Id, "Sync returned failure");
-        }
-        catch (OperationCanceledException) { await Downloads.PauseAsync(record.Id); }
-        catch (Exception ex)
-        {
-            if (cts.IsCancellationRequested) await Downloads.PauseAsync(record.Id);
-            else { await Downloads.FailAsync(record.Id, ex.Message); Msg.Error($"Sync failed: {ex.Message}"); }
-        }
-        finally { _ownedDownloads.Remove(record.Id); Downloads.RemoveCts(record.Id); StateHasChanged(); }
     }
 
     private void PauseDownload(DirEntry entry)
@@ -509,7 +470,6 @@
         var record = Downloads.Find(AgentUuid, currentPath + entry.Name);
         if (record is null || Downloads.HasActiveCts(record.Id)) return;
         await Downloads.QueueAsync(record.Id);
-        _ = ProcessQueue();
     }
 
     private async Task RetryDownload(DirEntry entry)

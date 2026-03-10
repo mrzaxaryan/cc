@@ -95,10 +95,8 @@
     --cc-space-8: 32px;
 
     /* Layout dimensions */
-    --cc-titlebar-h: 32px;
-    --cc-activity-bar-w: 48px;
-    --cc-tab-bar-h: 36px;
-    --cc-status-bar-h: 24px;
+    --cc-titlebar-h: 36px;
+    --cc-taskbar-h: 32px;
 
     /* Elevation */
     --cc-elevation-1: 0 1px 3px rgba(0, 0, 0, 0.2);
@@ -344,41 +342,87 @@ a:hover {
     border-radius: var(--cc-radius-lg);
     box-shadow: var(--cc-elevation-3), 0 0 0 1px var(--cc-window-border-glow);
     background: var(--cc-bg-base);
-    overflow: hidden;
+    overflow: visible;
     min-width: 320px;
     min-height: 48px;
+    animation: win-open var(--cc-transition-slow) ease-out;
+    transition: box-shadow var(--cc-transition-normal), border-color var(--cc-transition-normal);
+}
+
+@keyframes win-open {
+    from { opacity: 0; transform: scale(0.95) translateY(8px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.app-window.focused {
+    border-color: var(--cc-border-active);
+    box-shadow: var(--cc-elevation-3), 0 0 0 1px var(--cc-blue-15);
+}
+
+.app-window.unfocused {
+    border-color: var(--cc-border);
+    box-shadow: var(--cc-elevation-1);
+}
+
+.app-window.unfocused .app-window-titlebar {
+    background: var(--cc-bg-surface);
+}
+
+.app-window.unfocused .app-window-title {
+    color: var(--cc-text-dim);
+}
+
+.app-window.unfocused .app-window-icon {
+    opacity: 0.4;
 }
 
 .app-window.maximized {
     left: 0 !important;
     top: var(--cc-titlebar-h) !important;
     width: 100vw !important;
-    height: calc(100vh - var(--cc-titlebar-h) - var(--cc-status-bar-h)) !important;
+    height: calc(100vh - var(--cc-titlebar-h) - var(--cc-taskbar-h)) !important;
     border-radius: 0;
     border: none;
     z-index: 1045 !important;
+    animation: none;
 }
 
 .app-window.minimized {
     display: none;
 }
 
+/* Titlebar */
 .app-window-titlebar {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.35rem 0.6rem;
+    gap: 6px;
+    padding: 0 6px 0 10px;
+    height: 34px;
     background: var(--cc-bg-deep);
     color: var(--cc-text);
     cursor: grab;
     user-select: none;
     flex-shrink: 0;
-    font-size: 0.85rem;
-    border-bottom: 1px solid var(--cc-bg-overlay);
+    font-size: 0.8rem;
+    border-bottom: 1px solid var(--cc-border-subtle);
+    border-radius: var(--cc-radius-lg) var(--cc-radius-lg) 0 0;
+    transition: background var(--cc-transition-normal);
+}
+
+.app-window.maximized .app-window-titlebar {
+    border-radius: 0;
 }
 
 .app-window-titlebar:active {
     cursor: grabbing;
+}
+
+.app-window-icon {
+    color: var(--cc-text-muted);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    transition: opacity var(--cc-transition-normal);
 }
 
 .app-window-title {
@@ -387,19 +431,31 @@ a:hover {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.01em;
+    transition: color var(--cc-transition-normal);
+}
+
+/* Window control buttons */
+.app-window-controls {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-shrink: 0;
+    margin-left: auto;
 }
 
 .app-window-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 24px;
     background: none;
     border: none;
     color: var(--cc-text-dim);
-    font-size: 0.85rem;
-    line-height: 1;
-    padding: 0.2rem 0.4rem;
-    border-radius: var(--cc-radius-sm);
     cursor: pointer;
-    transition: background var(--cc-transition-normal), color var(--cc-transition-normal), transform 0.1s;
+    border-radius: var(--cc-radius-sm);
+    transition: background var(--cc-transition-fast), color var(--cc-transition-fast);
 }
 
 .app-window-btn:hover {
@@ -408,19 +464,20 @@ a:hover {
 }
 
 .app-window-btn:active {
-    transform: scale(0.92);
+    background: var(--cc-bg-active);
 }
 
 .app-window-btn:focus-visible {
     outline: 2px solid var(--cc-focus-ring);
-    outline-offset: 1px;
+    outline-offset: -1px;
 }
 
 .app-window-btn.close-btn:hover {
     background: var(--cc-accent-red);
-    color: var(--cc-bg-base);
+    color: #fff;
 }
 
+/* Body */
 .app-window-body {
     flex: 1;
     overflow: hidden;
@@ -429,6 +486,11 @@ a:hover {
     display: flex;
     flex-direction: column;
     min-height: 0;
+    border-radius: 0 0 var(--cc-radius-lg) var(--cc-radius-lg);
+}
+
+.app-window.maximized .app-window-body {
+    border-radius: 0;
 }
 
 .app-window-body > * {
@@ -436,25 +498,93 @@ a:hover {
     min-height: 0;
 }
 
-.app-window-resize {
+/* Edge resize handles */
+.app-window-resize-n,
+.app-window-resize-s,
+.app-window-resize-e,
+.app-window-resize-w,
+.app-window-resize-nw,
+.app-window-resize-ne,
+.app-window-resize-sw,
+.app-window-resize-se {
     position: absolute;
-    right: 0;
-    bottom: 0;
-    width: 12px;
-    height: 12px;
-    cursor: nwse-resize;
-    z-index: 1;
+    z-index: 2;
 }
 
-.app-window-resize::after {
-    content: '';
-    position: absolute;
-    right: 2px;
-    bottom: 2px;
-    width: 8px;
-    height: 8px;
-    border-right: 2px solid var(--cc-resize-border);
-    border-bottom: 2px solid var(--cc-resize-border);
+.app-window-resize-n  { top: -3px; left: 8px; right: 8px; height: 6px; cursor: ns-resize; }
+.app-window-resize-s  { bottom: -3px; left: 8px; right: 8px; height: 6px; cursor: ns-resize; }
+.app-window-resize-e  { right: -3px; top: 8px; bottom: 8px; width: 6px; cursor: ew-resize; }
+.app-window-resize-w  { left: -3px; top: 8px; bottom: 8px; width: 6px; cursor: ew-resize; }
+.app-window-resize-nw { top: -3px; left: -3px; width: 12px; height: 12px; cursor: nwse-resize; }
+.app-window-resize-ne { top: -3px; right: -3px; width: 12px; height: 12px; cursor: nesw-resize; }
+.app-window-resize-sw { bottom: -3px; left: -3px; width: 12px; height: 12px; cursor: nesw-resize; }
+.app-window-resize-se { bottom: -3px; right: -3px; width: 12px; height: 12px; cursor: nwse-resize; }
+
+/* ===== Taskbar ===== */
+.mdi-taskbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--cc-taskbar-h);
+    background: var(--cc-bg-deep);
+    border-top: 1px solid var(--cc-border-subtle);
+    display: flex;
+    align-items: center;
+    padding: 0 var(--cc-space-2);
+    gap: 2px;
+    z-index: 1050;
+    overflow-x: auto;
+}
+
+.mdi-taskbar:empty {
+    display: none;
+}
+
+.mdi-taskbar-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--cc-bg-overlay);
+    border: 1px solid var(--cc-border);
+    color: var(--cc-text-muted);
+    font-size: 0.72rem;
+    padding: 3px 10px;
+    border-radius: var(--cc-radius-sm);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background var(--cc-transition-normal), color var(--cc-transition-normal);
+    max-width: 200px;
+}
+
+.mdi-taskbar-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mdi-taskbar-item:hover {
+    background: var(--cc-bg-highlight);
+    color: var(--cc-text);
+}
+
+.mdi-taskbar-item:focus-visible {
+    outline: 2px solid var(--cc-focus-ring);
+    outline-offset: -1px;
+}
+
+.mdi-taskbar-item:active {
+    transform: scale(0.97);
+}
+
+.mdi-taskbar-item.active {
+    background: var(--cc-bg-active);
+    color: var(--cc-text);
+    border-color: var(--cc-border-active);
+}
+
+.mdi-taskbar-item.minimized {
+    opacity: 0.5;
 }
 
 /* ===== Scrollbar ===== */
@@ -702,34 +832,36 @@ a:hover {
 /* ===== Mobile / Touch Responsive ===== */
 @media (max-width: 768px) {
     :root {
-        --cc-activity-bar-w: 0px;
+        --cc-taskbar-h: 40px;
     }
 
     .app-window:not(.minimized) {
         left: 0 !important;
         top: var(--cc-titlebar-h) !important;
         width: 100vw !important;
-        height: calc(100vh - var(--cc-titlebar-h) - var(--cc-status-bar-h)) !important;
+        height: calc(100vh - var(--cc-titlebar-h) - var(--cc-taskbar-h)) !important;
         border-radius: 0;
         border: none;
         z-index: 1045 !important;
     }
 
-    .app-window-resize { display: none; }
-
-    .app-window-btn {
-        padding: 0.4rem 0.6rem;
-        font-size: 1rem;
-        min-width: 36px;
-        min-height: 36px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+    /* Hide edge resize handles on mobile */
+    .app-window-resize-n, .app-window-resize-s,
+    .app-window-resize-e, .app-window-resize-w,
+    .app-window-resize-nw, .app-window-resize-ne,
+    .app-window-resize-sw, .app-window-resize-se {
+        display: none;
     }
 
     .app-window-titlebar {
-        padding: 0.4rem 0.6rem;
+        padding: 0 8px;
+        height: 38px;
         font-size: 0.85rem;
+    }
+
+    .app-window-btn {
+        width: 36px;
+        height: 32px;
     }
 
     .notif-dropdown {
@@ -745,19 +877,13 @@ a:hover {
     }
 
     .app-window-btn {
-        min-width: 36px;
-        min-height: 36px;
+        width: 36px;
+        height: 32px;
     }
 
-    .app-window-resize {
-        width: 24px;
-        height: 24px;
-    }
-
-    .app-window-resize::after {
-        right: 4px;
-        bottom: 4px;
-        width: 12px;
-        height: 12px;
-    }
+    /* Wider touch targets for edge resize */
+    .app-window-resize-n, .app-window-resize-s { height: 10px; }
+    .app-window-resize-e, .app-window-resize-w { width: 10px; }
+    .app-window-resize-nw, .app-window-resize-ne,
+    .app-window-resize-sw, .app-window-resize-se { width: 16px; height: 16px; }
 }

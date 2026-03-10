@@ -12,14 +12,41 @@
 <div class="mdi-menubar">
     <span class="mdi-brand">cc</span>
     <span class="mdi-sep"></span>
-    <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Relay")'>Relay</button>
-    <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Agents")'>Agents</button>
-    <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Settings")'>Settings</button>
+
+    <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Agents")'>
+        <CcIcon Name="agents" Size="Size.Xs" /> Agents
+    </button>
+    <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Relay")'>
+        <CcIcon Name="server" Size="Size.Xs" /> Relay
+    </button>
+    <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Settings")'>
+        <CcIcon Name="database" Size="Size.Xs" /> Cache
+    </button>
+    <button class="mdi-menu-item" @onclick='() => Wm.OpenWindow("Sync")'>
+        <CcIcon Name="sync" Size="Size.Xs" /> Sync
+    </button>
+
     <div class="mdi-spacer"></div>
 
+    @* Relay status indicators *@
+    @foreach (var rs in RelaySvc.RelayStates.Values)
+    {
+        <span class="mdi-relay-status" title="@rs.Url">
+            <span class="mdi-relay-dot @(rs.Connected ? "dot-on" : "dot-off")"></span>
+            <span class="mdi-relay-name">@rs.Name</span>
+            @if (rs.Connected)
+            {
+                <span class="mdi-relay-count">@(rs.Agents?.Count ?? 0)</span>
+            }
+        </span>
+    }
+
+    <span class="mdi-sep"></span>
+
+    @* Notifications *@
     <div class="notif-wrapper" @onfocusout="OnFocusOut" tabindex="-1">
-        <button class="notif-bell" @onclick="ToggleDropdown" title="Notifications">
-            <span>&#128276;</span>
+        <button class="mdi-icon-btn" @onclick="ToggleDropdown" title="Notifications">
+            <CcIcon Name="bell" Size="Size.Sm" />
             @if (updateAvailable || Notif.UnreadCount > 0)
             {
                 <span class="notif-badge">@BadgeText()</span>
@@ -57,7 +84,9 @@
                                 <span class="notif-time">@FormatTime(n.Created)</span>
                                 @if (n.Type == "error")
                                 {
-                                    <button class="notif-copy" @onclick="() => CopyText(n.Text)" title="Copy">&#128203;</button>
+                                    <button class="notif-copy" @onclick="() => CopyText(n.Text)" title="Copy">
+                                        <CcIcon Name="copy" Size="Size.Xs" />
+                                    </button>
                                 }
                                 <button class="notif-remove" @onclick="() => RemoveOne(n.Id)" title="Dismiss">&times;</button>
                             </div>
@@ -68,14 +97,15 @@
         }
     </div>
 
-    <button class="theme-toggle" @onclick="ToggleTheme" title="Toggle theme">
+    @* Theme toggle *@
+    <button class="mdi-icon-btn" @onclick="ToggleTheme" title="Toggle theme">
         @if (Theme.Current == cc.Services.Theme.Dark)
         {
-            <span>&#9788;</span>
+            <CcIcon Name="sun" Size="Size.Sm" />
         }
         else
         {
-            <span>&#9790;</span>
+            <CcIcon Name="moon" Size="Size.Sm" />
         }
     </button>
 </div>
@@ -102,6 +132,7 @@
         Theme.OnChanged += OnThemeChanged;
         Msg.OnNotification += OnNotification;
         Notif.OnChanged += OnNotifChanged;
+        RelaySvc.OnChanged += OnRelayChanged;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -120,7 +151,6 @@
             }
             StateHasChanged();
 
-            // Poll for service worker update
             _updateTimer = new Timer(async _ =>
             {
                 try
@@ -149,25 +179,12 @@
     private void ToggleDropdown()
     {
         dropdownOpen = !dropdownOpen;
-        if (dropdownOpen)
-            Notif.MarkAllRead();
+        if (dropdownOpen) Notif.MarkAllRead();
     }
 
-    private void OnFocusOut()
-    {
-        // Close dropdown when focus leaves the wrapper
-        dropdownOpen = false;
-    }
-
-    private async Task RemoveOne(int id)
-    {
-        await Notif.RemoveAsync(id);
-    }
-
-    private async Task CopyText(string text)
-    {
-        await JS.InvokeVoidAsync("navigator.clipboard.writeText", text);
-    }
+    private void OnFocusOut() => dropdownOpen = false;
+    private async Task RemoveOne(int id) => await Notif.RemoveAsync(id);
+    private async Task CopyText(string text) => await JS.InvokeVoidAsync("navigator.clipboard.writeText", text);
 
     private async Task ClearAll()
     {
@@ -181,10 +198,7 @@
         return count > 99 ? "99+" : count.ToString();
     }
 
-    private void ReloadApp()
-    {
-        _ = JS.InvokeVoidAsync("location.reload");
-    }
+    private void ReloadApp() => _ = JS.InvokeVoidAsync("location.reload");
 
     private static string FormatTime(double epochMs)
     {
@@ -200,6 +214,7 @@
     private void OnThemeChanged() => InvokeAsync(StateHasChanged);
     private void OnWmChanged() => InvokeAsync(StateHasChanged);
     private void OnNotifChanged() => InvokeAsync(StateHasChanged);
+    private void OnRelayChanged() => InvokeAsync(StateHasChanged);
 
     private void OnWelcomeComplete()
     {
@@ -213,6 +228,7 @@
         Theme.OnChanged -= OnThemeChanged;
         Msg.OnNotification -= OnNotification;
         Notif.OnChanged -= OnNotifChanged;
+        RelaySvc.OnChanged -= OnRelayChanged;
         _updateTimer?.Dispose();
     }
 }

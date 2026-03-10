@@ -1,0 +1,288 @@
+@inject DownloadStore Downloads
+@inject AgentStore AgentDb
+@inject RelayConnectionService RelaySvc
+@inject MessageService Msg
+@implements IDisposable
+
+<div class="sp">
+    @* Global status header *@
+    <div class="sp-header">
+        <div class="sp-header-left">
+            <span class="sp-title">Background Sync</span>
+            @if (IsGloballyRunning)
+            {
+                <CcBadge Variant="BadgeVariant.Success" Size="Size.Xs">
+                    <CcIcon Name="sync" Size="Size.Xs" CssClass="sp-spinning" /> Running
+                </CcBadge>
+            }
+            else if (SyncPaused > 0 || SyncQueued > 0)
+            {
+                <CcBadge Variant="BadgeVariant.Warning" Size="Size.Xs">Paused</CcBadge>
+            }
+            else
+            {
+                <CcBadge Variant="BadgeVariant.Muted" Size="Size.Xs">Idle</CcBadge>
+            }
+        </div>
+        <div class="sp-header-right">
+            @if (SyncDownloading > 0 || SyncQueued > 0)
+            {
+                <CcBtn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="StopAll" Title="Stop all active syncs">STOP ALL</CcBtn>
+            }
+            @if (SyncPaused > 0)
+            {
+                <CcBtn Variant="BtnVariant.Success" Size="Size.Xs" OnClick="ResumeAll" Title="Resume all paused">RESUME ALL</CcBtn>
+            }
+        </div>
+    </div>
+
+    @* Global stats *@
+    <div class="sp-stats">
+        <div class="sp-stat">
+            <span class="sp-stat-value sp-stat-active">@SyncDownloading</span>
+            <span class="sp-stat-label">Syncing</span>
+        </div>
+        <div class="sp-stat">
+            <span class="sp-stat-value">@SyncQueued</span>
+            <span class="sp-stat-label">Queued</span>
+        </div>
+        <div class="sp-stat">
+            <span class="sp-stat-value">@SyncPaused</span>
+            <span class="sp-stat-label">Paused</span>
+        </div>
+        <div class="sp-stat">
+            <span class="sp-stat-value sp-stat-done">@SyncCompleted</span>
+            <span class="sp-stat-label">Done</span>
+        </div>
+        <div class="sp-stat">
+            <span class="sp-stat-value sp-stat-fail">@SyncFailed</span>
+            <span class="sp-stat-label">Failed</span>
+        </div>
+    </div>
+
+    @* Per-agent breakdown *@
+    <div class="sp-agents">
+        @foreach (var group in GetAgentGroups())
+        {
+            var isProcessing = RelaySvc.ProcessingAgents.Contains(group.Uuid);
+            var isOnline = RelaySvc.GetAllAgents().Any(a => AgentDb.GetUuidByAgentId(a.Agent.Id) == group.Uuid);
+            <div class="sp-agent-card">
+                <div class="sp-agent-header">
+                    <span class="status-dot @(isOnline ? "dot-on" : "dot-off")"></span>
+                    <span class="sp-agent-name">@group.Name</span>
+                    @if (isProcessing)
+                    {
+                        <CcBadge Variant="BadgeVariant.Info" Size="Size.Xs">
+                            <CcIcon Name="sync" Size="Size.Xs" CssClass="sp-spinning" /> Syncing
+                        </CcBadge>
+                    }
+                    else if (group.Queued > 0 && !isOnline)
+                    {
+                        <CcBadge Variant="BadgeVariant.Warning" Size="Size.Xs">Offline</CcBadge>
+                    }
+                    <span class="sp-agent-summary">
+                        @if (group.Downloading > 0) { <span class="sp-count-active">@group.Downloading&#x25CF;</span> }
+                        @if (group.Queued > 0) { <span class="sp-count-queued">@group.Queued&#x25CB;</span> }
+                        @if (group.Paused > 0) { <span class="sp-count-paused">@group.Paused&#x25A0;</span> }
+                        <span class="sp-count-done">@group.Completed&#x2713;</span>
+                        @if (group.Failed > 0) { <span class="sp-count-fail">@group.Failed&#x2717;</span> }
+                    </span>
+                </div>
+
+                @* Active downloads for this agent *@
+                @foreach (var dl in GetAgentDownloads(group.Uuid, DownloadStatus.Downloading))
+                {
+                    var pct = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
+                    <div class="sp-file">
+                        <div class="sp-file-row">
+                            <span class="sp-file-icon sp-icon-active">&#x25CF;</span>
+                            <span class="sp-file-name" title="@dl.RemotePath">@dl.FileName</span>
+                            <span class="sp-file-status">
+                                <span class="sp-pct">@pct%</span>
+                                @if (dl.SpeedBytesPerSec > 0)
+                                {
+                                    <span class="sp-speed">@Formatters.FormatSpeed(dl.SpeedBytesPerSec)</span>
+                                }
+                                <CcBtn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseDownload(dl)" Title="Pause">&#x23F8;</CcBtn>
+                            </span>
+                        </div>
+                        <CcProgress Size="Size.Xs" Variant="ProgressVariant.Info" Percent="@pct" />
+                    </div>
+                }
+
+                @* Queued *@
+                @foreach (var dl in GetAgentDownloads(group.Uuid, DownloadStatus.Queued))
+                {
+                    <div class="sp-file">
+                        <div class="sp-file-row">
+                            <span class="sp-file-icon">&#x25CB;</span>
+                            <span class="sp-file-name" title="@dl.RemotePath">@dl.FileName</span>
+                            <span class="sp-file-status">
+                                <CcBadge Variant="BadgeVariant.Muted" Size="Size.Xs">QUEUED</CcBadge>
+                                <span class="sp-file-size">@Formatters.FormatSize((ulong)dl.TotalSize)</span>
+                            </span>
+                        </div>
+                    </div>
+                }
+
+                @* Paused *@
+                @foreach (var dl in GetAgentDownloads(group.Uuid, DownloadStatus.Paused))
+                {
+                    var pctP = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
+                    <div class="sp-file">
+                        <div class="sp-file-row">
+                            <span class="sp-file-icon">&#x25A0;</span>
+                            <span class="sp-file-name" title="@dl.RemotePath">@dl.FileName</span>
+                            <span class="sp-file-status">
+                                <CcBadge Variant="BadgeVariant.Warning" Size="Size.Xs">@pctP%</CcBadge>
+                                <CcBtn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeDownload(dl)" Title="Resume">&#x25B6;</CcBtn>
+                            </span>
+                        </div>
+                    </div>
+                }
+
+                @* Failed *@
+                @foreach (var dl in GetAgentDownloads(group.Uuid, DownloadStatus.Failed))
+                {
+                    <div class="sp-file">
+                        <div class="sp-file-row">
+                            <span class="sp-file-icon sp-icon-fail">&#x2717;</span>
+                            <span class="sp-file-name" title="@dl.RemotePath">@dl.FileName</span>
+                            <span class="sp-file-status">
+                                <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@dl.Error">FAILED</CcBadge>
+                                <CcBtn Size="Size.Xs" OnClick="() => ResumeDownload(dl)" Title="Retry">&#x21bb;</CcBtn>
+                            </span>
+                        </div>
+                    </div>
+                }
+
+                @* Completed (collapsed summary) *@
+                @if (group.Completed > 0)
+                {
+                    <div class="sp-file sp-file-done-summary" @onclick="() => ToggleCompleted(group.Uuid)">
+                        <div class="sp-file-row">
+                            <span class="sp-file-icon sp-icon-done">&#x2713;</span>
+                            <span class="sp-file-name">@group.Completed completed files (@Formatters.FormatSize((ulong)group.CompletedSize))</span>
+                            <span class="sp-file-status">
+                                <span class="sp-expand">@(expandedAgents.Contains(group.Uuid) ? "&#x25B2;" : "&#x25BC;")</span>
+                            </span>
+                        </div>
+                    </div>
+                    @if (expandedAgents.Contains(group.Uuid))
+                    {
+                        @foreach (var dl in GetAgentDownloads(group.Uuid, DownloadStatus.Completed))
+                        {
+                            <div class="sp-file sp-file-done">
+                                <div class="sp-file-row">
+                                    <span class="sp-file-icon sp-icon-done">&#x2713;</span>
+                                    <span class="sp-file-name" title="@dl.RemotePath">@dl.FileName</span>
+                                    <span class="sp-file-status">
+                                        <span class="sp-file-size">@Formatters.FormatSize((ulong)dl.TotalSize)</span>
+                                    </span>
+                                </div>
+                            </div>
+                        }
+                    }
+                }
+            </div>
+        }
+
+        @if (Downloads.Downloads.Count == 0)
+        {
+            <div class="sp-empty">No sync activity. Add files from the File Manager to start syncing.</div>
+        }
+    </div>
+</div>
+
+@code {
+    private readonly HashSet<string> expandedAgents = new();
+
+    private int SyncDownloading => Downloads.Downloads.Count(r => r.Status == DownloadStatus.Downloading);
+    private int SyncQueued => Downloads.Downloads.Count(r => r.Status == DownloadStatus.Queued);
+    private int SyncPaused => Downloads.Downloads.Count(r => r.Status == DownloadStatus.Paused);
+    private int SyncCompleted => Downloads.Downloads.Count(r => r.Status == DownloadStatus.Completed);
+    private int SyncFailed => Downloads.Downloads.Count(r => r.Status == DownloadStatus.Failed);
+    private bool IsGloballyRunning => RelaySvc.ProcessingAgents.Count > 0 || SyncDownloading > 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Downloads.OnChanged += OnChanged;
+        RelaySvc.OnChanged += OnChanged;
+        await AgentDb.LoadAsync();
+        await Downloads.LoadAsync();
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    private record AgentGroup(string Uuid, string Name, int Downloading, int Queued, int Paused, int Completed, int Failed, long CompletedSize);
+
+    private List<AgentGroup> GetAgentGroups()
+    {
+        return Downloads.Downloads
+            .GroupBy(r => r.AgentUuid)
+            .Select(g =>
+            {
+                var uuid = g.Key;
+                var agent = AgentDb.GetByUuid(uuid);
+                var name = agent?.Name ?? uuid[..Math.Min(8, uuid.Length)];
+                return new AgentGroup(
+                    uuid, name,
+                    g.Count(r => r.Status == DownloadStatus.Downloading),
+                    g.Count(r => r.Status == DownloadStatus.Queued),
+                    g.Count(r => r.Status == DownloadStatus.Paused),
+                    g.Count(r => r.Status == DownloadStatus.Completed),
+                    g.Count(r => r.Status == DownloadStatus.Failed),
+                    g.Where(r => r.Status == DownloadStatus.Completed).Sum(r => r.TotalSize)
+                );
+            })
+            .OrderByDescending(g => g.Downloading)
+            .ThenByDescending(g => g.Queued)
+            .ThenByDescending(g => g.Paused)
+            .ThenBy(g => g.Name)
+            .ToList();
+    }
+
+    private List<DownloadRecord> GetAgentDownloads(string uuid, string status)
+    {
+        return Downloads.Downloads
+            .Where(r => r.AgentUuid == uuid && r.Status == status)
+            .OrderBy(r => r.Priority)
+            .ThenBy(r => r.CreatedAt)
+            .ToList();
+    }
+
+    private void ToggleCompleted(string uuid)
+    {
+        if (!expandedAgents.Remove(uuid))
+            expandedAgents.Add(uuid);
+    }
+
+    private void PauseDownload(DownloadRecord dl) => Downloads.CancelCts(dl.Id);
+
+    private async Task ResumeDownload(DownloadRecord dl)
+    {
+        if (Downloads.HasActiveCts(dl.Id)) return;
+        await Downloads.QueueAsync(dl.Id);
+    }
+
+    private async Task StopAll()
+    {
+        Downloads.CancelAll();
+        var queued = Downloads.Downloads.Where(r => r.Status == DownloadStatus.Queued).ToList();
+        foreach (var dl in queued)
+            await Downloads.PauseAsync(dl.Id);
+    }
+
+    private async Task ResumeAll()
+    {
+        var paused = Downloads.Downloads.Where(r => r.Status == DownloadStatus.Paused).ToList();
+        foreach (var dl in paused)
+            await Downloads.QueueAsync(dl.Id);
+    }
+
+    public void Dispose()
+    {
+        Downloads.OnChanged -= OnChanged;
+        RelaySvc.OnChanged -= OnChanged;
+    }
+}
