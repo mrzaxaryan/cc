@@ -7,182 +7,180 @@
 @inject MessageService Msg
 @implements IDisposable
 
-<div class="scan">
-    @* Header *@
-    <div class="scan-header">
-        <div class="scan-header-left">
-            <span class="scan-title">File Search</span>
-            @if (!string.IsNullOrEmpty(AgentName))
-            {
-                <span class="scan-agent">@AgentName</span>
-            }
-            @if (IsAgentServicePaused)
-            {
-                <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs">Service Paused</CcBadge>
-            }
-        </div>
-        <div class="scan-header-right">
-            @if (IsAgentServicePaused)
-            {
-                <CcBtn Variant="BtnVariant.Success" Size="Size.Xs" OnClick="ResumeAgentService" Title="Resume search service for this agent">RESUME SERVICE</CcBtn>
-            }
-            else
-            {
-                <CcBtn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="PauseAgentService" Title="Pause search service for this agent">PAUSE SERVICE</CcBtn>
-            }
-            @if (AgentScanning > 0 && !IsAgentServicePaused)
-            {
-                <CcBtn Variant="BtnVariant.Warning" Size="Size.Xs" OnClick="PauseAllAgent" Title="Pause all searches for this agent">PAUSE ALL</CcBtn>
-            }
-            @if (AgentPaused > 0 && !IsAgentServicePaused)
-            {
-                <CcBtn Variant="BtnVariant.Success" Size="Size.Xs" OnClick="ResumeAllAgent" Title="Resume all searches for this agent">RESUME ALL</CcBtn>
-            }
-            <CcBtn Size="Size.Xs" OnClick="Refresh" Title="Refresh">&#x21bb;</CcBtn>
-        </div>
-    </div>
-
-    @* New search form *@
-    @if (showNewScan)
-    {
-        <div class="scan-form">
-            @if (!fullScanMode)
-            {
-                <div class="scan-form-row">
-                    <label class="scan-label">Directory</label>
-                    <CcInput @bind-Value="newScanPath" Placeholder="C:\Users" Monospace />
-                </div>
-            }
-            <div class="scan-form-row">
-                <label class="scan-label">Extension groups</label>
-                <div class="scan-ext-groups">
-                    @foreach (var group in ExtGroupStore.Groups)
-                    {
-                        var g = group;
-                        var isActive = activeGroups.Contains(g.Name);
-                        <button class="scan-ext-group @(isActive ? "active" : "") @(!g.Enabled ? "disabled" : "")" @onclick="() => ToggleGroup(g.Name)" title="@g.Extensions" disabled="@(!g.Enabled)">
-                            @g.Name
-                        </button>
-                    }
-                </div>
-            </div>
-            <div class="scan-form-row">
-                <label class="scan-label">Extensions (comma-separated)</label>
-                <CcInput @bind-Value="newScanExtensions" Placeholder=".txt,.pdf,.doc,.xls" Monospace />
-            </div>
-            @if (!string.IsNullOrEmpty(extensionError))
-            {
-                <div class="scan-form-row scan-ext-error">@extensionError</div>
-            }
-            <div class="scan-form-row scan-form-check">
-                <label>
-                    <input type="checkbox" @bind="newScanAutoDownload" />
-                    Auto-download matching files
-                </label>
-            </div>
-            <div class="scan-form-actions">
-                @if (fullScanMode)
+<PanelLayout Title="File Search">
+    <HeaderLeft>
+        @if (!string.IsNullOrEmpty(AgentName))
+        {
+            <span class="scan-agent">@AgentName</span>
+        }
+        @if (IsAgentServicePaused)
+        {
+            <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs">Service Paused</CcBadge>
+        }
+    </HeaderLeft>
+    <HeaderRight>
+        @if (IsAgentServicePaused)
+        {
+            <CcBtn Variant="BtnVariant.Success" Size="Size.Xs" OnClick="ResumeAgentService" Title="Resume search service for this agent">RESUME SERVICE</CcBtn>
+        }
+        else
+        {
+            <CcBtn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="PauseAgentService" Title="Pause search service for this agent">PAUSE SERVICE</CcBtn>
+        }
+        @if (AgentScanning > 0 && !IsAgentServicePaused)
+        {
+            <CcBtn Variant="BtnVariant.Warning" Size="Size.Xs" OnClick="PauseAllAgent" Title="Pause all searches for this agent">PAUSE ALL</CcBtn>
+        }
+        @if (AgentPaused > 0 && !IsAgentServicePaused)
+        {
+            <CcBtn Variant="BtnVariant.Success" Size="Size.Xs" OnClick="ResumeAllAgent" Title="Resume all searches for this agent">RESUME ALL</CcBtn>
+        }
+        <CcBtn Size="Size.Xs" OnClick="Refresh" Title="Refresh">&#x21bb;</CcBtn>
+    </HeaderRight>
+    <Toolbar>
+        @* New search form *@
+        @if (showNewScan)
+        {
+            <div class="scan-form">
+                @if (!fullScanMode)
                 {
-                    <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="StartFullScan" Disabled="@(string.IsNullOrWhiteSpace(newScanExtensions))">START FULL SEARCH</CcBtn>
+                    <div class="scan-form-row">
+                        <label class="scan-label">Directory</label>
+                        <CcInput @bind-Value="newScanPath" Placeholder="C:\Users" Monospace />
+                    </div>
+                }
+                <div class="scan-form-row">
+                    <label class="scan-label">Extension groups</label>
+                    <div class="scan-ext-groups">
+                        @foreach (var group in ExtGroupStore.Groups)
+                        {
+                            var g = group;
+                            var isActive = activeGroups.Contains(g.Name);
+                            <button class="scan-ext-group @(isActive ? "active" : "") @(!g.Enabled ? "disabled" : "")" @onclick="() => ToggleGroup(g.Name)" title="@g.Extensions" disabled="@(!g.Enabled)">
+                                @g.Name
+                            </button>
+                        }
+                    </div>
+                </div>
+                <div class="scan-form-row">
+                    <label class="scan-label">Extensions (comma-separated)</label>
+                    <CcInput @bind-Value="newScanExtensions" Placeholder=".txt,.pdf,.doc,.xls" Monospace />
+                </div>
+                @if (!string.IsNullOrEmpty(extensionError))
+                {
+                    <div class="scan-form-row scan-ext-error">@extensionError</div>
+                }
+                <div class="scan-form-row scan-form-check">
+                    <label>
+                        <input type="checkbox" @bind="newScanAutoDownload" />
+                        Auto-download matching files
+                    </label>
+                </div>
+                <div class="scan-form-actions">
+                    @if (fullScanMode)
+                    {
+                        <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="StartFullScan" Disabled="@(string.IsNullOrWhiteSpace(newScanExtensions))">START FULL SEARCH</CcBtn>
+                    }
+                    else
+                    {
+                        <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="StartScan" Disabled="@(string.IsNullOrWhiteSpace(newScanPath) || string.IsNullOrWhiteSpace(newScanExtensions))">START SEARCH</CcBtn>
+                    }
+                    <CcBtn Size="Size.Xs" OnClick="CancelForm">CANCEL</CcBtn>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="scan-new-btn">
+                <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="ShowNewScan">NEW SEARCH</CcBtn>
+                <CcBtn Size="Size.Xs" OnClick="ShowFullScan">FULL SEARCH</CcBtn>
+            </div>
+        }
+
+        @* Active scans *@
+        <div class="scan-tabs">
+            <button class="scan-tab @(filter == Filter.All ? "active" : "")" @onclick="() => SetFilter(Filter.All)">
+                All <span class="scan-tab-count">@allRecords.Count</span>
+            </button>
+            <button class="scan-tab @(filter == Filter.Active ? "active" : "")" @onclick="() => SetFilter(Filter.Active)">
+                Active <span class="scan-tab-count">@CountByFilter(Filter.Active)</span>
+            </button>
+            <button class="scan-tab @(filter == Filter.Done ? "active" : "")" @onclick="() => SetFilter(Filter.Done)">
+                Done <span class="scan-tab-count">@CountByFilter(Filter.Done)</span>
+            </button>
+        </div>
+    </Toolbar>
+    <Body>
+        @if (filteredRecords.Count == 0)
+        {
+            <div class="scan-empty">
+                @if (allRecords.Count == 0)
+                {
+                    <span>No searches yet. Click NEW SEARCH to start.</span>
                 }
                 else
                 {
-                    <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="StartScan" Disabled="@(string.IsNullOrWhiteSpace(newScanPath) || string.IsNullOrWhiteSpace(newScanExtensions))">START SEARCH</CcBtn>
+                    <span>No @filter.ToString().ToLower() searches</span>
                 }
-                <CcBtn Size="Size.Xs" OnClick="CancelForm">CANCEL</CcBtn>
             </div>
-        </div>
-    }
-    else
-    {
-        <div class="scan-new-btn">
-            <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="ShowNewScan">NEW SEARCH</CcBtn>
-            <CcBtn Size="Size.Xs" OnClick="ShowFullScan">FULL SEARCH</CcBtn>
-        </div>
-    }
-
-    @* Active scans *@
-    <div class="scan-tabs">
-        <button class="scan-tab @(filter == Filter.All ? "active" : "")" @onclick="() => SetFilter(Filter.All)">
-            All <span class="scan-tab-count">@allRecords.Count</span>
-        </button>
-        <button class="scan-tab @(filter == Filter.Active ? "active" : "")" @onclick="() => SetFilter(Filter.Active)">
-            Active <span class="scan-tab-count">@CountByFilter(Filter.Active)</span>
-        </button>
-        <button class="scan-tab @(filter == Filter.Done ? "active" : "")" @onclick="() => SetFilter(Filter.Done)">
-            Done <span class="scan-tab-count">@CountByFilter(Filter.Done)</span>
-        </button>
-    </div>
-
-    @if (filteredRecords.Count == 0)
-    {
-        <div class="scan-empty">
-            @if (allRecords.Count == 0)
-            {
-                <span>No searches yet. Click NEW SEARCH to start.</span>
-            }
-            else
-            {
-                <span>No @filter.ToString().ToLower() searches</span>
-            }
-        </div>
-    }
-    else
-    {
-        <div class="scan-list">
-            @foreach (var scan in filteredRecords)
-            {
-                var s = scan;
-                var pct = s.DirsTotal > 0 ? (int)(s.DirsScanned * 100 / s.DirsTotal) : 0;
-                <div class="scan-item @StatusClass(s.Status)">
-                    <div class="scan-item-row">
-                        <span class="scan-item-icon">@StatusIcon(s.Status)</span>
-                        <div class="scan-item-info">
-                            <span class="scan-item-path" title="@(string.IsNullOrEmpty(s.RootPath) ? "Full filesystem" : s.RootPath)">@(string.IsNullOrEmpty(s.RootPath) ? "Full filesystem" : s.RootPath)</span>
-                            <span class="scan-item-meta">
-                                @s.Extensions
-                                @if (!string.IsNullOrEmpty(s.AgentName) && string.IsNullOrEmpty(AgentUuid))
+        }
+        else
+        {
+            <div class="scan-list">
+                @foreach (var scan in filteredRecords)
+                {
+                    var s = scan;
+                    var pct = s.DirsTotal > 0 ? (int)(s.DirsScanned * 100 / s.DirsTotal) : 0;
+                    <div class="scan-item @StatusClass(s.Status)">
+                        <div class="scan-item-row">
+                            <span class="scan-item-icon">@StatusIcon(s.Status)</span>
+                            <div class="scan-item-info">
+                                <span class="scan-item-path" title="@(string.IsNullOrEmpty(s.RootPath) ? "Full filesystem" : s.RootPath)">@(string.IsNullOrEmpty(s.RootPath) ? "Full filesystem" : s.RootPath)</span>
+                                <span class="scan-item-meta">
+                                    @s.Extensions
+                                    @if (!string.IsNullOrEmpty(s.AgentName) && string.IsNullOrEmpty(AgentUuid))
+                                    {
+                                        <span class="scan-item-agent">@s.AgentName</span>
+                                    }
+                                </span>
+                            </div>
+                            <div class="scan-item-status">
+                                @switch (s.Status)
                                 {
-                                    <span class="scan-item-agent">@s.AgentName</span>
+                                    case SearchStatus.Scanning:
+                                        <CcBtn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseScan(s)" Title="Pause">&#x23F8;</CcBtn>
+                                        break;
+                                    case SearchStatus.Paused:
+                                        <CcBtn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeScan(s)" Title="Resume">&#x25B6;</CcBtn>
+                                        break;
+                                    case SearchStatus.Completed:
+                                        <CcBadge Variant="BadgeVariant.Success" Size="Size.Xs">DONE</CcBadge>
+                                        break;
+                                    case SearchStatus.Failed:
+                                        <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@s.Error">FAILED</CcBadge>
+                                        break;
                                 }
-                            </span>
+                                <CcBtn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => RemoveScan(s)" Title="Remove" CssClass="scan-remove-btn">&#x2715;</CcBtn>
+                            </div>
                         </div>
-                        <div class="scan-item-status">
-                            @switch (s.Status)
+                        <div class="scan-item-stats">
+                            <span>Dirs: @s.DirsScanned / @s.DirsTotal</span>
+                            <span>Files found: @s.FilesFound</span>
+                            @if (s.AutoDownload)
                             {
-                                case SearchStatus.Scanning:
-                                    <CcBtn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseScan(s)" Title="Pause">&#x23F8;</CcBtn>
-                                    break;
-                                case SearchStatus.Paused:
-                                    <CcBtn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeScan(s)" Title="Resume">&#x25B6;</CcBtn>
-                                    break;
-                                case SearchStatus.Completed:
-                                    <CcBadge Variant="BadgeVariant.Success" Size="Size.Xs">DONE</CcBadge>
-                                    break;
-                                case SearchStatus.Failed:
-                                    <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@s.Error">FAILED</CcBadge>
-                                    break;
+                                <span>Queued: @s.FilesQueued</span>
                             }
-                            <CcBtn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => RemoveScan(s)" Title="Remove" CssClass="scan-remove-btn">&#x2715;</CcBtn>
                         </div>
-                    </div>
-                    <div class="scan-item-stats">
-                        <span>Dirs: @s.DirsScanned / @s.DirsTotal</span>
-                        <span>Files found: @s.FilesFound</span>
-                        @if (s.AutoDownload)
+                        @if (s.Status is SearchStatus.Scanning or SearchStatus.Paused)
                         {
-                            <span>Queued: @s.FilesQueued</span>
+                            <CcProgress Size="Size.Xs" Variant="@ProgressVariant(s.Status)" Percent="@pct" />
                         }
                     </div>
-                    @if (s.Status is SearchStatus.Scanning or SearchStatus.Paused)
-                    {
-                        <CcProgress Size="Size.Xs" Variant="@ProgressVariant(s.Status)" Percent="@pct" />
-                    }
-                </div>
-            }
-        </div>
-    }
-</div>
+                }
+            </div>
+        }
+    </Body>
+</PanelLayout>
 
 @code {
     [Parameter] public string? AgentUuid { get; set; }

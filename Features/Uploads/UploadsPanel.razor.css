@@ -1,38 +1,3 @@
-.sp {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    gap: 0;
-}
-
-/* Header */
-.sp-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--cc-border);
-    flex-shrink: 0;
-}
-
-.sp-header-left {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.sp-header-right {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.sp-title {
-    font-weight: 700;
-    font-size: 0.8rem;
-    color: var(--cc-text);
-}
-
 .sp-spinning {
     animation: cc-pulse 1.5s ease-in-out infinite;
 }
@@ -41,9 +6,6 @@
 .sp-stats {
     display: flex;
     gap: 0;
-    padding: 0.4rem 0.75rem;
-    border-bottom: 1px solid var(--cc-border);
-    flex-shrink: 0;
 }
 
 .sp-stat {
@@ -81,9 +43,6 @@
 
 /* Agent list */
 .sp-agents {
-    flex: 1;
-    overflow-y: auto;
-    padding: 0.5rem 0.75rem;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;

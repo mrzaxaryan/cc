@@ -2,66 +2,66 @@
 @inject MessageService Msg
 @implements IDisposable
 
-<div class="eg">
-    <div class="eg-toolbar">
-        <span class="eg-title">Extension Groups</span>
+<PanelLayout Title="Extension Groups">
+    <HeaderRight>
         <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="ShowAddForm">ADD GROUP</CcBtn>
-    </div>
-
-    @if (showForm)
-    {
-        <div class="eg-form">
-            <div class="eg-form-row">
-                <label class="eg-label">Group Name</label>
-                <CcInput @bind-Value="formName" Placeholder="e.g. Audio" />
-            </div>
-            <div class="eg-form-row">
-                <label class="eg-label">Extensions (comma-separated)</label>
-                <CcInput @bind-Value="formExtensions" Placeholder=".mp3,.wav,.flac,.ogg" Monospace />
-            </div>
-            @if (!string.IsNullOrEmpty(formError))
-            {
-                <div class="eg-form-error">@formError</div>
-            }
-            <div class="eg-form-actions">
-                <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="SaveGroup" Disabled="@saving" Loading="@saving">
-                    @(editingGroup is not null ? "UPDATE" : "ADD")
-                </CcBtn>
-                <CcBtn Size="Size.Xs" OnClick="CancelForm">CANCEL</CcBtn>
-            </div>
-        </div>
-    }
-
-    <div class="eg-list">
-        @if (Store.Groups.Count == 0)
+    </HeaderRight>
+    <Body>
+        @if (showForm)
         {
-            <div class="eg-empty">
-                No extension groups configured.
-                <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="SeedDefaults" Disabled="@saving">LOAD DEFAULTS</CcBtn>
+            <div class="eg-form">
+                <div class="eg-form-row">
+                    <label class="eg-label">Group Name</label>
+                    <CcInput @bind-Value="formName" Placeholder="e.g. Audio" />
+                </div>
+                <div class="eg-form-row">
+                    <label class="eg-label">Extensions (comma-separated)</label>
+                    <CcInput @bind-Value="formExtensions" Placeholder=".mp3,.wav,.flac,.ogg" Monospace />
+                </div>
+                @if (!string.IsNullOrEmpty(formError))
+                {
+                    <div class="eg-form-error">@formError</div>
+                }
+                <div class="eg-form-actions">
+                    <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="SaveGroup" Disabled="@saving" Loading="@saving">
+                        @(editingGroup is not null ? "UPDATE" : "ADD")
+                    </CcBtn>
+                    <CcBtn Size="Size.Xs" OnClick="CancelForm">CANCEL</CcBtn>
+                </div>
             </div>
         }
-        else
-        {
-            @foreach (var group in Store.Groups)
+
+        <div class="eg-list">
+            @if (Store.Groups.Count == 0)
             {
-                var g = group;
-                <div class="eg-item @(!g.Enabled ? "eg-item-disabled" : "")">
-                    <div class="eg-item-header">
-                        <label class="eg-item-toggle">
-                            <input type="checkbox" checked="@g.Enabled" @onchange="() => ToggleEnabled(g)" />
-                            <span class="eg-item-name">@g.Name</span>
-                        </label>
-                        <div class="eg-item-actions">
-                            <CcBtn Size="Size.Xs" OnClick="() => EditGroup(g)" Title="Edit">EDIT</CcBtn>
-                            <CcBtn Size="Size.Xs" Variant="BtnVariant.Danger" OnClick="() => RemoveGroup(g)" Title="Remove">&#x2715;</CcBtn>
-                        </div>
-                    </div>
-                    <div class="eg-item-exts">@g.Extensions</div>
+                <div class="eg-empty">
+                    No extension groups configured.
+                    <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="SeedDefaults" Disabled="@saving">LOAD DEFAULTS</CcBtn>
                 </div>
             }
-        }
-    </div>
-</div>
+            else
+            {
+                @foreach (var group in Store.Groups)
+                {
+                    var g = group;
+                    <div class="eg-item @(!g.Enabled ? "eg-item-disabled" : "")">
+                        <div class="eg-item-header">
+                            <label class="eg-item-toggle">
+                                <input type="checkbox" checked="@g.Enabled" @onchange="() => ToggleEnabled(g)" />
+                                <span class="eg-item-name">@g.Name</span>
+                            </label>
+                            <div class="eg-item-actions">
+                                <CcBtn Size="Size.Xs" OnClick="() => EditGroup(g)" Title="Edit">EDIT</CcBtn>
+                                <CcBtn Size="Size.Xs" Variant="BtnVariant.Danger" OnClick="() => RemoveGroup(g)" Title="Remove">&#x2715;</CcBtn>
+                            </div>
+                        </div>
+                        <div class="eg-item-exts">@g.Extensions</div>
+                    </div>
+                }
+            }
+        </div>
+    </Body>
+</PanelLayout>
 
 @code {
     private bool showForm;

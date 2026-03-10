@@ -1,38 +1,3 @@
-.sg {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    gap: 0;
-}
-
-/* Header */
-.sg-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--cc-border);
-    flex-shrink: 0;
-}
-
-.sg-header-left {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.sg-header-right {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.sg-title {
-    font-weight: 700;
-    font-size: 0.8rem;
-    color: var(--cc-text);
-}
-
 .sg-spinning {
     animation: cc-pulse 1.5s ease-in-out infinite;
 }
@@ -41,9 +6,6 @@
 .sg-stats {
     display: flex;
     gap: 0;
-    padding: 0.4rem 0.75rem;
-    border-bottom: 1px solid var(--cc-border);
-    flex-shrink: 0;
 }
 
 .sg-stat {
@@ -81,9 +43,6 @@
 
 /* Agent list */
 .sg-agents {
-    flex: 1;
-    overflow-y: auto;
-    padding: 0.5rem 0.75rem;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;

@@ -1,40 +1,4 @@
-/* Sync Manager */
-.sm {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    gap: 0;
-}
-
-/* Header */
-.sm-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 0.5rem;
-    gap: 0.5rem;
-}
-
-.sm-header-left {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    min-width: 0;
-}
-
-.sm-header-right {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    flex-shrink: 0;
-}
-
-.sm-title {
-    font-weight: 700;
-    font-size: 0.8rem;
-    color: var(--cc-text);
-    letter-spacing: 0.02em;
-}
+/* Upload Manager — panel-specific styles */
 
 .sm-agent {
     font-size: 0.7rem;
@@ -55,7 +19,6 @@
 .sm-tabs {
     display: flex;
     gap: 1px;
-    margin-bottom: 0.5rem;
     border-bottom: 1px solid var(--cc-border);
 }
 
@@ -92,9 +55,8 @@
 
 /* List */
 .sm-list {
-    flex: 1;
-    overflow-y: auto;
-    min-height: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Item */

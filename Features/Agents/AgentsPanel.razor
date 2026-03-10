@@ -4,89 +4,92 @@
 @inject RelayConnectionService Relay
 @implements IDisposable
 
-<div class="ap">
-    @{
-        var relays = BuildRelayTabs();
-        var rows = BuildAgentRows(Relay.GetAllAgents());
-        var filtered = selectedRelay is null ? rows : rows.Where(r => r.RelayUrl == selectedRelay && r.IsOnline).ToList();
-    }
+@{
+    var relays = BuildRelayTabs();
+    var rows = BuildAgentRows(Relay.GetAllAgents());
+    var filtered = selectedRelay is null ? rows : rows.Where(r => r.RelayUrl == selectedRelay && r.IsOnline).ToList();
+}
 
-    <div class="ap-relay-bar">
-        <button class="ap-relay-tab @(selectedRelay is null ? "ap-relay-tab--active" : "")"
-                @onclick="() => selectedRelay = null">
-            All <span class="ap-relay-count">@rows.Count</span>
-        </button>
-        @foreach (var relay in relays)
-        {
-            var url = relay.Url;
-            <button class="ap-relay-tab @(selectedRelay == url ? "ap-relay-tab--active" : "")"
-                    @onclick="() => selectedRelay = url">
-                <span class="ap-dot @(relay.Connected ? "ap-dot--on" : "ap-dot--off")"></span>
-                @relay.Name
-                <span class="ap-relay-count">@relay.AgentCount</span>
+<PanelLayout Title="Agents">
+    <Toolbar>
+        <div class="ap-relay-bar">
+            <button class="ap-relay-tab @(selectedRelay is null ? "ap-relay-tab--active" : "")"
+                    @onclick="() => selectedRelay = null">
+                All <span class="ap-relay-count">@rows.Count</span>
             </button>
+            @foreach (var relay in relays)
+            {
+                var url = relay.Url;
+                <button class="ap-relay-tab @(selectedRelay == url ? "ap-relay-tab--active" : "")"
+                        @onclick="() => selectedRelay = url">
+                    <span class="ap-dot @(relay.Connected ? "ap-dot--on" : "ap-dot--off")"></span>
+                    @relay.Name
+                    <span class="ap-relay-count">@relay.AgentCount</span>
+                </button>
+            }
+        </div>
+    </Toolbar>
+    <Body>
+        @if (filtered.Count == 0)
+        {
+            <p class="ap-empty"><em>No agents known.</em></p>
         }
-    </div>
-
-    @if (filtered.Count == 0)
-    {
-        <p class="ap-empty"><em>No agents known.</em></p>
-    }
-    else
-    {
-        <CcTable Striped Hover>
-            <thead>
-                <tr>
-                    <th class="ap-col-status"></th>
-                    <th>Name</th>
-                    <th>IP</th>
-                    <th>System</th>
-                    <th>Location</th>
-                    <th>Network</th>
-                    <th class="ap-col-paired">Paired</th>
-                    <th>Last Seen</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var row in filtered)
-                {
-                    <CcTr Active="@(row.IsOnline && Wm.ConnectedAgentIds.Contains(row.AgentId))"
-                          Dim="@(!row.IsOnline)"
-                          CssClass="ap-row"
-                          OnContextMenu="(e) => ShowContextMenu(e, row.AgentId, row.RelayUrl, row.IsOnline)"
-                          PreventDefault>
-                        <td class="ap-col-status">
-                            <span class="ap-dot @(row.IsOnline ? "ap-dot--on" : "ap-dot--off")"></span>
-                        </td>
-                        <td>
-                            <div class="ap-name-cell">
-                                <span class="ap-name">@row.Name</span>
-                                <code class="ap-uuid" title="@row.Uuid">@(row.Uuid is not null ? row.Uuid[..Math.Min(8, row.Uuid.Length)] : "...")</code>
-                            </div>
-                        </td>
-                        <td><code>@row.Ip</code></td>
-                        <td>
-                            <span class="ap-sys">@row.Os</span>
-                            @if (row.Arch != "—")
-                            {
-                                <span class="ap-arch">@row.Arch</span>
-                            }
-                        </td>
-                        <td>@row.Location</td>
-                        <td class="ap-net-cell">@row.Network</td>
-                        <td class="ap-col-paired">
-                            @if (row.Paired)
-                            {
-                                <span class="ap-dot ap-dot--on"></span>
-                            }
-                        </td>
-                        <td class="ap-seen-cell">@row.LastSeen</td>
-                    </CcTr>
-                }
-            </tbody>
-        </CcTable>
-    }
-</div>
+        else
+        {
+            <CcTable Striped Hover>
+                <thead>
+                    <tr>
+                        <th class="ap-col-status"></th>
+                        <th>Name</th>
+                        <th>IP</th>
+                        <th>System</th>
+                        <th>Location</th>
+                        <th>Network</th>
+                        <th class="ap-col-paired">Paired</th>
+                        <th>Last Seen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in filtered)
+                    {
+                        <CcTr Active="@(row.IsOnline && Wm.ConnectedAgentIds.Contains(row.AgentId))"
+                              Dim="@(!row.IsOnline)"
+                              CssClass="ap-row"
+                              OnContextMenu="(e) => ShowContextMenu(e, row.AgentId, row.RelayUrl, row.IsOnline)"
+                              PreventDefault>
+                            <td class="ap-col-status">
+                                <span class="ap-dot @(row.IsOnline ? "ap-dot--on" : "ap-dot--off")"></span>
+                            </td>
+                            <td>
+                                <div class="ap-name-cell">
+                                    <span class="ap-name">@row.Name</span>
+                                    <code class="ap-uuid" title="@row.Uuid">@(row.Uuid is not null ? row.Uuid[..Math.Min(8, row.Uuid.Length)] : "...")</code>
+                                </div>
+                            </td>
+                            <td><code>@row.Ip</code></td>
+                            <td>
+                                <span class="ap-sys">@row.Os</span>
+                                @if (row.Arch != "—")
+                                {
+                                    <span class="ap-arch">@row.Arch</span>
+                                }
+                            </td>
+                            <td>@row.Location</td>
+                            <td class="ap-net-cell">@row.Network</td>
+                            <td class="ap-col-paired">
+                                @if (row.Paired)
+                                {
+                                    <span class="ap-dot ap-dot--on"></span>
+                                }
+                            </td>
+                            <td class="ap-seen-cell">@row.LastSeen</td>
+                        </CcTr>
+                    }
+                </tbody>
+            </CcTable>
+        }
+    </Body>
+</PanelLayout>
 
 <CcDropdown Visible="@ctxVisible" X="@ctxX" Y="@ctxY" OnClose="HideContextMenu">
     <CcDropdownItem OnClick="CtxOpenFiles">File Manager</CcDropdownItem>

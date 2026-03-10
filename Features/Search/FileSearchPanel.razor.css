@@ -1,41 +1,4 @@
-/* File Scanner */
-.scan {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    gap: 0;
-}
-
-/* Header */
-.scan-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 0.5rem;
-    gap: 0.5rem;
-}
-
-.scan-header-left {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    min-width: 0;
-}
-
-.scan-header-right {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    flex-shrink: 0;
-}
-
-.scan-title {
-    font-weight: 700;
-    font-size: 0.8rem;
-    color: var(--cc-text);
-    letter-spacing: 0.02em;
-}
-
+/* Agent name */
 .scan-agent {
     font-size: 0.7rem;
     color: var(--cc-accent-blue);
@@ -153,7 +116,6 @@
 .scan-tabs {
     display: flex;
     gap: 1px;
-    margin-bottom: 0.5rem;
     border-bottom: 1px solid var(--cc-border);
 }
 

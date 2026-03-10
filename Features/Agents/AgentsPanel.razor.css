@@ -1,19 +1,4 @@
 /* Agents Panel */
-.ap {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    min-height: 0;
-    overflow: hidden;
-}
-
-.ap ::deep .cc-table-wrap {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    border-top: none;
-    border-radius: 0 0 6px 6px;
-}
 
 .ap-empty {
     color: var(--cc-text-dim);

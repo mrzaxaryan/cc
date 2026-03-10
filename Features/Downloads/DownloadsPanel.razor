@@ -4,142 +4,138 @@
 @inject MessageService Msg
 @implements IDisposable
 
-<div class="sm">
-    @* Header *@
-    <div class="sm-header">
-        <div class="sm-header-left">
-            <span class="sm-title">Upload Manager</span>
-            @if (!string.IsNullOrEmpty(AgentName))
+<PanelLayout Title="Upload Manager">
+    <HeaderLeft>
+        @if (!string.IsNullOrEmpty(AgentName))
+        {
+            <span class="sm-agent">@AgentName</span>
+        }
+        @if (IsAgentServicePaused)
+        {
+            <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs">Service Paused</CcBadge>
+        }
+    </HeaderLeft>
+    <HeaderRight>
+        @if (IsAgentServicePaused)
+        {
+            <CcBtn Variant="BtnVariant.Success" Size="Size.Xs" OnClick="ResumeAgentService" Title="Resume upload service for this agent">RESUME SERVICE</CcBtn>
+        }
+        else
+        {
+            <CcBtn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="PauseAgentService" Title="Pause upload service for this agent">PAUSE SERVICE</CcBtn>
+        }
+        @if (HasActiveSyncs && !IsAgentServicePaused)
+        {
+            <CcBtn Variant="BtnVariant.Warning" Size="Size.Xs" OnClick="StopAllSyncs" Title="Pause all">STOP ALL</CcBtn>
+        }
+        @if (activeRecords.Count > 0)
+        {
+            @if (confirmClear)
             {
-                <span class="sm-agent">@AgentName</span>
-            }
-            @if (IsAgentServicePaused)
-            {
-                <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs">Service Paused</CcBadge>
-            }
-        </div>
-        <div class="sm-header-right">
-            @if (IsAgentServicePaused)
-            {
-                <CcBtn Variant="BtnVariant.Success" Size="Size.Xs" OnClick="ResumeAgentService" Title="Resume upload service for this agent">RESUME SERVICE</CcBtn>
+                <CcBtn Variant="BtnVariant.DangerSolid" Size="Size.Xs" OnClick="ClearPaused">YES</CcBtn>
+                <CcBtn Size="Size.Xs" OnClick="() => confirmClear = false">NO</CcBtn>
             }
             else
             {
-                <CcBtn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="PauseAgentService" Title="Pause upload service for this agent">PAUSE SERVICE</CcBtn>
+                <CcBtn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="() => confirmClear = true" Title="Clear paused/failed">CLEAR</CcBtn>
             }
-            @if (HasActiveSyncs && !IsAgentServicePaused)
-            {
-                <CcBtn Variant="BtnVariant.Warning" Size="Size.Xs" OnClick="StopAllSyncs" Title="Pause all">STOP ALL</CcBtn>
-            }
-            @if (activeRecords.Count > 0)
-            {
-                @if (confirmClear)
+        }
+        <CcBtn Size="Size.Xs" OnClick="Refresh" Title="Refresh">&#x21bb;</CcBtn>
+    </HeaderRight>
+    <Toolbar>
+        <div class="sm-tabs">
+            <button class="sm-tab @(filter == Filter.All ? "active" : "")" @onclick="() => SetFilter(Filter.All)">
+                All <span class="sm-tab-count">@activeRecords.Count</span>
+            </button>
+            <button class="sm-tab @(filter == Filter.Active ? "active" : "")" @onclick="() => SetFilter(Filter.Active)">
+                Active <span class="sm-tab-count">@CountByFilter(Filter.Active)</span>
+            </button>
+            <button class="sm-tab @(filter == Filter.Paused ? "active" : "")" @onclick="() => SetFilter(Filter.Paused)">
+                Paused <span class="sm-tab-count">@CountByFilter(Filter.Paused)</span>
+            </button>
+            <button class="sm-tab @(filter == Filter.Done ? "active" : "")" @onclick="() => SetFilter(Filter.Done)">
+                Done <span class="sm-tab-count">@CountByFilter(Filter.Done)</span>
+            </button>
+        </div>
+    </Toolbar>
+    <Body>
+        @if (filteredRecords.Count == 0)
+        {
+            <div class="sm-empty">
+                @if (activeRecords.Count == 0)
                 {
-                    <CcBtn Variant="BtnVariant.DangerSolid" Size="Size.Xs" OnClick="ClearPaused">YES</CcBtn>
-                    <CcBtn Size="Size.Xs" OnClick="() => confirmClear = false">NO</CcBtn>
+                    <span>No active syncs</span>
                 }
                 else
                 {
-                    <CcBtn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="() => confirmClear = true" Title="Clear paused/failed">CLEAR</CcBtn>
+                    <span>No @filter.ToString().ToLower() items</span>
                 }
-            }
-            <CcBtn Size="Size.Xs" OnClick="Refresh" Title="Refresh">&#x21bb;</CcBtn>
-        </div>
-    </div>
-
-    @* Filter tabs *@
-    <div class="sm-tabs">
-        <button class="sm-tab @(filter == Filter.All ? "active" : "")" @onclick="() => SetFilter(Filter.All)">
-            All <span class="sm-tab-count">@activeRecords.Count</span>
-        </button>
-        <button class="sm-tab @(filter == Filter.Active ? "active" : "")" @onclick="() => SetFilter(Filter.Active)">
-            Active <span class="sm-tab-count">@CountByFilter(Filter.Active)</span>
-        </button>
-        <button class="sm-tab @(filter == Filter.Paused ? "active" : "")" @onclick="() => SetFilter(Filter.Paused)">
-            Paused <span class="sm-tab-count">@CountByFilter(Filter.Paused)</span>
-        </button>
-        <button class="sm-tab @(filter == Filter.Done ? "active" : "")" @onclick="() => SetFilter(Filter.Done)">
-            Done <span class="sm-tab-count">@CountByFilter(Filter.Done)</span>
-        </button>
-    </div>
-
-    @* Records list *@
-    @if (filteredRecords.Count == 0)
-    {
-        <div class="sm-empty">
-            @if (activeRecords.Count == 0)
-            {
-                <span>No active syncs</span>
-            }
-            else
-            {
-                <span>No @filter.ToString().ToLower() items</span>
-            }
-        </div>
-    }
-    else
-    {
-        <div class="sm-list">
-            @foreach (var dl in filteredRecords)
-            {
-                var rec = dl;
-                var pct = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
-                <div class="sm-item @StatusClass(dl.Status)">
-                    <div class="sm-item-row">
-                        <span class="sm-item-icon">@StatusIcon(dl.Status)</span>
-                        <div class="sm-item-info">
-                            <span class="sm-item-name" title="@dl.RemotePath">@dl.FileName</span>
-                            <span class="sm-item-meta">
-                                @Formatters.FormatSize((ulong)dl.DownloadedSize) / @Formatters.FormatSize((ulong)dl.TotalSize)
-                                @if (!string.IsNullOrEmpty(dl.AgentName) && string.IsNullOrEmpty(AgentUuid))
-                                {
-                                    <span class="sm-item-agent">@dl.AgentName</span>
-                                }
-                            </span>
-                        </div>
-                        <div class="sm-item-status">
-                            @switch (dl.Status)
-                            {
-                                case DownloadStatus.Downloading:
-                                    <span class="sm-pct">@pct%</span>
-                                    @if (dl.SpeedBytesPerSec > 0)
+            </div>
+        }
+        else
+        {
+            <div class="sm-list">
+                @foreach (var dl in filteredRecords)
+                {
+                    var rec = dl;
+                    var pct = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
+                    <div class="sm-item @StatusClass(dl.Status)">
+                        <div class="sm-item-row">
+                            <span class="sm-item-icon">@StatusIcon(dl.Status)</span>
+                            <div class="sm-item-info">
+                                <span class="sm-item-name" title="@dl.RemotePath">@dl.FileName</span>
+                                <span class="sm-item-meta">
+                                    @Formatters.FormatSize((ulong)dl.DownloadedSize) / @Formatters.FormatSize((ulong)dl.TotalSize)
+                                    @if (!string.IsNullOrEmpty(dl.AgentName) && string.IsNullOrEmpty(AgentUuid))
                                     {
-                                        <span class="sm-speed">@Formatters.FormatSpeed(dl.SpeedBytesPerSec)</span>
+                                        <span class="sm-item-agent">@dl.AgentName</span>
                                     }
-                                    <CcBtn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseDownload(rec)" Title="Pause">&#x23F8;</CcBtn>
-                                    break;
+                                </span>
+                            </div>
+                            <div class="sm-item-status">
+                                @switch (dl.Status)
+                                {
+                                    case DownloadStatus.Downloading:
+                                        <span class="sm-pct">@pct%</span>
+                                        @if (dl.SpeedBytesPerSec > 0)
+                                        {
+                                            <span class="sm-speed">@Formatters.FormatSpeed(dl.SpeedBytesPerSec)</span>
+                                        }
+                                        <CcBtn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseDownload(rec)" Title="Pause">&#x23F8;</CcBtn>
+                                        break;
 
-                                case DownloadStatus.Queued:
-                                    <CcBadge Variant="BadgeVariant.Muted" Size="Size.Xs">QUEUED</CcBadge>
-                                    <CcBtn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => BumpPriority(rec, -1)" Title="Higher priority">&#x25B2;</CcBtn>
-                                    <CcBtn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => BumpPriority(rec, 1)" Title="Lower priority">&#x25BC;</CcBtn>
-                                    break;
+                                    case DownloadStatus.Queued:
+                                        <CcBadge Variant="BadgeVariant.Muted" Size="Size.Xs">QUEUED</CcBadge>
+                                        <CcBtn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => BumpPriority(rec, -1)" Title="Higher priority">&#x25B2;</CcBtn>
+                                        <CcBtn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => BumpPriority(rec, 1)" Title="Lower priority">&#x25BC;</CcBtn>
+                                        break;
 
-                                case DownloadStatus.Paused:
-                                    <CcBadge Variant="BadgeVariant.Warning" Size="Size.Xs">PAUSED @pct%</CcBadge>
-                                    <CcBtn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeDownload(rec)" Disabled="@(Downloads.Cts.HasActive(rec.Id))" Title="Resume">&#x25B6;</CcBtn>
-                                    break;
+                                    case DownloadStatus.Paused:
+                                        <CcBadge Variant="BadgeVariant.Warning" Size="Size.Xs">PAUSED @pct%</CcBadge>
+                                        <CcBtn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeDownload(rec)" Disabled="@(Downloads.Cts.HasActive(rec.Id))" Title="Resume">&#x25B6;</CcBtn>
+                                        break;
 
-                                case DownloadStatus.Completed:
-                                    <CcBadge Variant="BadgeVariant.Success" Size="Size.Xs">DONE</CcBadge>
-                                    break;
+                                    case DownloadStatus.Completed:
+                                        <CcBadge Variant="BadgeVariant.Success" Size="Size.Xs">DONE</CcBadge>
+                                        break;
 
-                                case DownloadStatus.Failed:
-                                    <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@dl.Error">FAILED</CcBadge>
-                                    break;
-                            }
-                            <CcBtn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => RemoveDownload(rec)" Title="Remove" CssClass="sm-remove-btn">&#x2715;</CcBtn>
+                                    case DownloadStatus.Failed:
+                                        <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@dl.Error">FAILED</CcBadge>
+                                        break;
+                                }
+                                <CcBtn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => RemoveDownload(rec)" Title="Remove" CssClass="sm-remove-btn">&#x2715;</CcBtn>
+                            </div>
                         </div>
+                        @if (dl.Status is DownloadStatus.Downloading or DownloadStatus.Queued or DownloadStatus.Paused)
+                        {
+                            <CcProgress Size="Size.Xs" Variant="@ProgressVariant(dl.Status)" Percent="@pct" />
+                        }
                     </div>
-                    @if (dl.Status is DownloadStatus.Downloading or DownloadStatus.Queued or DownloadStatus.Paused)
-                    {
-                        <CcProgress Size="Size.Xs" Variant="@ProgressVariant(dl.Status)" Percent="@pct" />
-                    }
-                </div>
-            }
-        </div>
-    }
-</div>
+                }
+            </div>
+        }
+    </Body>
+</PanelLayout>
 
 @code {
     [Parameter] public string? AgentUuid { get; set; }
