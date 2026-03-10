@@ -8,7 +8,6 @@ public class AgentRecord
 {
     [JsonPropertyName("uuid")] public string Uuid { get; set; } = "";
     [JsonPropertyName("name")] public string Name { get; set; } = "";
-    [JsonPropertyName("agentId")] public string AgentId { get; set; } = "";
     [JsonPropertyName("relayStoreId")] public string RelayStoreId { get; set; } = "";
     [JsonPropertyName("ip")] public string Ip { get; set; } = "";
     [JsonPropertyName("country")] public string Country { get; set; } = "";
@@ -47,8 +46,6 @@ public class AgentStore
         {
             var records = await _js.InvokeAsync<AgentRecord[]>("ccAgentDb.getAll");
             _cache = records.ToDictionary(r => r.Uuid);
-            foreach (var r in _cache.Values)
-                _agentIdToUuid[r.AgentId] = r.Uuid;
         }
         catch
         {
@@ -64,7 +61,6 @@ public class AgentStore
         {
             Uuid = uuid,
             Name = $"Agent #{_cache.Count + 1}",
-            AgentId = agent.Id,
             RelayStoreId = relayStoreId,
             Ip = agent.Ip,
             Country = agent.Country,
@@ -97,6 +93,13 @@ FirstSeen = now,
     public string? GetUuidByAgentId(string agentId)
     {
         return _agentIdToUuid.TryGetValue(agentId, out var uuid) ? uuid : null;
+    }
+
+    public string? GetAgentIdByUuid(string uuid)
+    {
+        foreach (var (agentId, u) in _agentIdToUuid)
+            if (u == uuid) return agentId;
+        return null;
     }
 
     public AgentRecord? GetByUuid(string uuid)

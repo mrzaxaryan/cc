@@ -114,9 +114,10 @@ public class RelayConnectionService : IAsyncDisposable
         var relayEntry = !string.IsNullOrEmpty(agent.RelayStoreId) ? _relayStore.GetById(agent.RelayStoreId) : null;
         if (relayEntry is null) return null;
 
-        if (!GetAllAgents().Any(a => a.Agent.Id == agent.AgentId)) return null;
+        var agentId = _agentDb.GetAgentIdByUuid(agentUuid);
+        if (agentId is null || !GetAllAgents().Any(a => a.Agent.Id == agentId)) return null;
 
-        return (agent.AgentId, relayEntry.Url);
+        return (agentId, relayEntry.Url);
     }
 
     public void ForceReconnect(string url)
