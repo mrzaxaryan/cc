@@ -18,6 +18,8 @@ public class RelayConnectionService : IAsyncDisposable
     private readonly IEventBus _bus;
 
     private readonly Dictionary<string, RelayState> _relayStates = new();
+    /// <summary>Agents whose system info fetch failed (e.g. relay was paired). Key: agentId, Value: relayUrl.</summary>
+    private readonly Dictionary<string, string> _pendingInfoFetch = new();
     private IDisposable? _relayStoreSub;
     private bool _started;
     private bool _disposing;
@@ -191,6 +193,7 @@ public class RelayConnectionService : IAsyncDisposable
                         }
                     }
 
+                    _pendingInfoFetch.Remove(agent.Id);
                     var relayEntry = _relayStore.GetByUrl(relayUrl);
                     await _agentDb.UpsertAsync(uuid, agent, relayEntry?.Id ?? "");
                     _bus.Publish(new RelayAgentsChangedEvent(relayUrl));
@@ -206,6 +209,10 @@ public class RelayConnectionService : IAsyncDisposable
                 await Task.Delay(1000 * (attempt + 1));
                 await FetchUuid(agent, relayUrl, attempt + 1);
             }
+            else
+            {
+                _pendingInfoFetch[agent.Id] = relayUrl;
+            }
         }
         catch when (attempt < maxRetries)
         {
@@ -216,6 +223,7 @@ public class RelayConnectionService : IAsyncDisposable
         catch (Exception ex)
         {
             Console.WriteLine($"[FetchUuid] Failed for {agent.Id} after {attempt + 1} attempts: {ex.Message}");
+            _pendingInfoFetch[agent.Id] = relayUrl;
         }
         finally
         {
@@ -390,6 +398,8 @@ public class RelayConnectionService : IAsyncDisposable
                 }
                 else if (type == "agent_disconnected" && !string.IsNullOrEmpty(eventAgentId))
                 {
+                    _pendingInfoFetch.Remove(eventAgentId);
+
                     var list = rs.Agents.Connections.Where(a => a.Id != eventAgentId).ToList();
                     rs.Agents = new GroupInfo<AgentConnection>
                     {
@@ -427,12 +437,19 @@ public class RelayConnectionService : IAsyncDisposable
                         };
                     }
 
-                    if (!paired && _wm.ConnectedAgentIds.Contains(eventAgentId))
+                    if (!paired)
                     {
-                        _ = _wm.DisconnectAgent(eventAgentId);
-                        var unpairedUuid = _agentDb.GetUuidByAgentId(eventAgentId);
-                        var unpairedName = unpairedUuid is not null ? _agentDb.GetDisplayName(unpairedUuid) : eventAgentId;
-                        _msg.Warn("Agent Unpaired", $"{unpairedName} relay connection lost", "Relay");
+                        if (_wm.ConnectedAgentIds.Contains(eventAgentId))
+                        {
+                            _ = _wm.DisconnectAgent(eventAgentId);
+                            var unpairedUuid = _agentDb.GetUuidByAgentId(eventAgentId);
+                            var unpairedName = unpairedUuid is not null ? _agentDb.GetDisplayName(unpairedUuid) : eventAgentId;
+                            _msg.Warn("Agent Unpaired", $"{unpairedName} relay connection lost", "Relay");
+                        }
+
+                        // Relay is now free — if info fetch is still pending, retry
+                        if (existing is not null && _pendingInfoFetch.Remove(eventAgentId))
+                            _ = FetchUuid(existing, relayUrl);
                     }
 
                     _bus.Publish(new AgentPairingChangedEvent(eventAgentId, paired, relayUrl));

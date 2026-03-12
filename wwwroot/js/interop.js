@@ -9,15 +9,6 @@ window.c2Interop = {
     },
     getViewport() {
         return { width: window.innerWidth, height: window.innerHeight };
-    },
-    openPopout(panel, width, height, agentUuid, agentName) {
-        const params = new URLSearchParams();
-        params.set('popout', panel);
-        if (agentUuid) params.set('agent', agentUuid);
-        if (agentName) params.set('name', agentName);
-        const url = window.location.pathname + '?' + params.toString();
-        const features = `width=${Math.round(width)},height=${Math.round(height)},menubar=no,toolbar=no,location=no,status=no`;
-        window.open(url, '_blank', features);
     }
 };
 

@@ -10,7 +10,6 @@
 @inject NotificationStore Notif
 @inject ExtensionGroupStore ExtGroups
 @inject IJSRuntime JS
-@inject NavigationManager Nav
 
 @if (!initialized)
 {
@@ -18,22 +17,6 @@
         <span class="c2-loading-brand">C2</span>
         <div class="c2-loading-spinner"></div>
         <div class="c2-loading-text"></div>
-    </div>
-}
-else if (_popoutPanel is not null)
-{
-    <div class="popout-container">
-        @switch (_popoutPanel)
-        {
-            case "Settings":          <SettingsPanel /> break;
-            case "Relay":             <RelayPanel /> break;
-            case "Agents":            <AgentsPanel /> break;
-            case "Downloads":         <DownloadsPanel AgentUuid="@_popoutAgentUuid" AgentName="@_popoutAgentName" /> break;
-            case "Uploads":           <UploadsPanel /> break;
-            case "SearchJobs":        <SearchJobsPanel /> break;
-            case "ExtensionGroups":   <ExtensionGroupsPanel /> break;
-            case "AgentInfo":         <AgentInfoPanel AgentUuid="@_popoutAgentUuid" /> break;
-        }
     </div>
 }
 else if (showSetup)
@@ -165,18 +148,8 @@ else
     private bool updateAvailable;
     private Timer? _updateTimer;
 
-    private string? _popoutPanel;
-    private string? _popoutAgentUuid;
-    private string? _popoutAgentName;
-
     protected override void OnInitialized()
     {
-        var uri = new Uri(Nav.Uri);
-        var qs = System.Web.HttpUtility.ParseQueryString(uri.Query);
-        _popoutPanel = qs["popout"];
-        _popoutAgentUuid = qs["agent"];
-        _popoutAgentName = qs["name"];
-
         On<WindowChangedEvent>();
         On<ThemeChangedEvent>();
         On<NotificationStoreChangedEvent>();
