@@ -105,7 +105,7 @@ public class CacheManager
         if (!relay.IsConnected || !HasDirectory) return false;
 
         // Get file size first by reading 0 bytes
-        var probe = RelaySocket.BuildFileCommand(0x02, remotePath, 0, 0);
+        var probe = RelaySocket.BuildFileCommand(AgentCommands.ReadFile, remotePath, 0, 0);
         var probeResp = await relay.SendAndReceive(probe);
         if (probeResp is null || probeResp.Length < 12) return false;
 
@@ -125,7 +125,7 @@ public class CacheManager
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var payload = RelaySocket.BuildFileCommand(0x02, remotePath, chunkSize, offset);
+                var payload = RelaySocket.BuildFileCommand(AgentCommands.ReadFile, remotePath, chunkSize, offset);
                 var response = await relay.SendAndReceive(payload);
                 if (response is null || response.Length < 4) return false;
 

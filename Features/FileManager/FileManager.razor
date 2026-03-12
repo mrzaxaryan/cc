@@ -1,15 +1,12 @@
 @using System.Net.WebSockets
-@using System.Text
 @inherits EventSubscriber
 @inject CacheManager Cache
 @inject VfsStore Vfs
-@inject DownloadStore Downloads
 @inject RelayConnectionService RelaySvc
 @inject AgentStore AgentDb
-@inject RelayStore RelayDb
+@inject DownloadStore Downloads
 @inject MessageService Msg
 @inject WindowManager Wm
-@inject IJSRuntime Js
 
 <div class="fm">
     @if (!IsConnected)
@@ -103,7 +100,8 @@
                                 }
                                 else if (Cache.HasDirectory)
                                 {
-                                    @RenderFileActions(e)
+                                    <FileActions Entry="e" CurrentPath="@currentPath" AgentUuid="@AgentUuid" AgentName="@AgentName"
+                                                 IsConnected="@IsConnected" IsAgentOnline="@IsAgentOnline" OnViewFile="ViewFile" />
                                 }
                             </span>
                         </button>
@@ -123,55 +121,13 @@
         @* File viewer *@
         @if (viewingFile)
         {
-            <div class="fm-viewer">
-                <div class="fm-viewer-header">
-                    <span class="fm-viewer-title" title="@viewingFilePath">@viewingFileName</span>
-                    <div class="fm-viewer-actions">
-                        @if (!fileLoading)
-                        {
-                            <C2Btn OnClick="HashFile" Title="Compute SHA-256 hash of this file" Disabled="@(!IsConnected)">SHA-256</C2Btn>
-                        }
-                        <C2Btn Variant="BtnVariant.Danger" OnClick="CloseFileViewer" Title="Close file viewer">&#x2715;</C2Btn>
-                    </div>
-                </div>
-                @if (fileLoading)
-                {
-                    <div class="fm-viewer-loading">
-                        <C2Spinner Size="Size.Xs" /> Loading...
-                    </div>
-                }
-                else
-                {
-                    @if (fileHash is not null)
-                    {
-                        <div class="fm-hash">
-                            <span class="fm-hash-label">SHA-256</span>
-                            <code class="fm-hash-value">@fileHash</code>
-                        </div>
-                    }
-                    <div class="fm-viewer-meta">
-                        <span>@fileBytesRead bytes (offset @fileViewOffset)</span>
-                        <div class="fm-viewer-pager">
-                            @if (fileViewOffset > 0)
-                            {
-                                <C2Btn OnClick="PrevPage" Disabled="@(!IsConnected)">&#x25C0; Prev</C2Btn>
-                            }
-                            @if (fileBytesRead >= PageSize)
-                            {
-                                <C2Btn OnClick="NextPage" Disabled="@(!IsConnected)">Next &#x25B6;</C2Btn>
-                            }
-                        </div>
-                    </div>
-                    <pre class="fm-code">@fileContent</pre>
-                }
-            </div>
+            <FileViewer FilePath="@viewingFilePath" FileName="@viewingFileName"
+                        IsConnected="@IsConnected" Relay="@Relay" OnClose="CloseFileViewer" />
         }
     </div>
 </div>
 
 @code {
-    private const long PageSize = 8192;
-
     [Parameter] public RelaySocket? Relay { get; set; }
     [Parameter] public string? AgentId { get; set; }
     [Parameter] public string? AgentName { get; set; }
@@ -181,24 +137,22 @@
     private bool IsAgentOnline => AgentId is not null && RelaySvc.GetAllAgents().Any(a => a.Agent.Id == AgentId);
     private bool HasCache => Cache.HasDirectory && !string.IsNullOrEmpty(AgentUuid);
 
-    /// <summary>True when the agent runs Windows (has drive letters); false for Linux, UEFI, macOS, etc.</summary>
     private bool IsWindowsAgent
     {
         get
         {
-            // Try live connection first
             var os = RelaySvc.GetAllAgents()
                 .Where(a => a.Agent.Id == AgentId)
                 .Select(a => a.Agent.Os)
                 .FirstOrDefault();
-            // Fall back to persisted record
             if (string.IsNullOrEmpty(os) && !string.IsNullOrEmpty(AgentUuid))
                 os = AgentDb.GetByUuid(AgentUuid)?.Os;
             return string.Equals(os, "Windows", StringComparison.OrdinalIgnoreCase);
         }
     }
 
-    /// <summary>The root path to send: empty string for Windows (drive listing), "/" for everything else.</summary>
+    private bool IsUnixAgent => !IsWindowsAgent;
+    private string PathSep => IsUnixAgent ? "/" : @"\";
     private string RootPath => IsWindowsAgent ? "" : "/";
 
     private string currentPath = "";
@@ -206,24 +160,17 @@
     private List<DirEntry>? entries;
     private DirEntry? selectedEntry;
     private bool loading;
-
     private bool _syncing;
 
     private bool viewingFile;
     private string viewingFileName = "";
     private string viewingFilePath = "";
-    private string fileContent = "";
-    private long fileBytesRead;
-    private long fileViewOffset;
-    private bool fileLoading;
-    private string? fileHash;
 
     protected override async Task OnParametersSetAsync()
     {
         if (entries is not null) return;
         await Downloads.LoadAsync();
 
-        // Ensure initial path matches the agent's OS
         if (string.IsNullOrEmpty(currentPath))
             currentPath = RootPath;
 
@@ -240,10 +187,8 @@
             if (!_syncing && Cache.HasDirectory && entries is not null)
                 _ = SyncCacheAsync();
         });
-        On<DownloadStoreChangedEvent>(e => OnDownloadsChanged());
+        On<DownloadStoreChangedEvent>();
     }
-
-    private void OnDownloadsChanged() => _ = InvokeAsync(StateHasChanged);
 
     public override void Dispose() => base.Dispose();
 
@@ -254,88 +199,22 @@
         entries = null;
         selectedEntry = null;
         viewingFile = false;
-        fileContent = "";
-        fileHash = null;
     }
 
-    private RenderFragment RenderFileActions(DirEntry e) => __builder =>
-    {
-        var dl = GetDownloadRecord(e.Name);
-        if (dl is null || dl.Status == DownloadStatus.Pending)
-        {
-            <C2Btn Size="Size.Xs" Variant="BtnVariant.Primary" OnClick="() => EnqueueSync(e)" Title="Upload to cache" Disabled="@(!IsConnected)">UPLOAD</C2Btn>
-            return;
-        }
-
-        switch (dl.Status)
-        {
-            case DownloadStatus.Downloading:
-                var pct = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
-                <span class="fm-dl-status">
-                    <C2Spinner Size="Size.Xs" />
-                    <span class="fm-dl-pct">@pct%</span>
-                    @if (dl.SpeedBytesPerSec > 0)
-                    {
-                        <span class="fm-dl-speed">@Formatters.FormatSpeed(dl.SpeedBytesPerSec)</span>
-                    }
-                    <C2Btn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseDownload(e)" Title="Pause">&#x23F8;</C2Btn>
-                </span>
-                break;
-
-            case DownloadStatus.Paused:
-                var pctP = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
-                <span class="fm-dl-status">
-                    <C2Badge Variant="BadgeVariant.Warning" Size="Size.Xs">@pctP%</C2Badge>
-                    <C2Btn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeDownload(e)" Title="Resume" Disabled="@(!IsConnected && !IsAgentOnline)">&#x25B6;</C2Btn>
-                </span>
-                break;
-
-            case DownloadStatus.Queued:
-                <C2Badge Variant="BadgeVariant.Muted" Size="Size.Xs">QUEUED</C2Badge>
-                break;
-
-            case DownloadStatus.Completed:
-                <span class="fm-dl-status">
-                    <C2Btn Size="Size.Xs" OnClick="() => ViewFile(e.Name)" Title="View">VIEW</C2Btn>
-                    <C2Btn Size="Size.Xs" Variant="BtnVariant.Primary" OnClick="() => SaveToBrowser(dl)" Title="Save">SAVE</C2Btn>
-                </span>
-                break;
-
-            case DownloadStatus.Failed:
-                <span class="fm-dl-status">
-                    <C2Badge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@dl.Error">&#x2717;</C2Badge>
-                    <C2Btn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => RetryDownload(e)" Title="Retry" Disabled="@(!IsConnected)">&#x21bb;</C2Btn>
-                </span>
-                break;
-        }
-    };
-
-    private bool IsUnixAgent => !IsWindowsAgent;
-    private string PathSep => IsUnixAgent ? "/" : @"\";
-
-    private void UpdatePathSegments()
-    {
-        pathSegments = currentPath
-            .Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries)
-            .ToArray();
-    }
+    // --- Navigation ---
 
     private async Task NavigateTo(string path)
     {
         if (loading) return;
         if (!IsConnected) { if (HasCache) await NavigateFromCache(path); return; }
 
-        currentPath = path.TrimEnd('\\', '/');
-        if (IsUnixAgent && string.IsNullOrEmpty(currentPath)) currentPath = "/";
-        if (!string.IsNullOrEmpty(currentPath) && currentPath != "/")
-            currentPath += IsUnixAgent ? "/" : @"\";
-
-        UpdatePathSegments();
+        currentPath = FileManagerPath.Normalize(path, IsUnixAgent);
+        pathSegments = FileManagerPath.GetSegments(currentPath);
         loading = true; entries = null; StateHasChanged();
 
         try
         {
-            var payload = RelaySocket.BuildPathCommand(0x01, currentPath);
+            var payload = RelaySocket.BuildPathCommand(AgentCommands.ListDirectory, currentPath);
             var response = await SendCommand(payload);
             if (response is null) return;
 
@@ -353,17 +232,13 @@
     {
         if (loading) return;
 
-        currentPath = path.TrimEnd('\\', '/');
-        if (IsUnixAgent && string.IsNullOrEmpty(currentPath)) currentPath = "/";
-        if (!string.IsNullOrEmpty(currentPath) && currentPath != "/")
-            currentPath += IsUnixAgent ? "/" : @"\";
-
-        UpdatePathSegments();
+        currentPath = FileManagerPath.Normalize(path, IsUnixAgent);
+        pathSegments = FileManagerPath.GetSegments(currentPath);
         loading = true; entries = null; StateHasChanged();
 
         try
         {
-            var remotePath = currentPath.TrimEnd('\\', '/');
+            var remotePath = FileManagerPath.TrimTrailing(currentPath);
             var parentId = await ResolveDirectoryId(remotePath);
             var dirs = await Vfs.GetChildDirectoriesAsync(AgentUuid!, parentId);
             var files = await Vfs.GetFilesInDirectoryAsync(AgentUuid!, parentId);
@@ -386,78 +261,56 @@
 
     private async Task NavigateUp()
     {
-        if (pathSegments.Length <= 1) { await NavigateTo(RootPath); return; }
-        var parent = string.Join(PathSep, pathSegments.Take(pathSegments.Length - 1));
-        if (IsUnixAgent) parent = "/" + parent;
+        var parent = FileManagerPath.GetParent(pathSegments, PathSep, IsUnixAgent, RootPath);
         await NavigateTo(parent);
     }
 
     private async Task NavigateToRoot() => await NavigateTo(RootPath);
+
     private async Task NavigateToBreadcrumb(int index)
     {
-        var joined = string.Join(PathSep, pathSegments.Take(index + 1));
-        if (IsUnixAgent) joined = "/" + joined;
-        await NavigateTo(joined);
+        var path = FileManagerPath.BuildBreadcrumbPath(pathSegments, index, PathSep, IsUnixAgent);
+        await NavigateTo(path);
     }
+
     private async Task OnPathKeyDown(KeyboardEventArgs e) { if (e.Key == "Enter") await NavigateTo(currentPath); }
     private async Task OpenAsDirectory(string name) => await NavigateTo(currentPath + name);
 
-    private async Task ViewFile(string name)
+    // --- File viewer ---
+
+    private Task ViewFile(string name)
     {
-        viewingFileName = name; viewingFilePath = currentPath + name;
-        fileViewOffset = 0; fileHash = null;
-        await LoadFilePage(); viewingFile = true;
+        viewingFileName = name;
+        viewingFilePath = currentPath + name;
+        viewingFile = true;
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 
-    private async Task LoadFilePage()
+    private void CloseFileViewer()
     {
-        fileLoading = true; fileContent = ""; fileBytesRead = 0; StateHasChanged();
-        try
-        {
-            var payload = RelaySocket.BuildFileCommand(0x02, viewingFilePath, PageSize, fileViewOffset);
-            var response = await SendCommand(payload);
-            if (response is null) return;
-            if (response.Length < 4) { Msg.Error("File Read Error", "Invalid response from agent (too short)", "File Manager"); return; }
-            var status = RelaySocket.ReadStatus(response);
-            if (status != 0) { Msg.Error("File Read Error", $"Agent returned error status {status} for {viewingFilePath}", "File Manager"); return; }
-            if (response.Length < 12) { Msg.Error("File Read Error", "Invalid response from agent (missing content)", "File Manager"); return; }
-            var (bytesRead, data) = RelaySocket.ReadFileContent(response);
-            fileBytesRead = (long)bytesRead;
-            try { fileContent = Encoding.UTF8.GetString(data); }
-            catch { fileContent = Formatters.FormatHexDump(data.ToArray()); }
-        }
-        catch (Exception ex) { Msg.Error("File Read Failed", $"Could not read {viewingFilePath}: {ex.Message}", "File Manager"); }
-        finally { fileLoading = false; StateHasChanged(); }
+        viewingFile = false;
+        viewingFileName = "";
+        viewingFilePath = "";
     }
 
-    private async Task NextPage() { fileViewOffset += PageSize; await LoadFilePage(); }
-    private async Task PrevPage() { fileViewOffset = Math.Max(0, fileViewOffset - PageSize); await LoadFilePage(); }
-    private void CloseFileViewer() { viewingFile = false; fileContent = ""; fileHash = null; }
-
-    private async Task HashFile()
+    private async Task OnEntryDoubleClick(DirEntry entry)
     {
-        fileLoading = true; fileHash = null; StateHasChanged();
-        try
-        {
-            var payload = RelaySocket.BuildFileCommand(0x03, viewingFilePath, PageSize, fileViewOffset);
-            var response = await SendCommand(payload);
-            if (response is null) return;
-            if (response.Length < 4) return;
-            var status = RelaySocket.ReadStatus(response);
-            if (status != 0) { Msg.Error("Hash Error", $"Agent returned error status {status} for {viewingFilePath}", "File Manager"); return; }
-            if (response.Length < 36) return;
-            fileHash = RelaySocket.ReadHash(response);
-        }
-        catch (Exception ex) { Msg.Error("Hash Failed", $"Could not hash {viewingFilePath}: {ex.Message}", "File Manager"); }
-        finally { fileLoading = false; StateHasChanged(); }
+        if (entry.IsDirectory || entry.IsDrive) await OpenAsDirectory(entry.Name);
+        else if (IsFileSynced(entry.Name)) await ViewFile(entry.Name);
     }
+
+    private bool IsFileSynced(string fileName)
+        => !string.IsNullOrEmpty(AgentUuid) && Downloads.Find(AgentUuid, currentPath + fileName)?.Status == DownloadStatus.Completed;
+
+    // --- Cache sync ---
 
     private async Task SyncCacheAsync()
     {
         if (_syncing) return;
         if (!Cache.HasDirectory || entries is null || string.IsNullOrEmpty(AgentUuid)) return;
         var snapshot = entries.ToList();
-        var remotePath = currentPath.TrimEnd('\\', '/');
+        var remotePath = FileManagerPath.TrimTrailing(currentPath);
         _syncing = true;
         try
         {
@@ -470,54 +323,15 @@
                     if (entry.IsDirectory || entry.IsDrive) await Vfs.PutDirectoryAsync(AgentUuid, parentId, entry.Name, entryRemotePath, entry.IsDrive);
                     else await Vfs.PutFileAsync(AgentUuid, parentId, entry.Name, entryRemotePath, (long)entry.Size);
                 }
-                catch { }
+                catch (Exception ex) { Msg.Show($"Cache sync: {ex.Message}", MessageType.Warning, source: "File Manager"); }
             }
             await InvokeAsync(StateHasChanged);
         }
-        catch { }
+        catch (Exception ex) { Msg.Show($"Cache sync failed: {ex.Message}", MessageType.Warning, source: "File Manager"); }
         finally { _syncing = false; }
     }
 
-    private DownloadRecord? GetDownloadRecord(string fileName) => string.IsNullOrEmpty(AgentUuid) ? null : Downloads.Find(AgentUuid, currentPath + fileName);
-
-    private async Task EnqueueSync(DirEntry entry)
-    {
-        if (!Cache.HasDirectory || string.IsNullOrEmpty(AgentUuid)) return;
-        var remotePath = currentPath + entry.Name;
-        var parentRemotePath = currentPath.TrimEnd('\\', '/');
-        var totalSize = (long)entry.Size;
-        var parentId = await Vfs.ResolveOrCreatePathAsync(AgentUuid, parentRemotePath);
-        var vfsFile = await Vfs.PutFileAsync(AgentUuid, parentId, entry.Name, remotePath.Replace('\\', '/'), totalSize);
-        var record = Downloads.Find(AgentUuid, remotePath);
-        if (record is null || record.Status == DownloadStatus.Completed || record.Status == DownloadStatus.Failed)
-            await Downloads.AddAsync(AgentUuid, AgentName ?? "", remotePath, entry.Name, vfsFile.Id, totalSize);
-        else if (record.Status == DownloadStatus.Paused)
-            await Downloads.QueueAsync(record.Id);
-        StateHasChanged();
-    }
-
-    private void PauseDownload(DirEntry entry)
-    {
-        if (string.IsNullOrEmpty(AgentUuid)) return;
-        var record = Downloads.Find(AgentUuid, currentPath + entry.Name);
-        if (record is not null) Downloads.Cts.Cancel(record.Id);
-    }
-
-    private async Task ResumeDownload(DirEntry entry)
-    {
-        if (string.IsNullOrEmpty(AgentUuid)) return;
-        var record = Downloads.Find(AgentUuid, currentPath + entry.Name);
-        if (record is null || Downloads.Cts.HasActive(record.Id)) return;
-        await Downloads.QueueAsync(record.Id);
-    }
-
-    private async Task RetryDownload(DirEntry entry)
-    {
-        if (string.IsNullOrEmpty(AgentUuid)) return;
-        var existing = Downloads.Find(AgentUuid, currentPath + entry.Name);
-        if (existing is not null) await Downloads.RemoveAsync(existing.Id);
-        await EnqueueSync(entry);
-    }
+    // --- Windows ---
 
     private void OpenDownloadsWindow()
     {
@@ -538,15 +352,7 @@
         Wm.OpenAgentWindow("FileSearch", AgentId, agentName: AgentName, agentUuid: AgentUuid);
     }
 
-    private async Task SaveToBrowser(DownloadRecord dl)
-    {
-        try
-        {
-            if (!await Cache.BlobExistsAsync(dl.CacheSubPath)) { Msg.Error("Save Failed", "File not found in local cache", "File Manager"); return; }
-            await Js.InvokeVoidAsync("c2SaveFile", dl.FileName, dl.CacheSubPath);
-        }
-        catch (Exception ex) { Msg.Error("Save Failed", $"Could not save {dl.FileName}: {ex.Message}", "File Manager"); }
-    }
+    // --- Agent communication ---
 
     private async Task<byte[]?> SendCommand(byte[] payload)
     {
@@ -554,12 +360,4 @@
         try { return await Relay.SendAndReceive(payload); }
         catch (Exception ex) { Msg.Error("Command Failed", $"Agent command error: {ex.Message}", "File Manager"); return null; }
     }
-
-    private async Task OnEntryDoubleClick(DirEntry entry)
-    {
-        if (entry.IsDirectory || entry.IsDrive) await OpenAsDirectory(entry.Name);
-        else if (IsFileSynced(entry.Name)) await ViewFile(entry.Name);
-    }
-
-    private bool IsFileSynced(string fileName) => !string.IsNullOrEmpty(AgentUuid) && Downloads.Find(AgentUuid, currentPath + fileName)?.Status == DownloadStatus.Completed;
 }

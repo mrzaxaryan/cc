@@ -145,12 +145,12 @@ public class RelaySocket
     {
         var inputBytes = Encoding.UTF8.GetBytes(input + "\0");
         var payload = new byte[1 + inputBytes.Length];
-        payload[0] = 0x04;
+        payload[0] = AgentCommands.WriteShell;
         inputBytes.CopyTo(payload, 1);
         return payload;
     }
 
-    public static byte[] BuildReadShell() => [0x05];
+    public static byte[] BuildReadShell() => [AgentCommands.ReadShell];
 
     public static (ulong bytesRead, string output) ReadShellOutput(byte[] response)
     {

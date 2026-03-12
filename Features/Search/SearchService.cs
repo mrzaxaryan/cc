@@ -169,7 +169,7 @@ public class SearchService : IDisposable
             pending.RemoveAt(0);
             scan.PendingDirs = pending;
 
-            var payload = RelaySocket.BuildPathCommand(0x01, dir);
+            var payload = RelaySocket.BuildPathCommand(AgentCommands.ListDirectory, dir);
             var response = await relay.SendAndReceive(payload);
             if (response is null || response.Length < 4) continue;
 
