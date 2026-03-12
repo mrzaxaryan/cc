@@ -35,6 +35,17 @@ else
             @if (brandMenuOpen)
             {
                 <div class="brand-popup">
+                    <button class="brand-popup-item" @onclick='() => BrandAction("Settings")'>
+                        <C2Icon Name="settings" Size="Size.Xs" /> Settings
+                    </button>
+                    <button class="brand-popup-item" @onclick="BrandToggleTheme">
+                        <C2Icon Name="@(Theme.Current == C2.Infrastructure.Theme.Dark ? "sun" : "moon")" Size="Size.Xs" />
+                        @(Theme.Current == C2.Infrastructure.Theme.Dark ? "Light Theme" : "Dark Theme")
+                    </button>
+                    <button class="brand-popup-item" @onclick="BrandReload">
+                        <C2Icon Name="refresh" Size="Size.Xs" /> Reload App
+                    </button>
+                    <div class="brand-popup-divider"></div>
                     <button class="brand-popup-item shutdown" @onclick="ShutdownAsync">
                         <C2Icon Name="power" Size="Size.Xs" /> Shut Down
                     </button>
@@ -269,6 +280,24 @@ else
     }
 
     private void ToggleBrandMenu() => brandMenuOpen = !brandMenuOpen;
+
+    private void BrandAction(string panel)
+    {
+        brandMenuOpen = false;
+        Wm.OpenWindow(panel);
+    }
+
+    private async Task BrandToggleTheme()
+    {
+        brandMenuOpen = false;
+        await Theme.Toggle();
+    }
+
+    private void BrandReload()
+    {
+        brandMenuOpen = false;
+        _ = JS.InvokeVoidAsync("eval", "location.reload()");
+    }
 
     private async void OnBrandFocusOut()
     {

@@ -92,6 +92,12 @@
     color: var(--c2-accent-red);
 }
 
+.brand-popup-divider {
+    height: 1px;
+    background: var(--c2-border);
+    margin: 4px 0;
+}
+
 .mdi-sep {
     width: 1px;
     height: 16px;
