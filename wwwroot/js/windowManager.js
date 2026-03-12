@@ -276,23 +276,33 @@
 
         const snap = detectSnapZone(e.clientX, e.clientY);
         if (snap && _dotnetRef) {
-            // Apply snap with animation
-            d.el.classList.add('win-animating');
-            d.el.style.left = snap.rect.x + 'px';
-            d.el.style.top = snap.rect.y + 'px';
-            d.el.style.width = snap.rect.w + 'px';
-            d.el.style.height = snap.rect.h + 'px';
+            // Maximize snap zone — use proper maximize state instead of snap
+            if (snap.zone === 'maximize') {
+                _dotnetRef.invokeMethodAsync('OnWindowAction', d.winId, 'maximize');
+                autoSave();
+            } else {
+                // Apply snap with animation
+                d.el.classList.add('win-animating');
+                d.el.classList.remove('maximized');
+                d.el.style.left = snap.rect.x + 'px';
+                d.el.style.top = snap.rect.y + 'px';
+                d.el.style.width = snap.rect.w + 'px';
+                d.el.style.height = snap.rect.h + 'px';
 
-            d.el.addEventListener('transitionend', function onEnd() {
-                d.el.removeEventListener('transitionend', onEnd);
-                d.el.classList.remove('win-animating');
-            });
+                d.el.addEventListener('transitionend', function onEnd() {
+                    d.el.removeEventListener('transitionend', onEnd);
+                    d.el.classList.remove('win-animating');
+                });
 
-            _dotnetRef.invokeMethodAsync('OnSnapApplied', d.winId,
-                snap.rect.x, snap.rect.y, snap.rect.w, snap.rect.h, snap.zone);
+                _dotnetRef.invokeMethodAsync('OnSnapApplied', d.winId,
+                    snap.rect.x, snap.rect.y, snap.rect.w, snap.rect.h, snap.zone);
 
-            autoSave();
+                autoSave();
+            }
         } else {
+            // If was previously snapped/maximized, clear those classes
+            d.el.classList.remove('maximized');
+
             // Normal drag end — sync final position
             const finalX = parseFloat(d.el.style.left) || 0;
             const finalY = parseFloat(d.el.style.top) || 0;
@@ -688,7 +698,18 @@
     }
 
     function snapWindowTo(winId, el, zone, rect) {
-        animateWindow(el, rect);
+        if (zone === 'maximize') {
+            el.classList.add('win-animating');
+            el.classList.add('maximized');
+            el.style.left = '';
+            el.style.top = '';
+            el.style.width = '';
+            el.style.height = '';
+            setTimeout(() => el.classList.remove('win-animating'), 250);
+        } else {
+            el.classList.remove('maximized');
+            animateWindow(el, rect);
+        }
         if (_dotnetRef) {
             _dotnetRef.invokeMethodAsync('OnSnapApplied', winId, rect.x, rect.y, rect.w, rect.h, zone);
         }
