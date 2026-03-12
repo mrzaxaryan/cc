@@ -15,3 +15,25 @@ window.c2Interop = {
 window.c2SaveFile = function (fileName, fileId) {
     return c2FileSystem.saveBlobToDownload(fileName, fileId);
 };
+
+// VNC panel — ResizeObserver to repaint SKCanvasView on container resize
+window.c2Vnc = (() => {
+    const ro = new ResizeObserver(entries => {
+        for (const entry of entries) {
+            const ref = entry.target._vncDotnetRef;
+            if (ref) ref.invokeMethodAsync('OnContainerResized');
+        }
+    });
+    return {
+        observe(el, dotnetRef) {
+            if (!el) return;
+            el._vncDotnetRef = dotnetRef;
+            ro.observe(el);
+        },
+        unobserve(el) {
+            if (!el) return;
+            ro.unobserve(el);
+            delete el._vncDotnetRef;
+        }
+    };
+})();

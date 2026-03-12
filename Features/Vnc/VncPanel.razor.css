@@ -28,14 +28,21 @@
     color: var(--c2-text-dim);
 }
 
+/* Wrapper fills all remaining space; position:relative gives the canvas a sizing context */
 .vnc-canvas-wrap {
-    flex: 1;
+    flex: 1 1 0%;
     min-height: 0;
+    position: relative;
     overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     background: #000;
+}
+
+/* Force the SKCanvasView <canvas> to fill the wrapper */
+.vnc-canvas-wrap ::deep canvas {
+    position: absolute;
+    inset: 0;
+    width: 100% !important;
+    height: 100% !important;
 }
 
 .vnc-display-select {

@@ -2,6 +2,8 @@
 @using SkiaSharp
 @using SkiaSharp.Views.Blazor
 @inject MessageService Msg
+@inject IJSRuntime Js
+@implements IAsyncDisposable
 
 <PanelLayout Title="Screen">
     <HeaderLeft>
@@ -73,10 +75,9 @@
                 </div>
             }
 
-            <div class="vnc-canvas-wrap">
+            <div class="vnc-canvas-wrap" @ref="_wrapEl">
                 <SKCanvasView @ref="_canvasRef"
-                              OnPaintSurface="OnPaintSurface"
-                              style="width:100%;height:100%;" />
+                              OnPaintSurface="OnPaintSurface" />
             </div>
         </div>
     </Body>
@@ -97,6 +98,8 @@
     private int _fps;
     private SKBitmap? _bitmap;
     private SKCanvasView? _canvasRef;
+    private ElementReference _wrapEl;
+    private DotNetObjectReference<VncPanel>? _dotnetRef;
     private CancellationTokenSource? _streamCts;
 
     // FPS tracking
@@ -109,6 +112,21 @@
     {
         if (IsConnected)
             await FetchDisplays();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _dotnetRef = DotNetObjectReference.Create(this);
+            await Js.InvokeVoidAsync("c2Vnc.observe", _wrapEl, _dotnetRef);
+        }
+    }
+
+    [JSInvokable]
+    public void OnContainerResized()
+    {
+        _canvasRef?.Invalidate();
     }
 
     private async Task FetchDisplays()
@@ -268,9 +286,11 @@
             _quality = q;
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         StopStreaming();
+        try { await Js.InvokeVoidAsync("c2Vnc.unobserve", _wrapEl); } catch { }
+        _dotnetRef?.Dispose();
         _bitmap?.Dispose();
     }
 }
