@@ -423,6 +423,15 @@
             startResize(e, handle);
             return;
         }
+
+        // Click anywhere on a window — bring to front
+        const winEl = e.target.closest('.app-window');
+        if (winEl && _dotnetRef) {
+            const winId = getWinId(winEl);
+            if (winId !== null) {
+                _dotnetRef.invokeMethodAsync('OnBringToFront', winId);
+            }
+        }
     }
 
     function onPointerMove(e) {
