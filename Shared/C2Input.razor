@@ -1,6 +1,6 @@
 @inherits Microsoft.AspNetCore.Components.ComponentBase
 
-<input class="cc-input @SizeClass @CssClass @(Monospace ? "cc-input-mono" : "")"
+<input class="c2-input @SizeClass @CssClass @(Monospace ? "c2-input-mono" : "")"
        type="@Type"
        value="@Value"
        @onchange="OnValueChanged"
@@ -29,9 +29,9 @@
 
     private string SizeClass => Size switch
     {
-        Size.Xs => "cc-input-xs",
-        Size.Md => "cc-input-md",
-        Size.Lg => "cc-input-lg",
+        Size.Xs => "c2-input-xs",
+        Size.Md => "c2-input-md",
+        Size.Lg => "c2-input-lg",
         _ => ""
     };
 

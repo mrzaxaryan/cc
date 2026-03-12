@@ -2,12 +2,12 @@
 
 @if (_confirming)
 {
-    <CcBtn Variant="BtnVariant.DangerSolid" Size="Size" OnClick="Confirm">@ConfirmLabel</CcBtn>
-    <CcBtn Size="Size" OnClick="Cancel">@CancelLabel</CcBtn>
+    <C2Btn Variant="BtnVariant.DangerSolid" Size="Size" OnClick="Confirm">@ConfirmLabel</C2Btn>
+    <C2Btn Size="Size" OnClick="Cancel">@CancelLabel</C2Btn>
 }
 else
 {
-    <CcBtn Variant="Variant" Size="Size" OnClick="ShowConfirm" Disabled="@Disabled" Title="@Title">@ChildContent</CcBtn>
+    <C2Btn Variant="Variant" Size="Size" OnClick="ShowConfirm" Disabled="@Disabled" Title="@Title">@ChildContent</C2Btn>
 }
 
 @code {

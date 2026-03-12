@@ -12,20 +12,20 @@
 .ai-table th,
 .ai-table td {
     padding: 0.35rem 0.6rem;
-    border-bottom: 1px solid var(--cc-border);
+    border-bottom: 1px solid var(--c2-border);
     vertical-align: top;
 }
 
 .ai-table th {
     text-align: left;
     white-space: nowrap;
-    color: var(--cc-text-muted);
+    color: var(--c2-text-muted);
     font-weight: 500;
     width: 140px;
 }
 
 .ai-table td {
-    color: var(--cc-text);
+    color: var(--c2-text);
     word-break: break-all;
 }
 
@@ -40,6 +40,6 @@
 }
 
 ::deep .ai-note {
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     font-style: italic;
 }

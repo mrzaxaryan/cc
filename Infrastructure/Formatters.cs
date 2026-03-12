@@ -1,7 +1,7 @@
-using cc.Features.Relay;
-using cc.Features.Agents;
+using C2.Features.Relay;
+using C2.Features.Agents;
 
-namespace cc.Infrastructure;
+namespace C2.Infrastructure;
 
 public static class Formatters
 {

@@ -1,10 +1,10 @@
 .sp-pct {
     font-size: 0.65rem;
     font-weight: 700;
-    color: var(--cc-accent-blue);
+    color: var(--c2-accent-blue);
 }
 
 .sp-speed {
     font-size: 0.6rem;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
 }

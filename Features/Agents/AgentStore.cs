@@ -1,8 +1,8 @@
 using System.Text.Json.Serialization;
-using cc.Features.Relay;
+using C2.Features.Relay;
 using Microsoft.JSInterop;
 
-namespace cc.Features.Agents;
+namespace C2.Features.Agents;
 
 /// <summary>Persisted agent metadata stored in IndexedDB.</summary>
 public class AgentRecord
@@ -46,7 +46,7 @@ public class AgentStore
 
         try
         {
-            var records = await _js.InvokeAsync<AgentRecord[]>("ccAgentDb.getAll");
+            var records = await _js.InvokeAsync<AgentRecord[]>("c2AgentDb.getAll");
             _cache = records.ToDictionary(r => r.Uuid);
         }
         catch
@@ -84,7 +84,7 @@ public class AgentStore
 
         _cache[uuid] = record;
         _agentIdToUuid[agent.Id] = uuid;
-        await _js.InvokeVoidAsync("ccAgentDb.put", record);
+        await _js.InvokeVoidAsync("c2AgentDb.put", record);
     }
 
     public string? GetUuidByAgentId(string agentId)
@@ -111,14 +111,14 @@ public class AgentStore
     {
         if (!_cache.TryGetValue(uuid, out var record)) return;
         record.LastSeen = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        await _js.InvokeVoidAsync("ccAgentDb.put", record);
+        await _js.InvokeVoidAsync("c2AgentDb.put", record);
     }
 
     public async Task RenameAsync(string uuid, string name)
     {
         if (!_cache.TryGetValue(uuid, out var record)) return;
         record.Name = name;
-        await _js.InvokeVoidAsync("ccAgentDb.put", record);
+        await _js.InvokeVoidAsync("c2AgentDb.put", record);
     }
 
     public async Task RemoveAsync(string uuid)
@@ -131,13 +131,13 @@ public class AgentStore
                 _agentIdToUuid.Remove(key);
         }
         _cache.Remove(uuid);
-        await _js.InvokeVoidAsync("ccAgentDb.remove", uuid);
+        await _js.InvokeVoidAsync("c2AgentDb.remove", uuid);
     }
 
     public async Task ClearAsync()
     {
         _cache.Clear();
         _agentIdToUuid.Clear();
-        await _js.InvokeVoidAsync("ccAgentDb.clear");
+        await _js.InvokeVoidAsync("c2AgentDb.clear");
     }
 }

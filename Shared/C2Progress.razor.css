@@ -1,0 +1,40 @@
+/* Progress bar */
+.c2-progress {
+    height: 4px;
+    background: var(--c2-bg-overlay);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.c2-progress-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+/* Variants */
+.c2-progress-info {
+    background: var(--c2-accent-blue);
+    box-shadow: 0 0 6px var(--c2-blue-30);
+}
+
+.c2-progress-success {
+    background: var(--c2-accent-green);
+}
+
+.c2-progress-warning {
+    background: var(--c2-accent-yellow);
+}
+
+.c2-progress-danger {
+    background: var(--c2-accent-red);
+}
+
+.c2-progress-muted {
+    background: var(--c2-bg-active);
+}
+
+/* Sizes */
+.c2-progress-xs {
+    height: 3px;
+}

@@ -1,28 +1,28 @@
 /* Table wrapper */
-.cc-table-wrap {
+.c2-table-wrap {
     overflow-x: auto;
-    border: 1px solid var(--cc-border);
+    border: 1px solid var(--c2-border);
     border-radius: 6px;
 }
 
 /* Table */
-.cc-table {
+.c2-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.78rem;
-    color: var(--cc-text);
+    color: var(--c2-text);
 }
 
 /* Header */
-.cc-table th {
+.c2-table th {
     font-size: 0.68rem;
     font-weight: 600;
-    color: var(--cc-text-muted);
+    color: var(--c2-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     padding: 0.45rem 0.6rem;
-    border-bottom: 1px solid var(--cc-border);
-    background: var(--cc-bg-deep);
+    border-bottom: 1px solid var(--c2-border);
+    background: var(--c2-bg-deep);
     text-align: left;
     white-space: nowrap;
     position: sticky;
@@ -31,49 +31,49 @@
 }
 
 /* Cells */
-.cc-table td {
+.c2-table td {
     padding: 0.4rem 0.6rem;
-    border-bottom: 1px solid var(--cc-border);
+    border-bottom: 1px solid var(--c2-border);
     vertical-align: middle;
 }
 
-.cc-table tbody tr:last-child td {
+.c2-table tbody tr:last-child td {
     border-bottom: none;
 }
 
 /* Code inside cells */
-.cc-table code {
+.c2-table code {
     font-size: 0.72rem;
-    color: var(--cc-text-muted);
+    color: var(--c2-text-muted);
     background: none;
 }
 
 /* Striped */
-.cc-table-striped tbody tr:nth-child(even) {
-    background: var(--cc-bg-surface);
+.c2-table-striped tbody tr:nth-child(even) {
+    background: var(--c2-bg-surface);
 }
 
 /* Hover */
-.cc-table-hover tbody tr {
+.c2-table-hover tbody tr {
     transition: background 0.15s;
 }
 
-.cc-table-hover tbody tr:hover {
-    background: var(--cc-bg-overlay);
+.c2-table-hover tbody tr:hover {
+    background: var(--c2-bg-overlay);
 }
 
 /* Fixed layout */
-.cc-table-fixed {
+.c2-table-fixed {
     table-layout: fixed;
 }
 
 /* Compact */
-.cc-table-compact th {
+.c2-table-compact th {
     padding: 0.3rem 0.5rem;
     font-size: 0.62rem;
 }
 
-.cc-table-compact td {
+.c2-table-compact td {
     padding: 0.25rem 0.5rem;
     font-size: 0.74rem;
 }

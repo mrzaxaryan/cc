@@ -15,27 +15,27 @@
         }
         @if (IsAgentServicePaused)
         {
-            <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs">Service Paused</CcBadge>
+            <C2Badge Variant="BadgeVariant.Danger" Size="Size.Xs">Service Paused</C2Badge>
         }
     </HeaderLeft>
     <HeaderRight>
         @if (IsAgentServicePaused)
         {
-            <CcBtn Variant="BtnVariant.Success" Size="Size.Xs" OnClick="ResumeAgentService" Title="Resume search service for this agent">RESUME SERVICE</CcBtn>
+            <C2Btn Variant="BtnVariant.Success" Size="Size.Xs" OnClick="ResumeAgentService" Title="Resume search service for this agent">RESUME SERVICE</C2Btn>
         }
         else
         {
-            <CcBtn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="PauseAgentService" Title="Pause search service for this agent">PAUSE SERVICE</CcBtn>
+            <C2Btn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="PauseAgentService" Title="Pause search service for this agent">PAUSE SERVICE</C2Btn>
         }
         @if (AgentScanning > 0 && !IsAgentServicePaused)
         {
-            <CcBtn Variant="BtnVariant.Warning" Size="Size.Xs" OnClick="PauseAllAgent" Title="Pause all searches for this agent">PAUSE ALL</CcBtn>
+            <C2Btn Variant="BtnVariant.Warning" Size="Size.Xs" OnClick="PauseAllAgent" Title="Pause all searches for this agent">PAUSE ALL</C2Btn>
         }
         @if (AgentPaused > 0 && !IsAgentServicePaused)
         {
-            <CcBtn Variant="BtnVariant.Success" Size="Size.Xs" OnClick="ResumeAllAgent" Title="Resume all searches for this agent">RESUME ALL</CcBtn>
+            <C2Btn Variant="BtnVariant.Success" Size="Size.Xs" OnClick="ResumeAllAgent" Title="Resume all searches for this agent">RESUME ALL</C2Btn>
         }
-        <CcBtn Size="Size.Xs" OnClick="Refresh" Title="Refresh">&#x21bb;</CcBtn>
+        <C2Btn Size="Size.Xs" OnClick="Refresh" Title="Refresh">&#x21bb;</C2Btn>
     </HeaderRight>
     <Toolbar>
         @* New search form *@
@@ -46,7 +46,7 @@
                 {
                     <div class="scan-form-row">
                         <label class="scan-label">Directory</label>
-                        <CcInput @bind-Value="newScanPath" Placeholder="C:\Users" Monospace />
+                        <C2Input @bind-Value="newScanPath" Placeholder="C:\Users" Monospace />
                     </div>
                 }
                 <div class="scan-form-row">
@@ -64,7 +64,7 @@
                 </div>
                 <div class="scan-form-row">
                     <label class="scan-label">Extensions (comma-separated)</label>
-                    <CcInput @bind-Value="newScanExtensions" Placeholder=".txt,.pdf,.doc,.xls" Monospace />
+                    <C2Input @bind-Value="newScanExtensions" Placeholder=".txt,.pdf,.doc,.xls" Monospace />
                 </div>
                 @if (!string.IsNullOrEmpty(extensionError))
                 {
@@ -79,21 +79,21 @@
                 <div class="scan-form-actions">
                     @if (fullScanMode)
                     {
-                        <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="StartFullScan" Disabled="@(string.IsNullOrWhiteSpace(newScanExtensions))">START FULL SEARCH</CcBtn>
+                        <C2Btn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="StartFullScan" Disabled="@(string.IsNullOrWhiteSpace(newScanExtensions))">START FULL SEARCH</C2Btn>
                     }
                     else
                     {
-                        <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="StartScan" Disabled="@(string.IsNullOrWhiteSpace(newScanPath) || string.IsNullOrWhiteSpace(newScanExtensions))">START SEARCH</CcBtn>
+                        <C2Btn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="StartScan" Disabled="@(string.IsNullOrWhiteSpace(newScanPath) || string.IsNullOrWhiteSpace(newScanExtensions))">START SEARCH</C2Btn>
                     }
-                    <CcBtn Size="Size.Xs" OnClick="CancelForm">CANCEL</CcBtn>
+                    <C2Btn Size="Size.Xs" OnClick="CancelForm">CANCEL</C2Btn>
                 </div>
             </div>
         }
         else
         {
             <div class="scan-new-btn">
-                <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="ShowNewScan">NEW SEARCH</CcBtn>
-                <CcBtn Size="Size.Xs" OnClick="ShowFullScan">FULL SEARCH</CcBtn>
+                <C2Btn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="ShowNewScan">NEW SEARCH</C2Btn>
+                <C2Btn Size="Size.Xs" OnClick="ShowFullScan">FULL SEARCH</C2Btn>
             </div>
         }
 
@@ -148,19 +148,19 @@
                                 @switch (s.Status)
                                 {
                                     case SearchStatus.Scanning:
-                                        <CcBtn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseScan(s)" Title="Pause">&#x23F8;</CcBtn>
+                                        <C2Btn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseScan(s)" Title="Pause">&#x23F8;</C2Btn>
                                         break;
                                     case SearchStatus.Paused:
-                                        <CcBtn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeScan(s)" Title="Resume">&#x25B6;</CcBtn>
+                                        <C2Btn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeScan(s)" Title="Resume">&#x25B6;</C2Btn>
                                         break;
                                     case SearchStatus.Completed:
-                                        <CcBadge Variant="BadgeVariant.Success" Size="Size.Xs">DONE</CcBadge>
+                                        <C2Badge Variant="BadgeVariant.Success" Size="Size.Xs">DONE</C2Badge>
                                         break;
                                     case SearchStatus.Failed:
-                                        <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@s.Error">FAILED</CcBadge>
+                                        <C2Badge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@s.Error">FAILED</C2Badge>
                                         break;
                                 }
-                                <CcBtn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => RemoveScan(s)" Title="Remove" CssClass="panel-remove-btn">&#x2715;</CcBtn>
+                                <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => RemoveScan(s)" Title="Remove" CssClass="panel-remove-btn">&#x2715;</C2Btn>
                             </div>
                         </div>
                         <div class="scan-item-stats">
@@ -173,7 +173,7 @@
                         </div>
                         @if (s.Status is SearchStatus.Scanning or SearchStatus.Paused)
                         {
-                            <CcProgress Size="Size.Xs" Variant="@ProgressVariant(s.Status)" Percent="@pct" />
+                            <C2Progress Size="Size.Xs" Variant="@ProgressVariant(s.Status)" Percent="@pct" />
                         }
                     </div>
                 }
@@ -433,9 +433,9 @@
 
     private static ProgressVariant ProgressVariant(string s) => s switch
     {
-        SearchStatus.Scanning => cc.Shared.ProgressVariant.Info,
-        SearchStatus.Paused => cc.Shared.ProgressVariant.Warning,
-        _ => cc.Shared.ProgressVariant.Muted
+        SearchStatus.Scanning => C2.Shared.ProgressVariant.Info,
+        SearchStatus.Paused => C2.Shared.ProgressVariant.Warning,
+        _ => C2.Shared.ProgressVariant.Muted
     };
 
     public override void Dispose() => base.Dispose();

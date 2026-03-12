@@ -19,9 +19,9 @@
 }
 
 .sh-banner--warn {
-    background: var(--cc-yellow-10);
-    border-bottom: 1px solid var(--cc-yellow-30);
-    color: var(--cc-accent-yellow);
+    background: var(--c2-yellow-10);
+    border-bottom: 1px solid var(--c2-yellow-30);
+    color: var(--c2-accent-yellow);
 }
 
 /* Terminal output area */
@@ -30,13 +30,13 @@
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
-    background: var(--cc-code);
+    background: var(--c2-code);
     padding: 0.5rem 0.6rem;
     scroll-behavior: smooth;
 }
 
 .sh-empty {
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     font-size: 0.72rem;
     font-style: italic;
     padding: 1.5rem 0;
@@ -48,20 +48,20 @@
     font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
     font-size: 0.73rem;
     line-height: 1.5;
-    color: var(--cc-text);
+    color: var(--c2-text);
     white-space: pre-wrap;
     word-break: break-all;
     min-height: 1.1em;
 }
 
 .sh-line--cmd {
-    color: var(--cc-accent-green);
+    color: var(--c2-accent-green);
     font-weight: 500;
     padding-top: 0.15rem;
 }
 
 .sh-line--err {
-    color: var(--cc-accent-red);
+    color: var(--c2-accent-red);
 }
 
 /* Input bar */
@@ -70,15 +70,15 @@
     align-items: center;
     gap: 0.35rem;
     padding: 0.4rem 0.5rem;
-    border-top: 1px solid var(--cc-border);
-    background: var(--cc-bg-deep);
+    border-top: 1px solid var(--c2-border);
+    background: var(--c2-bg-deep);
     flex-shrink: 0;
 }
 
 .sh-prompt {
     font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
     font-size: 0.78rem;
-    color: var(--cc-accent-green);
+    color: var(--c2-accent-green);
     flex-shrink: 0;
     font-weight: 600;
     user-select: none;
@@ -87,20 +87,20 @@
 .sh-input {
     flex: 1;
     min-width: 0;
-    background: var(--cc-bg-surface);
-    border: 1px solid var(--cc-border);
-    border-radius: var(--cc-radius-sm);
+    background: var(--c2-bg-surface);
+    border: 1px solid var(--c2-border);
+    border-radius: var(--c2-radius-sm);
     padding: 0.3rem 0.5rem;
     font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
     font-size: 0.73rem;
-    color: var(--cc-text);
+    color: var(--c2-text);
     outline: none;
-    transition: border-color var(--cc-transition-fast);
+    transition: border-color var(--c2-transition-fast);
 }
 
 .sh-input:focus {
-    border-color: var(--cc-accent-blue);
-    box-shadow: 0 0 0 2px var(--cc-blue-15);
+    border-color: var(--c2-accent-blue);
+    box-shadow: 0 0 0 2px var(--c2-blue-15);
 }
 
 .sh-input:disabled {
@@ -109,7 +109,7 @@
 }
 
 .sh-input::placeholder {
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
 }
 
 /* ===== Tablet ===== */

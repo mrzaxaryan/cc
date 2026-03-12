@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Components;
 
-namespace cc.Infrastructure;
+namespace C2.Infrastructure;
 
 /// <summary>
 /// Base component that simplifies event subscriptions.

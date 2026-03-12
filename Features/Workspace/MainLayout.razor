@@ -13,10 +13,10 @@
 
 @if (!initialized)
 {
-    <div class="cc-loading">
-        <span class="cc-loading-brand">CC</span>
-        <div class="cc-loading-spinner"></div>
-        <div class="cc-loading-text"></div>
+    <div class="c2-loading">
+        <span class="c2-loading-brand">C2</span>
+        <div class="c2-loading-spinner"></div>
+        <div class="c2-loading-text"></div>
     </div>
 }
 else if (showSetup)
@@ -26,14 +26,14 @@ else if (showSetup)
 else
 {
     <div class="mdi-menubar">
-        <span class="mdi-brand">CC</span>
+        <span class="mdi-brand">C2</span>
         <span class="mdi-sep"></span>
 
         @foreach (var item in MenuItems)
         {
             var panel = item.Panel;
             <button class="mdi-menu-item" @onclick="() => Wm.OpenWindow(panel)">
-                <CcIcon Name="@item.Icon" Size="Size.Xs" /> @item.Label
+                <C2Icon Name="@item.Icon" Size="Size.Xs" /> @item.Label
             </button>
         }
 
@@ -42,7 +42,7 @@ else
         @* Notifications *@
         <div class="notif-wrapper" @onfocusout="OnFocusOut" tabindex="-1">
             <button class="mdi-icon-btn" @onclick="ToggleDropdown" title="Notifications">
-                <CcIcon Name="bell" Size="Size.Sm" />
+                <C2Icon Name="bell" Size="Size.Sm" />
                 @if (updateAvailable || Notif.UnreadCount > 0)
                 {
                     <span class="notif-badge">@BadgeText()</span>
@@ -81,7 +81,7 @@ else
                                     @if (n.Type == "error")
                                     {
                                         <button class="notif-copy" @onclick="() => CopyText(n.Text)" title="Copy">
-                                            <CcIcon Name="copy" Size="Size.Xs" />
+                                            <C2Icon Name="copy" Size="Size.Xs" />
                                         </button>
                                     }
                                     <button class="notif-remove" @onclick="() => RemoveOne(n.Id)" title="Dismiss">&times;</button>
@@ -95,13 +95,13 @@ else
 
         @* Theme toggle *@
         <button class="mdi-icon-btn" @onclick="ToggleTheme" title="Toggle theme">
-            @if (Theme.Current == cc.Infrastructure.Theme.Dark)
+            @if (Theme.Current == C2.Infrastructure.Theme.Dark)
             {
-                <CcIcon Name="sun" Size="Size.Sm" />
+                <C2Icon Name="sun" Size="Size.Sm" />
             }
             else
             {
-                <CcIcon Name="moon" Size="Size.Sm" />
+                <C2Icon Name="moon" Size="Size.Sm" />
             }
         </button>
     </div>
@@ -160,7 +160,7 @@ else
             {
                 try
                 {
-                    var available = await JS.InvokeAsync<bool>("eval", "!!window._ccUpdateAvailable");
+                    var available = await JS.InvokeAsync<bool>("eval", "!!window._c2UpdateAvailable");
                     if (available && !updateAvailable)
                     {
                         updateAvailable = true;

@@ -1,4 +1,4 @@
-namespace cc.Shared;
+namespace C2.Shared;
 
 public enum BtnVariant
 {

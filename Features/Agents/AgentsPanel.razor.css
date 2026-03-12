@@ -6,7 +6,7 @@
     align-items: center;
     gap: 0.25rem;
     padding: 0.35rem 0.5rem;
-    border-bottom: 1px solid var(--cc-border);
+    border-bottom: 1px solid var(--c2-border);
     flex-shrink: 0;
     overflow-x: auto;
 }
@@ -16,10 +16,10 @@
     align-items: center;
     gap: 0.3rem;
     padding: 0.2rem 0.5rem;
-    border: 1px solid var(--cc-border);
+    border: 1px solid var(--c2-border);
     border-radius: 4px;
     background: transparent;
-    color: var(--cc-text-muted);
+    color: var(--c2-text-muted);
     font-size: 0.72rem;
     cursor: pointer;
     white-space: nowrap;
@@ -27,20 +27,20 @@
 }
 
 .ap-relay-tab:hover {
-    background: var(--cc-bg-hover);
-    color: var(--cc-text);
+    background: var(--c2-bg-hover);
+    color: var(--c2-text);
 }
 
 .ap-relay-tab--active {
-    background: var(--cc-bg-active);
-    color: var(--cc-text);
-    border-color: var(--cc-accent);
+    background: var(--c2-bg-active);
+    color: var(--c2-text);
+    border-color: var(--c2-accent);
 }
 
 .ap-relay-count {
     font-size: 0.62rem;
-    color: var(--cc-text-dim);
-    background: var(--cc-bg-hover);
+    color: var(--c2-text-dim);
+    background: var(--c2-bg-hover);
     padding: 0 0.3rem;
     border-radius: 3px;
     min-width: 1.1em;
@@ -54,22 +54,22 @@
     transition: background 0.15s, box-shadow 0.15s;
 }
 
-::deep .cc-table-hover tbody tr.ap-row:hover {
-    background: var(--cc-bg-highlight);
-    box-shadow: inset 3px 0 0 var(--cc-accent-blue);
+::deep .c2-table-hover tbody tr.ap-row:hover {
+    background: var(--c2-bg-highlight);
+    box-shadow: inset 3px 0 0 var(--c2-accent-blue);
 }
 
-::deep .cc-table-wrap {
+::deep .c2-table-wrap {
     border-top: none;
     border-radius: 0;
 }
 
-::deep .cc-table thead th {
-    border-bottom: 2px solid var(--cc-border);
+::deep .c2-table thead th {
+    border-bottom: 2px solid var(--c2-border);
 }
 
-::deep .cc-table tbody tr.ap-row td {
-    border-bottom: 1px solid var(--cc-border);
+::deep .c2-table tbody tr.ap-row td {
+    border-bottom: 1px solid var(--c2-border);
     padding-top: 0.5rem;
     padding-bottom: 0.5rem;
 }
@@ -94,13 +94,13 @@
 .ap-name {
     font-weight: 600;
     font-size: 0.8rem;
-    color: var(--cc-text);
+    color: var(--c2-text);
     letter-spacing: 0.01em;
 }
 
 .ap-uuid {
     font-size: 0.62rem;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     opacity: 0.7;
 }
 
@@ -115,7 +115,7 @@
 
 .ap-arch {
     font-size: 0.68rem;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     margin-left: 0.25rem;
 }
 
@@ -129,7 +129,7 @@
 
 .ap-seen-cell {
     white-space: nowrap;
-    color: var(--cc-text-muted);
+    color: var(--c2-text-muted);
     font-size: 0.74rem;
 }
 
@@ -145,7 +145,7 @@
     width: 100%;
     background: none;
     border: none;
-    color: var(--cc-text);
+    color: var(--c2-text);
     font-size: 0.78rem;
     padding: 0.35rem 0.75rem;
     text-align: left;
@@ -155,7 +155,7 @@
 }
 
 .ap-ctx-sub-trigger:hover {
-    background: var(--cc-bg-highlight);
+    background: var(--c2-bg-highlight);
 }
 
 .ap-ctx-arrow {
@@ -168,10 +168,10 @@
     left: 100%;
     top: 0;
     min-width: 130px;
-    background: var(--cc-bg-base);
-    border: 1px solid var(--cc-border-light);
+    background: var(--c2-bg-base);
+    border: 1px solid var(--c2-border-light);
     border-radius: 6px;
-    box-shadow: 0 4px 16px var(--cc-shadow);
+    box-shadow: 0 4px 16px var(--c2-shadow);
     padding: 0.25rem 0;
     z-index: 1;
 }
@@ -182,7 +182,7 @@
 
 ::deep .ap-ctx-copy-item {
     font-size: 0.74rem;
-    color: var(--cc-text-muted);
+    color: var(--c2-text-muted);
 }
 
 /* ===== Mobile card view (hidden on desktop) ===== */
@@ -195,7 +195,7 @@
     flex-direction: column;
     gap: 0.25rem;
     padding: 0.55rem 0.6rem;
-    border-bottom: 1px solid var(--cc-border);
+    border-bottom: 1px solid var(--c2-border);
     cursor: context-menu;
     user-select: none;
     transition: background 0.15s;
@@ -206,7 +206,7 @@
 }
 
 .ap-card:active {
-    background: var(--cc-bg-overlay);
+    background: var(--c2-bg-overlay);
 }
 
 .ap-card--dim {
@@ -214,7 +214,7 @@
 }
 
 .ap-card--active {
-    background: var(--cc-blue-04);
+    background: var(--c2-blue-04);
 }
 
 .ap-card-top {
@@ -226,7 +226,7 @@
 .ap-card-name {
     font-weight: 600;
     font-size: 0.82rem;
-    color: var(--cc-text);
+    color: var(--c2-text);
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -241,7 +241,7 @@
 
 .ap-card-seen {
     font-size: 0.65rem;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     white-space: nowrap;
     flex-shrink: 0;
 }
@@ -255,12 +255,12 @@
 
 .ap-card-detail {
     font-size: 0.68rem;
-    color: var(--cc-text-muted);
+    color: var(--c2-text-muted);
 }
 
 .ap-card-detail code {
     font-size: 0.66rem;
-    color: var(--cc-text-muted);
+    color: var(--c2-text-muted);
 }
 
 /* ===== Tablet: switch to card view ===== */
@@ -297,7 +297,7 @@
         border: none;
         box-shadow: none;
         border-radius: 0;
-        border-top: 1px solid var(--cc-border);
+        border-top: 1px solid var(--c2-border);
         min-width: unset;
     }
 

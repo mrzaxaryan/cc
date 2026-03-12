@@ -1,6 +1,6 @@
-using cc.Features.Relay;
+using C2.Features.Relay;
 
-namespace cc.Features.Workspace;
+namespace C2.Features.Workspace;
 
 /// <summary>Tracks position, size, and context for a single workspace window/panel.</summary>
 public class WindowState

@@ -5,7 +5,7 @@
       "name": "Launch (https)",
       "type": "dotnet",
       "request": "launch",
-      "projectPath": "${workspaceFolder}/cc.csproj"
+      "projectPath": "${workspaceFolder}/C2.csproj"
     }
   ]
 }

@@ -1,11 +1,11 @@
-.cc-dialog-backdrop {
+.c2-dialog-backdrop {
     position: fixed;
     inset: 0;
-    background: var(--cc-overlay-bg);
+    background: var(--c2-overlay-bg);
     z-index: 2000;
 }
 
-.cc-dialog {
+.c2-dialog {
     position: fixed;
     top: 50%;
     left: 50%;
@@ -13,87 +13,87 @@
     z-index: 2001;
     min-width: 320px;
     max-width: 460px;
-    background: var(--cc-bg-base);
-    border: 1px solid var(--cc-border-light);
-    border-radius: var(--cc-radius-lg);
-    box-shadow: var(--cc-elevation-3);
-    animation: cc-dialog-in 0.15s ease-out;
+    background: var(--c2-bg-base);
+    border: 1px solid var(--c2-border-light);
+    border-radius: var(--c2-radius-lg);
+    box-shadow: var(--c2-elevation-3);
+    animation: c2-dialog-in 0.15s ease-out;
 }
 
-@keyframes cc-dialog-in {
+@keyframes c2-dialog-in {
     from { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
     to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
-.cc-dialog-header {
+.c2-dialog-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--cc-border);
+    border-bottom: 1px solid var(--c2-border);
 }
 
-.cc-dialog-title {
+.c2-dialog-title {
     font-weight: 600;
     font-size: 0.85rem;
 }
 
-.cc-dialog-close {
+.c2-dialog-close {
     background: none;
     border: none;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     font-size: 1.1rem;
     cursor: pointer;
     padding: 0 0.25rem;
-    border-radius: var(--cc-radius-sm);
+    border-radius: var(--c2-radius-sm);
     line-height: 1;
-    transition: color var(--cc-transition-fast);
+    transition: color var(--c2-transition-fast);
 }
 
-.cc-dialog-close:hover {
-    color: var(--cc-text);
+.c2-dialog-close:hover {
+    color: var(--c2-text);
 }
 
-.cc-dialog-body {
+.c2-dialog-body {
     padding: 1rem;
 }
 
-.cc-dialog-footer {
+.c2-dialog-footer {
     display: flex;
     justify-content: flex-end;
     gap: 0.5rem;
     padding: 0.75rem 1rem;
-    border-top: 1px solid var(--cc-border);
+    border-top: 1px solid var(--c2-border);
 }
 
 /* Mobile — full-width dialog */
 @media (max-width: 768px) {
-    .cc-dialog {
+    .c2-dialog {
         min-width: unset;
         max-width: unset;
         width: calc(100vw - 1.5rem);
     }
 
-    .cc-dialog-close {
+    .c2-dialog-close {
         padding: 0.25rem;
         font-size: 1.2rem;
     }
 }
 
 @media (max-width: 480px) {
-    .cc-dialog {
+    .c2-dialog {
         width: calc(100vw - 1rem);
     }
 
-    .cc-dialog-header {
+    .c2-dialog-header {
         padding: 0.6rem 0.75rem;
     }
 
-    .cc-dialog-body {
+    .c2-dialog-body {
         padding: 0.75rem;
     }
 
-    .cc-dialog-footer {
+    .c2-dialog-footer {
         padding: 0.6rem 0.75rem;
     }
 }

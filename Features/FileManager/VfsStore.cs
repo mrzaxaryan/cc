@@ -1,9 +1,9 @@
 using System.Text.Json.Serialization;
-using cc.Features.Storage;
-using cc.Infrastructure;
+using C2.Features.Storage;
+using C2.Infrastructure;
 using Microsoft.JSInterop;
 
-namespace cc.Features.FileManager;
+namespace C2.Features.FileManager;
 
 public class VfsDirectory
 {
@@ -63,25 +63,25 @@ public class VfsStore
             IsDrive = isDrive,
             CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
         };
-        await _js.InvokeVoidAsync("ccDirectoryDb.put", dir);
+        await _js.InvokeVoidAsync("c2DirectoryDb.put", dir);
         _bus.Publish(new VfsChangedEvent());
         return dir;
     }
 
     public async Task<VfsDirectory?> GetDirectoryAsync(string id)
     {
-        return await _js.InvokeAsync<VfsDirectory?>("ccDirectoryDb.get", id);
+        return await _js.InvokeAsync<VfsDirectory?>("c2DirectoryDb.get", id);
     }
 
     public async Task<List<VfsDirectory>> GetChildDirectoriesAsync(string agentUuid, string parentId)
     {
-        var dirs = await _js.InvokeAsync<VfsDirectory[]>("ccDirectoryDb.getByParent", agentUuid, parentId);
+        var dirs = await _js.InvokeAsync<VfsDirectory[]>("c2DirectoryDb.getByParent", agentUuid, parentId);
         return dirs?.OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase).ToList() ?? new();
     }
 
     public async Task<VfsDirectory?> FindDirectoryAsync(string agentUuid, string parentId, string name)
     {
-        var dirs = await _js.InvokeAsync<VfsDirectory[]>("ccDirectoryDb.getByParent", agentUuid, parentId);
+        var dirs = await _js.InvokeAsync<VfsDirectory[]>("c2DirectoryDb.getByParent", agentUuid, parentId);
         return dirs?.FirstOrDefault(d => string.Equals(d.Name.TrimEnd('\\', '/'), name.TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase));
     }
 
@@ -130,13 +130,13 @@ public class VfsStore
         foreach (var child in childDirs)
             await RemoveDirectoryAsync(child.Id);
 
-        await _js.InvokeVoidAsync("ccDirectoryDb.remove", id);
+        await _js.InvokeVoidAsync("c2DirectoryDb.remove", id);
         _bus.Publish(new VfsChangedEvent());
     }
 
     public async Task ClearAgentAsync(string agentUuid)
     {
-        var files = await _js.InvokeAsync<VfsFile[]>("ccFileDb.getByAgent", agentUuid);
+        var files = await _js.InvokeAsync<VfsFile[]>("c2FileDb.getByAgent", agentUuid);
         if (files is not null)
         {
             foreach (var f in files)
@@ -145,8 +145,8 @@ public class VfsStore
             }
         }
 
-        await _js.InvokeVoidAsync("ccDirectoryDb.removeByAgent", agentUuid);
-        await _js.InvokeVoidAsync("ccFileDb.removeByAgent", agentUuid);
+        await _js.InvokeVoidAsync("c2DirectoryDb.removeByAgent", agentUuid);
+        await _js.InvokeVoidAsync("c2FileDb.removeByAgent", agentUuid);
         _bus.Publish(new VfsChangedEvent());
     }
 
@@ -158,7 +158,7 @@ public class VfsStore
         if (existing is not null)
         {
             existing.Size = size;
-            await _js.InvokeVoidAsync("ccFileDb.put", existing);
+            await _js.InvokeVoidAsync("c2FileDb.put", existing);
             return existing;
         }
 
@@ -172,32 +172,32 @@ public class VfsStore
             Size = size,
             CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
         };
-        await _js.InvokeVoidAsync("ccFileDb.put", file);
+        await _js.InvokeVoidAsync("c2FileDb.put", file);
         _bus.Publish(new VfsChangedEvent());
         return file;
     }
 
     public async Task<VfsFile?> GetFileAsync(string id)
     {
-        return await _js.InvokeAsync<VfsFile?>("ccFileDb.get", id);
+        return await _js.InvokeAsync<VfsFile?>("c2FileDb.get", id);
     }
 
     public async Task<List<VfsFile>> GetFilesInDirectoryAsync(string agentUuid, string directoryId)
     {
-        var files = await _js.InvokeAsync<VfsFile[]>("ccFileDb.getByDirectory", agentUuid, directoryId);
+        var files = await _js.InvokeAsync<VfsFile[]>("c2FileDb.getByDirectory", agentUuid, directoryId);
         return files?.OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase).ToList() ?? new();
     }
 
     public async Task<VfsFile?> FindFileAsync(string agentUuid, string directoryId, string name)
     {
-        var files = await _js.InvokeAsync<VfsFile[]>("ccFileDb.getByDirectory", agentUuid, directoryId);
+        var files = await _js.InvokeAsync<VfsFile[]>("c2FileDb.getByDirectory", agentUuid, directoryId);
         return files?.FirstOrDefault(f => string.Equals(f.Name, name, StringComparison.OrdinalIgnoreCase));
     }
 
     public async Task RemoveFileAsync(string id, bool raiseEvent = true)
     {
         try { await _cache.DeleteBlobAsync(id); } catch { }
-        await _js.InvokeVoidAsync("ccFileDb.remove", id);
+        await _js.InvokeVoidAsync("c2FileDb.remove", id);
         if (raiseEvent) _bus.Publish(new VfsChangedEvent());
     }
 
@@ -205,8 +205,8 @@ public class VfsStore
 
     public async Task<(int dirCount, int fileCount, long totalSize)> GetAgentStatsAsync(string agentUuid)
     {
-        var dirs = await _js.InvokeAsync<VfsDirectory[]?>("ccDirectoryDb.getByAgent", agentUuid);
-        var files = await _js.InvokeAsync<VfsFile[]?>("ccFileDb.getByAgent", agentUuid);
+        var dirs = await _js.InvokeAsync<VfsDirectory[]?>("c2DirectoryDb.getByAgent", agentUuid);
+        var files = await _js.InvokeAsync<VfsFile[]?>("c2FileDb.getByAgent", agentUuid);
         var dirCount = dirs?.Length ?? 0;
         var fileCount = files?.Length ?? 0;
         var totalSize = files?.Sum(f => f.Size) ?? 0;

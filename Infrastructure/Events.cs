@@ -1,4 +1,4 @@
-namespace cc.Infrastructure;
+namespace C2.Infrastructure;
 
 // ── Base ──────────────────────────────────────────────────────────────
 

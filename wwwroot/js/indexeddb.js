@@ -1,6 +1,6 @@
 // IndexedDB CRUD for agents, relays, and virtual filesystem
 (function () {
-    const DB_NAME = 'cc-agents';
+    const DB_NAME = 'c2-agents';
     const DB_VERSION = 8;
     const AGENTS_STORE = 'agents';
     const RELAYS_STORE = 'relays';
@@ -75,7 +75,7 @@
         });
     }
 
-    window.ccAgentDb = {
+    window.c2AgentDb = {
         getAll: () => run(AGENTS_STORE, 'readonly', s => s.getAll()),
         get: uuid => run(AGENTS_STORE, 'readonly', s => s.get(uuid)),
         put: record => run(AGENTS_STORE, 'readwrite', s => s.put(record)),
@@ -84,7 +84,7 @@
         count: () => run(AGENTS_STORE, 'readonly', s => s.count())
     };
 
-    window.ccRelayDb = {
+    window.c2RelayDb = {
         getAll: () => run(RELAYS_STORE, 'readonly', s => s.getAll()),
         get: url => run(RELAYS_STORE, 'readonly', s => s.get(url)),
         put: record => run(RELAYS_STORE, 'readwrite', s => s.put(record)),
@@ -92,7 +92,7 @@
         clear: () => run(RELAYS_STORE, 'readwrite', s => s.clear())
     };
 
-    window.ccDownloadDb = {
+    window.c2DownloadDb = {
         getAll: () => run(DOWNLOADS_STORE, 'readonly', s => s.getAll()),
         get: id => run(DOWNLOADS_STORE, 'readonly', s => s.get(id)),
         put: record => run(DOWNLOADS_STORE, 'readwrite', s => s.put(record)),
@@ -123,7 +123,7 @@
         });
     }
 
-    window.ccDirectoryDb = {
+    window.c2DirectoryDb = {
         getAll: () => run(DIRECTORIES_STORE, 'readonly', s => s.getAll()),
         get: id => run(DIRECTORIES_STORE, 'readonly', s => s.get(id)),
         put: record => run(DIRECTORIES_STORE, 'readwrite', s => s.put(record)),
@@ -161,7 +161,7 @@
         }
     };
 
-    window.ccFileDb = {
+    window.c2FileDb = {
         getAll: () => run(FILES_STORE, 'readonly', s => s.getAll()),
         get: id => run(FILES_STORE, 'readonly', s => s.get(id)),
         put: record => run(FILES_STORE, 'readwrite', s => s.put(record)),
@@ -199,7 +199,7 @@
         }
     };
 
-    window.ccScanDb = {
+    window.c2ScanDb = {
         getAll: () => run(SCANS_STORE, 'readonly', s => s.getAll()),
         get: id => run(SCANS_STORE, 'readonly', s => s.get(id)),
         put: record => run(SCANS_STORE, 'readwrite', s => s.put(record)),
@@ -219,7 +219,7 @@
         }
     };
 
-    window.ccNotificationDb = {
+    window.c2NotificationDb = {
         getAll: () => run(NOTIFICATIONS_STORE, 'readonly', s => s.getAll()),
         put: record => run(NOTIFICATIONS_STORE, 'readwrite', s => s.put(record)),
         remove: id => run(NOTIFICATIONS_STORE, 'readwrite', s => s.delete(id)),
@@ -227,7 +227,7 @@
         count: () => run(NOTIFICATIONS_STORE, 'readonly', s => s.count())
     };
 
-    window.ccExtGroupDb = {
+    window.c2ExtGroupDb = {
         getAll: () => run(EXTGROUPS_STORE, 'readonly', s => s.getAll()),
         get: name => run(EXTGROUPS_STORE, 'readonly', s => s.get(name)),
         put: record => run(EXTGROUPS_STORE, 'readwrite', s => s.put(record)),
@@ -235,7 +235,7 @@
         clear: () => run(EXTGROUPS_STORE, 'readwrite', s => s.clear())
     };
 
-    window.ccServiceDb = {
+    window.c2ServiceDb = {
         getAll: () => run(SERVICES_STORE, 'readonly', s => s.getAll()),
         get: key => run(SERVICES_STORE, 'readonly', s => s.get(key)),
         put: record => run(SERVICES_STORE, 'readwrite', s => s.put(record)),
@@ -243,7 +243,7 @@
         clear: () => run(SERVICES_STORE, 'readwrite', s => s.clear())
     };
 
-    window.ccClearAll = async function () {
+    window.c2ClearAll = async function () {
         const db = await openDb();
         const names = Array.from(db.objectStoreNames);
         const tx = db.transaction(names, 'readwrite');
@@ -255,7 +255,7 @@
         db.close();
     };
 
-    window.ccDbInfo = {
+    window.c2DbInfo = {
         getTableStats: () => {
             return openDb().then(db => {
                 const names = Array.from(db.objectStoreNames);

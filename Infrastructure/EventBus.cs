@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace cc.Infrastructure;
+namespace C2.Infrastructure;
 
 public interface IEventBus
 {

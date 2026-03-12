@@ -1,4 +1,4 @@
-namespace cc.Features.Relay;
+namespace C2.Features.Relay;
 
 public class HealthStatus
 {

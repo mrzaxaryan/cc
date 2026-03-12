@@ -12,35 +12,35 @@
         }
         @if (IsAgentServicePaused)
         {
-            <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs">Service Paused</CcBadge>
+            <C2Badge Variant="BadgeVariant.Danger" Size="Size.Xs">Service Paused</C2Badge>
         }
     </HeaderLeft>
     <HeaderRight>
         @if (IsAgentServicePaused)
         {
-            <CcBtn Variant="BtnVariant.Success" Size="Size.Xs" OnClick="ResumeAgentService" Title="Resume upload service for this agent">RESUME SERVICE</CcBtn>
+            <C2Btn Variant="BtnVariant.Success" Size="Size.Xs" OnClick="ResumeAgentService" Title="Resume upload service for this agent">RESUME SERVICE</C2Btn>
         }
         else
         {
-            <CcBtn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="PauseAgentService" Title="Pause upload service for this agent">PAUSE SERVICE</CcBtn>
+            <C2Btn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="PauseAgentService" Title="Pause upload service for this agent">PAUSE SERVICE</C2Btn>
         }
         @if (HasActiveSyncs && !IsAgentServicePaused)
         {
-            <CcBtn Variant="BtnVariant.Warning" Size="Size.Xs" OnClick="StopAllSyncs" Title="Pause all">STOP ALL</CcBtn>
+            <C2Btn Variant="BtnVariant.Warning" Size="Size.Xs" OnClick="StopAllSyncs" Title="Pause all">STOP ALL</C2Btn>
         }
         @if (activeRecords.Count > 0)
         {
             @if (confirmClear)
             {
-                <CcBtn Variant="BtnVariant.DangerSolid" Size="Size.Xs" OnClick="ClearPaused">YES</CcBtn>
-                <CcBtn Size="Size.Xs" OnClick="() => confirmClear = false">NO</CcBtn>
+                <C2Btn Variant="BtnVariant.DangerSolid" Size="Size.Xs" OnClick="ClearPaused">YES</C2Btn>
+                <C2Btn Size="Size.Xs" OnClick="() => confirmClear = false">NO</C2Btn>
             }
             else
             {
-                <CcBtn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="() => confirmClear = true" Title="Clear paused/failed">CLEAR</CcBtn>
+                <C2Btn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="() => confirmClear = true" Title="Clear paused/failed">CLEAR</C2Btn>
             }
         }
-        <CcBtn Size="Size.Xs" OnClick="Refresh" Title="Refresh">&#x21bb;</CcBtn>
+        <C2Btn Size="Size.Xs" OnClick="Refresh" Title="Refresh">&#x21bb;</C2Btn>
     </HeaderRight>
     <Toolbar>
         <div class="panel-tabs">
@@ -101,34 +101,34 @@
                                         {
                                             <span class="sm-speed">@Formatters.FormatSpeed(dl.SpeedBytesPerSec)</span>
                                         }
-                                        <CcBtn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseDownload(rec)" Title="Pause">&#x23F8;</CcBtn>
+                                        <C2Btn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseDownload(rec)" Title="Pause">&#x23F8;</C2Btn>
                                         break;
 
                                     case DownloadStatus.Queued:
-                                        <CcBadge Variant="BadgeVariant.Muted" Size="Size.Xs">QUEUED</CcBadge>
-                                        <CcBtn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => BumpPriority(rec, -1)" Title="Higher priority">&#x25B2;</CcBtn>
-                                        <CcBtn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => BumpPriority(rec, 1)" Title="Lower priority">&#x25BC;</CcBtn>
+                                        <C2Badge Variant="BadgeVariant.Muted" Size="Size.Xs">QUEUED</C2Badge>
+                                        <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => BumpPriority(rec, -1)" Title="Higher priority">&#x25B2;</C2Btn>
+                                        <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => BumpPriority(rec, 1)" Title="Lower priority">&#x25BC;</C2Btn>
                                         break;
 
                                     case DownloadStatus.Paused:
-                                        <CcBadge Variant="BadgeVariant.Warning" Size="Size.Xs">PAUSED @pct%</CcBadge>
-                                        <CcBtn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeDownload(rec)" Disabled="@(Downloads.Cts.HasActive(rec.Id))" Title="Resume">&#x25B6;</CcBtn>
+                                        <C2Badge Variant="BadgeVariant.Warning" Size="Size.Xs">PAUSED @pct%</C2Badge>
+                                        <C2Btn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeDownload(rec)" Disabled="@(Downloads.Cts.HasActive(rec.Id))" Title="Resume">&#x25B6;</C2Btn>
                                         break;
 
                                     case DownloadStatus.Completed:
-                                        <CcBadge Variant="BadgeVariant.Success" Size="Size.Xs">DONE</CcBadge>
+                                        <C2Badge Variant="BadgeVariant.Success" Size="Size.Xs">DONE</C2Badge>
                                         break;
 
                                     case DownloadStatus.Failed:
-                                        <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@dl.Error">FAILED</CcBadge>
+                                        <C2Badge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@dl.Error">FAILED</C2Badge>
                                         break;
                                 }
-                                <CcBtn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => RemoveDownload(rec)" Title="Remove" CssClass="panel-remove-btn">&#x2715;</CcBtn>
+                                <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => RemoveDownload(rec)" Title="Remove" CssClass="panel-remove-btn">&#x2715;</C2Btn>
                             </div>
                         </div>
                         @if (dl.Status is DownloadStatus.Downloading or DownloadStatus.Queued or DownloadStatus.Paused)
                         {
-                            <CcProgress Size="Size.Xs" Variant="@ProgressVariant(dl.Status)" Percent="@pct" />
+                            <C2Progress Size="Size.Xs" Variant="@ProgressVariant(dl.Status)" Percent="@pct" />
                         }
                     </div>
                 }
@@ -214,9 +214,9 @@
 
     private static ProgressVariant ProgressVariant(string s) => s switch
     {
-        DownloadStatus.Downloading => cc.Shared.ProgressVariant.Info,
-        DownloadStatus.Paused => cc.Shared.ProgressVariant.Warning,
-        _ => cc.Shared.ProgressVariant.Muted
+        DownloadStatus.Downloading => C2.Shared.ProgressVariant.Info,
+        DownloadStatus.Paused => C2.Shared.ProgressVariant.Warning,
+        _ => C2.Shared.ProgressVariant.Muted
     };
 
     private async Task PauseAgentService()

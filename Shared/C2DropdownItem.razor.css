@@ -1,10 +1,10 @@
 /* Dropdown item */
-.cc-dropdown-item {
+.c2-dropdown-item {
     display: block;
     width: 100%;
     background: none;
     border: none;
-    color: var(--cc-text);
+    color: var(--c2-text);
     font-size: 0.78rem;
     padding: 0.35rem 0.75rem;
     text-align: left;
@@ -13,16 +13,16 @@
     user-select: none;
 }
 
-.cc-dropdown-item:hover:not(:disabled) {
-    background: var(--cc-bg-highlight);
+.c2-dropdown-item:hover:not(:disabled) {
+    background: var(--c2-bg-highlight);
 }
 
-.cc-dropdown-item:focus-visible {
-    outline: 2px solid var(--cc-accent-blue);
+.c2-dropdown-item:focus-visible {
+    outline: 2px solid var(--c2-accent-blue);
     outline-offset: -2px;
 }
 
-.cc-dropdown-item:disabled {
+.c2-dropdown-item:disabled {
     opacity: 0.4;
     cursor: not-allowed;
 }

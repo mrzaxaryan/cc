@@ -1,9 +1,9 @@
-using cc.Features.Relay;
-using cc.Features.Storage;
-using cc.Features.Workspace;
-using cc.Infrastructure;
+using C2.Features.Relay;
+using C2.Features.Storage;
+using C2.Features.Workspace;
+using C2.Infrastructure;
 
-namespace cc.Features.Downloads;
+namespace C2.Features.Downloads;
 
 public class DownloadService : IDisposable
 {

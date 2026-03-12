@@ -1,0 +1,52 @@
+/* Base badge */
+.c2-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    line-height: 1.4;
+    user-select: none;
+    transition: opacity 0.15s;
+}
+
+/* Variants */
+.c2-badge-success {
+    background: var(--c2-green-15);
+    color: var(--c2-accent-green);
+}
+
+.c2-badge-danger {
+    background: var(--c2-red-15);
+    color: var(--c2-accent-red);
+}
+
+.c2-badge-warning {
+    background: var(--c2-yellow-15);
+    color: var(--c2-accent-yellow);
+}
+
+.c2-badge-info {
+    background: var(--c2-blue-15);
+    color: var(--c2-accent-blue);
+}
+
+.c2-badge-muted {
+    background: var(--c2-bg-active);
+    color: var(--c2-text-muted);
+}
+
+.c2-badge-dark {
+    background: var(--c2-bg-deep);
+    color: var(--c2-text-dim);
+}
+
+/* Sizes */
+.c2-badge-xs {
+    font-size: 0.55rem;
+    padding: 0.05rem 0.3rem;
+    border-radius: 3px;
+}

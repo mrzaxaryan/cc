@@ -1,6 +1,6 @@
 // Minimal JS interop for Blazor — browser APIs that can't be done from C#
 
-window.ccInterop = {
+window.c2Interop = {
     setTheme(name) {
         document.documentElement.setAttribute('data-theme', name);
         document.documentElement.setAttribute('data-bs-theme', name);
@@ -12,6 +12,6 @@ window.ccInterop = {
     }
 };
 
-window.ccSaveFile = function (fileName, fileId) {
-    return ccFileSystem.saveBlobToDownload(fileName, fileId);
+window.c2SaveFile = function (fileName, fileId) {
+    return c2FileSystem.saveBlobToDownload(fileName, fileId);
 };

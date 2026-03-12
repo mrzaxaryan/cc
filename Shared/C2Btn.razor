@@ -1,6 +1,6 @@
 @inherits Microsoft.AspNetCore.Components.ComponentBase
 
-<button class="cc-btn @VariantClass @SizeClass @CssClass"
+<button class="c2-btn @VariantClass @SizeClass @CssClass"
         @onclick="OnClick"
         @onclick:stopPropagation="StopPropagation"
         disabled="@Disabled"
@@ -8,7 +8,7 @@
         type="button">
     @if (Loading)
     {
-        <span class="cc-spinner cc-spinner-inline"></span>
+        <span class="c2-spinner c2-spinner-inline"></span>
     }
     @ChildContent
 </button>
@@ -26,22 +26,22 @@
 
     private string VariantClass => Variant switch
     {
-        BtnVariant.Primary => "cc-btn-primary",
-        BtnVariant.Success => "cc-btn-success",
-        BtnVariant.Danger => "cc-btn-danger",
-        BtnVariant.DangerSolid => "cc-btn-danger-solid",
-        BtnVariant.Warning => "cc-btn-warning",
-        BtnVariant.Ghost => "cc-btn-ghost",
-        BtnVariant.Link => "cc-btn-link",
+        BtnVariant.Primary => "c2-btn-primary",
+        BtnVariant.Success => "c2-btn-success",
+        BtnVariant.Danger => "c2-btn-danger",
+        BtnVariant.DangerSolid => "c2-btn-danger-solid",
+        BtnVariant.Warning => "c2-btn-warning",
+        BtnVariant.Ghost => "c2-btn-ghost",
+        BtnVariant.Link => "c2-btn-link",
         _ => ""
     };
 
     private string SizeClass => Size switch
     {
-        Size.Xs => "cc-btn-xs",
-        Size.Md => "cc-btn-md",
-        Size.Lg => "cc-btn-lg",
-        Size.Icon => "cc-btn-icon",
+        Size.Xs => "c2-btn-xs",
+        Size.Md => "c2-btn-md",
+        Size.Lg => "c2-btn-lg",
+        Size.Icon => "c2-btn-icon",
         _ => ""
     };
 }

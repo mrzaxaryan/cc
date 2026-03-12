@@ -1,7 +1,7 @@
 using System.Net.WebSockets;
 using System.Text;
 
-namespace cc.Features.Relay;
+namespace C2.Features.Relay;
 
 public class RelaySocket
 {

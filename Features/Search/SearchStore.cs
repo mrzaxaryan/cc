@@ -1,8 +1,8 @@
-using cc.Infrastructure;
+using C2.Infrastructure;
 using System.Text.Json.Serialization;
 using Microsoft.JSInterop;
 
-namespace cc.Features.Search;
+namespace C2.Features.Search;
 
 public class SearchRecord
 {
@@ -76,7 +76,7 @@ public class SearchStore
 
         try
         {
-            var records = await _js.InvokeAsync<SearchRecord[]>("ccScanDb.getAll");
+            var records = await _js.InvokeAsync<SearchRecord[]>("c2ScanDb.getAll");
             _cache = records.ToList();
         }
         catch
@@ -100,7 +100,7 @@ public class SearchStore
             CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
         };
 
-        var id = await _js.InvokeAsync<int>("ccScanDb.put", record);
+        var id = await _js.InvokeAsync<int>("c2ScanDb.put", record);
         record.Id = id;
         _cache.Add(record);
         _bus.Publish(new SearchStoreChangedEvent());
@@ -110,7 +110,7 @@ public class SearchStore
 
     public async Task UpdateAsync(SearchRecord record)
     {
-        await _js.InvokeVoidAsync("ccScanDb.put", record);
+        await _js.InvokeVoidAsync("c2ScanDb.put", record);
         _bus.Publish(new SearchStoreChangedEvent());
     }
 
@@ -119,7 +119,7 @@ public class SearchStore
         var record = _cache.FirstOrDefault(r => r.Id == id);
         if (record is null) return;
         record.Status = SearchStatus.Paused;
-        await _js.InvokeVoidAsync("ccScanDb.put", record);
+        await _js.InvokeVoidAsync("c2ScanDb.put", record);
         _bus.Publish(new SearchStoreChangedEvent());
     }
 
@@ -128,7 +128,7 @@ public class SearchStore
         var record = _cache.FirstOrDefault(r => r.Id == id);
         if (record is null) return;
         record.Status = SearchStatus.Scanning;
-        await _js.InvokeVoidAsync("ccScanDb.put", record);
+        await _js.InvokeVoidAsync("c2ScanDb.put", record);
         _bus.Publish(new SearchStoreChangedEvent());
         _bus.Publish(new SearchItemQueuedEvent(record.AgentUuid));
     }
@@ -139,7 +139,7 @@ public class SearchStore
         if (record is null) return;
         record.Status = SearchStatus.Completed;
         record.CompletedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        await _js.InvokeVoidAsync("ccScanDb.put", record);
+        await _js.InvokeVoidAsync("c2ScanDb.put", record);
         _bus.Publish(new SearchStoreChangedEvent());
     }
 
@@ -149,14 +149,14 @@ public class SearchStore
         if (record is null) return;
         record.Status = SearchStatus.Failed;
         record.Error = error;
-        await _js.InvokeVoidAsync("ccScanDb.put", record);
+        await _js.InvokeVoidAsync("c2ScanDb.put", record);
         _bus.Publish(new SearchStoreChangedEvent());
     }
 
     public async Task RemoveAsync(int id)
     {
         _cache.RemoveAll(r => r.Id == id);
-        await _js.InvokeVoidAsync("ccScanDb.remove", id);
+        await _js.InvokeVoidAsync("c2ScanDb.remove", id);
         _bus.Publish(new SearchStoreChangedEvent());
     }
 

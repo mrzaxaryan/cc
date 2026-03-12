@@ -2,18 +2,18 @@
 
 @if (Visible)
 {
-    <div class="cc-dialog-backdrop" @onclick="Cancel"></div>
-    <div class="cc-dialog">
-        <div class="cc-dialog-header">
-            <span class="cc-dialog-title">@Title</span>
-            <button class="cc-dialog-close" @onclick="Cancel">&times;</button>
+    <div class="c2-dialog-backdrop" @onclick="Cancel"></div>
+    <div class="c2-dialog">
+        <div class="c2-dialog-header">
+            <span class="c2-dialog-title">@Title</span>
+            <button class="c2-dialog-close" @onclick="Cancel">&times;</button>
         </div>
-        <div class="cc-dialog-body">
+        <div class="c2-dialog-body">
             @ChildContent
         </div>
-        <div class="cc-dialog-footer">
-            <CcBtn OnClick="Cancel">Cancel</CcBtn>
-            <CcBtn Variant="BtnVariant.Primary" OnClick="Confirm">@ConfirmText</CcBtn>
+        <div class="c2-dialog-footer">
+            <C2Btn OnClick="Cancel">Cancel</C2Btn>
+            <C2Btn Variant="BtnVariant.Primary" OnClick="Confirm">@ConfirmText</C2Btn>
         </div>
     </div>
 }

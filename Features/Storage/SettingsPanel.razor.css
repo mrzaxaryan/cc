@@ -2,7 +2,7 @@
 .cm-reset-warning {
     flex: 1;
     font-size: 0.72rem;
-    color: var(--cc-accent-red);
+    color: var(--c2-accent-red);
     font-weight: 500;
 }
 
@@ -39,12 +39,12 @@
     display: block;
     font-weight: 700;
     font-size: 0.85rem;
-    color: var(--cc-text);
+    color: var(--c2-text);
 }
 
 .cm-stat-label {
     font-size: 0.65rem;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
 }
 
 /* Breadcrumb */
@@ -60,34 +60,34 @@
 }
 
 .cm-crumb {
-    color: var(--cc-accent-blue);
+    color: var(--c2-accent-blue);
     text-decoration: none;
     padding: 0.1rem 0.2rem;
     border-radius: 3px;
 }
 
 .cm-crumb:hover {
-    background: var(--cc-bg-overlay);
+    background: var(--c2-bg-overlay);
 }
 
 .cm-crumb-sep {
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     font-size: 0.65rem;
 }
 
 .cm-crumb-active {
-    color: var(--cc-text);
+    color: var(--c2-text);
     font-weight: 600;
 }
 
 /* List */
 .cm-list {
-    border: 1px solid var(--cc-border);
+    border: 1px solid var(--c2-border);
     border-radius: 6px;
     overflow-y: auto;
     flex: 1;
     min-height: 0;
-    background: var(--cc-bg-surface);
+    background: var(--c2-bg-surface);
 }
 
 .cm-item {
@@ -97,8 +97,8 @@
     padding: 0.3rem 0.6rem;
     font-family: monospace;
     font-size: 0.75rem;
-    border-bottom: 1px solid var(--cc-border);
-    color: var(--cc-text);
+    border-bottom: 1px solid var(--c2-border);
+    color: var(--c2-text);
     background: none;
     border-left: none;
     border-right: none;
@@ -117,7 +117,7 @@
 }
 
 .cm-item-nav:hover {
-    background: var(--cc-bg-overlay);
+    background: var(--c2-bg-overlay);
 }
 
 .cm-item-icon {
@@ -131,7 +131,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    color: var(--cc-accent-blue);
+    color: var(--c2-accent-blue);
     text-decoration: none;
 }
 
@@ -141,7 +141,7 @@
 
 .cm-item-meta {
     font-size: 0.6rem;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     flex-shrink: 0;
 }
 
@@ -164,18 +164,18 @@
 
 .cm-db-version {
     font-size: 0.65rem;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     font-family: monospace;
 }
 
 .cm-db-key {
     font-size: 0.68rem;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
 }
 
 .cm-db-total {
     font-size: 0.7rem;
-    color: var(--cc-text-muted);
+    color: var(--c2-text-muted);
     padding: 0.4rem 0;
     text-align: right;
 }
@@ -207,13 +207,13 @@
     font-size: 1.6rem;
     font-weight: 800;
     letter-spacing: 0.04em;
-    color: var(--cc-text);
+    color: var(--c2-text);
     line-height: 1;
 }
 
 .cm-about-tagline {
     font-size: 0.7rem;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     letter-spacing: 0.06em;
     text-transform: uppercase;
 }
@@ -234,7 +234,7 @@
 
 .cm-about-label {
     font-size: 0.7rem;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     font-weight: 600;
     text-transform: uppercase;
     flex-shrink: 0;
@@ -242,7 +242,7 @@
 
 .cm-about-value {
     font-size: 0.72rem;
-    color: var(--cc-text);
+    color: var(--c2-text);
     text-align: right;
     overflow: hidden;
     text-overflow: ellipsis;

@@ -7,7 +7,7 @@
     @* Sidebar *@
     <div class="su-sidebar">
         <div class="su-brand">
-            <span class="su-logo">cc</span>
+            <span class="su-logo">C2</span>
             <span class="su-brand-name">Command & Control</span>
         </div>
 
@@ -34,8 +34,8 @@
         <div class="su-content">
             @if (step == Step.Welcome)
             {
-                <h2 class="su-title">Welcome to CC</h2>
-                <p class="su-desc">CC is a command center dashboard built with Blazor WebAssembly (.NET 10). It connects to remote agents through a WebSocket relay and provides a real-time interface for browsing filesystems, searching files, and downloading data to a local cache.</p>
+                <h2 class="su-title">Welcome to C2</h2>
+                <p class="su-desc">C2 is a command center dashboard built with Blazor WebAssembly (.NET 10). It connects to remote agents through a WebSocket relay and provides a real-time interface for browsing filesystems, searching files, and downloading data to a local cache.</p>
 
                 <div class="su-section-label">How it works</div>
                 <div class="su-features">
@@ -76,7 +76,7 @@
                 </div>
 
                 <div class="su-actions">
-                    <CcBtn Variant="BtnVariant.Primary" Size="Size.Lg" OnClick="Advance">Get Started</CcBtn>
+                    <C2Btn Variant="BtnVariant.Primary" Size="Size.Lg" OnClick="Advance">Get Started</C2Btn>
                 </div>
             }
             else if (step == Step.Cache)
@@ -88,7 +88,7 @@
                         <span class="su-info-icon">&#x26A0;</span>
                         <div class="su-info-text">
                             <strong>Browser not supported</strong>
-                            <span>Your browser does not support the File System Access API. A cache folder is required for CC to function. Please use a Chromium-based browser (Chrome, Edge, Brave).</span>
+                            <span>Your browser does not support the File System Access API. A cache folder is required for C2 to function. Please use a Chromium-based browser (Chrome, Edge, Brave).</span>
                         </div>
                     </div>
                 }
@@ -96,8 +96,8 @@
                 {
                     <p class="su-desc">Your previously selected cache folder needs permission to be re-granted. A cache folder is required for storing downloaded agent files.</p>
                     <div class="su-actions">
-                        <CcBtn Variant="BtnVariant.Primary" Size="Size.Lg" OnClick="ReGrantPermission" Disabled="@picking" Loading="@picking">Grant Access</CcBtn>
-                        <CcBtn Size="Size.Md" OnClick="PickFolder" Disabled="@picking">Pick Different Folder</CcBtn>
+                        <C2Btn Variant="BtnVariant.Primary" Size="Size.Lg" OnClick="ReGrantPermission" Disabled="@picking" Loading="@picking">Grant Access</C2Btn>
+                        <C2Btn Size="Size.Md" OnClick="PickFolder" Disabled="@picking">Pick Different Folder</C2Btn>
                     </div>
                 }
                 else
@@ -107,11 +107,11 @@
                         <span class="su-info-icon">&#x1f4c1;</span>
                         <div class="su-info-text">
                             <strong>Why a cache folder?</strong>
-                            <span>CC stores agent data locally on your machine. Downloaded files, filesystem metadata, and search results all require a cache directory. Choose a folder with enough free space.</span>
+                            <span>C2 stores agent data locally on your machine. Downloaded files, filesystem metadata, and search results all require a cache directory. Choose a folder with enough free space.</span>
                         </div>
                     </div>
                     <div class="su-actions">
-                        <CcBtn Variant="BtnVariant.Primary" Size="Size.Lg" OnClick="PickFolder" Disabled="@picking" Loading="@picking">Select Cache Folder</CcBtn>
+                        <C2Btn Variant="BtnVariant.Primary" Size="Size.Lg" OnClick="PickFolder" Disabled="@picking" Loading="@picking">Select Cache Folder</C2Btn>
                     </div>
                 }
             }
@@ -133,13 +133,13 @@
                                     <span class="su-relay-url">@relay.Url</span>
                                 </div>
                                 <div class="su-relay-actions">
-                                    <CcBtn Size="Size.Xs" OnClick="() => EditRelay(relay)" Title="Edit">EDIT</CcBtn>
-                                    <CcBtn Size="Size.Xs"
+                                    <C2Btn Size="Size.Xs" OnClick="() => EditRelay(relay)" Title="Edit">EDIT</C2Btn>
+                                    <C2Btn Size="Size.Xs"
                                            Variant="@(relay.Enabled ? BtnVariant.Warning : BtnVariant.Success)"
                                            OnClick="() => ToggleRelay(relay)"
                                            Title="@(relay.Enabled ? "Disable" : "Enable")">
                                         @(relay.Enabled ? "OFF" : "ON")
-                                    </CcBtn>
+                                    </C2Btn>
                                     @if (Relay.Relays.Count > 1)
                                     {
                                         <button class="su-ext-remove" @onclick="() => RemoveRelay(relay)" title="Remove">&#x2715;</button>
@@ -154,11 +154,11 @@
                 <div class="su-form">
                     <div class="su-field">
                         <label class="su-label">Relay Name</label>
-                        <CcInput @bind-Value="relayName" Size="Size.Md" Placeholder="My Relay" />
+                        <C2Input @bind-Value="relayName" Size="Size.Md" Placeholder="My Relay" />
                     </div>
                     <div class="su-field">
                         <label class="su-label">Relay URL</label>
-                        <CcInput @bind-Value="relayUrl" Size="Size.Md" Placeholder="wss://relay.example.com" Monospace Disabled="@(editingRelay is not null)" />
+                        <C2Input @bind-Value="relayUrl" Size="Size.Md" Placeholder="wss://relay.example.com" Monospace Disabled="@(editingRelay is not null)" />
                         <span class="su-field-hint">Must start with wss:// or ws://</span>
                     </div>
                 </div>
@@ -166,19 +166,19 @@
                 <div class="su-actions">
                     @if (editingRelay is not null)
                     {
-                        <CcBtn Variant="BtnVariant.Primary" Size="Size.Md" OnClick="UpdateRelay" Disabled="@saving" Loading="@saving">Update Relay</CcBtn>
-                        <CcBtn Size="Size.Md" OnClick="CancelEditRelay">Cancel</CcBtn>
+                        <C2Btn Variant="BtnVariant.Primary" Size="Size.Md" OnClick="UpdateRelay" Disabled="@saving" Loading="@saving">Update Relay</C2Btn>
+                        <C2Btn Size="Size.Md" OnClick="CancelEditRelay">Cancel</C2Btn>
                     }
                     else
                     {
-                        <CcBtn Variant="BtnVariant.Primary" Size="Size.Md" OnClick="AddRelay" Disabled="@saving" Loading="@saving">Add Relay</CcBtn>
+                        <C2Btn Variant="BtnVariant.Primary" Size="Size.Md" OnClick="AddRelay" Disabled="@saving" Loading="@saving">Add Relay</C2Btn>
                     }
                 </div>
 
                 @if (Relay.EnabledRelays.Count > 0)
                 {
                     <div class="su-actions" style="margin-top: 1rem;">
-                        <CcBtn Variant="BtnVariant.Primary" Size="Size.Lg" OnClick="Advance">Continue</CcBtn>
+                        <C2Btn Variant="BtnVariant.Primary" Size="Size.Lg" OnClick="Advance">Continue</C2Btn>
                     </div>
                 }
                 else
@@ -229,9 +229,9 @@
                 <div class="su-section-label">Add custom group</div>
                 <div class="su-custom-form">
                     <div class="su-custom-row">
-                        <CcInput @bind-Value="customGroupName" Placeholder="Group name (e.g. Audio)" Size="Size.Sm" />
-                        <CcInput @bind-Value="customGroupExts" Placeholder="Extensions (e.g. .mp3,.wav,.flac)" Size="Size.Sm" Monospace />
-                        <CcBtn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="AddCustomGroup">ADD</CcBtn>
+                        <C2Input @bind-Value="customGroupName" Placeholder="Group name (e.g. Audio)" Size="Size.Sm" />
+                        <C2Input @bind-Value="customGroupExts" Placeholder="Extensions (e.g. .mp3,.wav,.flac)" Size="Size.Sm" Monospace />
+                        <C2Btn Variant="BtnVariant.Primary" Size="Size.Xs" OnClick="AddCustomGroup">ADD</C2Btn>
                     </div>
                     @if (!string.IsNullOrEmpty(customGroupError))
                     {
@@ -240,8 +240,8 @@
                 </div>
 
                 <div class="su-actions">
-                    <CcBtn Variant="BtnVariant.Primary" Size="Size.Lg" OnClick="SaveExtensions" Disabled="@saving" Loading="@saving">Finish Setup</CcBtn>
-                    <CcBtn Size="Size.Md" OnClick="SaveAllExtensions" Disabled="@saving">Select All & Finish</CcBtn>
+                    <C2Btn Variant="BtnVariant.Primary" Size="Size.Lg" OnClick="SaveExtensions" Disabled="@saving" Loading="@saving">Finish Setup</C2Btn>
+                    <C2Btn Size="Size.Md" OnClick="SaveAllExtensions" Disabled="@saving">Select All & Finish</C2Btn>
                 </div>
 
                 <p class="su-hint">You can modify these later from the Extensions panel.</p>
@@ -276,7 +276,7 @@
     [
         new("\U0001f4bb", "Agent", "Cross-platform remote agent built on PIR (Position-Independent Runtime) \u2014 a zero-dependency C++23 shellcode runtime with cryptography, networking, and TLS 1.3. Communicates via a binary command protocol over WebSocket."),
         new("\U0001f310", "Relay", "WebSocket relay running on Cloudflare Workers with Durable Objects. Pairs agents with dashboard connections 1:1 \u2014 no direct inbound connections to agents needed."),
-        new("\U0001f5a5", "CC (this dashboard)", "Blazor WebAssembly app that runs entirely in your browser. Connects to the relay, sends commands to agents, and caches downloaded files locally using the File System Access API and IndexedDB."),
+        new("\U0001f5a5", "C2 (this dashboard)", "Blazor WebAssembly app that runs entirely in your browser. Connects to the relay, sends commands to agents, and caches downloaded files locally using the File System Access API and IndexedDB."),
     ];
 
     private static readonly InfoItem[] Features =
@@ -288,7 +288,7 @@
 
     private static readonly LinkItem[] RepoLinks =
     [
-        new("\U0001f5a5", "CC Dashboard", "https://github.com/mrzaxaryan/cc"),
+        new("\U0001f5a5", "C2 Dashboard", "https://github.com/mrzaxaryan/C2"),
         new("\U0001f310", "Relay Server", "https://github.com/mrzaxaryan/relay"),
         new("\U0001f4bb", "Agent", "https://github.com/mrzaxaryan/Position-Independent-Agent"),
         new("\u2699", "PIR Runtime", "https://github.com/mrzaxaryan/Position-Independent-Runtime"),

@@ -1,6 +1,6 @@
 @inherits Microsoft.AspNetCore.Components.ComponentBase
 
-<span class="cc-badge @VariantClass @SizeClass @CssClass" title="@Title">@ChildContent</span>
+<span class="c2-badge @VariantClass @SizeClass @CssClass" title="@Title">@ChildContent</span>
 
 @code {
     [Parameter] public RenderFragment? ChildContent { get; set; }
@@ -11,17 +11,17 @@
 
     private string VariantClass => Variant switch
     {
-        BadgeVariant.Success => "cc-badge-success",
-        BadgeVariant.Danger => "cc-badge-danger",
-        BadgeVariant.Warning => "cc-badge-warning",
-        BadgeVariant.Info => "cc-badge-info",
-        BadgeVariant.Dark => "cc-badge-dark",
-        _ => "cc-badge-muted"
+        BadgeVariant.Success => "c2-badge-success",
+        BadgeVariant.Danger => "c2-badge-danger",
+        BadgeVariant.Warning => "c2-badge-warning",
+        BadgeVariant.Info => "c2-badge-info",
+        BadgeVariant.Dark => "c2-badge-dark",
+        _ => "c2-badge-muted"
     };
 
     private string SizeClass => Size switch
     {
-        Size.Xs => "cc-badge-xs",
+        Size.Xs => "c2-badge-xs",
         _ => ""
     };
 }

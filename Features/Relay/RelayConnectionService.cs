@@ -1,11 +1,11 @@
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
-using cc.Features.Workspace;
-using cc.Features.Agents;
-using cc.Infrastructure;
+using C2.Features.Workspace;
+using C2.Features.Agents;
+using C2.Infrastructure;
 
-namespace cc.Features.Relay;
+namespace C2.Features.Relay;
 
 public class RelayConnectionService : IAsyncDisposable
 {

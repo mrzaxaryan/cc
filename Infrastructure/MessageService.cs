@@ -1,4 +1,4 @@
-namespace cc.Infrastructure;
+namespace C2.Infrastructure;
 
 /// <summary>Severity level for toast/notification messages.</summary>
 public enum MessageType

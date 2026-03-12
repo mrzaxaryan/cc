@@ -17,11 +17,11 @@
     <HeaderLeft>
         @if (onlineCount > 0)
         {
-            <CcBadge Variant="BadgeVariant.Success" Size="Size.Xs">@onlineCount Online</CcBadge>
+            <C2Badge Variant="BadgeVariant.Success" Size="Size.Xs">@onlineCount Online</C2Badge>
         }
         else
         {
-            <CcBadge Variant="BadgeVariant.Muted" Size="Size.Xs">None Online</CcBadge>
+            <C2Badge Variant="BadgeVariant.Muted" Size="Size.Xs">None Online</C2Badge>
         }
     </HeaderLeft>
     <Toolbar>
@@ -69,7 +69,7 @@
         {
             @* Desktop: table view (hidden ≤1024px) *@
             <div class="ap-table-view">
-                <CcTable Striped Hover>
+                <C2Table Striped Hover>
                     <thead>
                         <tr>
                             <th class="ap-col-status" title="Connection status">Status</th>
@@ -85,7 +85,7 @@
                     <tbody>
                         @foreach (var row in filtered)
                         {
-                            <CcTr Active="@(row.IsOnline && Wm.ConnectedAgentIds.Contains(row.AgentId))"
+                            <C2Tr Active="@(row.IsOnline && Wm.ConnectedAgentIds.Contains(row.AgentId))"
                                   Dim="@(!row.IsOnline)"
                                   CssClass="ap-row"
                                   OnContextMenu="(e) => ShowContextMenu(e, row)"
@@ -116,10 +116,10 @@
                                     }
                                 </td>
                                 <td class="ap-col-seen ap-seen-cell">@row.LastSeen</td>
-                            </CcTr>
+                            </C2Tr>
                         }
                     </tbody>
-                </CcTable>
+                </C2Table>
             </div>
 
             @* Tablet/Mobile: card view (shown ≤1024px) *@
@@ -153,8 +153,8 @@
     </Body>
 </PanelLayout>
 
-<CcDropdown Visible="@ctxVisible" X="@ctxX" Y="@ctxY" OnClose="HideContextMenu">
-    <CcDropdownItem OnClick="CtxShowInfo">Information</CcDropdownItem>
+<C2Dropdown Visible="@ctxVisible" X="@ctxX" Y="@ctxY" OnClose="HideContextMenu">
+    <C2DropdownItem OnClick="CtxShowInfo">Information</C2DropdownItem>
     @if (ctxRow is not null)
     {
         <div class="ap-ctx-submenu-wrap">
@@ -165,21 +165,21 @@
                 @foreach (var item in GetCopyItems(ctxRow))
                 {
                     var val = item.Value;
-                    <CcDropdownItem OnClick="() => CtxCopy(val)" CssClass="ap-ctx-copy-item">@item.Label</CcDropdownItem>
+                    <C2DropdownItem OnClick="() => CtxCopy(val)" CssClass="ap-ctx-copy-item">@item.Label</C2DropdownItem>
                 }
             </div>
         </div>
     }
-    <CcDropdownItem OnClick="CtxStartRename" Disabled="@(!ctxIsOnline)">Rename</CcDropdownItem>
-    <CcDropdownItem OnClick="CtxOpenFiles" Disabled="@(!ctxIsOnline)">File Manager</CcDropdownItem>
-    <CcDropdownItem OnClick="CtxOpenShell" Disabled="@(!ctxIsOnline)">Shell</CcDropdownItem>
-</CcDropdown>
+    <C2DropdownItem OnClick="CtxStartRename" Disabled="@(!ctxIsOnline)">Rename</C2DropdownItem>
+    <C2DropdownItem OnClick="CtxOpenFiles" Disabled="@(!ctxIsOnline)">File Manager</C2DropdownItem>
+    <C2DropdownItem OnClick="CtxOpenShell" Disabled="@(!ctxIsOnline)">Shell</C2DropdownItem>
+</C2Dropdown>
 
-<CcDialog Visible="@renameVisible" Title="Rename Agent" ConfirmText="Rename"
+<C2Dialog Visible="@renameVisible" Title="Rename Agent" ConfirmText="Rename"
           OnConfirm="CommitRename" OnCancel="CancelRename">
-    <CcInput @bind-Value="renameValue" BindOnInput Placeholder="Agent name"
+    <C2Input @bind-Value="renameValue" BindOnInput Placeholder="Agent name"
              OnKeyDown="OnRenameKeyDown" />
-</CcDialog>
+</C2Dialog>
 
 @code {
     private Timer? _countdownTimer;

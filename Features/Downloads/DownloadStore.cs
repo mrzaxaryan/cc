@@ -1,8 +1,8 @@
-using cc.Infrastructure;
+using C2.Infrastructure;
 using System.Text.Json.Serialization;
 using Microsoft.JSInterop;
 
-namespace cc.Features.Downloads;
+namespace C2.Features.Downloads;
 
 public class DownloadRecord
 {
@@ -73,7 +73,7 @@ public class DownloadStore
 
         try
         {
-            var records = await _js.InvokeAsync<DownloadRecord[]>("ccDownloadDb.getAll");
+            var records = await _js.InvokeAsync<DownloadRecord[]>("c2DownloadDb.getAll");
             _cache = records.ToList();
         }
         catch
@@ -97,7 +97,7 @@ public class DownloadStore
             CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
         };
 
-        var id = await _js.InvokeAsync<int>("ccDownloadDb.put", record);
+        var id = await _js.InvokeAsync<int>("c2DownloadDb.put", record);
         record.Id = id;
         _cache.Add(record);
         _bus.Publish(new DownloadStoreChangedEvent());
@@ -111,7 +111,7 @@ public class DownloadStore
         if (record is null) return;
 
         record.Status = DownloadStatus.Queued;
-        await _js.InvokeVoidAsync("ccDownloadDb.put", record);
+        await _js.InvokeVoidAsync("c2DownloadDb.put", record);
         _bus.Publish(new DownloadStoreChangedEvent());
         _bus.Publish(new DownloadItemQueuedEvent(record.AgentUuid));
     }
@@ -143,7 +143,7 @@ public class DownloadStore
             }
         }
 
-        await _js.InvokeVoidAsync("ccDownloadDb.put", record);
+        await _js.InvokeVoidAsync("c2DownloadDb.put", record);
         _bus.Publish(new DownloadStoreChangedEvent());
     }
 
@@ -155,7 +155,7 @@ public class DownloadStore
         record.Status = DownloadStatus.Completed;
         record.DownloadedSize = record.TotalSize;
         record.CompletedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        await _js.InvokeVoidAsync("ccDownloadDb.put", record);
+        await _js.InvokeVoidAsync("c2DownloadDb.put", record);
         _bus.Publish(new DownloadStoreChangedEvent());
     }
 
@@ -165,7 +165,7 @@ public class DownloadStore
         if (record is null) return;
 
         record.Status = DownloadStatus.Paused;
-        await _js.InvokeVoidAsync("ccDownloadDb.put", record);
+        await _js.InvokeVoidAsync("c2DownloadDb.put", record);
         _bus.Publish(new DownloadStoreChangedEvent());
     }
 
@@ -176,21 +176,21 @@ public class DownloadStore
 
         record.Status = DownloadStatus.Failed;
         record.Error = error;
-        await _js.InvokeVoidAsync("ccDownloadDb.put", record);
+        await _js.InvokeVoidAsync("c2DownloadDb.put", record);
         _bus.Publish(new DownloadStoreChangedEvent());
     }
 
     public async Task RemoveAsync(int id)
     {
         _cache.RemoveAll(r => r.Id == id);
-        await _js.InvokeVoidAsync("ccDownloadDb.remove", id);
+        await _js.InvokeVoidAsync("c2DownloadDb.remove", id);
         _bus.Publish(new DownloadStoreChangedEvent());
     }
 
     public async Task ClearAsync()
     {
         _cache.Clear();
-        await _js.InvokeVoidAsync("ccDownloadDb.clear");
+        await _js.InvokeVoidAsync("c2DownloadDb.clear");
         _bus.Publish(new DownloadStoreChangedEvent());
     }
 
@@ -200,7 +200,7 @@ public class DownloadStore
         if (record is null) return;
 
         record.Priority = priority;
-        await _js.InvokeVoidAsync("ccDownloadDb.put", record);
+        await _js.InvokeVoidAsync("c2DownloadDb.put", record);
         _bus.Publish(new DownloadStoreChangedEvent());
     }
 

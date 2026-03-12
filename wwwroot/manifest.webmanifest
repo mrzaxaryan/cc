@@ -1,6 +1,6 @@
 {
-  "name": "CC — Command & Control",
-  "short_name": "CC",
+  "name": "C2 — Command & Control",
+  "short_name": "C2",
   "description": "Agent management and command & control panel",
   "id": "/",
   "start_url": "./",

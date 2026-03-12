@@ -1,4 +1,4 @@
-namespace cc.Features.FileManager;
+namespace C2.Features.FileManager;
 
 /// <summary>
 /// A single directory entry parsed from the agent's binary directory-listing response.

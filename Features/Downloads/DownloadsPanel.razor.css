@@ -9,7 +9,7 @@
 /* Item */
 .sm-item {
     padding: 0.4rem 0.5rem;
-    border-bottom: 1px solid var(--cc-border);
+    border-bottom: 1px solid var(--c2-border);
     transition: background 0.15s;
 }
 
@@ -18,11 +18,11 @@
 }
 
 .sm-item:hover {
-    background: var(--cc-hover-subtle);
+    background: var(--c2-hover-subtle);
 }
 
 .sm-item-active {
-    background: var(--cc-blue-04);
+    background: var(--c2-blue-04);
 }
 
 .sm-item-done {
@@ -30,7 +30,7 @@
 }
 
 .sm-item-failed {
-    background: var(--cc-red-04);
+    background: var(--c2-red-04);
 }
 
 .sm-item-row {
@@ -47,16 +47,16 @@
 }
 
 .sm-item-active .sm-item-icon {
-    color: var(--cc-accent-blue);
-    animation: cc-pulse 1.5s ease-in-out infinite;
+    color: var(--c2-accent-blue);
+    animation: c2-pulse 1.5s ease-in-out infinite;
 }
 
 .sm-item-done .sm-item-icon {
-    color: var(--cc-accent-green);
+    color: var(--c2-accent-green);
 }
 
 .sm-item-failed .sm-item-icon {
-    color: var(--cc-accent-red);
+    color: var(--c2-accent-red);
 }
 
 .sm-item-info {
@@ -70,7 +70,7 @@
 .sm-item-name {
     font-family: monospace;
     font-size: 0.75rem;
-    color: var(--cc-text);
+    color: var(--c2-text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -78,14 +78,14 @@
 
 .sm-item-meta {
     font-size: 0.6rem;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     display: flex;
     align-items: center;
     gap: 0.4rem;
 }
 
 .sm-item-agent {
-    color: var(--cc-accent-purple);
+    color: var(--c2-accent-purple);
     font-weight: 500;
 }
 
@@ -99,12 +99,12 @@
 .sm-pct {
     font-size: 0.65rem;
     font-weight: 700;
-    color: var(--cc-accent-blue);
+    color: var(--c2-accent-blue);
 }
 
 .sm-speed {
     font-size: 0.6rem;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
 }
 
 /* ===== Mobile ===== */

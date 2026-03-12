@@ -22,19 +22,19 @@
 
     @* Toolbar *@
     <div class="fm-toolbar">
-        <CcBtn OnClick="NavigateUp" Disabled="@(loading || (!IsConnected && !HasCache))" Title="Up">
+        <C2Btn OnClick="NavigateUp" Disabled="@(loading || (!IsConnected && !HasCache))" Title="Up">
             <span class="fm-icon">&#x2191;</span>
-        </CcBtn>
-        <CcBtn OnClick="() => NavigateTo(currentPath)" Disabled="@(loading || (!IsConnected && !HasCache))" Title="Refresh">&#x21bb;</CcBtn>
+        </C2Btn>
+        <C2Btn OnClick="() => NavigateTo(currentPath)" Disabled="@(loading || (!IsConnected && !HasCache))" Title="Refresh">&#x21bb;</C2Btn>
         <div class="fm-path-bar">
-            <CcInput @bind-Value="currentPath" OnKeyDown="OnPathKeyDown" Monospace />
+            <C2Input @bind-Value="currentPath" OnKeyDown="OnPathKeyDown" Monospace />
         </div>
-        <CcBtn Variant="BtnVariant.Primary" OnClick="OpenFullSearchWindow" Disabled="@(!IsConnected)" Title="Search entire filesystem">
+        <C2Btn Variant="BtnVariant.Primary" OnClick="OpenFullSearchWindow" Disabled="@(!IsConnected)" Title="Search entire filesystem">
             <span class="fm-icon">&#x1F50D;</span> SEARCH
-        </CcBtn>
-        <CcBtn Variant="BtnVariant.Primary" OnClick="OpenDownloadsWindow" Title="Upload Manager">
+        </C2Btn>
+        <C2Btn Variant="BtnVariant.Primary" OnClick="OpenDownloadsWindow" Title="Upload Manager">
             <span class="fm-icon">&#x21C5;</span> UPLOADS
-        </CcBtn>
+        </C2Btn>
     </div>
 
     @* Breadcrumb *@
@@ -64,7 +64,7 @@
             <div class="fm-listing-header">
                 @if (loading)
                 {
-                    <CcSpinner Size="Size.Xs" />
+                    <C2Spinner Size="Size.Xs" />
                 }
                 <span class="fm-listing-title">@(currentPath == RootPath ? (IsWindowsAgent ? "Drives" : "/") : currentPath)</span>
                 @if (entries is not null)
@@ -98,8 +98,8 @@
                             <span class="fm-entry-actions" @onclick:stopPropagation="true">
                                 @if (isDir)
                                 {
-                                    <CcBtn Size="Size.Xs" OnClick="() => OpenAsDirectory(e.Name)" Title="Open" Disabled="@(!IsConnected && !HasCache)">OPEN</CcBtn>
-                                    <CcBtn Size="Size.Xs" Variant="BtnVariant.Primary" OnClick="() => OpenSearchWindow(e.Name)" Title="Search directory" Disabled="@(!IsConnected)">SEARCH</CcBtn>
+                                    <C2Btn Size="Size.Xs" OnClick="() => OpenAsDirectory(e.Name)" Title="Open" Disabled="@(!IsConnected && !HasCache)">OPEN</C2Btn>
+                                    <C2Btn Size="Size.Xs" Variant="BtnVariant.Primary" OnClick="() => OpenSearchWindow(e.Name)" Title="Search directory" Disabled="@(!IsConnected)">SEARCH</C2Btn>
                                 }
                                 else if (Cache.HasDirectory)
                                 {
@@ -125,15 +125,15 @@
                     <div class="fm-viewer-actions">
                         @if (!fileLoading)
                         {
-                            <CcBtn OnClick="HashFile" Title="Compute SHA-256 hash of this file" Disabled="@(!IsConnected)">SHA-256</CcBtn>
+                            <C2Btn OnClick="HashFile" Title="Compute SHA-256 hash of this file" Disabled="@(!IsConnected)">SHA-256</C2Btn>
                         }
-                        <CcBtn Variant="BtnVariant.Danger" OnClick="CloseFileViewer" Title="Close file viewer">&#x2715;</CcBtn>
+                        <C2Btn Variant="BtnVariant.Danger" OnClick="CloseFileViewer" Title="Close file viewer">&#x2715;</C2Btn>
                     </div>
                 </div>
                 @if (fileLoading)
                 {
                     <div class="fm-viewer-loading">
-                        <CcSpinner Size="Size.Xs" /> Loading...
+                        <C2Spinner Size="Size.Xs" /> Loading...
                     </div>
                 }
                 else
@@ -150,11 +150,11 @@
                         <div class="fm-viewer-pager">
                             @if (fileViewOffset > 0)
                             {
-                                <CcBtn OnClick="PrevPage" Disabled="@(!IsConnected)">&#x25C0; Prev</CcBtn>
+                                <C2Btn OnClick="PrevPage" Disabled="@(!IsConnected)">&#x25C0; Prev</C2Btn>
                             }
                             @if (fileBytesRead >= PageSize)
                             {
-                                <CcBtn OnClick="NextPage" Disabled="@(!IsConnected)">Next &#x25B6;</CcBtn>
+                                <C2Btn OnClick="NextPage" Disabled="@(!IsConnected)">Next &#x25B6;</C2Btn>
                             }
                         </div>
                     </div>
@@ -259,7 +259,7 @@
         var dl = GetDownloadRecord(e.Name);
         if (dl is null || dl.Status == DownloadStatus.Pending)
         {
-            <CcBtn Size="Size.Xs" Variant="BtnVariant.Primary" OnClick="() => EnqueueSync(e)" Title="Upload to cache" Disabled="@(!IsConnected)">UPLOAD</CcBtn>
+            <C2Btn Size="Size.Xs" Variant="BtnVariant.Primary" OnClick="() => EnqueueSync(e)" Title="Upload to cache" Disabled="@(!IsConnected)">UPLOAD</C2Btn>
             return;
         }
 
@@ -268,39 +268,39 @@
             case DownloadStatus.Downloading:
                 var pct = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
                 <span class="fm-dl-status">
-                    <CcSpinner Size="Size.Xs" />
+                    <C2Spinner Size="Size.Xs" />
                     <span class="fm-dl-pct">@pct%</span>
                     @if (dl.SpeedBytesPerSec > 0)
                     {
                         <span class="fm-dl-speed">@Formatters.FormatSpeed(dl.SpeedBytesPerSec)</span>
                     }
-                    <CcBtn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseDownload(e)" Title="Pause">&#x23F8;</CcBtn>
+                    <C2Btn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseDownload(e)" Title="Pause">&#x23F8;</C2Btn>
                 </span>
                 break;
 
             case DownloadStatus.Paused:
                 var pctP = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
                 <span class="fm-dl-status">
-                    <CcBadge Variant="BadgeVariant.Warning" Size="Size.Xs">@pctP%</CcBadge>
-                    <CcBtn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeDownload(e)" Title="Resume" Disabled="@(!IsConnected && !IsAgentOnline)">&#x25B6;</CcBtn>
+                    <C2Badge Variant="BadgeVariant.Warning" Size="Size.Xs">@pctP%</C2Badge>
+                    <C2Btn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeDownload(e)" Title="Resume" Disabled="@(!IsConnected && !IsAgentOnline)">&#x25B6;</C2Btn>
                 </span>
                 break;
 
             case DownloadStatus.Queued:
-                <CcBadge Variant="BadgeVariant.Muted" Size="Size.Xs">QUEUED</CcBadge>
+                <C2Badge Variant="BadgeVariant.Muted" Size="Size.Xs">QUEUED</C2Badge>
                 break;
 
             case DownloadStatus.Completed:
                 <span class="fm-dl-status">
-                    <CcBtn Size="Size.Xs" OnClick="() => ViewFile(e.Name)" Title="View">VIEW</CcBtn>
-                    <CcBtn Size="Size.Xs" Variant="BtnVariant.Primary" OnClick="() => SaveToBrowser(dl)" Title="Save">SAVE</CcBtn>
+                    <C2Btn Size="Size.Xs" OnClick="() => ViewFile(e.Name)" Title="View">VIEW</C2Btn>
+                    <C2Btn Size="Size.Xs" Variant="BtnVariant.Primary" OnClick="() => SaveToBrowser(dl)" Title="Save">SAVE</C2Btn>
                 </span>
                 break;
 
             case DownloadStatus.Failed:
                 <span class="fm-dl-status">
-                    <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@dl.Error">&#x2717;</CcBadge>
-                    <CcBtn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => RetryDownload(e)" Title="Retry" Disabled="@(!IsConnected)">&#x21bb;</CcBtn>
+                    <C2Badge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@dl.Error">&#x2717;</C2Badge>
+                    <C2Btn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => RetryDownload(e)" Title="Retry" Disabled="@(!IsConnected)">&#x21bb;</C2Btn>
                 </span>
                 break;
         }
@@ -539,7 +539,7 @@
         try
         {
             if (!await Cache.BlobExistsAsync(dl.CacheSubPath)) { Msg.Error("File not found in cache"); return; }
-            await Js.InvokeVoidAsync("ccSaveFile", dl.FileName, dl.CacheSubPath);
+            await Js.InvokeVoidAsync("c2SaveFile", dl.FileName, dl.CacheSubPath);
         }
         catch (Exception ex) { Msg.Error($"Save failed: {ex.Message}"); }
     }

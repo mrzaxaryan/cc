@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using Microsoft.JSInterop;
 
-namespace cc.Infrastructure;
+namespace C2.Infrastructure;
 
 public class ServiceStateRecord
 {
@@ -44,7 +44,7 @@ public class ServiceStateStore
 
         try
         {
-            var records = await _js.InvokeAsync<ServiceStateRecord[]>("ccServiceDb.getAll");
+            var records = await _js.InvokeAsync<ServiceStateRecord[]>("c2ServiceDb.getAll");
             foreach (var r in records)
                 _cache[r.Key] = r;
         }
@@ -87,7 +87,7 @@ public class ServiceStateStore
         };
 
         _cache[key] = record;
-        await _js.InvokeVoidAsync("ccServiceDb.put", record);
+        await _js.InvokeVoidAsync("c2ServiceDb.put", record);
         _bus.Publish(new ServiceStateChangedEvent());
     }
 

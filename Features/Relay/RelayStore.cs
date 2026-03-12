@@ -1,8 +1,8 @@
 using System.Text.Json.Serialization;
-using cc.Infrastructure;
+using C2.Infrastructure;
 using Microsoft.JSInterop;
 
-namespace cc.Features.Relay;
+namespace C2.Features.Relay;
 
 public class RelayRecord
 {
@@ -49,7 +49,7 @@ public class RelayStore
 
         try
         {
-            var entries = await _js.InvokeAsync<RelayRecord[]>("ccRelayDb.getAll");
+            var entries = await _js.InvokeAsync<RelayRecord[]>("c2RelayDb.getAll");
             _relays = entries?.ToList() ?? new();
         }
         catch
@@ -61,7 +61,7 @@ public class RelayStore
         foreach (var r in _relays.Where(r => string.IsNullOrEmpty(r.Id)))
         {
             r.Id = Guid.NewGuid().ToString("N")[..8];
-            await _js.InvokeVoidAsync("ccRelayDb.put", r);
+            await _js.InvokeVoidAsync("c2RelayDb.put", r);
         }
 
         if (_relays.Count == 0)
@@ -69,7 +69,7 @@ public class RelayStore
             SetupRequired = true;
             var entry = new RelayRecord { Id = Guid.NewGuid().ToString("N")[..8], Url = DefaultUrl, Name = DefaultName, Enabled = true };
             _relays.Add(entry);
-            await _js.InvokeVoidAsync("ccRelayDb.put", entry);
+            await _js.InvokeVoidAsync("c2RelayDb.put", entry);
         }
     }
 
@@ -79,14 +79,14 @@ public class RelayStore
         if (_relays!.Any(r => r.Url == url)) return;
         var entry = new RelayRecord { Id = Guid.NewGuid().ToString("N")[..8], Url = url, Name = name };
         _relays!.Add(entry);
-        await _js.InvokeVoidAsync("ccRelayDb.put", entry);
+        await _js.InvokeVoidAsync("c2RelayDb.put", entry);
         _bus.Publish(new RelayStoreChangedEvent());
     }
 
     public async Task RemoveRelay(string url)
     {
         _relays!.RemoveAll(r => r.Url == url);
-        await _js.InvokeVoidAsync("ccRelayDb.remove", url);
+        await _js.InvokeVoidAsync("c2RelayDb.remove", url);
         _bus.Publish(new RelayStoreChangedEvent());
     }
 
@@ -96,7 +96,7 @@ public class RelayStore
         if (entry is null) return;
         if (entry.Enabled == enabled) return;
         entry.Enabled = enabled;
-        await _js.InvokeVoidAsync("ccRelayDb.put", entry);
+        await _js.InvokeVoidAsync("c2RelayDb.put", entry);
         _bus.Publish(new RelayStoreChangedEvent());
     }
 
@@ -106,7 +106,7 @@ public class RelayStore
         if (entry is not null)
         {
             entry.Name = name;
-            await _js.InvokeVoidAsync("ccRelayDb.put", entry);
+            await _js.InvokeVoidAsync("c2RelayDb.put", entry);
         }
     }
 
@@ -119,12 +119,12 @@ public class RelayStore
         if (oldUrl != newUrl)
         {
             if (_relays!.Any(r => r.Url == newUrl)) return; // duplicate check
-            await _js.InvokeVoidAsync("ccRelayDb.remove", oldUrl);
+            await _js.InvokeVoidAsync("c2RelayDb.remove", oldUrl);
             entry.Url = newUrl;
         }
 
         entry.Name = newName;
-        await _js.InvokeVoidAsync("ccRelayDb.put", entry);
+        await _js.InvokeVoidAsync("c2RelayDb.put", entry);
         _bus.Publish(new RelayStoreChangedEvent());
     }
 }

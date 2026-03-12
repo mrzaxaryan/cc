@@ -3,9 +3,9 @@
     display: flex;
     align-items: center;
     height: 36px;
-    background: var(--cc-bg-deep);
-    border-bottom: 1px solid var(--cc-border-subtle);
-    padding: 0 var(--cc-space-2);
+    background: var(--c2-bg-deep);
+    border-bottom: 1px solid var(--c2-border-subtle);
+    padding: 0 var(--c2-space-2);
     gap: 0;
     position: fixed;
     top: 0;
@@ -18,16 +18,16 @@
 .mdi-brand {
     font-weight: 700;
     font-size: 0.95rem;
-    color: var(--cc-text);
-    padding: 0 var(--cc-space-3);
+    color: var(--c2-text);
+    padding: 0 var(--c2-space-3);
     letter-spacing: 0.05em;
 }
 
 .mdi-sep {
     width: 1px;
     height: 16px;
-    background: var(--cc-bg-highlight);
-    margin: 0 var(--cc-space-2);
+    background: var(--c2-bg-highlight);
+    margin: 0 var(--c2-space-2);
     flex-shrink: 0;
 }
 
@@ -37,19 +37,19 @@
     gap: 5px;
     background: none;
     border: none;
-    color: var(--cc-text-muted);
+    color: var(--c2-text-muted);
     font-size: 0.78rem;
     padding: 4px 10px;
     cursor: pointer;
-    border-radius: var(--cc-radius-sm);
-    transition: background var(--cc-transition-normal), color var(--cc-transition-normal), transform 0.1s;
+    border-radius: var(--c2-radius-sm);
+    transition: background var(--c2-transition-normal), color var(--c2-transition-normal), transform 0.1s;
     font-weight: 500;
     user-select: none;
 }
 
 .mdi-menu-item:hover {
-    background: var(--cc-bg-highlight);
-    color: var(--cc-text);
+    background: var(--c2-bg-highlight);
+    color: var(--c2-text);
 }
 
 .mdi-menu-item:active {
@@ -57,7 +57,7 @@
 }
 
 .mdi-menu-item:focus-visible {
-    outline: 2px solid var(--cc-focus-ring);
+    outline: 2px solid var(--c2-focus-ring);
     outline-offset: -1px;
 }
 
@@ -71,13 +71,13 @@
     align-items: center;
     gap: 4px;
     font-size: 0.7rem;
-    color: var(--cc-text-muted);
+    color: var(--c2-text-muted);
     padding: 2px 8px;
     border-radius: 10px;
-    background: var(--cc-bg-overlay);
-    border: 1px solid var(--cc-border);
+    background: var(--c2-bg-overlay);
+    border: 1px solid var(--c2-border);
     margin: 0 2px;
-    transition: border-color var(--cc-transition-normal);
+    transition: border-color var(--c2-transition-normal);
 }
 
 .mdi-relay-dot {
@@ -88,12 +88,12 @@
 }
 
 .mdi-relay-dot.dot-on {
-    background: var(--cc-accent-green);
-    box-shadow: 0 0 4px var(--cc-accent-green);
+    background: var(--c2-accent-green);
+    box-shadow: 0 0 4px var(--c2-accent-green);
 }
 
 .mdi-relay-dot.dot-off {
-    background: var(--cc-text-dim);
+    background: var(--c2-text-dim);
 }
 
 .mdi-relay-name {
@@ -106,8 +106,8 @@
 .mdi-relay-count {
     font-weight: 600;
     font-size: 0.65rem;
-    color: var(--cc-accent-blue);
-    background: var(--cc-blue-15);
+    color: var(--c2-accent-blue);
+    background: var(--c2-blue-15);
     padding: 0 4px;
     border-radius: 6px;
     min-width: 14px;
@@ -123,20 +123,20 @@
     height: 28px;
     border: none;
     background: none;
-    color: var(--cc-text-muted);
-    border-radius: var(--cc-radius-sm);
+    color: var(--c2-text-muted);
+    border-radius: var(--c2-radius-sm);
     cursor: pointer;
-    transition: background var(--cc-transition-normal), color var(--cc-transition-normal);
+    transition: background var(--c2-transition-normal), color var(--c2-transition-normal);
     position: relative;
 }
 
 .mdi-icon-btn:hover {
-    background: var(--cc-bg-highlight);
-    color: var(--cc-text);
+    background: var(--c2-bg-highlight);
+    color: var(--c2-text);
 }
 
 .mdi-icon-btn:focus-visible {
-    outline: 2px solid var(--cc-focus-ring);
+    outline: 2px solid var(--c2-focus-ring);
     outline-offset: -1px;
 }
 
@@ -146,11 +146,11 @@
     top: 36px;
     left: 0;
     right: 0;
-    bottom: var(--cc-taskbar-h, 32px);
+    bottom: var(--c2-taskbar-h, 32px);
     background:
-        radial-gradient(ellipse at 20% 50%, var(--cc-workspace-grad1) 0%, transparent 50%),
-        radial-gradient(ellipse at 80% 20%, var(--cc-workspace-grad2) 0%, transparent 50%),
-        var(--cc-bg-base);
+        radial-gradient(ellipse at 20% 50%, var(--c2-workspace-grad1) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, var(--c2-workspace-grad2) 0%, transparent 50%),
+        var(--c2-bg-base);
 }
 
 /* ===== Tablet ===== */
@@ -169,7 +169,7 @@
 @media (max-width: 768px) {
     .mdi-menubar {
         height: 40px;
-        padding: 0 var(--cc-space-1);
+        padding: 0 var(--c2-space-1);
         overflow-x: auto;
         scrollbar-width: none;
     }
@@ -180,7 +180,7 @@
 
     .mdi-brand {
         font-size: 0.85rem;
-        padding: 0 var(--cc-space-2);
+        padding: 0 var(--c2-space-2);
     }
 
     .mdi-menu-item {
@@ -191,7 +191,7 @@
     }
 
     .mdi-sep {
-        margin: 0 var(--cc-space-1);
+        margin: 0 var(--c2-space-1);
     }
 
     .mdi-relay-status {
@@ -220,7 +220,7 @@
 
     .mdi-brand {
         font-size: 0.8rem;
-        padding: 0 var(--cc-space-1);
+        padding: 0 var(--c2-space-1);
     }
 
     .mdi-menu-item {

@@ -5,9 +5,9 @@
     gap: 0.4rem;
     padding: 0.5rem;
     margin-bottom: 0.5rem;
-    border: 1px solid var(--cc-border);
+    border: 1px solid var(--c2-border);
     border-radius: 4px;
-    background: var(--cc-hover-subtle);
+    background: var(--c2-hover-subtle);
 }
 
 .eg-form-row {
@@ -19,14 +19,14 @@
 .eg-label {
     font-size: 0.65rem;
     font-weight: 600;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
 
 .eg-form-error {
     font-size: 0.65rem;
-    color: var(--cc-accent-red);
+    color: var(--c2-accent-red);
     font-weight: 500;
 }
 
@@ -52,20 +52,20 @@
 .eg-table thead th {
     position: sticky;
     top: 0;
-    background: var(--cc-bg);
+    background: var(--c2-bg);
     font-size: 0.6rem;
     font-weight: 600;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     text-align: left;
     padding: 0.35rem 0.5rem;
-    border-bottom: 1px solid var(--cc-border);
+    border-bottom: 1px solid var(--c2-border);
     z-index: 1;
 }
 
 .eg-table tbody tr {
-    border-bottom: 1px solid var(--cc-border);
+    border-bottom: 1px solid var(--c2-border);
     transition: background 0.15s;
 }
 
@@ -74,7 +74,7 @@
 }
 
 .eg-table tbody tr:hover {
-    background: var(--cc-hover-subtle);
+    background: var(--c2-hover-subtle);
 }
 
 .eg-table td {
@@ -92,13 +92,13 @@
 }
 
 .eg-col-toggle input[type="checkbox"] {
-    accent-color: var(--cc-accent-blue);
+    accent-color: var(--c2-accent-blue);
     cursor: pointer;
 }
 
 .eg-col-name {
     font-weight: 600;
-    color: var(--cc-text);
+    color: var(--c2-text);
     white-space: nowrap;
 }
 
@@ -108,7 +108,7 @@
 
 .eg-exts-text {
     font-size: 0.65rem;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     font-family: monospace;
     word-break: break-word;
 }

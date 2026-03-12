@@ -1,11 +1,11 @@
-using cc.Features.Downloads;
-using cc.Features.FileManager;
-using cc.Features.Relay;
-using cc.Features.Storage;
-using cc.Features.Workspace;
-using cc.Infrastructure;
+using C2.Features.Downloads;
+using C2.Features.FileManager;
+using C2.Features.Relay;
+using C2.Features.Storage;
+using C2.Features.Workspace;
+using C2.Infrastructure;
 
-namespace cc.Features.Search;
+namespace C2.Features.Search;
 
 public class SearchService : IDisposable
 {

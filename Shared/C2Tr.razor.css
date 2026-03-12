@@ -1,0 +1,15 @@
+/* Active row */
+.c2-tr-active {
+    background: var(--c2-blue-08) !important;
+    border-left: 2px solid var(--c2-accent-blue);
+}
+
+/* Dimmed row */
+.c2-tr-dim {
+    opacity: 0.5;
+    transition: opacity 0.15s;
+}
+
+.c2-tr-dim:hover {
+    opacity: 0.7;
+}

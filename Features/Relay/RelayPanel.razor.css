@@ -7,15 +7,15 @@
 .rp-section-title {
     font-size: 0.85rem;
     font-weight: 600;
-    color: var(--cc-text);
+    color: var(--c2-text);
     margin: 0.75rem 0 0.4rem;
 }
 
 /* Add form */
 .rp-add-form {
     padding: 0.6rem;
-    border-bottom: 1px solid var(--cc-border);
-    background: var(--cc-bg-surface);
+    border-bottom: 1px solid var(--c2-border);
+    background: var(--c2-bg-surface);
 }
 
 .rp-add-row {
@@ -40,7 +40,7 @@
     display: block;
     font-size: 0.7rem;
     font-weight: 500;
-    color: var(--cc-text-muted);
+    color: var(--c2-text-muted);
     margin-bottom: 0.2rem;
 }
 
@@ -50,13 +50,13 @@
 }
 
 .rp-active-dot {
-    color: var(--cc-accent-green);
+    color: var(--c2-accent-green);
     font-size: 0.7rem;
 }
 
 .rp-code {
     font-size: 0.72rem;
-    color: var(--cc-text-muted);
+    color: var(--c2-text-muted);
 }
 
 .rp-actions {
@@ -93,13 +93,13 @@
     display: block;
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--cc-text);
+    color: var(--c2-text);
     line-height: 1.2;
 }
 
 .rp-stat-label {
     font-size: 0.7rem;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
 }
 
 /* Collapse toggle */
@@ -122,13 +122,13 @@
 }
 
 .rp-error {
-    color: var(--cc-accent-red);
+    color: var(--c2-accent-red);
     font-size: 0.85rem;
 }
 
 /* States */
 .rp-loading {
-    color: var(--cc-text-muted);
+    color: var(--c2-text-muted);
     font-size: 0.85rem;
 }
 

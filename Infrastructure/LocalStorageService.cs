@@ -1,6 +1,6 @@
 using Microsoft.JSInterop;
 
-namespace cc.Infrastructure;
+namespace C2.Infrastructure;
 
 public class LocalStorageService
 {

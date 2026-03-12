@@ -10,39 +10,39 @@
     <HeaderLeft>
         @if (IsGlobalServicePaused)
         {
-            <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs">Service Paused</CcBadge>
+            <C2Badge Variant="BadgeVariant.Danger" Size="Size.Xs">Service Paused</C2Badge>
         }
         else if (IsGloballyRunning)
         {
-            <CcBadge Variant="BadgeVariant.Success" Size="Size.Xs">
-                <CcIcon Name="search" Size="Size.Xs" CssClass="panel-spinning" /> Searching
-            </CcBadge>
+            <C2Badge Variant="BadgeVariant.Success" Size="Size.Xs">
+                <C2Icon Name="search" Size="Size.Xs" CssClass="panel-spinning" /> Searching
+            </C2Badge>
         }
         else if (TotalPaused > 0)
         {
-            <CcBadge Variant="BadgeVariant.Warning" Size="Size.Xs">Paused</CcBadge>
+            <C2Badge Variant="BadgeVariant.Warning" Size="Size.Xs">Paused</C2Badge>
         }
         else
         {
-            <CcBadge Variant="BadgeVariant.Muted" Size="Size.Xs">Idle</CcBadge>
+            <C2Badge Variant="BadgeVariant.Muted" Size="Size.Xs">Idle</C2Badge>
         }
     </HeaderLeft>
     <HeaderRight>
         @if (IsGlobalServicePaused)
         {
-            <CcBtn Variant="BtnVariant.Success" Size="Size.Xs" OnClick="ResumeService" Title="Resume search service for all agents">RESUME SERVICE</CcBtn>
+            <C2Btn Variant="BtnVariant.Success" Size="Size.Xs" OnClick="ResumeService" Title="Resume search service for all agents">RESUME SERVICE</C2Btn>
         }
         else
         {
-            <CcBtn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="PauseService" Title="Pause search service for all agents">PAUSE SERVICE</CcBtn>
+            <C2Btn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="PauseService" Title="Pause search service for all agents">PAUSE SERVICE</C2Btn>
         }
         @if (TotalScanning > 0 && !IsGlobalServicePaused)
         {
-            <CcBtn Variant="BtnVariant.Warning" Size="Size.Xs" OnClick="StopAll" Title="Pause all active searches">PAUSE ALL</CcBtn>
+            <C2Btn Variant="BtnVariant.Warning" Size="Size.Xs" OnClick="StopAll" Title="Pause all active searches">PAUSE ALL</C2Btn>
         }
         @if (TotalPaused > 0 && !IsGlobalServicePaused)
         {
-            <CcBtn Variant="BtnVariant.Success" Size="Size.Xs" OnClick="ResumeAll" Title="Resume all paused searches">RESUME ALL</CcBtn>
+            <C2Btn Variant="BtnVariant.Success" Size="Size.Xs" OnClick="ResumeAll" Title="Resume all paused searches">RESUME ALL</C2Btn>
         }
     </HeaderRight>
     <Toolbar>
@@ -81,7 +81,7 @@
                         <span class="panel-card-name">@group.Name</span>
                         @if (isAgentPaused)
                         {
-                            <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs">Paused</CcBadge>
+                            <C2Badge Variant="BadgeVariant.Danger" Size="Size.Xs">Paused</C2Badge>
                         }
                         <span class="panel-card-summary">
                             @if (group.Scanning > 0) { <span class="panel-count-active">@group.Scanning&#x25CF;</span> }
@@ -91,11 +91,11 @@
                         </span>
                         @if (isAgentPaused)
                         {
-                            <CcBtn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeAgentService(group.Uuid)" Title="Resume search service for this agent">&#x25B6;</CcBtn>
+                            <C2Btn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeAgentService(group.Uuid)" Title="Resume search service for this agent">&#x25B6;</C2Btn>
                         }
                         else
                         {
-                            <CcBtn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseAgentService(group.Uuid)" Title="Pause search service for this agent">&#x23F8;</CcBtn>
+                            <C2Btn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseAgentService(group.Uuid)" Title="Pause search service for this agent">&#x23F8;</C2Btn>
                         }
                     </div>
 
@@ -112,10 +112,10 @@
                                 </div>
                                 <span class="panel-row-status">
                                     <span class="panel-row-meta">@scan.DirsScanned/@scan.DirsTotal dirs &middot; @scan.FilesFound files</span>
-                                    <CcBtn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseScan(scan)" Title="Pause">&#x23F8;</CcBtn>
+                                    <C2Btn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseScan(scan)" Title="Pause">&#x23F8;</C2Btn>
                                 </span>
                             </div>
-                            <CcProgress Size="Size.Xs" Variant="ProgressVariant.Info" Percent="@pct" />
+                            <C2Progress Size="Size.Xs" Variant="ProgressVariant.Info" Percent="@pct" />
                         </div>
                     }
 
@@ -131,8 +131,8 @@
                                     <span class="panel-row-meta">@scan.Extensions &middot; @scan.FilesFound files found</span>
                                 </div>
                                 <span class="panel-row-status">
-                                    <CcBadge Variant="BadgeVariant.Warning" Size="Size.Xs">@pctP%</CcBadge>
-                                    <CcBtn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeScan(scan)" Title="Resume">&#x25B6;</CcBtn>
+                                    <C2Badge Variant="BadgeVariant.Warning" Size="Size.Xs">@pctP%</C2Badge>
+                                    <C2Btn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeScan(scan)" Title="Resume">&#x25B6;</C2Btn>
                                 </span>
                             </div>
                         </div>
@@ -149,8 +149,8 @@
                                     <span class="panel-row-meta">@scan.Extensions &middot; @scan.FilesFound files found</span>
                                 </div>
                                 <span class="panel-row-status">
-                                    <CcBadge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@scan.Error">FAILED</CcBadge>
-                                    <CcBtn Size="Size.Xs" OnClick="() => ResumeScan(scan)" Title="Retry">&#x21bb;</CcBtn>
+                                    <C2Badge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@scan.Error">FAILED</C2Badge>
+                                    <C2Btn Size="Size.Xs" OnClick="() => ResumeScan(scan)" Title="Retry">&#x21bb;</C2Btn>
                                 </span>
                             </div>
                         </div>
@@ -180,7 +180,7 @@
                                             <span class="panel-row-meta">@scan.Extensions &middot; @scan.DirsScanned dirs &middot; @scan.FilesFound files</span>
                                         </div>
                                         <span class="panel-row-status">
-                                            <CcBtn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => RemoveScan(scan)" Title="Remove">&#x2715;</CcBtn>
+                                            <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => RemoveScan(scan)" Title="Remove">&#x2715;</C2Btn>
                                         </span>
                                     </div>
                                 </div>

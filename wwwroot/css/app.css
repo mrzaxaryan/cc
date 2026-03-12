@@ -9,187 +9,187 @@
 :root,
 [data-theme="dark"] {
     /* Backgrounds — surface elevation */
-    --cc-bg-base: #1e1e2e;
-    --cc-bg-deep: #16161e;
-    --cc-bg-surface: #181825;
-    --cc-bg-overlay: #2a2a3a;
-    --cc-bg-highlight: #313244;
-    --cc-bg-active: #45475a;
+    --c2-bg-base: #1e1e2e;
+    --c2-bg-deep: #16161e;
+    --c2-bg-surface: #181825;
+    --c2-bg-overlay: #2a2a3a;
+    --c2-bg-highlight: #313244;
+    --c2-bg-active: #45475a;
 
     /* Borders */
-    --cc-border: #313244;
-    --cc-border-subtle: #262637;
-    --cc-border-light: #3a3a4a;
-    --cc-border-active: #585b70;
+    --c2-border: #313244;
+    --c2-border-subtle: #262637;
+    --c2-border-light: #3a3a4a;
+    --c2-border-active: #585b70;
 
     /* Text */
-    --cc-text: #cdd6f4;
-    --cc-text-muted: #9399b2;
-    --cc-text-dim: #6c7086;
+    --c2-text: #cdd6f4;
+    --c2-text-muted: #9399b2;
+    --c2-text-dim: #6c7086;
 
     /* Accent colors */
-    --cc-accent-blue: #89b4fa;
-    --cc-accent-green: #a6e3a1;
-    --cc-accent-red: #f38ba8;
-    --cc-accent-yellow: #f9e2af;
-    --cc-accent-purple: #cba6f7;
+    --c2-accent-blue: #89b4fa;
+    --c2-accent-green: #a6e3a1;
+    --c2-accent-red: #f38ba8;
+    --c2-accent-yellow: #f9e2af;
+    --c2-accent-purple: #cba6f7;
 
     /* Semantic aliases */
-    --cc-success: var(--cc-accent-green);
-    --cc-danger: var(--cc-accent-red);
-    --cc-warning: var(--cc-accent-yellow);
-    --cc-info: var(--cc-accent-blue);
+    --c2-success: var(--c2-accent-green);
+    --c2-danger: var(--c2-accent-red);
+    --c2-warning: var(--c2-accent-yellow);
+    --c2-info: var(--c2-accent-blue);
 
     /* Accent translucent */
-    --cc-blue-04: rgba(137, 180, 250, 0.04);
-    --cc-blue-08: rgba(137, 180, 250, 0.08);
-    --cc-blue-15: rgba(137, 180, 250, 0.15);
-    --cc-blue-18: rgba(137, 180, 250, 0.18);
-    --cc-blue-30: rgba(137, 180, 250, 0.3);
-    --cc-green-10: rgba(166, 227, 161, 0.1);
-    --cc-green-12: rgba(166, 227, 161, 0.12);
-    --cc-green-15: rgba(166, 227, 161, 0.15);
-    --cc-green-18: rgba(166, 227, 161, 0.18);
-    --cc-green-25: rgba(166, 227, 161, 0.25);
-    --cc-green-30: rgba(166, 227, 161, 0.3);
-    --cc-red-04: rgba(243, 139, 168, 0.04);
-    --cc-red-12: rgba(243, 139, 168, 0.12);
-    --cc-red-15: rgba(243, 139, 168, 0.15);
-    --cc-red-18: rgba(243, 139, 168, 0.18);
-    --cc-red-30: rgba(243, 139, 168, 0.3);
-    --cc-red-40: rgba(243, 139, 168, 0.4);
-    --cc-yellow-10: rgba(249, 226, 175, 0.1);
-    --cc-yellow-12: rgba(249, 226, 175, 0.12);
-    --cc-yellow-15: rgba(249, 226, 175, 0.15);
-    --cc-yellow-18: rgba(249, 226, 175, 0.18);
-    --cc-yellow-30: rgba(249, 226, 175, 0.3);
-    --cc-yellow-40: rgba(249, 226, 175, 0.4);
-    --cc-purple-40: rgba(203, 166, 247, 0.4);
-    --cc-green-04: rgba(166, 227, 161, 0.04);
+    --c2-blue-04: rgba(137, 180, 250, 0.04);
+    --c2-blue-08: rgba(137, 180, 250, 0.08);
+    --c2-blue-15: rgba(137, 180, 250, 0.15);
+    --c2-blue-18: rgba(137, 180, 250, 0.18);
+    --c2-blue-30: rgba(137, 180, 250, 0.3);
+    --c2-green-10: rgba(166, 227, 161, 0.1);
+    --c2-green-12: rgba(166, 227, 161, 0.12);
+    --c2-green-15: rgba(166, 227, 161, 0.15);
+    --c2-green-18: rgba(166, 227, 161, 0.18);
+    --c2-green-25: rgba(166, 227, 161, 0.25);
+    --c2-green-30: rgba(166, 227, 161, 0.3);
+    --c2-red-04: rgba(243, 139, 168, 0.04);
+    --c2-red-12: rgba(243, 139, 168, 0.12);
+    --c2-red-15: rgba(243, 139, 168, 0.15);
+    --c2-red-18: rgba(243, 139, 168, 0.18);
+    --c2-red-30: rgba(243, 139, 168, 0.3);
+    --c2-red-40: rgba(243, 139, 168, 0.4);
+    --c2-yellow-10: rgba(249, 226, 175, 0.1);
+    --c2-yellow-12: rgba(249, 226, 175, 0.12);
+    --c2-yellow-15: rgba(249, 226, 175, 0.15);
+    --c2-yellow-18: rgba(249, 226, 175, 0.18);
+    --c2-yellow-30: rgba(249, 226, 175, 0.3);
+    --c2-yellow-40: rgba(249, 226, 175, 0.4);
+    --c2-purple-40: rgba(203, 166, 247, 0.4);
+    --c2-green-04: rgba(166, 227, 161, 0.04);
 
     /* Semantic surface aliases */
-    --cc-bg-alt: var(--cc-bg-surface);
-    --cc-bg-hover: var(--cc-bg-overlay);
-    --cc-bg: var(--cc-bg-base);
-    --cc-accent: var(--cc-accent-blue);
+    --c2-bg-alt: var(--c2-bg-surface);
+    --c2-bg-hover: var(--c2-bg-overlay);
+    --c2-bg: var(--c2-bg-base);
+    --c2-accent: var(--c2-accent-blue);
 
     /* Special */
-    --cc-code: #11111b;
-    --cc-shadow: rgba(0, 0, 0, 0.5);
-    --cc-shadow-light: rgba(0, 0, 0, 0.4);
-    --cc-resize-border: #585b70;
-    --cc-window-border-glow: rgba(255, 255, 255, 0.05);
-    --cc-overlay-bg: rgba(0, 0, 0, 0.75);
-    --cc-scrollbar-thumb: #45475a;
-    --cc-scrollbar-thumb-hover: #585b70;
-    --cc-workspace-grad1: rgba(137, 180, 250, 0.03);
-    --cc-workspace-grad2: rgba(203, 166, 247, 0.03);
-    --cc-selection: rgba(137, 180, 250, 0.25);
-    --cc-focus-ring: rgba(137, 180, 250, 0.5);
-    --cc-hover-white: rgba(255, 255, 255, 0.1);
-    --cc-hover-subtle: rgba(255, 255, 255, 0.02);
-    --cc-blue-glow: rgba(137, 180, 250, 0.3);
-    --cc-blue-glow-strong: rgba(137, 180, 250, 0.4);
+    --c2-code: #11111b;
+    --c2-shadow: rgba(0, 0, 0, 0.5);
+    --c2-shadow-light: rgba(0, 0, 0, 0.4);
+    --c2-resize-border: #585b70;
+    --c2-window-border-glow: rgba(255, 255, 255, 0.05);
+    --c2-overlay-bg: rgba(0, 0, 0, 0.75);
+    --c2-scrollbar-thumb: #45475a;
+    --c2-scrollbar-thumb-hover: #585b70;
+    --c2-workspace-grad1: rgba(137, 180, 250, 0.03);
+    --c2-workspace-grad2: rgba(203, 166, 247, 0.03);
+    --c2-selection: rgba(137, 180, 250, 0.25);
+    --c2-focus-ring: rgba(137, 180, 250, 0.5);
+    --c2-hover-white: rgba(255, 255, 255, 0.1);
+    --c2-hover-subtle: rgba(255, 255, 255, 0.02);
+    --c2-blue-glow: rgba(137, 180, 250, 0.3);
+    --c2-blue-glow-strong: rgba(137, 180, 250, 0.4);
 
     /* Spacing scale */
-    --cc-space-1: 4px;
-    --cc-space-2: 8px;
-    --cc-space-3: 12px;
-    --cc-space-4: 16px;
-    --cc-space-5: 20px;
-    --cc-space-6: 24px;
-    --cc-space-7: 28px;
-    --cc-space-8: 32px;
+    --c2-space-1: 4px;
+    --c2-space-2: 8px;
+    --c2-space-3: 12px;
+    --c2-space-4: 16px;
+    --c2-space-5: 20px;
+    --c2-space-6: 24px;
+    --c2-space-7: 28px;
+    --c2-space-8: 32px;
 
     /* Layout dimensions */
-    --cc-titlebar-h: 36px;
-    --cc-taskbar-h: 32px;
+    --c2-titlebar-h: 36px;
+    --c2-taskbar-h: 32px;
 
     /* Elevation */
-    --cc-elevation-1: 0 1px 3px rgba(0, 0, 0, 0.2);
-    --cc-elevation-2: 0 4px 12px rgba(0, 0, 0, 0.3);
-    --cc-elevation-3: 0 8px 32px rgba(0, 0, 0, 0.5);
+    --c2-elevation-1: 0 1px 3px rgba(0, 0, 0, 0.2);
+    --c2-elevation-2: 0 4px 12px rgba(0, 0, 0, 0.3);
+    --c2-elevation-3: 0 8px 32px rgba(0, 0, 0, 0.5);
 
     /* Radius */
-    --cc-radius-sm: 4px;
-    --cc-radius-md: 6px;
-    --cc-radius-lg: 8px;
-    --cc-radius-xl: 12px;
+    --c2-radius-sm: 4px;
+    --c2-radius-md: 6px;
+    --c2-radius-lg: 8px;
+    --c2-radius-xl: 12px;
 
     /* Motion */
-    --cc-transition-fast: 100ms ease;
-    --cc-transition-normal: 150ms ease;
-    --cc-transition-slow: 200ms ease;
+    --c2-transition-fast: 100ms ease;
+    --c2-transition-normal: 150ms ease;
+    --c2-transition-slow: 200ms ease;
 
     color-scheme: dark;
 }
 
 [data-theme="light"] {
-    --cc-bg-base: #eff1f5;
-    --cc-bg-deep: #e6e9ef;
-    --cc-bg-surface: #dce0e8;
-    --cc-bg-overlay: #ccd0da;
-    --cc-bg-highlight: #bcc0cc;
-    --cc-bg-active: #acb0be;
-    --cc-border: #bcc0cc;
-    --cc-border-subtle: #ccd0da;
-    --cc-border-light: #ccd0da;
-    --cc-border-active: #9ca0b0;
-    --cc-text: #4c4f69;
-    --cc-text-muted: #6c6f85;
-    --cc-text-dim: #8c8fa1;
-    --cc-accent-blue: #1e66f5;
-    --cc-accent-green: #40a02b;
-    --cc-accent-red: #d20f39;
-    --cc-accent-yellow: #df8e1d;
-    --cc-accent-purple: #8839ef;
+    --c2-bg-base: #eff1f5;
+    --c2-bg-deep: #e6e9ef;
+    --c2-bg-surface: #dce0e8;
+    --c2-bg-overlay: #ccd0da;
+    --c2-bg-highlight: #bcc0cc;
+    --c2-bg-active: #acb0be;
+    --c2-border: #bcc0cc;
+    --c2-border-subtle: #ccd0da;
+    --c2-border-light: #ccd0da;
+    --c2-border-active: #9ca0b0;
+    --c2-text: #4c4f69;
+    --c2-text-muted: #6c6f85;
+    --c2-text-dim: #8c8fa1;
+    --c2-accent-blue: #1e66f5;
+    --c2-accent-green: #40a02b;
+    --c2-accent-red: #d20f39;
+    --c2-accent-yellow: #df8e1d;
+    --c2-accent-purple: #8839ef;
 
-    --cc-blue-04: rgba(30, 102, 245, 0.04);
-    --cc-blue-08: rgba(30, 102, 245, 0.08);
-    --cc-blue-15: rgba(30, 102, 245, 0.15);
-    --cc-blue-18: rgba(30, 102, 245, 0.18);
-    --cc-blue-30: rgba(30, 102, 245, 0.3);
-    --cc-green-10: rgba(64, 160, 43, 0.1);
-    --cc-green-12: rgba(64, 160, 43, 0.12);
-    --cc-green-15: rgba(64, 160, 43, 0.15);
-    --cc-green-18: rgba(64, 160, 43, 0.18);
-    --cc-green-25: rgba(64, 160, 43, 0.25);
-    --cc-green-30: rgba(64, 160, 43, 0.3);
-    --cc-red-04: rgba(210, 15, 57, 0.04);
-    --cc-red-12: rgba(210, 15, 57, 0.12);
-    --cc-red-15: rgba(210, 15, 57, 0.15);
-    --cc-red-18: rgba(210, 15, 57, 0.18);
-    --cc-red-30: rgba(210, 15, 57, 0.3);
-    --cc-red-40: rgba(210, 15, 57, 0.4);
-    --cc-yellow-10: rgba(223, 142, 29, 0.1);
-    --cc-yellow-12: rgba(223, 142, 29, 0.12);
-    --cc-yellow-15: rgba(223, 142, 29, 0.15);
-    --cc-yellow-18: rgba(223, 142, 29, 0.18);
-    --cc-yellow-30: rgba(223, 142, 29, 0.3);
-    --cc-yellow-40: rgba(223, 142, 29, 0.4);
-    --cc-purple-40: rgba(136, 57, 239, 0.4);
-    --cc-green-04: rgba(64, 160, 43, 0.04);
+    --c2-blue-04: rgba(30, 102, 245, 0.04);
+    --c2-blue-08: rgba(30, 102, 245, 0.08);
+    --c2-blue-15: rgba(30, 102, 245, 0.15);
+    --c2-blue-18: rgba(30, 102, 245, 0.18);
+    --c2-blue-30: rgba(30, 102, 245, 0.3);
+    --c2-green-10: rgba(64, 160, 43, 0.1);
+    --c2-green-12: rgba(64, 160, 43, 0.12);
+    --c2-green-15: rgba(64, 160, 43, 0.15);
+    --c2-green-18: rgba(64, 160, 43, 0.18);
+    --c2-green-25: rgba(64, 160, 43, 0.25);
+    --c2-green-30: rgba(64, 160, 43, 0.3);
+    --c2-red-04: rgba(210, 15, 57, 0.04);
+    --c2-red-12: rgba(210, 15, 57, 0.12);
+    --c2-red-15: rgba(210, 15, 57, 0.15);
+    --c2-red-18: rgba(210, 15, 57, 0.18);
+    --c2-red-30: rgba(210, 15, 57, 0.3);
+    --c2-red-40: rgba(210, 15, 57, 0.4);
+    --c2-yellow-10: rgba(223, 142, 29, 0.1);
+    --c2-yellow-12: rgba(223, 142, 29, 0.12);
+    --c2-yellow-15: rgba(223, 142, 29, 0.15);
+    --c2-yellow-18: rgba(223, 142, 29, 0.18);
+    --c2-yellow-30: rgba(223, 142, 29, 0.3);
+    --c2-yellow-40: rgba(223, 142, 29, 0.4);
+    --c2-purple-40: rgba(136, 57, 239, 0.4);
+    --c2-green-04: rgba(64, 160, 43, 0.04);
 
-    --cc-code: #dce0e8;
-    --cc-shadow: rgba(0, 0, 0, 0.12);
-    --cc-shadow-light: rgba(0, 0, 0, 0.08);
-    --cc-resize-border: #9ca0b0;
-    --cc-window-border-glow: rgba(0, 0, 0, 0.05);
-    --cc-overlay-bg: rgba(0, 0, 0, 0.4);
-    --cc-scrollbar-thumb: #acb0be;
-    --cc-scrollbar-thumb-hover: #9ca0b0;
-    --cc-workspace-grad1: rgba(30, 102, 245, 0.04);
-    --cc-workspace-grad2: rgba(136, 57, 239, 0.04);
-    --cc-selection: rgba(30, 102, 245, 0.2);
-    --cc-focus-ring: rgba(30, 102, 245, 0.5);
-    --cc-hover-white: rgba(0, 0, 0, 0.06);
-    --cc-hover-subtle: rgba(0, 0, 0, 0.02);
-    --cc-blue-glow: rgba(30, 102, 245, 0.3);
-    --cc-blue-glow-strong: rgba(30, 102, 245, 0.4);
+    --c2-code: #dce0e8;
+    --c2-shadow: rgba(0, 0, 0, 0.12);
+    --c2-shadow-light: rgba(0, 0, 0, 0.08);
+    --c2-resize-border: #9ca0b0;
+    --c2-window-border-glow: rgba(0, 0, 0, 0.05);
+    --c2-overlay-bg: rgba(0, 0, 0, 0.4);
+    --c2-scrollbar-thumb: #acb0be;
+    --c2-scrollbar-thumb-hover: #9ca0b0;
+    --c2-workspace-grad1: rgba(30, 102, 245, 0.04);
+    --c2-workspace-grad2: rgba(136, 57, 239, 0.04);
+    --c2-selection: rgba(30, 102, 245, 0.2);
+    --c2-focus-ring: rgba(30, 102, 245, 0.5);
+    --c2-hover-white: rgba(0, 0, 0, 0.06);
+    --c2-hover-subtle: rgba(0, 0, 0, 0.02);
+    --c2-blue-glow: rgba(30, 102, 245, 0.3);
+    --c2-blue-glow-strong: rgba(30, 102, 245, 0.4);
 
-    --cc-elevation-1: 0 1px 3px rgba(0, 0, 0, 0.08);
-    --cc-elevation-2: 0 4px 12px rgba(0, 0, 0, 0.12);
-    --cc-elevation-3: 0 8px 32px rgba(0, 0, 0, 0.2);
+    --c2-elevation-1: 0 1px 3px rgba(0, 0, 0, 0.08);
+    --c2-elevation-2: 0 4px 12px rgba(0, 0, 0, 0.12);
+    --c2-elevation-3: 0 8px 32px rgba(0, 0, 0, 0.2);
 
     color-scheme: light;
 }
@@ -208,15 +208,15 @@ html, body {
     overflow: hidden;
     height: 100%;
     margin: 0;
-    background: var(--cc-bg-base);
-    color: var(--cc-text);
+    background: var(--c2-bg-base);
+    color: var(--c2-text);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
 
 ::selection {
-    background: var(--cc-selection);
-    color: var(--cc-text);
+    background: var(--c2-selection);
+    color: var(--c2-text);
 }
 
 h1:focus { outline: none; }
@@ -226,16 +226,16 @@ code, pre, .mono {
 }
 
 code {
-    color: var(--cc-accent-blue);
+    color: var(--c2-accent-blue);
     font-size: 0.9em;
 }
 
 pre {
-    background: var(--cc-code) !important;
+    background: var(--c2-code) !important;
 }
 
 a {
-    color: var(--cc-accent-blue);
+    color: var(--c2-accent-blue);
     text-decoration: none;
 }
 
@@ -244,30 +244,30 @@ a:hover {
 }
 
 /* ===== Shared Spinner ===== */
-.cc-spinner {
+.c2-spinner {
     display: inline-block;
     width: 0.9rem;
     height: 0.9rem;
-    border: 2px solid var(--cc-border-active);
-    border-top-color: var(--cc-accent-blue);
+    border: 2px solid var(--c2-border-active);
+    border-top-color: var(--c2-accent-blue);
     border-radius: 50%;
-    animation: cc-spin 0.6s linear infinite;
+    animation: c2-spin 0.6s linear infinite;
     flex-shrink: 0;
 }
 
-.cc-spinner-xs {
+.c2-spinner-xs {
     width: 0.7rem;
     height: 0.7rem;
     border-width: 1.5px;
 }
 
-.cc-spinner-inline {
+.c2-spinner-inline {
     width: 0.75em;
     height: 0.75em;
     border-width: 1.5px;
 }
 
-@keyframes cc-spin {
+@keyframes c2-spin {
     to { transform: rotate(360deg); }
 }
 
@@ -298,7 +298,7 @@ a:hover {
     background: #b32121;
     padding: 1rem 1rem 1rem 1.5rem;
     color: white;
-    border-radius: var(--cc-radius-sm);
+    border-radius: var(--c2-radius-sm);
 }
 
 .blazor-error-boundary::after {
@@ -306,7 +306,7 @@ a:hover {
 }
 
 /* ===== Loading Screen ===== */
-.cc-loading {
+.c2-loading {
     position: absolute;
     inset: 0;
     display: flex;
@@ -314,37 +314,37 @@ a:hover {
     align-items: center;
     justify-content: center;
     gap: 1.25rem;
-    background: var(--cc-bg-base);
-    animation: cc-loading-fade-in 0.3s ease;
+    background: var(--c2-bg-base);
+    animation: c2-loading-fade-in 0.3s ease;
 }
 
-.cc-loading-brand {
+.c2-loading-brand {
     font-weight: 700;
     font-size: 2rem;
-    color: var(--cc-text);
+    color: var(--c2-text);
     letter-spacing: 0.05em;
     opacity: 0.85;
 }
 
-.cc-loading-spinner {
+.c2-loading-spinner {
     width: 1.5rem;
     height: 1.5rem;
-    border: 2.5px solid var(--cc-border-active);
-    border-top-color: var(--cc-accent-blue);
+    border: 2.5px solid var(--c2-border-active);
+    border-top-color: var(--c2-accent-blue);
     border-radius: 50%;
-    animation: cc-spin 0.6s linear infinite;
+    animation: c2-spin 0.6s linear infinite;
 }
 
-.cc-loading-text {
+.c2-loading-text {
     font-size: 0.75rem;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
 }
 
-.cc-loading-text:after {
+.c2-loading-text:after {
     content: var(--blazor-load-percentage-text, "Loading");
 }
 
-@keyframes cc-loading-fade-in {
+@keyframes c2-loading-fade-in {
     from { opacity: 0; }
     to   { opacity: 1; }
 }
@@ -354,15 +354,15 @@ a:hover {
     position: fixed;
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--cc-border-light);
-    border-radius: var(--cc-radius-lg);
-    box-shadow: var(--cc-elevation-3), 0 0 0 1px var(--cc-window-border-glow);
-    background: var(--cc-bg-base);
+    border: 1px solid var(--c2-border-light);
+    border-radius: var(--c2-radius-lg);
+    box-shadow: var(--c2-elevation-3), 0 0 0 1px var(--c2-window-border-glow);
+    background: var(--c2-bg-base);
     overflow: visible;
     min-width: 320px;
     min-height: 48px;
-    animation: win-open var(--cc-transition-slow) ease-out;
-    transition: box-shadow var(--cc-transition-normal), border-color var(--cc-transition-normal);
+    animation: win-open var(--c2-transition-slow) ease-out;
+    transition: box-shadow var(--c2-transition-normal), border-color var(--c2-transition-normal);
 }
 
 @keyframes win-open {
@@ -371,21 +371,21 @@ a:hover {
 }
 
 .app-window.focused {
-    border-color: var(--cc-border-active);
-    box-shadow: var(--cc-elevation-3), 0 0 0 1px var(--cc-blue-15);
+    border-color: var(--c2-border-active);
+    box-shadow: var(--c2-elevation-3), 0 0 0 1px var(--c2-blue-15);
 }
 
 .app-window.unfocused {
-    border-color: var(--cc-border);
-    box-shadow: var(--cc-elevation-1);
+    border-color: var(--c2-border);
+    box-shadow: var(--c2-elevation-1);
 }
 
 .app-window.unfocused .app-window-titlebar {
-    background: var(--cc-bg-surface);
+    background: var(--c2-bg-surface);
 }
 
 .app-window.unfocused .app-window-title {
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
 }
 
 .app-window.unfocused .app-window-icon {
@@ -394,9 +394,9 @@ a:hover {
 
 .app-window.maximized {
     left: 0 !important;
-    top: var(--cc-titlebar-h) !important;
+    top: var(--c2-titlebar-h) !important;
     width: 100vw !important;
-    height: calc(100vh - var(--cc-titlebar-h) - var(--cc-taskbar-h)) !important;
+    height: calc(100vh - var(--c2-titlebar-h) - var(--c2-taskbar-h)) !important;
     border-radius: 0;
     border: none;
     animation: none;
@@ -413,15 +413,15 @@ a:hover {
     gap: 6px;
     padding: 0 6px 0 10px;
     height: 34px;
-    background: var(--cc-bg-deep);
-    color: var(--cc-text);
+    background: var(--c2-bg-deep);
+    color: var(--c2-text);
     cursor: grab;
     user-select: none;
     flex-shrink: 0;
     font-size: 0.8rem;
-    border-bottom: 1px solid var(--cc-border-subtle);
-    border-radius: var(--cc-radius-lg) var(--cc-radius-lg) 0 0;
-    transition: background var(--cc-transition-normal);
+    border-bottom: 1px solid var(--c2-border-subtle);
+    border-radius: var(--c2-radius-lg) var(--c2-radius-lg) 0 0;
+    transition: background var(--c2-transition-normal);
 }
 
 .app-window.maximized .app-window-titlebar {
@@ -433,11 +433,11 @@ a:hover {
 }
 
 .app-window-icon {
-    color: var(--cc-text-muted);
+    color: var(--c2-text-muted);
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    transition: opacity var(--cc-transition-normal);
+    transition: opacity var(--c2-transition-normal);
 }
 
 .app-window-title {
@@ -447,7 +447,7 @@ a:hover {
     overflow: hidden;
     text-overflow: ellipsis;
     letter-spacing: 0.01em;
-    transition: color var(--cc-transition-normal);
+    transition: color var(--c2-transition-normal);
 }
 
 /* Window control buttons */
@@ -467,28 +467,28 @@ a:hover {
     height: 24px;
     background: none;
     border: none;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     cursor: pointer;
-    border-radius: var(--cc-radius-sm);
-    transition: background var(--cc-transition-fast), color var(--cc-transition-fast);
+    border-radius: var(--c2-radius-sm);
+    transition: background var(--c2-transition-fast), color var(--c2-transition-fast);
 }
 
 .app-window-btn:hover {
-    background: var(--cc-hover-white);
-    color: var(--cc-text);
+    background: var(--c2-hover-white);
+    color: var(--c2-text);
 }
 
 .app-window-btn:active {
-    background: var(--cc-bg-active);
+    background: var(--c2-bg-active);
 }
 
 .app-window-btn:focus-visible {
-    outline: 2px solid var(--cc-focus-ring);
+    outline: 2px solid var(--c2-focus-ring);
     outline-offset: -1px;
 }
 
 .app-window-btn.close-btn:hover {
-    background: var(--cc-accent-red);
+    background: var(--c2-accent-red);
     color: #fff;
 }
 
@@ -501,7 +501,7 @@ a:hover {
     display: flex;
     flex-direction: column;
     min-height: 0;
-    border-radius: 0 0 var(--cc-radius-lg) var(--cc-radius-lg);
+    border-radius: 0 0 var(--c2-radius-lg) var(--c2-radius-lg);
 }
 
 .app-window.maximized .app-window-body {
@@ -541,12 +541,12 @@ a:hover {
     bottom: 0;
     left: 0;
     right: 0;
-    height: var(--cc-taskbar-h);
-    background: var(--cc-bg-deep);
-    border-top: 1px solid var(--cc-border-subtle);
+    height: var(--c2-taskbar-h);
+    background: var(--c2-bg-deep);
+    border-top: 1px solid var(--c2-border-subtle);
     display: flex;
     align-items: center;
-    padding: 0 var(--cc-space-2);
+    padding: 0 var(--c2-space-2);
     gap: 2px;
     z-index: 1050;
     overflow-x: auto;
@@ -560,15 +560,15 @@ a:hover {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    background: var(--cc-bg-overlay);
-    border: 1px solid var(--cc-border);
-    color: var(--cc-text-muted);
+    background: var(--c2-bg-overlay);
+    border: 1px solid var(--c2-border);
+    color: var(--c2-text-muted);
     font-size: 0.72rem;
     padding: 3px 10px;
-    border-radius: var(--cc-radius-sm);
+    border-radius: var(--c2-radius-sm);
     cursor: pointer;
     white-space: nowrap;
-    transition: background var(--cc-transition-normal), color var(--cc-transition-normal);
+    transition: background var(--c2-transition-normal), color var(--c2-transition-normal);
     max-width: 200px;
 }
 
@@ -579,12 +579,12 @@ a:hover {
 }
 
 .mdi-taskbar-item:hover {
-    background: var(--cc-bg-highlight);
-    color: var(--cc-text);
+    background: var(--c2-bg-highlight);
+    color: var(--c2-text);
 }
 
 .mdi-taskbar-item:focus-visible {
-    outline: 2px solid var(--cc-focus-ring);
+    outline: 2px solid var(--c2-focus-ring);
     outline-offset: -1px;
 }
 
@@ -593,9 +593,9 @@ a:hover {
 }
 
 .mdi-taskbar-item.active {
-    background: var(--cc-bg-active);
-    color: var(--cc-text);
-    border-color: var(--cc-border-active);
+    background: var(--c2-bg-active);
+    color: var(--c2-text);
+    border-color: var(--c2-border-active);
 }
 
 .mdi-taskbar-item.minimized {
@@ -613,12 +613,12 @@ a:hover {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: var(--cc-scrollbar-thumb);
-    border-radius: var(--cc-radius-sm);
+    background: var(--c2-scrollbar-thumb);
+    border-radius: var(--c2-radius-sm);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: var(--cc-scrollbar-thumb-hover);
+    background: var(--c2-scrollbar-thumb-hover);
 }
 
 ::-webkit-scrollbar-corner {
@@ -635,27 +635,27 @@ a:hover {
 .notif-bell {
     background: none;
     border: none;
-    color: var(--cc-text-muted);
+    color: var(--c2-text-muted);
     font-size: 0.9rem;
     padding: 0.25rem 0.5rem;
     cursor: pointer;
-    border-radius: var(--cc-radius-sm);
-    transition: background var(--cc-transition-normal), color var(--cc-transition-normal);
+    border-radius: var(--c2-radius-sm);
+    transition: background var(--c2-transition-normal), color var(--c2-transition-normal);
     position: relative;
     display: flex;
     align-items: center;
 }
 
 .notif-bell:hover {
-    background: var(--cc-bg-highlight);
-    color: var(--cc-text);
+    background: var(--c2-bg-highlight);
+    color: var(--c2-text);
 }
 
 .notif-badge {
     position: absolute;
     top: 0;
     right: 0;
-    background: var(--cc-accent-red);
+    background: var(--c2-accent-red);
     color: #fff;
     font-size: 0.55rem;
     font-weight: 700;
@@ -677,14 +677,14 @@ a:hover {
     margin-top: 4px;
     width: 340px;
     max-height: 420px;
-    background: var(--cc-bg-surface);
-    border: 1px solid var(--cc-border);
-    border-radius: var(--cc-radius-lg);
-    box-shadow: var(--cc-elevation-3);
+    background: var(--c2-bg-surface);
+    border: 1px solid var(--c2-border);
+    border-radius: var(--c2-radius-lg);
+    box-shadow: var(--c2-elevation-3);
     z-index: 11000;
     display: flex;
     flex-direction: column;
-    animation: notif-drop var(--cc-transition-normal);
+    animation: notif-drop var(--c2-transition-normal);
 }
 
 @keyframes notif-drop {
@@ -697,25 +697,25 @@ a:hover {
     align-items: center;
     justify-content: space-between;
     padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--cc-border);
+    border-bottom: 1px solid var(--c2-border);
     font-size: 0.78rem;
     font-weight: 600;
-    color: var(--cc-text);
+    color: var(--c2-text);
 }
 
 .notif-clear-all {
     background: none;
     border: none;
-    color: var(--cc-accent-red);
+    color: var(--c2-accent-red);
     font-size: 0.72rem;
     cursor: pointer;
     padding: 0.15rem 0.4rem;
     border-radius: 3px;
-    transition: background var(--cc-transition-normal);
+    transition: background var(--c2-transition-normal);
 }
 
 .notif-clear-all:hover {
-    background: var(--cc-red-15);
+    background: var(--c2-red-15);
 }
 
 .notif-update {
@@ -723,15 +723,15 @@ a:hover {
     align-items: center;
     justify-content: space-between;
     padding: 0.5rem 0.75rem;
-    background: var(--cc-blue-18);
-    border-bottom: 1px solid var(--cc-accent-blue);
+    background: var(--c2-blue-18);
+    border-bottom: 1px solid var(--c2-accent-blue);
     font-size: 0.78rem;
-    color: var(--cc-accent-blue);
+    color: var(--c2-accent-blue);
 }
 
 .notif-reload {
-    background: var(--cc-accent-blue);
-    color: var(--cc-bg-deep);
+    background: var(--c2-accent-blue);
+    color: var(--c2-bg-deep);
     border: none;
     font-size: 0.72rem;
     font-weight: 600;
@@ -753,7 +753,7 @@ a:hover {
 .notif-empty {
     padding: 2rem 1rem;
     text-align: center;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     font-size: 0.78rem;
 }
 
@@ -764,26 +764,26 @@ a:hover {
     padding: 0.5rem 0.75rem;
     font-size: 0.78rem;
     line-height: 1.4;
-    border-bottom: 1px solid var(--cc-border);
+    border-bottom: 1px solid var(--c2-border);
     transition: background 0.1s;
 }
 
 .notif-item:last-child { border-bottom: none; }
-.notif-item:hover { background: var(--cc-hover-subtle); }
-.notif-item.notif-error { border-left: 3px solid var(--cc-accent-red); }
-.notif-item.notif-success { border-left: 3px solid var(--cc-accent-green); }
-.notif-item.notif-warning { border-left: 3px solid var(--cc-accent-yellow); }
-.notif-item.notif-info { border-left: 3px solid var(--cc-accent-blue); }
+.notif-item:hover { background: var(--c2-hover-subtle); }
+.notif-item.notif-error { border-left: 3px solid var(--c2-accent-red); }
+.notif-item.notif-success { border-left: 3px solid var(--c2-accent-green); }
+.notif-item.notif-warning { border-left: 3px solid var(--c2-accent-yellow); }
+.notif-item.notif-info { border-left: 3px solid var(--c2-accent-blue); }
 
 .notif-text {
     flex: 1;
-    color: var(--cc-text);
+    color: var(--c2-text);
     word-break: break-word;
 }
 
 .notif-time {
     font-size: 0.68rem;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     white-space: nowrap;
     flex-shrink: 0;
     padding-top: 1px;
@@ -793,14 +793,14 @@ a:hover {
 .notif-remove {
     background: none;
     border: none;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     line-height: 1;
     padding: 0 0.15rem;
     cursor: pointer;
     opacity: 0;
     flex-shrink: 0;
     border-radius: 3px;
-    transition: opacity var(--cc-transition-normal), color var(--cc-transition-normal);
+    transition: opacity var(--c2-transition-normal), color var(--c2-transition-normal);
 }
 
 .notif-copy { font-size: 0.75rem; }
@@ -811,35 +811,35 @@ a:hover {
     opacity: 0.6;
 }
 
-.notif-copy:hover { opacity: 1 !important; color: var(--cc-accent-blue); }
-.notif-remove:hover { opacity: 1 !important; color: var(--cc-accent-red); }
+.notif-copy:hover { opacity: 1 !important; color: var(--c2-accent-blue); }
+.notif-remove:hover { opacity: 1 !important; color: var(--c2-accent-red); }
 
 /* ===== Theme Toggle ===== */
 .theme-toggle {
     background: none;
     border: none;
-    color: var(--cc-text-muted);
+    color: var(--c2-text-muted);
     font-size: 0.85rem;
     padding: 0.25rem 0.5rem;
     cursor: pointer;
-    border-radius: var(--cc-radius-sm);
-    transition: background var(--cc-transition-normal), color var(--cc-transition-normal);
+    border-radius: var(--c2-radius-sm);
+    transition: background var(--c2-transition-normal), color var(--c2-transition-normal);
     display: flex;
     align-items: center;
 }
 
 .theme-toggle:hover {
-    background: var(--cc-bg-highlight);
-    color: var(--cc-text);
+    background: var(--c2-bg-highlight);
+    color: var(--c2-text);
 }
 
 /* ===== Shared Keyframes ===== */
-@keyframes cc-pulse {
+@keyframes c2-pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.4; }
 }
 
-@keyframes cc-fade-in {
+@keyframes c2-fade-in {
     from { opacity: 0; transform: scale(0.96); }
     to   { opacity: 1; transform: scale(1); }
 }
@@ -850,14 +850,14 @@ a:hover {
 .panel-tabs {
     display: flex;
     gap: 1px;
-    border-bottom: 1px solid var(--cc-border);
+    border-bottom: 1px solid var(--c2-border);
 }
 
 .panel-tab {
     background: none;
     border: none;
     border-bottom: 2px solid transparent;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     font-size: 0.7rem;
     font-weight: 500;
     padding: 0.3rem 0.6rem;
@@ -866,22 +866,22 @@ a:hover {
 }
 
 .panel-tab:hover {
-    color: var(--cc-text-muted);
+    color: var(--c2-text-muted);
 }
 
 .panel-tab.active {
-    color: var(--cc-accent-blue);
-    border-bottom-color: var(--cc-accent-blue);
+    color: var(--c2-accent-blue);
+    border-bottom-color: var(--c2-accent-blue);
 }
 
 .panel-tab-count {
     font-size: 0.6rem;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     margin-left: 0.2rem;
 }
 
 .panel-tab.active .panel-tab-count {
-    color: var(--cc-accent-blue);
+    color: var(--c2-accent-blue);
 }
 
 /* Empty state — used by all panels */
@@ -890,7 +890,7 @@ a:hover {
     align-items: center;
     justify-content: center;
     padding: 2.5rem 1rem;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     font-size: 0.8rem;
     font-style: italic;
     text-align: center;
@@ -899,7 +899,7 @@ a:hover {
 /* Agent label in header — used by Downloads, FileSearch */
 .panel-agent-label {
     font-size: 0.7rem;
-    color: var(--cc-accent-blue);
+    color: var(--c2-accent-blue);
     font-weight: 600;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -925,19 +925,19 @@ a:hover {
 .panel-stat-value {
     font-size: 1rem;
     font-weight: 700;
-    color: var(--cc-text);
+    color: var(--c2-text);
 }
 
 .panel-stat-label {
     font-size: 0.6rem;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     text-transform: uppercase;
     letter-spacing: 0.03em;
 }
 
-.panel-stat-active { color: var(--cc-accent-blue); }
-.panel-stat-done { color: var(--cc-accent-green); }
-.panel-stat-fail { color: var(--cc-accent-red); }
+.panel-stat-active { color: var(--c2-accent-blue); }
+.panel-stat-done { color: var(--c2-accent-green); }
+.panel-stat-fail { color: var(--c2-accent-red); }
 
 /* Status dot — used by Agents, SearchJobs, Uploads */
 .status-dot {
@@ -949,17 +949,17 @@ a:hover {
 }
 
 .dot-on {
-    background: var(--cc-accent-green);
-    box-shadow: 0 0 4px var(--cc-accent-green);
+    background: var(--c2-accent-green);
+    box-shadow: 0 0 4px var(--c2-accent-green);
 }
 
 .dot-off {
-    background: var(--cc-text-dim);
+    background: var(--c2-text-dim);
 }
 
 /* Remove button hover — used by Downloads, FileSearch */
 .panel-remove-btn:hover:not(:disabled) {
-    color: var(--cc-accent-red) !important;
+    color: var(--c2-accent-red) !important;
 }
 
 /* Agent card list — used by SearchJobs, Uploads */
@@ -971,7 +971,7 @@ a:hover {
 }
 
 .panel-card {
-    border: 1px solid var(--cc-border);
+    border: 1px solid var(--c2-border);
     border-radius: 4px;
     overflow: hidden;
 }
@@ -981,14 +981,14 @@ a:hover {
     align-items: center;
     gap: 0.4rem;
     padding: 0.4rem 0.6rem;
-    background: var(--cc-hover-subtle);
-    border-bottom: 1px solid var(--cc-border);
+    background: var(--c2-hover-subtle);
+    border-bottom: 1px solid var(--c2-border);
 }
 
 .panel-card-name {
     font-size: 0.78rem;
     font-weight: 600;
-    color: var(--cc-text);
+    color: var(--c2-text);
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1003,16 +1003,16 @@ a:hover {
 }
 
 /* Count colors — used by SearchJobs, Uploads */
-.panel-count-active { color: var(--cc-accent-blue); }
-.panel-count-queued { color: var(--cc-text-dim); }
-.panel-count-paused { color: var(--cc-accent-yellow); }
-.panel-count-done { color: var(--cc-accent-green); }
-.panel-count-fail { color: var(--cc-accent-red); }
+.panel-count-active { color: var(--c2-accent-blue); }
+.panel-count-queued { color: var(--c2-text-dim); }
+.panel-count-paused { color: var(--c2-accent-yellow); }
+.panel-count-done { color: var(--c2-accent-green); }
+.panel-count-fail { color: var(--c2-accent-red); }
 
 /* Card row items — used by SearchJobs, Uploads */
 .panel-row-item {
     padding: 0.3rem 0.6rem;
-    border-bottom: 1px solid var(--cc-border);
+    border-bottom: 1px solid var(--c2-border);
 }
 
 .panel-row-item:last-child {
@@ -1030,20 +1030,20 @@ a:hover {
     text-align: center;
     flex-shrink: 0;
     font-size: 0.65rem;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
 }
 
 .panel-row-icon.active {
-    color: var(--cc-accent-blue);
-    animation: cc-pulse 1.5s ease-in-out infinite;
+    color: var(--c2-accent-blue);
+    animation: c2-pulse 1.5s ease-in-out infinite;
 }
 
 .panel-row-icon.done {
-    color: var(--cc-accent-green);
+    color: var(--c2-accent-green);
 }
 
 .panel-row-icon.fail {
-    color: var(--cc-accent-red);
+    color: var(--c2-accent-red);
 }
 
 .panel-row-info {
@@ -1058,7 +1058,7 @@ a:hover {
     flex: 1;
     font-family: monospace;
     font-size: 0.72rem;
-    color: var(--cc-text);
+    color: var(--c2-text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1066,7 +1066,7 @@ a:hover {
 
 .panel-row-meta {
     font-size: 0.6rem;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
 }
 
 .panel-row-status {
@@ -1083,18 +1083,18 @@ a:hover {
 }
 
 .panel-done-summary:hover {
-    background: var(--cc-hover-subtle);
+    background: var(--c2-hover-subtle);
 }
 
 .panel-done-summary .panel-row-name {
     font-family: inherit;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     font-size: 0.7rem;
 }
 
 .panel-expand {
     font-size: 0.6rem;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
 }
 
 .panel-done-item {
@@ -1102,7 +1102,7 @@ a:hover {
 }
 
 .panel-spinning {
-    animation: cc-pulse 1.5s ease-in-out infinite;
+    animation: c2-pulse 1.5s ease-in-out infinite;
 }
 
 /* ===== Tablet Responsive (≤1024px) ===== */
@@ -1124,12 +1124,12 @@ a:hover {
     }
 
     /* Tighter table cells on tablet */
-    .cc-table th {
+    .c2-table th {
         padding: 0.35rem 0.45rem;
         font-size: 0.62rem;
     }
 
-    .cc-table td {
+    .c2-table td {
         padding: 0.3rem 0.45rem;
         font-size: 0.74rem;
     }
@@ -1138,14 +1138,14 @@ a:hover {
 /* ===== Mobile / Touch Responsive (≤768px) ===== */
 @media (max-width: 768px) {
     :root {
-        --cc-taskbar-h: 44px;
+        --c2-taskbar-h: 44px;
     }
 
     .app-window:not(.minimized) {
         left: 0 !important;
-        top: var(--cc-titlebar-h) !important;
+        top: var(--c2-titlebar-h) !important;
         width: 100vw !important;
-        height: calc(100vh - var(--cc-titlebar-h) - var(--cc-taskbar-h)) !important;
+        height: calc(100vh - var(--c2-titlebar-h) - var(--c2-taskbar-h)) !important;
         border-radius: 0;
         border: none;
     }
@@ -1177,9 +1177,9 @@ a:hover {
 
     /* Taskbar — larger items on mobile */
     .mdi-taskbar {
-        height: var(--cc-taskbar-h);
+        height: var(--c2-taskbar-h);
         gap: 3px;
-        padding: 0 var(--cc-space-1);
+        padding: 0 var(--c2-space-1);
     }
 
     .mdi-taskbar-item {
@@ -1226,12 +1226,12 @@ a:hover {
     }
 
     /* Tables — compact mode on mobile */
-    .cc-table th {
+    .c2-table th {
         padding: 0.3rem 0.35rem;
         font-size: 0.58rem;
     }
 
-    .cc-table td {
+    .c2-table td {
         padding: 0.3rem 0.35rem;
         font-size: 0.72rem;
     }
@@ -1261,7 +1261,7 @@ a:hover {
 /* ===== Small Phone (≤480px) ===== */
 @media (max-width: 480px) {
     :root {
-        --cc-taskbar-h: 48px;
+        --c2-taskbar-h: 48px;
     }
 
     .app-window-body {
@@ -1318,17 +1318,17 @@ a:hover {
     }
 
     /* Increase minimum touch target size */
-    .cc-btn {
+    .c2-btn {
         min-height: 32px;
         min-width: 32px;
     }
 
-    .cc-btn-xs {
+    .c2-btn-xs {
         min-height: 28px;
         min-width: 28px;
     }
 
-    .cc-btn-icon {
+    .c2-btn-icon {
         min-height: 32px;
         min-width: 32px;
     }

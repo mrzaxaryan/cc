@@ -1,7 +1,7 @@
-using cc.Features.Relay;
-using cc.Infrastructure;
+using C2.Features.Relay;
+using C2.Infrastructure;
 
-namespace cc.Features.Workspace;
+namespace C2.Features.Workspace;
 
 public class WindowManager
 {

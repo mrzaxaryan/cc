@@ -1,5 +1,5 @@
 // File System Access API + IndexedDB handle persistence
-const DB_NAME = 'cc-cache';
+const DB_NAME = 'c2-cache';
 const STORE_NAME = 'handles';
 const ROOT_KEY = 'root-dir';
 
@@ -34,7 +34,7 @@ async function loadHandle(key) {
 
 let _rootHandle = null;
 
-window.ccFileSystem = {
+window.c2FileSystem = {
     // Check if File System Access API is supported
     isSupported() {
         return typeof window.showDirectoryPicker === 'function';

@@ -4,16 +4,16 @@
     inset: 0;
     z-index: 10000;
     display: flex;
-    background: var(--cc-bg-base);
-    animation: cc-fade-in 0.25s ease-out;
+    background: var(--c2-bg-base);
+    animation: c2-fade-in 0.25s ease-out;
 }
 
 /* Sidebar */
 .su-sidebar {
     width: 260px;
     flex-shrink: 0;
-    background: var(--cc-bg-alt);
-    border-right: 1px solid var(--cc-border);
+    background: var(--c2-bg-alt);
+    border-right: 1px solid var(--c2-border);
     display: flex;
     flex-direction: column;
     padding: 1.5rem 0;
@@ -24,14 +24,14 @@
     align-items: center;
     gap: 0.75rem;
     padding: 0 1.25rem 1.5rem;
-    border-bottom: 1px solid var(--cc-border);
+    border-bottom: 1px solid var(--c2-border);
     margin-bottom: 1.5rem;
 }
 
 .su-logo {
     font-size: 1.5rem;
     font-weight: 800;
-    color: var(--cc-accent-blue);
+    color: var(--c2-accent-blue);
     letter-spacing: -0.04em;
     font-family: monospace;
 }
@@ -39,7 +39,7 @@
 .su-brand-name {
     font-size: 0.75rem;
     font-weight: 600;
-    color: var(--cc-text-muted);
+    color: var(--c2-text-muted);
     letter-spacing: 0.02em;
 }
 
@@ -60,7 +60,7 @@
     border: none;
     border-radius: 6px;
     background: none;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     font-size: 0.8rem;
     font-weight: 500;
     cursor: pointer;
@@ -69,17 +69,17 @@
 }
 
 .su-nav-item:hover {
-    background: var(--cc-hover-subtle);
-    color: var(--cc-text-muted);
+    background: var(--c2-hover-subtle);
+    color: var(--c2-text-muted);
 }
 
 .su-nav-item.active {
-    background: var(--cc-blue-04);
-    color: var(--cc-accent-blue);
+    background: var(--c2-blue-04);
+    color: var(--c2-accent-blue);
 }
 
 .su-nav-item.done .su-nav-label {
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
 }
 
 .su-nav-num {
@@ -92,17 +92,17 @@
     font-size: 0.7rem;
     font-weight: 700;
     flex-shrink: 0;
-    background: var(--cc-border);
-    color: var(--cc-text-dim);
+    background: var(--c2-border);
+    color: var(--c2-text-dim);
 }
 
 .su-nav-item.active .su-nav-num {
-    background: var(--cc-accent-blue);
+    background: var(--c2-accent-blue);
     color: #fff;
 }
 
 .su-nav-item.done .su-nav-num {
-    background: var(--cc-accent-green);
+    background: var(--c2-accent-green);
     color: #fff;
 }
 
@@ -113,7 +113,7 @@
 
 .su-nav-item.locked:hover {
     background: none;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
 }
 
 .su-nav-label {
@@ -121,20 +121,20 @@
 }
 
 .su-nav-check {
-    color: var(--cc-accent-green);
+    color: var(--c2-accent-green);
     font-size: 0.85rem;
     font-weight: 700;
 }
 
 .su-sidebar-footer {
     padding: 1rem 1.25rem 0.5rem;
-    border-top: 1px solid var(--cc-border);
+    border-top: 1px solid var(--c2-border);
     margin-top: auto;
 }
 
 .su-footer-text {
     font-size: 0.7rem;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     line-height: 1.5;
 }
 
@@ -156,19 +156,19 @@
 .su-title {
     font-size: 1.4rem;
     font-weight: 700;
-    color: var(--cc-text);
+    color: var(--c2-text);
     margin: 0 0 0.75rem;
 }
 
 .su-desc {
-    color: var(--cc-text-muted);
+    color: var(--c2-text-muted);
     font-size: 0.85rem;
     line-height: 1.6;
     margin-bottom: 1.25rem;
 }
 
 .su-hint {
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     font-size: 0.75rem;
     margin-top: 1rem;
     margin-bottom: 0;
@@ -178,7 +178,7 @@
 .su-section-label {
     font-size: 0.7rem;
     font-weight: 700;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     text-transform: uppercase;
     letter-spacing: 0.06em;
     margin-bottom: 0.5rem;
@@ -197,8 +197,8 @@
     display: flex;
     gap: 0.75rem;
     padding: 0.65rem 0.85rem;
-    background: var(--cc-bg-alt);
-    border: 1px solid var(--cc-border);
+    background: var(--c2-bg-alt);
+    border: 1px solid var(--c2-border);
     border-radius: 8px;
 }
 
@@ -213,12 +213,12 @@
     flex-direction: column;
     gap: 0.1rem;
     font-size: 0.78rem;
-    color: var(--cc-text-muted);
+    color: var(--c2-text-muted);
     line-height: 1.5;
 }
 
 .su-feature-text strong {
-    color: var(--cc-text);
+    color: var(--c2-text);
     font-size: 0.82rem;
 }
 
@@ -235,10 +235,10 @@
     align-items: center;
     gap: 0.35rem;
     padding: 0.4rem 0.75rem;
-    background: var(--cc-bg-alt);
-    border: 1px solid var(--cc-border);
+    background: var(--c2-bg-alt);
+    border: 1px solid var(--c2-border);
     border-radius: 6px;
-    color: var(--cc-accent-blue);
+    color: var(--c2-accent-blue);
     font-size: 0.78rem;
     font-weight: 500;
     text-decoration: none;
@@ -246,8 +246,8 @@
 }
 
 .su-link:hover {
-    border-color: var(--cc-accent-blue);
-    background: var(--cc-blue-04);
+    border-color: var(--c2-accent-blue);
+    background: var(--c2-blue-04);
 }
 
 .su-link-icon {
@@ -259,15 +259,15 @@
     display: flex;
     gap: 0.75rem;
     padding: 0.75rem 1rem;
-    background: var(--cc-blue-04);
-    border: 1px solid var(--cc-accent-blue);
+    background: var(--c2-blue-04);
+    border: 1px solid var(--c2-accent-blue);
     border-radius: 8px;
     margin-bottom: 1.25rem;
 }
 
 .su-info-box-danger {
-    background: var(--cc-red-04);
-    border-color: var(--cc-accent-red);
+    background: var(--c2-red-04);
+    border-color: var(--c2-accent-red);
 }
 
 .su-info-icon {
@@ -281,12 +281,12 @@
     flex-direction: column;
     gap: 0.2rem;
     font-size: 0.78rem;
-    color: var(--cc-text-muted);
+    color: var(--c2-text-muted);
     line-height: 1.5;
 }
 
 .su-info-text strong {
-    color: var(--cc-text);
+    color: var(--c2-text);
     font-size: 0.8rem;
 }
 
@@ -307,7 +307,7 @@
 .su-label {
     font-size: 0.78rem;
     font-weight: 600;
-    color: var(--cc-text);
+    color: var(--c2-text);
 }
 
 /* Relay list */
@@ -324,15 +324,15 @@
     justify-content: space-between;
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
-    background: var(--cc-bg-alt);
-    border: 1px solid var(--cc-border);
+    background: var(--c2-bg-alt);
+    border: 1px solid var(--c2-border);
     border-radius: 6px;
     transition: all 0.15s;
 }
 
 .su-relay-item.su-relay-enabled {
-    border-color: var(--cc-accent-green);
-    background: var(--cc-green-04);
+    border-color: var(--c2-accent-green);
+    background: var(--c2-green-04);
 }
 
 .su-relay-info {
@@ -346,12 +346,12 @@
 .su-relay-name {
     font-size: 0.8rem;
     font-weight: 600;
-    color: var(--cc-text);
+    color: var(--c2-text);
 }
 
 .su-relay-url {
     font-size: 0.68rem;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     font-family: monospace;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -367,7 +367,7 @@
 
 .su-field-hint {
     font-size: 0.68rem;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
 }
 
 /* Actions */
@@ -391,8 +391,8 @@
     display: flex;
     flex-direction: column;
     gap: 0.15rem;
-    background: var(--cc-bg-alt);
-    border: 1px solid var(--cc-border);
+    background: var(--c2-bg-alt);
+    border: 1px solid var(--c2-border);
     border-radius: 6px;
     padding: 0.6rem 0.75rem;
     cursor: pointer;
@@ -401,12 +401,12 @@
 }
 
 .su-ext-group:hover {
-    border-color: var(--cc-accent-blue);
+    border-color: var(--c2-accent-blue);
 }
 
 .su-ext-group.active {
-    background: var(--cc-blue-04);
-    border-color: var(--cc-accent-blue);
+    background: var(--c2-blue-04);
+    border-color: var(--c2-accent-blue);
 }
 
 .su-ext-group-top {
@@ -419,7 +419,7 @@
     width: 1.1rem;
     height: 1.1rem;
     border-radius: 3px;
-    border: 1.5px solid var(--cc-border);
+    border: 1.5px solid var(--c2-border);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -430,24 +430,24 @@
 }
 
 .su-ext-group.active .su-ext-group-check {
-    background: var(--cc-accent-blue);
-    border-color: var(--cc-accent-blue);
+    background: var(--c2-accent-blue);
+    border-color: var(--c2-accent-blue);
     color: #fff;
 }
 
 .su-ext-group-name {
     font-size: 0.82rem;
     font-weight: 600;
-    color: var(--cc-text);
+    color: var(--c2-text);
 }
 
 .su-ext-group.active .su-ext-group-name {
-    color: var(--cc-accent-blue);
+    color: var(--c2-accent-blue);
 }
 
 .su-ext-group-exts {
     font-size: 0.65rem;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     font-family: monospace;
     padding-left: 1.6rem;
 }
@@ -457,7 +457,7 @@
     margin-left: auto;
     background: none;
     border: none;
-    color: var(--cc-text-dim);
+    color: var(--c2-text-dim);
     cursor: pointer;
     font-size: 0.75rem;
     padding: 0 0.25rem;
@@ -466,7 +466,7 @@
 }
 
 .su-ext-remove:hover {
-    color: var(--cc-accent-red);
+    color: var(--c2-accent-red);
 }
 
 /* Custom group form */
@@ -495,7 +495,7 @@
 
 .su-custom-error {
     font-size: 0.65rem;
-    color: var(--cc-accent-red);
+    color: var(--c2-accent-red);
     font-weight: 500;
 }
 
@@ -526,7 +526,7 @@
         width: 100%;
         flex-shrink: 0;
         border-right: none;
-        border-bottom: 1px solid var(--cc-border);
+        border-bottom: 1px solid var(--c2-border);
         padding: 0.75rem 0;
     }
 

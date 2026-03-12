@@ -1,11 +1,11 @@
 @inherits Microsoft.AspNetCore.Components.ComponentBase
 
-<div class="cc-card @CssClass">
+<div class="c2-card @CssClass">
     @if (Header is not null)
     {
-        <div class="cc-card-header">@Header</div>
+        <div class="c2-card-header">@Header</div>
     }
-    <div class="cc-card-body @(Flush ? "cc-card-flush" : "") @(Compact ? "cc-card-compact" : "")">
+    <div class="c2-card-body @(Flush ? "c2-card-flush" : "") @(Compact ? "c2-card-compact" : "")">
         @ChildContent
     </div>
 </div>

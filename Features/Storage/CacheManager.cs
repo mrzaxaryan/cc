@@ -1,8 +1,8 @@
-using cc.Features.Relay;
-using cc.Infrastructure;
+using C2.Features.Relay;
+using C2.Infrastructure;
 using Microsoft.JSInterop;
 
-namespace cc.Features.Storage;
+namespace C2.Features.Storage;
 
 public class CacheManager
 {
@@ -24,15 +24,15 @@ public class CacheManager
     /// <summary>Initialize: check support and try to restore persisted handle (no user gesture needed).</summary>
     public async Task InitializeAsync()
     {
-        IsSupported = await _js.InvokeAsync<bool>("ccFileSystem.isSupported");
+        IsSupported = await _js.InvokeAsync<bool>("c2FileSystem.isSupported");
         if (!IsSupported) return;
 
-        var hasPersisted = await _js.InvokeAsync<bool>("ccFileSystem.hasPersistedHandle");
+        var hasPersisted = await _js.InvokeAsync<bool>("c2FileSystem.hasPersistedHandle");
         if (hasPersisted)
         {
-            HasDirectory = await _js.InvokeAsync<bool>("ccFileSystem.restoreHandle");
+            HasDirectory = await _js.InvokeAsync<bool>("c2FileSystem.restoreHandle");
             if (HasDirectory)
-                DirectoryName = await _js.InvokeAsync<string?>("ccFileSystem.getRootName");
+                DirectoryName = await _js.InvokeAsync<string?>("c2FileSystem.getRootName");
             else
                 NeedsPermission = true; // handle exists but permission expired
         }
@@ -41,12 +41,12 @@ public class CacheManager
     /// <summary>Re-request permission on persisted handle (must be called from user gesture).</summary>
     public async Task<bool> ReRequestPermissionAsync()
     {
-        var granted = await _js.InvokeAsync<bool>("ccFileSystem.reRequestPermission");
+        var granted = await _js.InvokeAsync<bool>("c2FileSystem.reRequestPermission");
         if (granted)
         {
             HasDirectory = true;
             NeedsPermission = false;
-            DirectoryName = await _js.InvokeAsync<string?>("ccFileSystem.getRootName");
+            DirectoryName = await _js.InvokeAsync<string?>("c2FileSystem.getRootName");
             _bus.Publish(new CacheChangedEvent());
         }
         return granted;
@@ -55,7 +55,7 @@ public class CacheManager
     /// <summary>Prompt user to pick a cache directory.</summary>
     public async Task<bool> PickDirectoryAsync()
     {
-        var name = await _js.InvokeAsync<string?>("ccFileSystem.pickDirectory");
+        var name = await _js.InvokeAsync<string?>("c2FileSystem.pickDirectory");
         if (name is null) return false;
         DirectoryName = name;
         HasDirectory = true;
@@ -66,33 +66,33 @@ public class CacheManager
     /// <summary>Write a blob by file GUID into .fs/{fileId}.</summary>
     public async Task WriteBlobAsync(string fileId, byte[] data)
     {
-        await _js.InvokeVoidAsync("ccFileSystem.writeBlobById", fileId, data);
+        await _js.InvokeVoidAsync("c2FileSystem.writeBlobById", fileId, data);
         _bus.Publish(new CacheChangedEvent());
     }
 
     /// <summary>Read a blob by file GUID (returns base64 string).</summary>
     public async Task<string?> ReadBlobAsync(string fileId)
     {
-        return await _js.InvokeAsync<string?>("ccFileSystem.readBlobById", fileId);
+        return await _js.InvokeAsync<string?>("c2FileSystem.readBlobById", fileId);
     }
 
     /// <summary>Check if a blob exists by file GUID.</summary>
     public async Task<bool> BlobExistsAsync(string fileId)
     {
-        return await _js.InvokeAsync<bool>("ccFileSystem.blobExists", fileId);
+        return await _js.InvokeAsync<bool>("c2FileSystem.blobExists", fileId);
     }
 
     /// <summary>Delete a blob by file GUID.</summary>
     public async Task DeleteBlobAsync(string fileId)
     {
-        await _js.InvokeVoidAsync("ccFileSystem.deleteBlobById", fileId);
+        await _js.InvokeVoidAsync("c2FileSystem.deleteBlobById", fileId);
         _bus.Publish(new CacheChangedEvent());
     }
 
     /// <summary>Get total cache size in bytes (all blobs in .fs/).</summary>
     public async Task<long> GetCacheSizeAsync()
     {
-        return await _js.InvokeAsync<long>("ccFileSystem.getCacheSize");
+        return await _js.InvokeAsync<long>("c2FileSystem.getCacheSize");
     }
 
     /// <summary>Download a file from an agent via relay and stream directly to .fs/{fileId}.</summary>
@@ -111,9 +111,9 @@ public class CacheManager
 
         // Open a streaming writable to .fs/{fileId}
         if (resumeOffset > 0)
-            await _js.InvokeVoidAsync("ccFileSystem.beginResumeWriteById", fileId, resumeOffset);
+            await _js.InvokeVoidAsync("c2FileSystem.beginResumeWriteById", fileId, resumeOffset);
         else
-            await _js.InvokeVoidAsync("ccFileSystem.beginWriteById", fileId);
+            await _js.InvokeVoidAsync("c2FileSystem.beginWriteById", fileId);
 
         const long chunkSize = 65536;
         long offset = resumeOffset;
@@ -137,7 +137,7 @@ public class CacheManager
                 if (bytesRead == 0) break;
 
                 // Stream chunk directly to disk
-                await _js.InvokeVoidAsync("ccFileSystem.writeChunk", data);
+                await _js.InvokeVoidAsync("c2FileSystem.writeChunk", data);
                 offset += (long)bytesRead;
                 if (onProgress is not null)
                     await onProgress(offset, -1);
@@ -145,7 +145,7 @@ public class CacheManager
                 if ((long)bytesRead < chunkSize) break;
             }
 
-            await _js.InvokeVoidAsync("ccFileSystem.endWrite");
+            await _js.InvokeVoidAsync("c2FileSystem.endWrite");
             success = true;
             _bus.Publish(new CacheChangedEvent());
             return true;
@@ -153,14 +153,14 @@ public class CacheManager
         catch (OperationCanceledException)
         {
             // Paused: save partial data
-            await _js.InvokeVoidAsync("ccFileSystem.endWrite");
+            await _js.InvokeVoidAsync("c2FileSystem.endWrite");
             throw;
         }
         finally
         {
             if (!success)
             {
-                try { await _js.InvokeVoidAsync("ccFileSystem.abortWrite"); } catch { }
+                try { await _js.InvokeVoidAsync("c2FileSystem.abortWrite"); } catch { }
             }
         }
     }
@@ -168,7 +168,7 @@ public class CacheManager
     /// <summary>Reset: clear persisted handle.</summary>
     public async Task ResetAsync()
     {
-        await _js.InvokeVoidAsync("ccFileSystem.clearHandle");
+        await _js.InvokeVoidAsync("c2FileSystem.clearHandle");
         HasDirectory = false;
         DirectoryName = null;
         _bus.Publish(new CacheChangedEvent());
@@ -177,8 +177,8 @@ public class CacheManager
     /// <summary>Clear all application data: all IndexedDB stores + persisted file handle.</summary>
     public async Task ClearAllDataAsync()
     {
-        await _js.InvokeVoidAsync("ccClearAll");
-        await _js.InvokeVoidAsync("ccFileSystem.clearHandle");
+        await _js.InvokeVoidAsync("c2ClearAll");
+        await _js.InvokeVoidAsync("c2FileSystem.clearHandle");
         HasDirectory = false;
         DirectoryName = null;
         NeedsPermission = false;

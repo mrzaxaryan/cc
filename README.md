@@ -1,10 +1,10 @@
-# cc
+# C2
 
 Real-time command center for monitoring and managing [Position-Independent-Agent](https://github.com/mrzaxaryan/Position-Independent-Agent) connections. Built with Blazor WebAssembly (.NET 10).
 
 ## Overview
 
-**cc** connects to the [relay](https://github.com/mrzaxaryan/relay) service over WebSocket and provides a desktop-like interface for live agent monitoring, remote file management, and search — all running in the browser as a PWA with offline support.
+**C2** connects to the [relay](https://github.com/mrzaxaryan/relay) service over WebSocket and provides a desktop-like interface for live agent monitoring, remote file management, and search — all running in the browser as a PWA with offline support.
 
 ### Features
 
@@ -25,7 +25,7 @@ Real-time command center for monitoring and managing [Position-Independent-Agent
 ```
 +---------------------------+         +---------------------------+
 |  Position-Independent     |         |                           |
-|  Runtime (PIR)            |         |  cc (this project)        |
+|  Runtime (PIR)            |         |  C2 (this project)        |
 |  C++23 shellcode runtime  |         |  Blazor WebAssembly       |
 |  Zero-dependency, cross-  |         |  monitoring dashboard     |
 |  platform                 |         |                           |
@@ -45,7 +45,7 @@ Real-time command center for monitoring and managing [Position-Independent-Agent
 | **PIR** | C++23 position-independent runtime — cryptography, networking, TLS 1.3, all without libc or CRT | [Position-Independent-Runtime](https://github.com/mrzaxaryan/Position-Independent-Runtime) |
 | **Agent** | Cross-platform remote agent built on PIR — file system, hashing, binary command protocol over WebSocket | [Position-Independent-Agent](https://github.com/mrzaxaryan/Position-Independent-Agent) |
 | **Relay** | WebSocket relay on Cloudflare Workers — pairs agents with relay connections 1:1 via Durable Objects | [relay](https://github.com/mrzaxaryan/relay) |
-| **cc** | This project — Blazor WebAssembly command center with real-time WebSocket monitoring and remote file management | [cc](https://github.com/mrzaxaryan/cc) |
+| **C2** | This project — Blazor WebAssembly command center with real-time WebSocket monitoring and remote file management | [C2](https://github.com/mrzaxaryan/C2) |
 
 ## Development
 
@@ -106,18 +106,18 @@ Starts on `http://localhost:5057` / `https://localhost:7104`.
 │   └── Notifications/          # Toast notification system
 │       └── NotificationStore.cs
 ├── Shared/                     # Reusable UI components
-│   ├── CcBtn.razor             # Button
-│   ├── CcCard.razor            # Card container
-│   ├── CcDialog.razor          # Modal dialog
-│   ├── CcDropdown.razor        # Dropdown menu
-│   ├── CcInput.razor           # Text input
-│   ├── CcTable.razor           # Table layout
-│   ├── CcTr.razor              # Table row
-│   ├── CcProgress.razor        # Progress bar
-│   ├── CcSpinner.razor         # Loading spinner
-│   ├── CcIcon.razor            # Icon
-│   ├── CcBadge.razor           # Badge/label
-│   └── CcConfirmBtn.razor      # Confirmation button
+│   ├── C2Btn.razor             # Button
+│   ├── C2Card.razor            # Card container
+│   ├── C2Dialog.razor          # Modal dialog
+│   ├── C2Dropdown.razor        # Dropdown menu
+│   ├── C2Input.razor           # Text input
+│   ├── C2Table.razor           # Table layout
+│   ├── C2Tr.razor              # Table row
+│   ├── C2Progress.razor        # Progress bar
+│   ├── C2Spinner.razor         # Loading spinner
+│   ├── C2Icon.razor            # Icon
+│   ├── C2Badge.razor           # Badge/label
+│   └── C2ConfirmBtn.razor      # Confirmation button
 ├── Infrastructure/             # Cross-cutting services
 │   ├── ThemeService.cs         # Dark/light theme toggle
 │   ├── LocalStorageService.cs  # Browser localStorage wrapper

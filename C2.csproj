@@ -26,7 +26,7 @@
     <WriteLinesToFile
       File="$(IntermediateOutputPath)BuildMeta.g.cs"
       Overwrite="true"
-      Lines="namespace cc%3B&#10;&#10;public static class BuildMeta&#10;{&#10;    public const string Date = &quot;$(BuildDate)&quot;%3B&#10;    public const string Hash = &quot;$(BuildHash)&quot;%3B&#10;    public const string Version = &quot;$(BuildDate)+$(BuildHash)&quot;%3B&#10;}" />
+      Lines="namespace C2%3B&#10;&#10;public static class BuildMeta&#10;{&#10;    public const string Date = &quot;$(BuildDate)&quot;%3B&#10;    public const string Hash = &quot;$(BuildHash)&quot;%3B&#10;    public const string Version = &quot;$(BuildDate)+$(BuildHash)&quot;%3B&#10;}" />
     <ItemGroup>
       <Compile Include="$(IntermediateOutputPath)BuildMeta.g.cs" />
     </ItemGroup>

@@ -1,9 +1,9 @@
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using cc.Infrastructure;
+using C2.Infrastructure;
 using Microsoft.JSInterop;
 
-namespace cc.Features.Extensions;
+namespace C2.Features.Extensions;
 
 public class ExtensionGroup
 {
@@ -48,7 +48,7 @@ public class ExtensionGroupStore
 
         try
         {
-            var records = await _js.InvokeAsync<ExtensionGroup[]>("ccExtGroupDb.getAll");
+            var records = await _js.InvokeAsync<ExtensionGroup[]>("c2ExtGroupDb.getAll");
             _cache = records.ToList();
         }
         catch
@@ -60,7 +60,7 @@ public class ExtensionGroupStore
     public async Task AddAsync(string name, string extensions, bool enabled = true)
     {
         var group = new ExtensionGroup { Name = name, Extensions = extensions, Enabled = enabled };
-        await _js.InvokeVoidAsync("ccExtGroupDb.put", group);
+        await _js.InvokeVoidAsync("c2ExtGroupDb.put", group);
         var existing = _cache.FindIndex(g => g.Name == name);
         if (existing >= 0)
             _cache[existing] = group;
@@ -72,13 +72,13 @@ public class ExtensionGroupStore
     public async Task RemoveAsync(string name)
     {
         _cache.RemoveAll(g => g.Name == name);
-        await _js.InvokeVoidAsync("ccExtGroupDb.remove", name);
+        await _js.InvokeVoidAsync("c2ExtGroupDb.remove", name);
         _bus.Publish(new ExtensionGroupStoreChangedEvent());
     }
 
     public async Task UpdateAsync(ExtensionGroup group)
     {
-        await _js.InvokeVoidAsync("ccExtGroupDb.put", group);
+        await _js.InvokeVoidAsync("c2ExtGroupDb.put", group);
         var idx = _cache.FindIndex(g => g.Name == group.Name);
         if (idx >= 0) _cache[idx] = group;
         else _cache.Add(group);

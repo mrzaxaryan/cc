@@ -1,6 +1,6 @@
 using Microsoft.JSInterop;
 
-namespace cc.Infrastructure;
+namespace C2.Infrastructure;
 
 public enum Theme { Dark, Light }
 
@@ -9,7 +9,7 @@ public class ThemeService
     private readonly IJSRuntime _js;
     private readonly LocalStorageService _storage;
     private readonly IEventBus _bus;
-    private const string StorageKey = "cc-theme";
+    private const string StorageKey = "c2-theme";
     private Theme _current = Theme.Dark;
 
     public Theme Current => _current;
@@ -39,6 +39,6 @@ public class ThemeService
     private async Task ApplyTheme()
     {
         var themeName = _current == Theme.Light ? "light" : "dark";
-        await _js.InvokeVoidAsync("ccInterop.setTheme", themeName);
+        await _js.InvokeVoidAsync("c2Interop.setTheme", themeName);
     }
 }

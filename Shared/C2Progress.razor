@@ -1,7 +1,7 @@
 @inherits Microsoft.AspNetCore.Components.ComponentBase
 
-<div class="cc-progress @SizeClass @CssClass">
-    <div class="cc-progress-fill @VariantClass" style="width:@Percent%"></div>
+<div class="c2-progress @SizeClass @CssClass">
+    <div class="c2-progress-fill @VariantClass" style="width:@Percent%"></div>
 </div>
 
 @code {
@@ -12,16 +12,16 @@
 
     private string VariantClass => Variant switch
     {
-        ProgressVariant.Success => "cc-progress-success",
-        ProgressVariant.Warning => "cc-progress-warning",
-        ProgressVariant.Danger => "cc-progress-danger",
-        ProgressVariant.Muted => "cc-progress-muted",
-        _ => "cc-progress-info"
+        ProgressVariant.Success => "c2-progress-success",
+        ProgressVariant.Warning => "c2-progress-warning",
+        ProgressVariant.Danger => "c2-progress-danger",
+        ProgressVariant.Muted => "c2-progress-muted",
+        _ => "c2-progress-info"
     };
 
     private string SizeClass => Size switch
     {
-        Size.Xs => "cc-progress-xs",
+        Size.Xs => "c2-progress-xs",
         _ => ""
     };
 }

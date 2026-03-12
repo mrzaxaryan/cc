@@ -1,32 +1,32 @@
 /* Card */
-.cc-card {
-    border: 1px solid var(--cc-border);
+.c2-card {
+    border: 1px solid var(--c2-border);
     border-radius: 6px;
-    background: var(--cc-bg-surface);
+    background: var(--c2-bg-surface);
     overflow: hidden;
     transition: border-color 0.15s;
 }
 
-.cc-card-header {
+.c2-card-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 0.4rem 0.6rem;
-    background: var(--cc-bg-deep);
-    border-bottom: 1px solid var(--cc-border);
+    background: var(--c2-bg-deep);
+    border-bottom: 1px solid var(--c2-border);
     font-size: 0.8rem;
     font-weight: 600;
-    color: var(--cc-text);
+    color: var(--c2-text);
 }
 
-.cc-card-body {
+.c2-card-body {
     padding: 0.75rem;
 }
 
-.cc-card-flush {
+.c2-card-flush {
     padding: 0;
 }
 
-.cc-card-compact {
+.c2-card-compact {
     padding: 0.4rem 0.6rem;
 }

@@ -2,7 +2,7 @@
 // so cache versioning is automatic on every publish.
 importScripts('service-worker-assets.js');
 
-const CACHE_NAME = `cc-cache-${self.assetsManifest.version}`;
+const CACHE_NAME = `c2-cache-${self.assetsManifest.version}`;
 
 self.addEventListener('install', event => {
     event.waitUntil(

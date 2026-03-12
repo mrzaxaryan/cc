@@ -1,9 +1,9 @@
 /* Base input */
-.cc-input {
+.c2-input {
     width: 100%;
-    background: var(--cc-bg-deep);
-    border: 1px solid var(--cc-border);
-    color: var(--cc-text);
+    background: var(--c2-bg-deep);
+    border: 1px solid var(--c2-border);
+    color: var(--c2-text);
     font-size: 0.75rem;
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
@@ -11,42 +11,42 @@
     transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.cc-input:focus {
-    border-color: var(--cc-accent-blue);
-    box-shadow: 0 0 0 2px var(--cc-focus-ring);
+.c2-input:focus {
+    border-color: var(--c2-accent-blue);
+    box-shadow: 0 0 0 2px var(--c2-focus-ring);
 }
 
-.cc-input:disabled {
+.c2-input:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
 
-.cc-input::placeholder {
-    color: var(--cc-text-dim);
+.c2-input::placeholder {
+    color: var(--c2-text-dim);
     transition: color 0.15s;
 }
 
-.cc-input:focus::placeholder {
-    color: var(--cc-text-muted);
+.c2-input:focus::placeholder {
+    color: var(--c2-text-muted);
 }
 
 /* Monospace */
-.cc-input-mono {
+.c2-input-mono {
     font-family: monospace;
 }
 
 /* Sizes */
-.cc-input-xs {
+.c2-input-xs {
     font-size: 0.65rem;
     padding: 0.15rem 0.35rem;
 }
 
-.cc-input-md {
+.c2-input-md {
     font-size: 0.85rem;
     padding: 0.35rem 0.65rem;
 }
 
-.cc-input-lg {
+.c2-input-lg {
     font-size: 0.95rem;
     padding: 0.45rem 0.8rem;
     border-radius: 6px;

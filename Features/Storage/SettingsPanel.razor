@@ -11,12 +11,12 @@
         @if (confirmReset)
         {
             <span class="cm-reset-warning">This will delete all settings, cached files, and application data. Are you sure?</span>
-            <CcBtn Variant="BtnVariant.DangerSolid" OnClick="ResetApplication" Disabled="@resetting" Loading="@resetting">YES, RESET</CcBtn>
-            <CcBtn OnClick="() => confirmReset = false">CANCEL</CcBtn>
+            <C2Btn Variant="BtnVariant.DangerSolid" OnClick="ResetApplication" Disabled="@resetting" Loading="@resetting">YES, RESET</C2Btn>
+            <C2Btn OnClick="() => confirmReset = false">CANCEL</C2Btn>
         }
         else
         {
-            <CcBtn Variant="BtnVariant.Danger" OnClick="() => confirmReset = true">RESET APPLICATION</CcBtn>
+            <C2Btn Variant="BtnVariant.Danger" OnClick="() => confirmReset = true">RESET APPLICATION</C2Btn>
         }
     </HeaderRight>
     <Toolbar>
@@ -31,15 +31,15 @@
         {
             @* Header *@
             <div class="cm-toolbar">
-                <CcBadge Variant="BadgeVariant.Info">@(Cache.DirectoryName ?? "No folder")</CcBadge>
+                <C2Badge Variant="BadgeVariant.Info">@(Cache.DirectoryName ?? "No folder")</C2Badge>
                 <div class="cm-toolbar-actions">
-                    <CcBtn OnClick="Refresh" Disabled="@loading" Title="Refresh">&#x21bb;</CcBtn>
-                    <CcBtn Variant="BtnVariant.Warning" OnClick="ChangeFolder" Title="Change folder">&#x1f4c1;</CcBtn>
+                    <C2Btn OnClick="Refresh" Disabled="@loading" Title="Refresh">&#x21bb;</C2Btn>
+                    <C2Btn Variant="BtnVariant.Warning" OnClick="ChangeFolder" Title="Change folder">&#x1f4c1;</C2Btn>
                 </div>
             </div>
 
             @* Stats *@
-            <CcCard Compact CssClass="cm-stats-card">
+            <C2Card Compact CssClass="cm-stats-card">
                 <div class="cm-stats">
                     <div class="cm-stat">
                         <span class="cm-stat-value">@stats.agentCount</span>
@@ -62,7 +62,7 @@
                         <span class="cm-stat-label">On Disk</span>
                     </div>
                 </div>
-            </CcCard>
+            </C2Card>
 
             @* Breadcrumb *@
             @if (breadcrumbs.Count > 0)
@@ -92,7 +92,7 @@
                     @* Agent list at root *@
                     @if (loading)
                     {
-                        <div class="cm-list-loading"><CcSpinner /></div>
+                        <div class="cm-list-loading"><C2Spinner /></div>
                     }
                     else if (agentStats.Count == 0)
                     {
@@ -106,7 +106,7 @@
                                 <a href="javascript:void(0)" class="cm-item-name" @onclick="() => NavigateToAgent(agent.uuid)" @onclick:preventDefault>@agent.name</a>
                                 <span class="cm-item-meta">@agent.dirs directories / @agent.files files</span>
                                 <span class="cm-item-meta">@Formatters.FormatSize((ulong)agent.size)</span>
-                                <CcConfirmBtn OnConfirm="() => DeleteAgentCache(agent.uuid)" Title="Delete agent cache">DEL</CcConfirmBtn>
+                                <C2ConfirmBtn OnConfirm="() => DeleteAgentCache(agent.uuid)" Title="Delete agent cache">DEL</C2ConfirmBtn>
                             </div>
                         }
                     }
@@ -116,7 +116,7 @@
                     @* Directory/file listing *@
                     @if (loading)
                     {
-                        <div class="cm-list-loading"><CcSpinner /></div>
+                        <div class="cm-list-loading"><C2Spinner /></div>
                     }
                     else
                     {
@@ -129,7 +129,7 @@
                             <div class="cm-item">
                                 <span class="cm-item-icon">&#x1f4c1;</span>
                                 <a href="javascript:void(0)" class="cm-item-name" @onclick="() => NavigateToDirectory(dir.Id)" @onclick:preventDefault>@dir.Name</a>
-                                <CcConfirmBtn OnConfirm="() => DeleteDir(dir)" Title="Delete">DEL</CcConfirmBtn>
+                                <C2ConfirmBtn OnConfirm="() => DeleteDir(dir)" Title="Delete">DEL</C2ConfirmBtn>
                             </div>
                         }
                         @foreach (var file in childFiles)
@@ -138,7 +138,7 @@
                                 <span class="cm-item-icon">&#x1f4c4;</span>
                                 <span class="cm-item-name">@file.Name</span>
                                 <span class="cm-item-meta">@Formatters.FormatSize((ulong)file.Size)</span>
-                                <CcConfirmBtn OnConfirm="() => DeleteFile(file)" Title="Delete">DEL</CcConfirmBtn>
+                                <C2ConfirmBtn OnConfirm="() => DeleteFile(file)" Title="Delete">DEL</C2ConfirmBtn>
                             </div>
                         }
                         @if (childDirs.Count == 0 && childFiles.Count == 0)
@@ -153,19 +153,19 @@
         {
             <div class="cm-db-section">
                 <div class="cm-toolbar">
-                    <CcBadge Variant="BadgeVariant.Dark">cc-agents</CcBadge>
+                    <C2Badge Variant="BadgeVariant.Dark">c2-agents</C2Badge>
                     <span class="cm-db-version">v4</span>
                     <div class="cm-toolbar-actions">
-                        <CcBtn OnClick="LoadDbStats" Disabled="@dbLoading" Title="Refresh">&#x21bb;</CcBtn>
+                        <C2Btn OnClick="LoadDbStats" Disabled="@dbLoading" Title="Refresh">&#x21bb;</C2Btn>
                     </div>
                 </div>
                 @if (dbLoading)
                 {
-                    <div class="cm-list-loading"><CcSpinner /></div>
+                    <div class="cm-list-loading"><C2Spinner /></div>
                 }
                 else
                 {
-                    <CcTable Hover>
+                    <C2Table Hover>
                         <thead>
                             <tr>
                                 <th>Object Store</th>
@@ -183,7 +183,7 @@
                                 </tr>
                             }
                         </tbody>
-                    </CcTable>
+                    </C2Table>
                     @if (dbTables.Count > 0)
                     {
                         <div class="cm-db-total">
@@ -197,11 +197,11 @@
         {
             <div class="cm-about">
                 <div class="cm-about-hero">
-                    <img class="cm-about-icon" src="icon-192.png" alt="CC" />
-                    <div class="cm-about-brand">CC</div>
+                    <img class="cm-about-icon" src="icon-192.png" alt="C2" />
+                    <div class="cm-about-brand">C2</div>
                     <div class="cm-about-tagline">Command &amp; Control</div>
                 </div>
-                <CcCard Compact>
+                <C2Card Compact>
                     <div class="cm-about-rows">
                         <div class="cm-about-row">
                             <span class="cm-about-label">Version</span>
@@ -224,7 +224,7 @@
                             <code class="cm-about-value">@System.Runtime.InteropServices.RuntimeInformation.OSDescription</code>
                         </div>
                     </div>
-                </CcCard>
+                </C2Card>
             </div>
         }
     </Body>
@@ -448,7 +448,7 @@
         StateHasChanged();
         try
         {
-            var results = await Js.InvokeAsync<DbTableResult[]>("ccDbInfo.getTableStats");
+            var results = await Js.InvokeAsync<DbTableResult[]>("c2DbInfo.getTableStats");
             dbTables = results.Select(r => new DbTable(r.Name, r.Count)).ToList();
         }
         catch (Exception ex) { Msg.Error($"Failed to read IndexedDB: {ex.Message}"); }

@@ -1,4 +1,4 @@
-@using cc.Features.Relay
+@using C2.Features.Relay
 @inject MessageService Msg
 @inject IJSRuntime Js
 @implements IDisposable
@@ -7,20 +7,20 @@
     <HeaderLeft>
         @if (IsConnected)
         {
-            <CcBadge Variant="BadgeVariant.Success" Size="Size.Xs">Connected</CcBadge>
+            <C2Badge Variant="BadgeVariant.Success" Size="Size.Xs">Connected</C2Badge>
         }
         else
         {
-            <CcBadge Variant="BadgeVariant.Muted" Size="Size.Xs">Disconnected</CcBadge>
+            <C2Badge Variant="BadgeVariant.Muted" Size="Size.Xs">Disconnected</C2Badge>
         }
     </HeaderLeft>
     <HeaderRight>
-        <CcBtn OnClick="ClearOutput" Title="Clear terminal" Size="Size.Xs" Variant="BtnVariant.Ghost">Clear</CcBtn>
-        <CcBtn OnClick="PollOutput" Disabled="@(!IsConnected || _polling)" Loading="@_polling" Title="Read output" Size="Size.Xs">Read</CcBtn>
-        <CcBtn OnClick="ToggleAutoRead" Title="@(_autoRead ? "Stop auto-read" : "Start auto-read")" Size="Size.Xs"
+        <C2Btn OnClick="ClearOutput" Title="Clear terminal" Size="Size.Xs" Variant="BtnVariant.Ghost">Clear</C2Btn>
+        <C2Btn OnClick="PollOutput" Disabled="@(!IsConnected || _polling)" Loading="@_polling" Title="Read output" Size="Size.Xs">Read</C2Btn>
+        <C2Btn OnClick="ToggleAutoRead" Title="@(_autoRead ? "Stop auto-read" : "Start auto-read")" Size="Size.Xs"
                Variant="@(_autoRead ? BtnVariant.Success : BtnVariant.Default)">
             @(_autoRead ? "Auto: ON" : "Auto: OFF")
-        </CcBtn>
+        </C2Btn>
     </HeaderRight>
     <Body>
         <div class="sh">
@@ -56,10 +56,10 @@
                        @ref="_inputEl"
                        @onkeydown="OnKeyDown" placeholder="@(IsConnected ? "Type command..." : "Disconnected")"
                        disabled="@(!IsConnected)" autocomplete="off" spellcheck="false" />
-                <CcBtn OnClick="SendCommand" Disabled="@(!IsConnected || string.IsNullOrWhiteSpace(_inputValue))"
+                <C2Btn OnClick="SendCommand" Disabled="@(!IsConnected || string.IsNullOrWhiteSpace(_inputValue))"
                        Size="Size.Xs" Variant="BtnVariant.Primary" Title="Send command">
                     &#x23CE;
-                </CcBtn>
+                </C2Btn>
             </div>
         </div>
     </Body>

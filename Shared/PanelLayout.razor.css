@@ -34,7 +34,7 @@
 .panel-title {
     font-weight: 700;
     font-size: 0.8rem;
-    color: var(--cc-text);
+    color: var(--c2-text);
     letter-spacing: 0.02em;
     white-space: nowrap;
 }

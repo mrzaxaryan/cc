@@ -41,7 +41,7 @@
              @onpointercancel="OnDragEnd"
              @onpointermove:preventDefault="true"
              @ondblclick="() => Wm.ToggleMaximize(win)">
-            <span class="app-window-icon"><CcIcon Name="@PanelIcon(win.Panel)" Size="Size.Xs" /></span>
+            <span class="app-window-icon"><C2Icon Name="@PanelIcon(win.Panel)" Size="Size.Xs" /></span>
             <span class="app-window-title">@win.Title</span>
             <div class="app-window-controls">
                 <button class="app-window-btn minimize-btn" @onclick="() => Wm.ToggleMinimize(win)" @onpointerdown:stopPropagation="true" title="Minimize">
@@ -102,7 +102,7 @@
                     @onclick="() => OnTaskbarClick(w)"
                     @ondblclick:preventDefault="true"
                     @ondblclick:stopPropagation="true">
-                <CcIcon Name="@PanelIcon(win.Panel)" Size="Size.Xs" />
+                <C2Icon Name="@PanelIcon(win.Panel)" Size="Size.Xs" />
                 <span class="mdi-taskbar-label">@win.Title</span>
             </button>
         }
@@ -177,7 +177,7 @@
     {
         if (win.Maximized) return;
         Wm.BringToFront(win);
-        var vp = await Js.InvokeAsync<ViewportSize>("ccInterop.getViewport");
+        var vp = await Js.InvokeAsync<ViewportSize>("c2Interop.getViewport");
         _vpWidth = vp.Width;
         _vpHeight = vp.Height;
         _dragging = new DragState
@@ -209,7 +209,7 @@
     {
         if (win.Maximized) return;
         Wm.BringToFront(win);
-        var vp = await Js.InvokeAsync<ViewportSize>("ccInterop.getViewport");
+        var vp = await Js.InvokeAsync<ViewportSize>("c2Interop.getViewport");
         _vpWidth = vp.Width;
         _vpHeight = vp.Height;
         _edgeResizing = new EdgeResizeState

@@ -1,32 +1,32 @@
 /* Dropdown backdrop */
-.cc-dropdown-backdrop {
+.c2-dropdown-backdrop {
     position: fixed;
     inset: 0;
     z-index: 1050;
 }
 
 /* Dropdown menu */
-.cc-dropdown {
+.c2-dropdown {
     position: fixed;
     z-index: 1051;
     min-width: 140px;
-    background: var(--cc-bg-base);
-    border: 1px solid var(--cc-border-light);
+    background: var(--c2-bg-base);
+    border: 1px solid var(--c2-border-light);
     border-radius: 6px;
-    box-shadow: 0 4px 16px var(--cc-shadow);
+    box-shadow: 0 4px 16px var(--c2-shadow);
     padding: 0.25rem 0;
     overflow: visible;
-    animation: cc-dropdown-in 0.12s ease-out;
+    animation: c2-dropdown-in 0.12s ease-out;
 }
 
-@keyframes cc-dropdown-in {
+@keyframes c2-dropdown-in {
     from { opacity: 0; transform: translateY(-4px); }
     to   { opacity: 1; transform: translateY(0); }
 }
 
 /* Mobile — ensure dropdown fits in viewport */
 @media (max-width: 768px) {
-    .cc-dropdown {
+    .c2-dropdown {
         max-width: calc(100vw - 1rem);
         max-height: 60vh;
         overflow-y: auto;

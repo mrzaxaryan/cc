@@ -1,8 +1,8 @@
-using cc.Infrastructure;
+using C2.Infrastructure;
 using System.Text.Json.Serialization;
 using Microsoft.JSInterop;
 
-namespace cc.Features.Notifications;
+namespace C2.Features.Notifications;
 
 public class NotificationRecord
 {
@@ -34,7 +34,7 @@ public class NotificationStore
         _loaded = true;
         try
         {
-            var records = await _js.InvokeAsync<NotificationRecord[]>("ccNotificationDb.getAll");
+            var records = await _js.InvokeAsync<NotificationRecord[]>("c2NotificationDb.getAll");
             _items = records.OrderByDescending(r => r.Created).ToList();
             UnreadCount = _items.Count;
         }
@@ -53,10 +53,10 @@ public class NotificationStore
             Created = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
         };
 
-        await _js.InvokeVoidAsync("ccNotificationDb.put", record);
+        await _js.InvokeVoidAsync("c2NotificationDb.put", record);
 
         // Re-fetch to get the auto-incremented id
-        var all = await _js.InvokeAsync<NotificationRecord[]>("ccNotificationDb.getAll");
+        var all = await _js.InvokeAsync<NotificationRecord[]>("c2NotificationDb.getAll");
         _items = all.OrderByDescending(r => r.Created).ToList();
         UnreadCount++;
         _bus.Publish(new NotificationStoreChangedEvent());
@@ -64,7 +64,7 @@ public class NotificationStore
 
     public async Task RemoveAsync(int id)
     {
-        await _js.InvokeVoidAsync("ccNotificationDb.remove", id);
+        await _js.InvokeVoidAsync("c2NotificationDb.remove", id);
         _items.RemoveAll(n => n.Id == id);
         UnreadCount = Math.Max(0, UnreadCount - 1);
         _bus.Publish(new NotificationStoreChangedEvent());
@@ -72,7 +72,7 @@ public class NotificationStore
 
     public async Task ClearAsync()
     {
-        await _js.InvokeVoidAsync("ccNotificationDb.clear");
+        await _js.InvokeVoidAsync("c2NotificationDb.clear");
         _items.Clear();
         UnreadCount = 0;
         _bus.Publish(new NotificationStoreChangedEvent());
