@@ -15,6 +15,7 @@
         }
     </HeaderLeft>
     <HeaderRight>
+        <C2Btn OnClick="SendBreak" Disabled="@(!IsConnected)" Title="Send Ctrl+C (break)" Size="Size.Xs" Variant="BtnVariant.Danger">Ctrl+C</C2Btn>
         <C2Btn OnClick="ClearOutput" Title="Clear terminal" Size="Size.Xs" Variant="BtnVariant.Ghost">Clear</C2Btn>
         <C2Btn OnClick="PollOutput" Disabled="@(!IsConnected || _polling)" Loading="@_polling" Title="Read output" Size="Size.Xs">Read</C2Btn>
         <C2Btn OnClick="ToggleAutoRead" Title="@(_autoRead ? "Stop auto-read" : "Start auto-read")" Size="Size.Xs"
@@ -23,7 +24,7 @@
         </C2Btn>
     </HeaderRight>
     <Body>
-        <div class="sh">
+        <div class="sh" @onclick="FocusInput">
             @if (!IsConnected)
             {
                 <div class="sh-banner sh-banner--warn">
@@ -33,33 +34,33 @@
             }
 
             <div class="sh-terminal" @ref="_terminalEl">
-                @if (_lines.Count == 0 && string.IsNullOrEmpty(_pendingOutput))
+                @foreach (var line in _lines)
                 {
-                    <div class="sh-empty">No output yet. Type a command below.</div>
+                    <div class="sh-line @(line.IsCommand ? "sh-line--cmd" : line.IsError ? "sh-line--err" : "")">@line.Text</div>
                 }
-                else
-                {
-                    @foreach (var line in _lines)
-                    {
-                        <div class="sh-line @(line.IsCommand ? "sh-line--cmd" : line.IsError ? "sh-line--err" : "")">@line.Text</div>
-                    }
-                    @if (!string.IsNullOrEmpty(_pendingOutput))
-                    {
-                        <div class="sh-line">@_pendingOutput</div>
-                    }
-                }
-            </div>
 
-            <div class="sh-input-bar">
-                <span class="sh-prompt">$</span>
-                <input class="sh-input" @bind="_inputValue" @bind:event="oninput"
-                       @ref="_inputEl"
-                       @onkeydown="OnKeyDown" placeholder="@(IsConnected ? "Type command..." : "Disconnected")"
-                       disabled="@(!IsConnected)" autocomplete="off" spellcheck="false" />
-                <C2Btn OnClick="SendCommand" Disabled="@(!IsConnected || string.IsNullOrWhiteSpace(_inputValue))"
-                       Size="Size.Xs" Variant="BtnVariant.Primary" Title="Send command">
-                    &#x23CE;
-                </C2Btn>
+                @* Active input line — pending output + typed text + cursor on ONE line *@
+                @if (IsConnected)
+                {
+                    <div class="sh-line sh-line--active">@_pendingOutput@_inputValue<span class="sh-cursor @(_focused ? "" : "sh-cursor--hidden")"></span></div>
+                }
+                else if (!string.IsNullOrEmpty(_pendingOutput))
+                {
+                    <div class="sh-line">@_pendingOutput</div>
+                }
+                else if (_lines.Count == 0)
+                {
+                    <div class="sh-empty">No output yet.</div>
+                }
+
+                @* Hidden input captures keystrokes *@
+                <input class="sh-hidden-input" @ref="_inputEl"
+                       @bind="_inputValue" @bind:event="oninput"
+                       @onkeydown="OnKeyDown"
+                       @onfocus="() => { _focused = true; }"
+                       @onblur="() => { _focused = false; }"
+                       disabled="@(!IsConnected)"
+                       autocomplete="off" spellcheck="false" autocorrect="off" autocapitalize="off" />
             </div>
         </div>
     </Body>
@@ -78,6 +79,8 @@
     private string _inputValue = "";
     private bool _polling;
     private bool _autoRead;
+    private bool _focused;
+    private bool _needsScroll;
     private Timer? _autoReadTimer;
     private ElementReference _terminalEl;
     private ElementReference _inputEl;
@@ -89,8 +92,16 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        // Always re-focus the hidden input after every render so keystrokes
+        // keep flowing — the input loses focus on each StateHasChanged cycle.
+        if (IsConnected)
             await FocusInput();
+
+        if (_needsScroll)
+        {
+            _needsScroll = false;
+            await ScrollToBottom();
+        }
     }
 
     private async Task FocusInput()
@@ -109,25 +120,21 @@
 
     private void AppendOutput(string text)
     {
-        // Normalize \r\n → \n and strip standalone \r (carriage returns cause
-        // extra line breaks inside white-space: pre-wrap divs)
         var combined = _pendingOutput + text.Replace("\r\n", "\n").Replace("\r", "");
         var parts = combined.Split('\n');
 
-        // All but last are complete lines
         for (var i = 0; i < parts.Length - 1; i++)
             _lines.Add(new ShellLine(parts[i]));
 
-        // Last part may be partial (no trailing newline)
         _pendingOutput = parts[^1];
-
         TrimLines();
     }
 
     private void AppendCommand(string cmd)
     {
-        FlushPending();
-        _lines.Add(new ShellLine($"$ {cmd}", IsCommand: true));
+        // Commit the pending output (remote prompt) + typed command as one line
+        _lines.Add(new ShellLine(_pendingOutput + cmd, IsCommand: true));
+        _pendingOutput = "";
         TrimLines();
     }
 
@@ -153,6 +160,35 @@
             _lines.RemoveRange(0, _lines.Count - MaxLines);
     }
 
+    private async Task SendBreak()
+    {
+        if (!IsConnected) return;
+
+        FlushPending();
+        _lines.Add(new ShellLine("^C", IsCommand: true));
+        _needsScroll = true;
+        StateHasChanged();
+
+        var payload = RelaySocket.BuildWriteShell("\x03");
+        try
+        {
+            var response = await Relay!.SendAndReceive(payload);
+            if (response is not null && response.Length >= 4)
+            {
+                var status = RelaySocket.ReadStatus(response);
+                if (status != 0)
+                    AppendError($"[Break error: status {status}]");
+            }
+        }
+        catch (Exception ex)
+        {
+            AppendError($"[Break error: {ex.Message}]");
+        }
+
+        await Task.Delay(150);
+        await PollOutput();
+    }
+
     private async Task SendCommand()
     {
         if (!IsConnected || string.IsNullOrWhiteSpace(_inputValue)) return;
@@ -163,8 +199,8 @@
         _historyIndex = _history.Count;
 
         AppendCommand(cmd);
+        _needsScroll = true;
         StateHasChanged();
-        await ScrollToBottom();
 
         var payload = RelaySocket.BuildWriteShell(cmd + "\n");
         try
@@ -182,10 +218,8 @@
             AppendError($"[Send error: {ex.Message}]");
         }
 
-        // Brief delay then read output
         await Task.Delay(150);
         await PollOutput();
-        await FocusInput();
     }
 
     private async Task PollOutput()
@@ -207,7 +241,7 @@
                     if (!string.IsNullOrEmpty(text))
                     {
                         AppendOutput(text);
-                        await ScrollToBottom();
+                        _needsScroll = true;
                     }
                 }
                 else if (status != 0)
@@ -268,6 +302,9 @@
             case "ArrowDown" when _history.Count > 0:
                 _historyIndex = Math.Min(_history.Count, _historyIndex + 1);
                 _inputValue = _historyIndex < _history.Count ? _history[_historyIndex] : "";
+                break;
+            case "c" when e.CtrlKey && string.IsNullOrEmpty(_inputValue):
+                await SendBreak();
                 break;
             case "l" when e.CtrlKey:
                 ClearOutput();
