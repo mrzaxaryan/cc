@@ -9,6 +9,8 @@
 @inject MessageService Msg
 @inject NotificationStore Notif
 @inject ExtensionGroupStore ExtGroups
+@inject DownloadStore DownloadStore
+@inject SearchStore SearchStore
 @inject IJSRuntime JS
 
 @if (!initialized)
@@ -26,7 +28,19 @@ else if (showSetup)
 else
 {
     <div class="mdi-menubar">
-        <span class="mdi-brand">C2</span>
+        <div class="brand-menu" @onfocusout="OnBrandFocusOut" tabindex="-1">
+            <button class="mdi-brand" @onclick="ToggleBrandMenu">
+                C2 <C2Icon Name="chevron-down" Size="Size.Xs" CssClass="brand-chevron" />
+            </button>
+            @if (brandMenuOpen)
+            {
+                <div class="brand-popup">
+                    <button class="brand-popup-item shutdown" @onclick="ShutdownAsync">
+                        <C2Icon Name="power" Size="Size.Xs" /> Shut Down
+                    </button>
+                </div>
+            }
+        </div>
         <span class="mdi-sep"></span>
 
         @foreach (var item in MenuItems)
@@ -128,6 +142,25 @@ else
     <div class="mdi-workspace"></div>
 
     <FloatingWindows />
+
+    @if (isShutdown)
+    {
+        <div class="shutdown-overlay">
+            <div class="shutdown-card">
+                <C2Icon Name="power" Size="Size.Lg" CssClass="shutdown-icon" />
+                <h2 class="shutdown-title">All services stopped</h2>
+                <p class="shutdown-text">Close this window or restart the app.</p>
+                <div class="shutdown-actions">
+                    <button class="shutdown-btn close" @onclick="CloseWindow">
+                        <C2Icon Name="x" Size="Size.Xs" /> Close Window
+                    </button>
+                    <button class="shutdown-btn restart" @onclick="RestartApp">
+                        <C2Icon Name="refresh" Size="Size.Xs" /> Restart
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
 }
 
 @code {
@@ -146,6 +179,8 @@ else
     private bool initialized;
     private bool dropdownOpen;
     private bool updateAvailable;
+    private bool brandMenuOpen;
+    private bool isShutdown;
     private Timer? _updateTimer;
 
     protected override void OnInitialized()
@@ -232,6 +267,39 @@ else
         if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h ago";
         return dt.ToString("MMM d");
     }
+
+    private void ToggleBrandMenu() => brandMenuOpen = !brandMenuOpen;
+
+    private async void OnBrandFocusOut()
+    {
+        await Task.Delay(200);
+        await InvokeAsync(() =>
+        {
+            brandMenuOpen = false;
+            StateHasChanged();
+        });
+    }
+
+    private async Task ShutdownAsync()
+    {
+        brandMenuOpen = false;
+
+        // Cancel all in-flight downloads, uploads, and searches
+        DownloadStore.Cts.CancelAll();
+        SearchStore.Cts.CancelAll();
+
+        // Dispose services (closes WebSockets, stops background loops)
+        await RelaySvc.DisposeAsync();
+        DownloadSvc.Dispose();
+        SearchSvc.Dispose();
+        _updateTimer?.Dispose();
+
+        isShutdown = true;
+    }
+
+    private void CloseWindow() => _ = JS.InvokeVoidAsync("eval", "window.close()");
+
+    private void RestartApp() => _ = JS.InvokeVoidAsync("eval", "location.reload()");
 
     private async Task ToggleTheme() => await Theme.Toggle();
 
