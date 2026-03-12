@@ -593,11 +593,108 @@ a:hover {
     padding: 0 var(--c2-space-2);
     gap: 2px;
     z-index: 1050;
-    overflow-x: auto;
+    overflow: visible;
 }
 
-.mdi-taskbar:empty {
-    display: none;
+.mdi-taskbar-spacer {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Taskbar menu button */
+.mdi-taskbar-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    background: var(--c2-bg-overlay);
+    border: 1px solid var(--c2-border);
+    color: var(--c2-text-muted);
+    font-size: 0.72rem;
+    padding: 3px 8px;
+    border-radius: var(--c2-radius-sm);
+    cursor: pointer;
+    transition: background var(--c2-transition-normal), color var(--c2-transition-normal);
+    flex-shrink: 0;
+}
+
+.mdi-taskbar-menu-btn:hover {
+    background: var(--c2-bg-highlight);
+    color: var(--c2-text);
+}
+
+/* Taskbar dropdown menu */
+.taskbar-menu-wrapper {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.taskbar-dropdown {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    right: 0;
+    min-width: 180px;
+    background: var(--c2-bg-surface);
+    border: 1px solid var(--c2-border);
+    border-radius: var(--c2-radius-md);
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.4);
+    padding: 4px;
+    z-index: 1060;
+}
+
+.taskbar-dropdown-label {
+    display: block;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--c2-text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 4px 8px 2px;
+}
+
+.taskbar-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    background: none;
+    border: none;
+    color: var(--c2-text-muted);
+    font-size: 0.75rem;
+    padding: 6px 8px;
+    border-radius: var(--c2-radius-sm);
+    cursor: pointer;
+    transition: background var(--c2-transition-normal), color var(--c2-transition-normal);
+    text-align: left;
+}
+
+.taskbar-dropdown-item:hover:not(:disabled) {
+    background: var(--c2-bg-highlight);
+    color: var(--c2-text);
+}
+
+.taskbar-dropdown-item:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.taskbar-dropdown-danger {
+    color: var(--c2-accent-red);
+}
+
+.taskbar-dropdown-danger:hover:not(:disabled) {
+    background: rgba(243, 139, 168, 0.1);
+    color: var(--c2-accent-red);
+}
+
+.taskbar-dropdown-divider {
+    height: 1px;
+    background: var(--c2-border);
+    margin: 4px 0;
+}
+
+.taskbar-dropdown-section {
+    display: flex;
+    flex-direction: column;
 }
 
 .mdi-taskbar-item {

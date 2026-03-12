@@ -67,24 +67,71 @@
     </div>
 }
 
-@* Taskbar — always visible when windows exist *@
-@if (Wm.Windows.Count > 0)
-{
-    <div class="mdi-taskbar">
-        @foreach (var win in Wm.Windows)
+@* Taskbar — always visible *@
+<div class="mdi-taskbar">
+    @foreach (var win in Wm.Windows)
+    {
+        var w = win;
+        <button @key="win.Id"
+                class="mdi-taskbar-item @(IsTopWindow(w) ? "active" : "") @(w.Minimized ? "minimized" : "")"
+                @onclick="() => OnTaskbarClick(w)"
+                @ondblclick:preventDefault="true"
+                @ondblclick:stopPropagation="true">
+            <C2Icon Name="@PanelIcon(win.Panel)" Size="Size.Xs" />
+            <span class="mdi-taskbar-label">@win.Title</span>
+        </button>
+    }
+
+    <div class="mdi-taskbar-spacer"></div>
+
+    @* Window management dropdown *@
+    <div class="taskbar-menu-wrapper" @onfocusout="OnTaskbarMenuFocusOut" tabindex="-1">
+        <button class="mdi-taskbar-menu-btn" @onclick="ToggleTaskbarMenu" title="Window management">
+            <C2Icon Name="grid" Size="Size.Xs" />
+            <C2Icon Name="chevron-up" Size="Size.Xs" />
+        </button>
+
+        @if (_taskbarMenuOpen)
         {
-            var w = win;
-            <button @key="win.Id"
-                    class="mdi-taskbar-item @(IsTopWindow(w) ? "active" : "") @(w.Minimized ? "minimized" : "")"
-                    @onclick="() => OnTaskbarClick(w)"
-                    @ondblclick:preventDefault="true"
-                    @ondblclick:stopPropagation="true">
-                <C2Icon Name="@PanelIcon(win.Panel)" Size="Size.Xs" />
-                <span class="mdi-taskbar-label">@win.Title</span>
-            </button>
+            <div class="taskbar-dropdown">
+                <div class="taskbar-dropdown-section">
+                    <span class="taskbar-dropdown-label">Tile</span>
+                    <button class="taskbar-dropdown-item" @onclick='() => TileWindows("grid-2x2")' disabled="@(Wm.Windows.Count == 0)">
+                        <C2Icon Name="grid" Size="Size.Xs" /> 2 x 2
+                    </button>
+                    <button class="taskbar-dropdown-item" @onclick='() => TileWindows("grid-3x3")' disabled="@(Wm.Windows.Count == 0)">
+                        <C2Icon Name="grid" Size="Size.Xs" /> 3 x 3
+                    </button>
+                    <button class="taskbar-dropdown-item" @onclick='() => TileWindows("grid-4x4")' disabled="@(Wm.Windows.Count == 0)">
+                        <C2Icon Name="grid" Size="Size.Xs" /> 4 x 4
+                    </button>
+                    <button class="taskbar-dropdown-item" @onclick='() => TileWindows("side-by-side")' disabled="@(Wm.Windows.Count == 0)">
+                        <C2Icon Name="columns" Size="Size.Xs" /> Side by Side
+                    </button>
+                    <button class="taskbar-dropdown-item" @onclick='() => TileWindows("stack")' disabled="@(Wm.Windows.Count == 0)">
+                        <C2Icon Name="rows" Size="Size.Xs" /> Stack
+                    </button>
+                    <button class="taskbar-dropdown-item" @onclick='() => TileWindows("cascade")' disabled="@(Wm.Windows.Count == 0)">
+                        <C2Icon Name="layers" Size="Size.Xs" /> Cascade
+                    </button>
+                </div>
+                <div class="taskbar-dropdown-divider"></div>
+                <div class="taskbar-dropdown-section">
+                    <button class="taskbar-dropdown-item" @onclick="MinimizeAll" disabled="@(Wm.Windows.Count == 0)">
+                        <C2Icon Name="minimize" Size="Size.Xs" /> Minimize All
+                    </button>
+                    <button class="taskbar-dropdown-item" @onclick="RestoreAll" disabled="@(Wm.Windows.Count == 0)">
+                        <C2Icon Name="maximize" Size="Size.Xs" /> Restore All
+                    </button>
+                </div>
+                <div class="taskbar-dropdown-divider"></div>
+                <button class="taskbar-dropdown-item taskbar-dropdown-danger" @onclick="CloseAll" disabled="@(Wm.Windows.Count == 0)">
+                    <C2Icon Name="x" Size="Size.Xs" /> Close All
+                </button>
+            </div>
         }
     </div>
-}
+</div>
 
 @code {
     private double _vpWidth;
@@ -254,6 +301,63 @@
         _ = Js.InvokeVoidAsync("c2Windows.setMaximized", win.Id, win.Maximized);
         if (!win.Maximized)
             _ = Js.InvokeVoidAsync("c2Windows.applyPosition", win.Id, win.X, win.Y, win.Width, win.Height, true);
+    }
+
+    // --- Taskbar menu ---
+    private bool _taskbarMenuOpen;
+
+    private void ToggleTaskbarMenu() => _taskbarMenuOpen = !_taskbarMenuOpen;
+
+    private async void OnTaskbarMenuFocusOut()
+    {
+        await Task.Delay(200);
+        await InvokeAsync(() => { _taskbarMenuOpen = false; StateHasChanged(); });
+    }
+
+    private async Task TileWindows(string layout)
+    {
+        _taskbarMenuOpen = false;
+        // Restore minimized windows first so they participate in tiling
+        foreach (var win in Wm.Windows.Where(w => w.Minimized))
+        {
+            win.Minimized = false;
+            await Js.InvokeVoidAsync("c2Windows.setMinimized", win.Id, false);
+        }
+        var ids = Wm.Windows.Select(w => w.Id).ToArray();
+        await Js.InvokeVoidAsync("c2Windows.tileWindows", layout, ids);
+        // Sync positions back to C#
+        // The JS tileWindows already calls OnTileApplied via dotnetRef
+    }
+
+    private void MinimizeAll()
+    {
+        _taskbarMenuOpen = false;
+        foreach (var win in Wm.Windows.Where(w => !w.Minimized))
+        {
+            Wm.ToggleMinimize(win);
+            _ = Js.InvokeVoidAsync("c2Windows.setMinimized", win.Id, true);
+        }
+    }
+
+    private void RestoreAll()
+    {
+        _taskbarMenuOpen = false;
+        foreach (var win in Wm.Windows.Where(w => w.Minimized).ToList())
+        {
+            Wm.ToggleMinimize(win);
+            _ = Js.InvokeVoidAsync("c2Windows.setMinimized", win.Id, false);
+        }
+    }
+
+    private async Task CloseAll()
+    {
+        _taskbarMenuOpen = false;
+        foreach (var win in Wm.Windows.ToList())
+        {
+            await Js.InvokeVoidAsync("c2Windows.animateClose", win.Id);
+            _registeredIds.Remove(win.Id);
+        }
+        await Wm.CloseAllWindows();
     }
 
     private async Task OnClose(WindowState win)

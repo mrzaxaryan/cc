@@ -521,7 +521,28 @@
 
         const results = [];
 
-        switch (layout) {
+        // Check for fixed grid layouts like 'grid-2x2', 'grid-3x3', 'grid-4x4'
+        const gridMatch = layout.match(/^grid-(\d+)x(\d+)$/);
+
+        if (gridMatch) {
+            const cols = parseInt(gridMatch[1], 10);
+            const rows = parseInt(gridMatch[2], 10);
+            const cellW = (ua.w - gap * (cols - 1)) / cols;
+            const cellH = (ua.h - gap * (rows - 1)) / rows;
+            ids.forEach((id, i) => {
+                const col = i % cols;
+                const row = Math.floor(i / cols);
+                results.push({
+                    id,
+                    rect: {
+                        x: ua.x + col * (cellW + gap),
+                        y: ua.y + row * (cellH + gap),
+                        w: cellW,
+                        h: cellH
+                    }
+                });
+            });
+        } else switch (layout) {
             case 'cascade': {
                 const baseW = Math.min(700, ua.w * 0.6);
                 const baseH = Math.min(500, ua.h * 0.6);
@@ -858,8 +879,19 @@
             const promises = [];
             tiles.forEach(t => {
                 const el = _windows.get(t.id);
-                if (el) promises.push(animateWindow(el, t.rect));
+                if (el) {
+                    el.classList.remove('maximized');
+                    promises.push(animateWindow(el, t.rect));
+                }
             });
+            // Sync positions back to C#
+            if (_dotnetRef && tiles.length > 0) {
+                _dotnetRef.invokeMethodAsync('OnTileApplied', layout,
+                    tiles.map(t => t.id),
+                    tiles.map(t => t.rect.x), tiles.map(t => t.rect.y),
+                    tiles.map(t => t.rect.w), tiles.map(t => t.rect.h));
+            }
+            autoSave();
             return Promise.all(promises);
         },
 
