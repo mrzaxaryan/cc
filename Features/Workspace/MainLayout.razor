@@ -137,17 +137,6 @@ else
             }
         </div>
 
-        @* Theme toggle *@
-        <button class="mdi-icon-btn" @onclick="ToggleTheme" title="Toggle theme">
-            @if (Theme.Current == C2.Infrastructure.Theme.Dark)
-            {
-                <C2Icon Name="sun" Size="Size.Sm" />
-            }
-            else
-            {
-                <C2Icon Name="moon" Size="Size.Sm" />
-            }
-        </button>
     </div>
 
     <div class="mdi-workspace"></div>
@@ -180,7 +169,6 @@ else
     [
         new("Agents", "agents", "Agents"),
         new("Relay", "server", "Relay"),
-        new("Settings", "database", "Settings"),
         new("Uploads", "sync", "Uploads"),
         new("SearchJobs", "search", "Search"),
         new("ExtensionGroups", "database", "Extensions"),
@@ -329,8 +317,6 @@ else
     private void CloseWindow() => _ = JS.InvokeVoidAsync("eval", "window.close()");
 
     private void RestartApp() => _ = JS.InvokeVoidAsync("eval", "location.reload()");
-
-    private async Task ToggleTheme() => await Theme.Toggle();
 
     private void OnSetupComplete()
     {
