@@ -108,6 +108,10 @@
                             </span>
                         </button>
                     }
+                    @if (entries.Count == 0 && !IsConnected)
+                    {
+                        <div class="fm-empty">No cached data for this path. Browse directories while the agent is online to cache them.</div>
+                    }
                 }
                 else if (!loading)
                 {
