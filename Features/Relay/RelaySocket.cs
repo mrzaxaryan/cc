@@ -143,7 +143,7 @@ public class RelaySocket
 
     public static byte[] BuildWriteShell(string input)
     {
-        var inputBytes = Encoding.Unicode.GetBytes(input + "\0");
+        var inputBytes = Encoding.UTF8.GetBytes(input + "\0");
         var payload = new byte[1 + inputBytes.Length];
         payload[0] = 0x04;
         inputBytes.CopyTo(payload, 1);
