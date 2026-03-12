@@ -109,8 +109,9 @@
 
     private void AppendOutput(string text)
     {
-        // Split into lines, handling partial lines
-        var combined = _pendingOutput + text;
+        // Normalize \r\n → \n and strip standalone \r (carriage returns cause
+        // extra line breaks inside white-space: pre-wrap divs)
+        var combined = _pendingOutput + text.Replace("\r\n", "\n").Replace("\r", "");
         var parts = combined.Split('\n');
 
         // All but last are complete lines
