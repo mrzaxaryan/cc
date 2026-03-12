@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
     <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
+    <WasmBuildNative>true</WasmBuildNative>
   </PropertyGroup>
 
   <Target Name="GenerateBuildInfo" BeforeTargets="CoreCompile">
@@ -23,10 +24,7 @@
         <_Parameter2>$(BuildHash)</_Parameter2>
       </AssemblyAttribute>
     </ItemGroup>
-    <WriteLinesToFile
-      File="$(IntermediateOutputPath)BuildMeta.g.cs"
-      Overwrite="true"
-      Lines="namespace C2%3B&#10;&#10;public static class BuildMeta&#10;{&#10;    public const string Date = &quot;$(BuildDate)&quot;%3B&#10;    public const string Hash = &quot;$(BuildHash)&quot;%3B&#10;    public const string Version = &quot;$(BuildDate)+$(BuildHash)&quot;%3B&#10;}" />
+    <WriteLinesToFile File="$(IntermediateOutputPath)BuildMeta.g.cs" Overwrite="true" Lines="namespace C2%3B&#xA;&#xA;public static class BuildMeta&#xA;{&#xA;    public const string Date = &quot;$(BuildDate)&quot;%3B&#xA;    public const string Hash = &quot;$(BuildHash)&quot;%3B&#xA;    public const string Version = &quot;$(BuildDate)+$(BuildHash)&quot;%3B&#xA;}" />
     <ItemGroup>
       <Compile Include="$(IntermediateOutputPath)BuildMeta.g.cs" />
     </ItemGroup>
@@ -39,6 +37,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.2" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.2" PrivateAssets="all" />
+    <PackageReference Include="SkiaSharp.Views.Blazor" Version="3.119.0" />
   </ItemGroup>
 
 </Project>

@@ -69,6 +69,26 @@ public static class Formatters
         return $"{bytesPerSec / (1024.0 * 1024 * 1024):F1} GB/s";
     }
 
+    public static string FormatFileTime(ulong fileTime)
+    {
+        if (fileTime == 0) return "-";
+        try
+        {
+            var dt = DateTime.FromFileTimeUtc((long)fileTime).ToLocalTime();
+            return dt.ToString("g");
+        }
+        catch { return "-"; }
+    }
+
+    public static string GetFileTypeLabel(string name, bool isDirectory, bool isDrive)
+    {
+        if (isDrive) return "Drive";
+        if (isDirectory) return "Folder";
+        var dot = name.LastIndexOf('.');
+        if (dot < 0) return "File";
+        return name[(dot + 1)..].ToUpperInvariant() + " File";
+    }
+
     public static string FormatHexDump(byte[] data)
     {
         var sb = new System.Text.StringBuilder();

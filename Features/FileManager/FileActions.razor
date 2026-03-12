@@ -1,38 +1,18 @@
 @inherits EventSubscriber
 @inject DownloadStore Downloads
-@inject VfsStore Vfs
-@inject CacheManager Cache
-@inject MessageService Msg
-@inject IJSRuntime Js
 
 @{
     var dl = GetDownloadRecord();
     if (dl is null || dl.Status == DownloadStatus.Pending)
-    {
-        <C2Btn Size="Size.Xs" Variant="BtnVariant.Primary" OnClick="EnqueueSync" Title="Upload to cache" Disabled="@(!IsConnected)">UPLOAD</C2Btn>
         return;
-    }
 
     switch (dl.Status)
     {
         case DownloadStatus.Downloading:
             var pct = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
-            <span class="fm-dl-status">
+            <span class="fm-dl-badge">
                 <C2Spinner Size="Size.Xs" />
-                <span class="fm-dl-pct">@pct%</span>
-                @if (dl.SpeedBytesPerSec > 0)
-                {
-                    <span class="fm-dl-speed">@Formatters.FormatSpeed(dl.SpeedBytesPerSec)</span>
-                }
-                <C2Btn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="PauseDownload" Title="Pause">&#x23F8;</C2Btn>
-            </span>
-            break;
-
-        case DownloadStatus.Paused:
-            var pctP = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
-            <span class="fm-dl-status">
-                <C2Badge Variant="BadgeVariant.Warning" Size="Size.Xs">@pctP%</C2Badge>
-                <C2Btn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="ResumeDownload" Title="Resume" Disabled="@(!IsConnected && !IsAgentOnline)">&#x25B6;</C2Btn>
+                <C2Badge Variant="BadgeVariant.Info" Size="Size.Xs">@pct%</C2Badge>
             </span>
             break;
 
@@ -41,17 +21,16 @@
             break;
 
         case DownloadStatus.Completed:
-            <span class="fm-dl-status">
-                <C2Btn Size="Size.Xs" OnClick="() => OnViewFile.InvokeAsync(Entry.Name)" Title="View">VIEW</C2Btn>
-                <C2Btn Size="Size.Xs" Variant="BtnVariant.Primary" OnClick="() => SaveToBrowser(dl)" Title="Save">SAVE</C2Btn>
-            </span>
+            <C2Badge Variant="BadgeVariant.Success" Size="Size.Xs">&#x2713;</C2Badge>
+            break;
+
+        case DownloadStatus.Paused:
+            var pctP = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
+            <C2Badge Variant="BadgeVariant.Warning" Size="Size.Xs">&#x23F8; @pctP%</C2Badge>
             break;
 
         case DownloadStatus.Failed:
-            <span class="fm-dl-status">
-                <C2Badge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@dl.Error">&#x2717;</C2Badge>
-                <C2Btn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="RetryDownload" Title="Retry" Disabled="@(!IsConnected)">&#x21bb;</C2Btn>
-            </span>
+            <C2Badge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@dl.Error">&#x2717;</C2Badge>
             break;
     }
 }
@@ -60,10 +39,6 @@
     [Parameter] public DirEntry Entry { get; set; } = default!;
     [Parameter] public string CurrentPath { get; set; } = "";
     [Parameter] public string? AgentUuid { get; set; }
-    [Parameter] public string? AgentName { get; set; }
-    [Parameter] public bool IsConnected { get; set; }
-    [Parameter] public bool IsAgentOnline { get; set; }
-    [Parameter] public EventCallback<string> OnViewFile { get; set; }
 
     protected override void OnInitialized()
     {
@@ -72,55 +47,6 @@
 
     private DownloadRecord? GetDownloadRecord()
         => string.IsNullOrEmpty(AgentUuid) ? null : Downloads.Find(AgentUuid, CurrentPath + Entry.Name);
-
-    private async Task EnqueueSync()
-    {
-        if (!Cache.HasDirectory || string.IsNullOrEmpty(AgentUuid)) return;
-        var remotePath = CurrentPath + Entry.Name;
-        var parentRemotePath = FileManagerPath.TrimTrailing(CurrentPath);
-        var totalSize = (long)Entry.Size;
-        var parentId = await Vfs.ResolveOrCreatePathAsync(AgentUuid, parentRemotePath);
-        var vfsFile = await Vfs.PutFileAsync(AgentUuid, parentId, Entry.Name, remotePath.Replace('\\', '/'), totalSize);
-        var record = Downloads.Find(AgentUuid, remotePath);
-        if (record is null || record.Status == DownloadStatus.Completed || record.Status == DownloadStatus.Failed)
-            await Downloads.AddAsync(AgentUuid, AgentName ?? "", remotePath, Entry.Name, vfsFile.Id, totalSize);
-        else if (record.Status == DownloadStatus.Paused)
-            await Downloads.QueueAsync(record.Id);
-        StateHasChanged();
-    }
-
-    private void PauseDownload()
-    {
-        if (string.IsNullOrEmpty(AgentUuid)) return;
-        var record = Downloads.Find(AgentUuid, CurrentPath + Entry.Name);
-        if (record is not null) Downloads.Cts.Cancel(record.Id);
-    }
-
-    private async Task ResumeDownload()
-    {
-        if (string.IsNullOrEmpty(AgentUuid)) return;
-        var record = Downloads.Find(AgentUuid, CurrentPath + Entry.Name);
-        if (record is null || Downloads.Cts.HasActive(record.Id)) return;
-        await Downloads.QueueAsync(record.Id);
-    }
-
-    private async Task RetryDownload()
-    {
-        if (string.IsNullOrEmpty(AgentUuid)) return;
-        var existing = Downloads.Find(AgentUuid, CurrentPath + Entry.Name);
-        if (existing is not null) await Downloads.RemoveAsync(existing.Id);
-        await EnqueueSync();
-    }
-
-    private async Task SaveToBrowser(DownloadRecord dl)
-    {
-        try
-        {
-            if (!await Cache.BlobExistsAsync(dl.CacheSubPath)) { Msg.Error("Save Failed", "File not found in local cache", "File Manager"); return; }
-            await Js.InvokeVoidAsync("c2SaveFile", dl.FileName, dl.CacheSubPath);
-        }
-        catch (Exception ex) { Msg.Error("Save Failed", $"Could not save {dl.FileName}: {ex.Message}", "File Manager"); }
-    }
 
     public override void Dispose() => base.Dispose();
 }

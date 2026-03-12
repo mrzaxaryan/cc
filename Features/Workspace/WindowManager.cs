@@ -83,8 +83,8 @@ public class WindowManager
             SearchPath = searchPath,
             X = 100 + offset,
             Y = 80 + offset,
-            Width = panel switch { "FileManager" => 800, "FileSearch" => 600, "AgentInfo" => 480, "Shell" => 700, _ => 700 },
-            Height = 500,
+            Width = panel switch { "FileManager" => 800, "FileSearch" => 600, "AgentInfo" => 480, "Shell" => 700, "Vnc" => 900, _ => 700 },
+            Height = panel switch { "Vnc" => 600, _ => 500 },
             ZIndex = _topZ
         });
         NotifyChanged();
@@ -133,6 +133,7 @@ public class WindowManager
         "FileManager" => "File Manager",
         "AgentInfo" => "Agent Info",
         "Shell" => "Shell",
+        "Vnc" => "Screen",
         "Settings" => "Settings",
         _ => panel
     };

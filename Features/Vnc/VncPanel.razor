@@ -1,0 +1,276 @@
+@using C2.Features.Relay
+@using SkiaSharp
+@using SkiaSharp.Views.Blazor
+@inject MessageService Msg
+
+<PanelLayout Title="Screen">
+    <HeaderLeft>
+        @if (IsConnected)
+        {
+            <C2Badge Variant="BadgeVariant.Success" Size="Size.Xs">Connected</C2Badge>
+        }
+        else
+        {
+            <C2Badge Variant="BadgeVariant.Muted" Size="Size.Xs">Disconnected</C2Badge>
+        }
+        @if (_displays.Length > 0)
+        {
+            <C2Badge Variant="BadgeVariant.Muted" Size="Size.Xs">@(_displays[_selectedDisplay].Width)x@(_displays[_selectedDisplay].Height)</C2Badge>
+        }
+        @if (_streaming)
+        {
+            <C2Badge Variant="BadgeVariant.Info" Size="Size.Xs">@(_fps)fps</C2Badge>
+        }
+    </HeaderLeft>
+    <HeaderRight>
+        @if (_displays.Length > 1)
+        {
+            <select class="vnc-display-select" @onchange="OnDisplayChanged">
+                @for (var i = 0; i < _displays.Length; i++)
+                {
+                    var d = _displays[i];
+                    <option value="@i" selected="@(i == _selectedDisplay)">
+                        Display @(i + 1)@(d.Primary ? " *" : "") (@(d.Width)x@(d.Height))
+                    </option>
+                }
+            </select>
+        }
+        <select class="vnc-display-select" @onchange="OnQualityChanged">
+            <option value="25" selected="@(_quality == 25)">Low</option>
+            <option value="50" selected="@(_quality == 50)">Medium</option>
+            <option value="75" selected="@(_quality == 75)">High</option>
+            <option value="95" selected="@(_quality == 95)">Max</option>
+        </select>
+        @if (!_streaming)
+        {
+            <C2Btn OnClick="CaptureOnce" Disabled="@(!IsConnected || _capturing)" Loading="@_capturing" Size="Size.Xs">Capture</C2Btn>
+            <C2Btn OnClick="StartStreaming" Disabled="@(!IsConnected)" Size="Size.Xs" Variant="BtnVariant.Success">Stream</C2Btn>
+        }
+        else
+        {
+            <C2Btn OnClick="StopStreaming" Size="Size.Xs" Variant="BtnVariant.Danger">Stop</C2Btn>
+        }
+    </HeaderRight>
+    <Body>
+        <div class="vnc">
+            @if (!IsConnected)
+            {
+                <div class="vnc-banner vnc-banner--warn">
+                    <span class="status-dot dot-off"></span>
+                    Agent disconnected — screen unavailable.
+                </div>
+            }
+            else if (_displays.Length == 0 && !_loadingDisplays)
+            {
+                <div class="vnc-banner vnc-banner--info">
+                    No displays detected. The agent may not have a graphical session.
+                </div>
+            }
+            else if (_loadingDisplays)
+            {
+                <div class="vnc-banner vnc-banner--info">
+                    <C2Spinner Size="Size.Sm" /> Enumerating displays...
+                </div>
+            }
+
+            <div class="vnc-canvas-wrap">
+                <SKCanvasView @ref="_canvasRef"
+                              OnPaintSurface="OnPaintSurface"
+                              style="width:100%;height:100%;" />
+            </div>
+        </div>
+    </Body>
+</PanelLayout>
+
+@code {
+    [Parameter] public RelaySocket? Relay { get; set; }
+    [Parameter] public string? AgentId { get; set; }
+    [Parameter] public string? AgentName { get; set; }
+    [Parameter] public string? AgentUuid { get; set; }
+
+    private ScreenDeviceInfo[] _displays = [];
+    private int _selectedDisplay;
+    private uint _quality = 75;
+    private bool _loadingDisplays;
+    private bool _capturing;
+    private bool _streaming;
+    private int _fps;
+    private SKBitmap? _bitmap;
+    private SKCanvasView? _canvasRef;
+    private CancellationTokenSource? _streamCts;
+
+    // FPS tracking
+    private int _frameCount;
+    private DateTime _fpsStart = DateTime.UtcNow;
+
+    private bool IsConnected => Relay is { IsConnected: true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (IsConnected)
+            await FetchDisplays();
+    }
+
+    private async Task FetchDisplays()
+    {
+        _loadingDisplays = true;
+        StateHasChanged();
+
+        try
+        {
+            var payload = RelaySocket.BuildGetDisplays();
+            var response = await Relay!.SendAndReceive(payload);
+            if (response is null || response.Length < 4) return;
+
+            var status = RelaySocket.ReadStatus(response);
+            if (status != 0)
+            {
+                Msg.Warn("Failed to enumerate displays.");
+                return;
+            }
+
+            _displays = RelaySocket.ReadDisplays(response);
+            // Default to primary display
+            for (var i = 0; i < _displays.Length; i++)
+            {
+                if (_displays[i].Primary) { _selectedDisplay = i; break; }
+            }
+        }
+        catch (Exception ex)
+        {
+            Msg.Error($"Display enumeration failed: {ex.Message}");
+        }
+        finally
+        {
+            _loadingDisplays = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CaptureOnce()
+    {
+        if (!IsConnected || _displays.Length == 0) return;
+        _capturing = true;
+        StateHasChanged();
+
+        try
+        {
+            await CaptureFrame();
+        }
+        finally
+        {
+            _capturing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CaptureFrame()
+    {
+        var payload = RelaySocket.BuildGetScreenshot((uint)_selectedDisplay, _quality);
+        var response = await Relay!.SendAndReceive(payload);
+        if (response is null || response.Length < 8) return;
+
+        var status = RelaySocket.ReadStatus(response);
+        if (status != 0) return;
+
+        var (_, jpegData) = RelaySocket.ReadScreenshot(response);
+        if (jpegData.Length == 0) return;
+
+        var newBitmap = SKBitmap.Decode(jpegData);
+        if (newBitmap is null) return;
+
+        var old = _bitmap;
+        _bitmap = newBitmap;
+        old?.Dispose();
+
+        // FPS tracking
+        _frameCount++;
+        var elapsed = (DateTime.UtcNow - _fpsStart).TotalSeconds;
+        if (elapsed >= 1.0)
+        {
+            _fps = (int)(_frameCount / elapsed);
+            _frameCount = 0;
+            _fpsStart = DateTime.UtcNow;
+        }
+
+        _canvasRef?.Invalidate();
+    }
+
+    private async Task StartStreaming()
+    {
+        if (!IsConnected || _displays.Length == 0) return;
+        _streaming = true;
+        _frameCount = 0;
+        _fpsStart = DateTime.UtcNow;
+        _streamCts = new CancellationTokenSource();
+        StateHasChanged();
+
+        var ct = _streamCts.Token;
+        try
+        {
+            while (!ct.IsCancellationRequested && IsConnected)
+            {
+                await CaptureFrame();
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            Msg.Error($"Stream error: {ex.Message}");
+        }
+        finally
+        {
+            _streaming = false;
+            _fps = 0;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void StopStreaming()
+    {
+        _streamCts?.Cancel();
+        _streamCts?.Dispose();
+        _streamCts = null;
+    }
+
+    private void OnPaintSurface(SKPaintSurfaceEventArgs e)
+    {
+        var canvas = e.Surface.Canvas;
+        canvas.Clear(SKColors.Black);
+
+        if (_bitmap is null) return;
+
+        // Fit-to-canvas with aspect ratio preserved
+        var canvasW = e.Info.Width;
+        var canvasH = e.Info.Height;
+        var imgW = _bitmap.Width;
+        var imgH = _bitmap.Height;
+
+        var scale = Math.Min((float)canvasW / imgW, (float)canvasH / imgH);
+        var drawW = imgW * scale;
+        var drawH = imgH * scale;
+        var x = (canvasW - drawW) / 2f;
+        var y = (canvasH - drawH) / 2f;
+
+        canvas.DrawBitmap(_bitmap, new SKRect(x, y, x + drawW, y + drawH));
+    }
+
+    private void OnDisplayChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var idx) && idx >= 0 && idx < _displays.Length)
+            _selectedDisplay = idx;
+    }
+
+    private void OnQualityChanged(ChangeEventArgs e)
+    {
+        if (uint.TryParse(e.Value?.ToString(), out var q))
+            _quality = q;
+    }
+
+    public void Dispose()
+    {
+        StopStreaming();
+        _bitmap?.Dispose();
+    }
+}

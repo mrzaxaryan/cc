@@ -160,4 +160,65 @@ public class RelaySocket
         var output = Encoding.UTF8.GetString(response, 12, length);
         return (bytesRead, output);
     }
+
+    // --- Display / Screenshot commands (0x06 GetDisplays, 0x07 GetScreenshot) ---
+
+    public static byte[] BuildGetDisplays() => [AgentCommands.GetDisplays];
+
+    /// <summary>Build a GetScreenshot command: [opcode][UINT32 displayIndex][UINT32 quality][UINT32 fullScreen].</summary>
+    public static byte[] BuildGetScreenshot(uint displayIndex, uint quality = 75, bool fullScreen = true)
+    {
+        var payload = new byte[1 + 4 + 4 + 4];
+        payload[0] = AgentCommands.GetScreenshot;
+        BitConverter.TryWriteBytes(payload.AsSpan(1), displayIndex);
+        BitConverter.TryWriteBytes(payload.AsSpan(5), quality);
+        BitConverter.TryWriteBytes(payload.AsSpan(9), fullScreen ? 1u : 0u);
+        return payload;
+    }
+
+    /// <summary>
+    /// Parse GetDisplays response: [UINT32 status][UINT32 count][ScreenDevice * count].
+    /// ScreenDevice is packed 17 bytes: INT32 Left, INT32 Top, UINT32 Width, UINT32 Height, BOOL(1) Primary.
+    /// </summary>
+    public static ScreenDeviceInfo[] ReadDisplays(byte[] response)
+    {
+        var count = BitConverter.ToUInt32(response, 4);
+        var devices = new ScreenDeviceInfo[count];
+        const int deviceSize = 17;
+        var offset = 8; // after status + count
+        for (var i = 0; i < count; i++)
+        {
+            devices[i] = new ScreenDeviceInfo
+            {
+                Left = BitConverter.ToInt32(response, offset),
+                Top = BitConverter.ToInt32(response, offset + 4),
+                Width = BitConverter.ToUInt32(response, offset + 8),
+                Height = BitConverter.ToUInt32(response, offset + 12),
+                Primary = response[offset + 16] != 0
+            };
+            offset += deviceSize;
+        }
+        return devices;
+    }
+
+    /// <summary>
+    /// Parse GetScreenshot response: [UINT32 status][UINT32 jpegSize][byte[] jpegData].
+    /// </summary>
+    public static (uint jpegSize, byte[] jpegData) ReadScreenshot(byte[] response)
+    {
+        var jpegSize = BitConverter.ToUInt32(response, 4);
+        var data = new byte[jpegSize];
+        Array.Copy(response, 8, data, 0, (int)jpegSize);
+        return (jpegSize, data);
+    }
+}
+
+/// <summary>Display device info returned by GetDisplays command.</summary>
+public class ScreenDeviceInfo
+{
+    public int Left { get; set; }
+    public int Top { get; set; }
+    public uint Width { get; set; }
+    public uint Height { get; set; }
+    public bool Primary { get; set; }
 }

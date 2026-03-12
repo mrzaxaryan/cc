@@ -1,16 +1,8 @@
-/* Download status inline */
-.fm-dl-status {
-    display: flex;
+/* Download status badge inline */
+.fm-dl-badge {
+    display: inline-flex;
     align-items: center;
     gap: 3px;
-    font-size: 0.6rem;
-}
-
-.fm-dl-pct {
-    color: var(--c2-accent-blue);
-    font-weight: 600;
-}
-
-.fm-dl-speed {
-    color: var(--c2-text-dim);
+    margin-left: 0.35rem;
+    vertical-align: middle;
 }

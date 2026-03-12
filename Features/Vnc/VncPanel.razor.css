@@ -1,0 +1,55 @@
+.vnc {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    background: #000;
+}
+
+.vnc-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.72rem;
+    flex-shrink: 0;
+}
+
+.vnc-banner--warn {
+    background: var(--c2-yellow-10);
+    border-bottom: 1px solid var(--c2-yellow-30);
+    color: var(--c2-accent-yellow);
+}
+
+.vnc-banner--info {
+    background: var(--c2-bg-2);
+    border-bottom: 1px solid var(--c2-border);
+    color: var(--c2-text-dim);
+}
+
+.vnc-canvas-wrap {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+}
+
+.vnc-display-select {
+    height: 22px;
+    font-size: 0.68rem;
+    padding: 0 0.3rem;
+    border: 1px solid var(--c2-border);
+    border-radius: var(--c2-radius-sm);
+    background: var(--c2-bg-2);
+    color: var(--c2-text);
+    cursor: pointer;
+}
+
+.vnc-display-select:focus {
+    outline: none;
+    border-color: var(--c2-accent);
+}

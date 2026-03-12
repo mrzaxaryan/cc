@@ -1,4 +1,6 @@
-/* FileManager */
+/* ===== FileManager — Explorer-style Layout ===== */
+
+/* Container */
 .fm {
     display: flex;
     flex-direction: column;
@@ -40,7 +42,6 @@
     font-size: 0.75rem;
 }
 
-/* Path bar */
 .fm-path-bar {
     flex: 1;
     min-width: 0;
@@ -101,7 +102,7 @@
     min-width: 0;
 }
 
-/* Listing */
+/* Listing container */
 .fm-listing {
     display: flex;
     flex-direction: column;
@@ -137,70 +138,179 @@
     flex-shrink: 0;
 }
 
-/* Entries */
+/* Entries scroll area */
 .fm-entries {
     flex: 1;
     overflow-y: auto;
     min-height: 0;
+    outline: none;
 }
 
-.fm-entry {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    width: 100%;
-    padding: 0.3rem 0.6rem;
-    background: none;
+/* ===== Table Layout ===== */
+
+::deep .fm-table {
     border: none;
-    border-bottom: 1px solid var(--c2-border);
-    color: var(--c2-text);
-    font-size: 0.78rem;
-    font-family: monospace;
-    cursor: pointer;
-    text-align: left;
-    transition: background 0.15s;
 }
 
-.fm-entry:last-child {
-    border-bottom: none;
+::deep .fm-table .c2-table-wrap {
+    border: none;
+    border-radius: 0;
 }
 
-.fm-entry:hover {
-    background: var(--c2-bg-overlay);
-}
-
-.fm-entry.selected {
-    background: var(--c2-bg-active);
-}
-
-.fm-entry-icon {
-    width: 1.2em;
+/* Column widths */
+::deep .fm-col-check {
+    width: 2rem;
     text-align: center;
-    flex-shrink: 0;
-    font-size: 0.85rem;
+    padding-left: 0.4rem !important;
+    padding-right: 0 !important;
 }
 
-.fm-entry-name {
-    flex: 1;
+::deep .fm-col-icon {
+    width: 2rem;
+    text-align: center;
+    padding-left: 0.2rem !important;
+    padding-right: 0.2rem !important;
+    font-size: 0.9rem;
+}
+
+::deep .fm-col-name {
     overflow: hidden;
-    text-overflow: ellipsis;
+}
+
+::deep .fm-col-size {
+    width: 10%;
+    text-align: right;
+    color: var(--c2-text-dim);
+    font-size: 0.7rem;
     white-space: nowrap;
 }
 
-.fm-entry-size {
+::deep .fm-col-modified {
+    width: 18%;
     color: var(--c2-text-dim);
-    font-size: 0.65rem;
-    flex-shrink: 0;
+    font-size: 0.7rem;
+    white-space: nowrap;
 }
 
-.fm-entry-actions {
+::deep .fm-col-type {
+    width: 12%;
+    color: var(--c2-text-dim);
+    font-size: 0.7rem;
+    white-space: nowrap;
+}
+
+/* Sortable headers */
+::deep .fm-col-sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: color var(--c2-transition-fast);
+}
+
+::deep .fm-col-sortable:hover {
+    color: var(--c2-text);
+}
+
+::deep .fm-sort-active {
+    color: var(--c2-accent-blue) !important;
+}
+
+::deep .fm-sort-arrow {
+    font-size: 0.55rem;
+    margin-left: 0.2rem;
+    vertical-align: middle;
+}
+
+/* Row styles */
+::deep .fm-row {
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.76rem;
+}
+
+::deep .fm-row td {
+    vertical-align: middle;
+}
+
+::deep .fm-row-focused td {
+    box-shadow: inset 0 0 0 1px var(--c2-blue-30);
+}
+
+::deep .fm-row-parent {
+    cursor: pointer;
+    color: var(--c2-text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.76rem;
+    transition: background 0.15s;
+}
+
+::deep .fm-row-parent:hover {
+    background: var(--c2-bg-overlay);
+}
+
+.fm-parent-label {
+    font-weight: 600;
+}
+
+/* File name */
+::deep .fm-name-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+    max-width: calc(100% - 3rem);
+    vertical-align: middle;
+}
+
+/* Icon colors */
+::deep .fm-icon-dir {
+    color: var(--c2-accent-yellow);
+}
+
+::deep .fm-icon-file {
+    color: var(--c2-text-dim);
+}
+
+::deep .fm-icon-drive {
+    color: var(--c2-accent-blue);
+}
+
+/* Checkbox */
+::deep .fm-check-all,
+::deep .fm-col-check input[type="checkbox"] {
+    accent-color: var(--c2-accent-blue);
+    cursor: pointer;
+    width: 13px;
+    height: 13px;
+}
+
+/* ===== Bulk Action Bar ===== */
+
+.fm-bulk-bar {
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: var(--c2-space-2);
+    padding: var(--c2-space-1) var(--c2-space-3);
+    background: var(--c2-bg-deep);
+    border-top: 1px solid var(--c2-border);
     flex-shrink: 0;
 }
 
-/* Empty state */
+.fm-bulk-count {
+    color: var(--c2-accent-blue);
+    font-weight: 600;
+    font-size: 0.72rem;
+}
+
+/* ===== Context Menu Separator ===== */
+
+::deep .fm-ctx-sep {
+    height: 1px;
+    background: var(--c2-border);
+    margin: 0.2rem 0;
+}
+
+/* ===== Empty State ===== */
+
 .fm-empty {
     padding: 2rem 1rem;
     text-align: center;
@@ -209,9 +319,15 @@
     font-style: italic;
 }
 
-/* ===== Mobile: stack split view, larger touch targets ===== */
+/* ===== Tablet (<=1024px) ===== */
+@media (max-width: 1024px) {
+    ::deep .fm-col-type {
+        display: none;
+    }
+}
+
+/* ===== Mobile (<=768px) ===== */
 @media (max-width: 768px) {
-    /* Stack split view vertically */
     .fm-split {
         flex-direction: column;
     }
@@ -225,14 +341,14 @@
         flex: 1;
     }
 
-    /* Larger touch targets for file entries */
-    .fm-entry {
-        padding: 0.45rem 0.5rem;
-        gap: 0.4rem;
-        min-height: 36px;
+    ::deep .fm-hide-mobile {
+        display: none;
     }
 
-    /* Breadcrumb — touch scroll */
+    ::deep .fm-col-size {
+        width: 20%;
+    }
+
     .fm-breadcrumb {
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
@@ -247,26 +363,37 @@
         padding: 0.2rem 0.3rem;
     }
 
-    /* Code viewer */
-    ::deep .fm-code {
-        font-size: 0.7rem;
-        padding: 0.4rem;
-    }
-
     .fm-toolbar {
         gap: 3px;
         flex-wrap: wrap;
     }
-}
 
-@media (max-width: 480px) {
-    .fm-entry {
-        padding: 0.5rem 0.4rem;
+    ::deep .fm-row {
         font-size: 0.74rem;
     }
 
-    .fm-entry-size {
-        font-size: 0.6rem;
+    ::deep .fm-col-check {
+        width: 1.6rem;
+    }
+
+    ::deep .fm-code {
+        font-size: 0.7rem;
+        padding: 0.4rem;
+    }
+}
+
+/* ===== Small Phone (<=480px) ===== */
+@media (max-width: 480px) {
+    ::deep .fm-col-size {
+        display: none;
+    }
+
+    ::deep .fm-col-check {
+        width: 1.4rem;
+    }
+
+    ::deep .fm-row {
+        font-size: 0.72rem;
     }
 
     ::deep .fm-code {

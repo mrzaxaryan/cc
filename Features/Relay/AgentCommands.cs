@@ -20,4 +20,10 @@ public static class AgentCommands
 
     /// <summary>Read output from agent shell.</summary>
     public const byte ReadShell = 0x05;
+
+    /// <summary>Enumerate connected display devices.</summary>
+    public const byte GetDisplays = 0x06;
+
+    /// <summary>Capture a JPEG screenshot of a display.</summary>
+    public const byte GetScreenshot = 0x07;
 }
