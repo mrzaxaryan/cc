@@ -823,6 +823,14 @@
                 el.classList.add('maximized');
             } else {
                 el.classList.remove('maximized');
+                // Ensure window has valid position after removing maximized class.
+                // Without this, the element briefly has no top/left (only z-index from
+                // Blazor's maximized style), causing it to render at top:0 behind the
+                // menubar on slower devices (e.g. iPad) before Blazor re-renders.
+                const top = parseFloat(el.style.top);
+                if (isNaN(top) || top < TITLEBAR_H) {
+                    el.style.top = TITLEBAR_H + 'px';
+                }
             }
             setTimeout(() => el.classList.remove('win-animating'), 250);
         },

@@ -23,6 +23,12 @@
             <span class="app-window-icon"><C2Icon Name="@PanelIcon(win.Panel)" Size="Size.Xs" /></span>
             <span class="app-window-title">@win.Title</span>
             <div class="app-window-controls">
+                @if (CanPopOut(win.Panel))
+                {
+                    <button class="app-window-btn popout-btn" @onclick="() => OnPopOut(win)" @onpointerdown:stopPropagation="true" title="Open in new tab">
+                        <svg width="10" height="10" viewBox="0 0 10 10"><rect x="1" y="3" width="5" height="5" rx="0.8" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M6 1h3v3" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/><line x1="9" y1="1" x2="5" y2="5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                    </button>
+                }
                 <button class="app-window-btn minimize-btn" @onclick="() => OnMinimize(win)" @onpointerdown:stopPropagation="true" title="Minimize">
                     <svg width="10" height="10" viewBox="0 0 10 10"><line x1="2" y1="5" x2="8" y2="5" stroke="currentColor" stroke-width="1.5"/></svg>
                 </button>
@@ -176,6 +182,8 @@
             case "toggle-maximize":
                 Wm.ToggleMaximize(win);
                 _ = Js.InvokeVoidAsync("c2Windows.setMaximized", id, win.Maximized);
+                if (!win.Maximized)
+                    _ = Js.InvokeVoidAsync("c2Windows.applyPosition", id, win.X, win.Y, win.Width, win.Height, true);
                 break;
             case "maximize":
                 if (!win.Maximized) Wm.ToggleMaximize(win);
@@ -205,6 +213,8 @@
         var visible = Wm.Windows.Where(w => !w.Minimized).ToList();
         return visible.Count > 0 && visible.MaxBy(w => w.ZIndex) == win;
     }
+
+    private static bool CanPopOut(string panel) => panel is not ("FileManager" or "FileSearch" or "Shell");
 
     private static string PanelIcon(string panel) => panel switch
     {
@@ -240,6 +250,12 @@
         }
     }
 
+    private async Task OnPopOut(WindowState win)
+    {
+        await Js.InvokeVoidAsync("c2Interop.openPopout",
+            win.Panel, win.Width, win.Height, win.AgentUuid, win.AgentName);
+    }
+
     private void OnMinimize(WindowState win)
     {
         Wm.ToggleMinimize(win);
@@ -250,6 +266,8 @@
     {
         Wm.ToggleMaximize(win);
         _ = Js.InvokeVoidAsync("c2Windows.setMaximized", win.Id, win.Maximized);
+        if (!win.Maximized)
+            _ = Js.InvokeVoidAsync("c2Windows.applyPosition", win.Id, win.X, win.Y, win.Width, win.Height, true);
     }
 
     private async Task OnClose(WindowState win)

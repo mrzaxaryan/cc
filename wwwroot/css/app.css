@@ -487,9 +487,31 @@ a:hover {
     outline-offset: -1px;
 }
 
+.app-window-btn.popout-btn:hover {
+    background: var(--c2-accent-blue, var(--c2-hover-white));
+    color: #fff;
+}
+
 .app-window-btn.close-btn:hover {
     background: var(--c2-accent-red);
     color: #fff;
+}
+
+/* Popout container — full-viewport single panel */
+.popout-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+    padding: 0.75rem;
+    font-size: 0.85rem;
+    background: var(--c2-bg);
+    color: var(--c2-text);
+}
+
+.popout-container > * {
+    flex: 1;
+    min-height: 0;
 }
 
 /* Body */
