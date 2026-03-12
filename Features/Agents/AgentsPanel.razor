@@ -3,6 +3,7 @@
 @inject RelayStore Store
 @inject AgentStore AgentDb
 @inject RelayConnectionService Relay
+@inject CacheManager Cache
 @inject IJSRuntime Js
 
 @{
@@ -170,8 +171,8 @@
             </div>
         </div>
     }
-    <C2DropdownItem OnClick="CtxStartRename" Disabled="@(!ctxIsOnline)">Rename</C2DropdownItem>
-    <C2DropdownItem OnClick="CtxOpenFiles" Disabled="@(!ctxIsOnline)">File Manager</C2DropdownItem>
+    <C2DropdownItem OnClick="CtxStartRename" Disabled="@(ctxRow?.Uuid is null)">Rename</C2DropdownItem>
+    <C2DropdownItem OnClick="CtxOpenFiles" Disabled="@(!ctxIsOnline && !ctxHasCache)">File Manager</C2DropdownItem>
     <C2DropdownItem OnClick="CtxOpenShell" Disabled="@(!ctxIsOnline)">Shell</C2DropdownItem>
 </C2Dropdown>
 
@@ -191,6 +192,7 @@
     private string? ctxAgentId;
     private string? ctxRelayUrl;
     private bool ctxIsOnline;
+    private bool ctxHasCache;
     private AgentRow? ctxRow;
 
     private bool renameVisible;
@@ -375,6 +377,7 @@
         ctxAgentId = row.AgentId;
         ctxRelayUrl = row.RelayUrl;
         ctxIsOnline = row.IsOnline;
+        ctxHasCache = Cache.HasDirectory && !string.IsNullOrEmpty(row.Uuid);
         ctxRow = row;
         ctxVisible = true;
     }
@@ -399,8 +402,17 @@
     private async Task CtxOpenFiles()
     {
         HideContextMenu();
-        if (ctxAgentId is not null && ctxRelayUrl is not null)
+        if (ctxAgentId is not null && ctxRelayUrl is not null && ctxIsOnline)
+        {
             await OpenAgentWindow("FileManager", ctxAgentId, ctxRelayUrl);
+        }
+        else if (ctxHasCache && ctxRow is not null)
+        {
+            // Open file manager in offline/cache-only mode (no relay connection)
+            var name = IsCopyable(ctxRow.Name) ? ctxRow.Name : null;
+            var agentId = !string.IsNullOrEmpty(ctxRow.AgentId) ? ctxRow.AgentId : ctxRow.Uuid ?? "";
+            Wm.OpenAgentWindow("FileManager", agentId, agentName: name, agentUuid: ctxRow.Uuid);
+        }
     }
 
     private async Task CtxOpenShell()
@@ -421,8 +433,7 @@
     private void CtxStartRename()
     {
         HideContextMenu();
-        if (ctxAgentId is null) return;
-        var uuid = AgentDb.GetUuidByAgentId(ctxAgentId);
+        var uuid = ctxRow?.Uuid;
         if (uuid is null) return;
         var record = AgentDb.GetByUuid(uuid);
         if (record is null) return;
