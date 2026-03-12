@@ -112,28 +112,28 @@ public class SearchService : IDisposable
                 var cts = _store.Cts.Register(scan.Id);
                 var label = string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath;
                 var agent = scan.AgentName;
-                _msg.Info($"Search started: {label} ({scan.Extensions}) on {agent}");
+                _msg.Info("Search Started", $"{label} ({scan.Extensions}) on {agent}", "Search");
                 try
                 {
                     await ProcessSearch(relay, scan, cts.Token);
-                    _msg.Success($"Search completed: {label} on {agent} — {scan.FilesFound} files found in {scan.DirsScanned} dirs");
+                    _msg.Success("Search Completed", $"{label} on {agent} — {scan.FilesFound} files found in {scan.DirsScanned} dirs", "Search");
                 }
                 catch (OperationCanceledException)
                 {
                     await _store.PauseAsync(scan.Id);
-                    _msg.Warn($"Search paused: {label} on {agent} — {scan.DirsScanned}/{scan.DirsTotal} dirs, {scan.FilesFound} files found");
+                    _msg.Warn("Search Paused", $"{label} on {agent} — {scan.DirsScanned}/{scan.DirsTotal} dirs, {scan.FilesFound} files found", "Search");
                 }
                 catch (Exception ex)
                 {
                     if (cts.IsCancellationRequested)
                     {
                         await _store.PauseAsync(scan.Id);
-                        _msg.Warn($"Search paused: {label} on {agent} — {scan.DirsScanned}/{scan.DirsTotal} dirs, {scan.FilesFound} files found");
+                        _msg.Warn("Search Paused", $"{label} on {agent} — {scan.DirsScanned}/{scan.DirsTotal} dirs, {scan.FilesFound} files found", "Search");
                     }
                     else
                     {
                         await _store.FailAsync(scan.Id, ex.Message);
-                        _msg.Error($"Search failed: {label} on {agent} — {ex.Message}");
+                        _msg.Error("Search Failed", $"{label} on {agent} — {ex.Message}", "Search");
                     }
                 }
                 finally

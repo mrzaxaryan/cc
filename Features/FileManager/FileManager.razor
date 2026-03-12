@@ -336,12 +336,12 @@
             if (response is null) return;
 
             var (parsed, parseError) = DirEntry.ParseDirectoryResponse(response);
-            if (parseError is not null) { Msg.Error(parseError); return; }
+            if (parseError is not null) { Msg.Show(parseError, MessageType.Error, source: "File Manager"); return; }
             entries = parsed;
 
             _ = SyncCacheAsync();
         }
-        catch (Exception ex) { Msg.Error($"Failed: {ex.Message}"); }
+        catch (Exception ex) { Msg.Error("Browse Failed", $"Could not list directory: {ex.Message}", "File Manager"); }
         finally { loading = false; StateHasChanged(); }
     }
 
@@ -370,7 +370,7 @@
             foreach (var f in files)
                 entries.Add(new DirEntry(Name: f.Name, CreationTime: 0, LastModifiedTime: 0, Size: (ulong)f.Size, Type: 0, IsDirectory: false, IsDrive: false, IsHidden: false, IsSystem: false, IsReadOnly: false));
         }
-        catch (Exception ex) { Msg.Error($"Failed to read cache: {ex.Message}"); }
+        catch (Exception ex) { Msg.Error("Cache Read Failed", $"Could not load cached entries: {ex.Message}", "File Manager"); }
         finally { loading = false; StateHasChanged(); }
     }
 
@@ -413,16 +413,16 @@
             var payload = RelaySocket.BuildFileCommand(0x02, viewingFilePath, PageSize, fileViewOffset);
             var response = await SendCommand(payload);
             if (response is null) return;
-            if (response.Length < 4) { Msg.Error("Invalid response"); return; }
+            if (response.Length < 4) { Msg.Error("File Read Error", "Invalid response from agent (too short)", "File Manager"); return; }
             var status = RelaySocket.ReadStatus(response);
-            if (status != 0) { Msg.Error($"Error reading file (status={status})"); return; }
-            if (response.Length < 12) { Msg.Error("Invalid response"); return; }
+            if (status != 0) { Msg.Error("File Read Error", $"Agent returned error status {status} for {viewingFilePath}", "File Manager"); return; }
+            if (response.Length < 12) { Msg.Error("File Read Error", "Invalid response from agent (missing content)", "File Manager"); return; }
             var (bytesRead, data) = RelaySocket.ReadFileContent(response);
             fileBytesRead = (long)bytesRead;
             try { fileContent = Encoding.UTF8.GetString(data); }
             catch { fileContent = Formatters.FormatHexDump(data.ToArray()); }
         }
-        catch (Exception ex) { Msg.Error($"Failed to read file: {ex.Message}"); }
+        catch (Exception ex) { Msg.Error("File Read Failed", $"Could not read {viewingFilePath}: {ex.Message}", "File Manager"); }
         finally { fileLoading = false; StateHasChanged(); }
     }
 
@@ -440,11 +440,11 @@
             if (response is null) return;
             if (response.Length < 4) return;
             var status = RelaySocket.ReadStatus(response);
-            if (status != 0) { Msg.Error($"Hash error (status={status})"); return; }
+            if (status != 0) { Msg.Error("Hash Error", $"Agent returned error status {status} for {viewingFilePath}", "File Manager"); return; }
             if (response.Length < 36) return;
             fileHash = RelaySocket.ReadHash(response);
         }
-        catch (Exception ex) { Msg.Error($"Hash failed: {ex.Message}"); }
+        catch (Exception ex) { Msg.Error("Hash Failed", $"Could not hash {viewingFilePath}: {ex.Message}", "File Manager"); }
         finally { fileLoading = false; StateHasChanged(); }
     }
 
@@ -538,17 +538,17 @@
     {
         try
         {
-            if (!await Cache.BlobExistsAsync(dl.CacheSubPath)) { Msg.Error("File not found in cache"); return; }
+            if (!await Cache.BlobExistsAsync(dl.CacheSubPath)) { Msg.Error("Save Failed", "File not found in local cache", "File Manager"); return; }
             await Js.InvokeVoidAsync("c2SaveFile", dl.FileName, dl.CacheSubPath);
         }
-        catch (Exception ex) { Msg.Error($"Save failed: {ex.Message}"); }
+        catch (Exception ex) { Msg.Error("Save Failed", $"Could not save {dl.FileName}: {ex.Message}", "File Manager"); }
     }
 
     private async Task<byte[]?> SendCommand(byte[] payload)
     {
-        if (Relay is null || !Relay.IsConnected) { Msg.Error("Not connected to agent"); return null; }
+        if (Relay is null || !Relay.IsConnected) { Msg.Error("Not Connected", "No active connection to agent", "File Manager"); return null; }
         try { return await Relay.SendAndReceive(payload); }
-        catch (Exception ex) { Msg.Error($"Command failed: {ex.Message}"); return null; }
+        catch (Exception ex) { Msg.Error("Command Failed", $"Agent command error: {ex.Message}", "File Manager"); return null; }
     }
 
     private async Task OnEntryDoubleClick(DirEntry entry)

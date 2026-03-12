@@ -76,11 +76,30 @@ else
                             @foreach (var n in Notif.Items)
                             {
                                 <div class="notif-item notif-@n.Type" @key="n.Id">
-                                    <span class="notif-text">@n.Text</span>
+                                    <div class="notif-body">
+                                        <div class="notif-row">
+                                            @if (!string.IsNullOrEmpty(n.Source))
+                                            {
+                                                <span class="notif-source">@n.Source</span>
+                                            }
+                                            @if (!string.IsNullOrEmpty(n.Title))
+                                            {
+                                                <span class="notif-title">@n.Title</span>
+                                            }
+                                        </div>
+                                        @if (!string.IsNullOrEmpty(n.Detail))
+                                        {
+                                            <span class="notif-detail">@n.Detail</span>
+                                        }
+                                        else if (string.IsNullOrEmpty(n.Title))
+                                        {
+                                            <span class="notif-text">@n.Text</span>
+                                        }
+                                    </div>
                                     <span class="notif-time">@FormatTime(n.Created)</span>
                                     @if (n.Type == "error")
                                     {
-                                        <button class="notif-copy" @onclick="() => CopyText(n.Text)" title="Copy">
+                                        <button class="notif-copy" @onclick="() => CopyText(n.Detail ?? n.Text)" title="Copy">
                                             <C2Icon Name="copy" Size="Size.Xs" />
                                         </button>
                                     }
@@ -136,7 +155,7 @@ else
         On<NotificationStoreChangedEvent>();
         OnAsync<NotificationEvent>(async e =>
         {
-            await Notif.AddAsync(e.Text, e.Type);
+            await Notif.AddAsync(e.Text, e.Type, e.Title, e.Detail, e.Source);
         });
     }
 

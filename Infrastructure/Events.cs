@@ -55,7 +55,7 @@ public record ThemeChangedEvent : IEvent;
 
 // ── Notifications (transient messages) ────────────────────────────────
 
-public record NotificationEvent(string Text, MessageType Type) : IEvent;
+public record NotificationEvent(string Text, MessageType Type, string? Title = null, string? Detail = null, string? Source = null) : IEvent;
 
 // ── Cache / VFS ───────────────────────────────────────────────────────
 

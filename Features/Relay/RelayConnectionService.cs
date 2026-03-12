@@ -153,7 +153,7 @@ public class RelayConnectionService : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            _msg.Error($"Connection failed: {ex.Message}");
+            _msg.Error("Connection Failed", $"Could not connect to agent: {ex.Message}", "Relay");
             await relay.Disconnect();
             return null;
         }
@@ -335,7 +335,7 @@ public class RelayConnectionService : IAsyncDisposable
 
             if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("type", out var typeProp))
             {
-                _msg.Warn($"Unknown event: {json[..Math.Min(json.Length, 200)]}");
+                _msg.Warn("Unknown Event", $"Unrecognized relay event: {json[..Math.Min(json.Length, 200)]}", "Relay");
                 return;
             }
 
@@ -404,7 +404,9 @@ public class RelayConnectionService : IAsyncDisposable
                     if (_wm.ConnectedAgentIds.Contains(eventAgentId))
                     {
                         _ = _wm.DisconnectAgent(eventAgentId);
-                        _msg.Warn("Agent disconnected.");
+                        var disconnectedUuid = _agentDb.GetUuidByAgentId(eventAgentId);
+                        var disconnectedName = disconnectedUuid is not null ? _agentDb.GetDisplayName(disconnectedUuid) : eventAgentId;
+                        _msg.Warn("Agent Disconnected", $"{disconnectedName} has gone offline", "Relay");
                     }
 
                     _bus.Publish(new AgentDisconnectedEvent(eventAgentId, uuid, relayUrl));
@@ -428,7 +430,9 @@ public class RelayConnectionService : IAsyncDisposable
                     if (!paired && _wm.ConnectedAgentIds.Contains(eventAgentId))
                     {
                         _ = _wm.DisconnectAgent(eventAgentId);
-                        _msg.Warn("Agent relay disconnected.");
+                        var unpairedUuid = _agentDb.GetUuidByAgentId(eventAgentId);
+                        var unpairedName = unpairedUuid is not null ? _agentDb.GetDisplayName(unpairedUuid) : eventAgentId;
+                        _msg.Warn("Agent Unpaired", $"{unpairedName} relay connection lost", "Relay");
                     }
 
                     _bus.Publish(new AgentPairingChangedEvent(eventAgentId, paired, relayUrl));
@@ -437,7 +441,7 @@ public class RelayConnectionService : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            _msg.Error($"Event parse error: {ex.Message}");
+            _msg.Error("Event Parse Error", $"Failed to parse relay event: {ex.Message}", "Relay");
         }
     }
 

@@ -9,6 +9,27 @@ window.c2Interop = {
     },
     getViewport() {
         return { width: window.innerWidth, height: window.innerHeight };
+    },
+    onResize(dotnetRef) {
+        const handler = () => {
+            dotnetRef.invokeMethodAsync('OnViewportResize', window.innerWidth, window.innerHeight);
+        };
+        window.addEventListener('resize', handler);
+        // Return dispose handle
+        window._c2ResizeHandler = handler;
+        // Send initial size immediately
+        handler();
+    },
+    disposeResize() {
+        if (window._c2ResizeHandler) {
+            window.removeEventListener('resize', window._c2ResizeHandler);
+            window._c2ResizeHandler = null;
+        }
+    },
+    setPointerCapture(element, pointerId) {
+        if (element && element.setPointerCapture) {
+            try { element.setPointerCapture(pointerId); } catch (_) {}
+        }
     }
 };
 

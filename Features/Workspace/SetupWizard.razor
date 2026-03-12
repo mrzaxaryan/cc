@@ -365,9 +365,9 @@
         {
             var success = await Cache.ReRequestPermissionAsync();
             if (success) Advance();
-            else Msg.Error("Permission denied. Try again or pick a different folder.");
+            else Msg.Error("Permission Denied", "Storage permission was denied. Try again or pick a different folder.", "Setup");
         }
-        catch (Exception ex) { Msg.Error(ex.Message); }
+        catch (Exception ex) { Msg.Error("Permission Error", ex.Message, "Setup"); }
         finally { picking = false; }
     }
 
@@ -379,9 +379,9 @@
         {
             var success = await Cache.PickDirectoryAsync();
             if (success) Advance();
-            else Msg.Warn("No folder selected. Please try again.");
+            else Msg.Warn("No Folder Selected", "Please pick a storage folder to continue.", "Setup");
         }
-        catch (Exception ex) { Msg.Error(ex.Message); }
+        catch (Exception ex) { Msg.Error("Folder Selection Error", ex.Message, "Setup"); }
         finally { picking = false; }
     }
 
@@ -390,10 +390,10 @@
         var name = relayName.Trim();
         var url = relayUrl.Trim().TrimEnd('/');
 
-        if (string.IsNullOrEmpty(url)) { Msg.Error("Relay URL is required."); return; }
-        if (!url.StartsWith("wss://") && !url.StartsWith("ws://")) { Msg.Error("URL must start with wss:// or ws://"); return; }
+        if (string.IsNullOrEmpty(url)) { Msg.Error("Validation Error", "Relay URL is required.", "Setup"); return; }
+        if (!url.StartsWith("wss://") && !url.StartsWith("ws://")) { Msg.Error("Validation Error", "URL must start with wss:// or ws://", "Setup"); return; }
         if (string.IsNullOrEmpty(name)) name = url;
-        if (Relay.Relays.Any(r => r.Url == url)) { Msg.Error("A relay with this URL already exists."); return; }
+        if (Relay.Relays.Any(r => r.Url == url)) { Msg.Error("Duplicate Relay", "A relay with this URL already exists.", "Setup"); return; }
 
         saving = true;
         StateHasChanged();
@@ -404,7 +404,7 @@
             relayName = "";
             relayUrl = "";
         }
-        catch (Exception ex) { Msg.Error(ex.Message); }
+        catch (Exception ex) { Msg.Error("Add Relay Failed", ex.Message, "Setup"); }
         finally { saving = false; }
     }
 
@@ -428,7 +428,7 @@
             await Relay.UpdateRelayName(editingRelay.Url, name);
             CancelEditRelay();
         }
-        catch (Exception ex) { Msg.Error(ex.Message); }
+        catch (Exception ex) { Msg.Error("Update Relay Failed", ex.Message, "Setup"); }
         finally { saving = false; }
     }
 
@@ -503,7 +503,7 @@
             completedSteps.Add(Step.Extensions);
             await OnComplete.InvokeAsync();
         }
-        catch (Exception ex) { Msg.Error(ex.Message); }
+        catch (Exception ex) { Msg.Error("Save Extensions Failed", ex.Message, "Setup"); }
         finally { saving = false; }
     }
 

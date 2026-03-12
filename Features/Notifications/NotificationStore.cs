@@ -10,6 +10,9 @@ public class NotificationRecord
     [JsonPropertyName("text")] public string Text { get; set; } = "";
     [JsonPropertyName("type")] public string Type { get; set; } = "info";
     [JsonPropertyName("created")] public double Created { get; set; }
+    [JsonPropertyName("title")] public string? Title { get; set; }
+    [JsonPropertyName("detail")] public string? Detail { get; set; }
+    [JsonPropertyName("source")] public string? Source { get; set; }
 }
 
 public class NotificationStore
@@ -44,13 +47,16 @@ public class NotificationStore
         }
     }
 
-    public async Task AddAsync(string text, MessageType type)
+    public async Task AddAsync(string text, MessageType type, string? title = null, string? detail = null, string? source = null)
     {
         var record = new NotificationRecord
         {
             Text = text,
             Type = type.ToString().ToLower(),
-            Created = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+            Created = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            Title = title,
+            Detail = detail,
+            Source = source
         };
 
         await _js.InvokeVoidAsync("c2NotificationDb.put", record);

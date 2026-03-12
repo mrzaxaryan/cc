@@ -24,8 +24,22 @@ public class MessageService
         _bus.Publish(new NotificationEvent(text, type));
     }
 
+    public void Show(string text, MessageType type, string? title = null, string? detail = null, string? source = null)
+    {
+        _bus.Publish(new NotificationEvent(text, type, title, detail, source));
+    }
+
     public void Error(string text) => Show(text, MessageType.Error);
     public void Success(string text) => Show(text, MessageType.Success);
     public void Warn(string text) => Show(text, MessageType.Warning);
     public void Info(string text) => Show(text, MessageType.Info);
+
+    public void Error(string title, string detail, string? source = null)
+        => Show(detail, MessageType.Error, title, detail, source);
+    public void Success(string title, string detail, string? source = null)
+        => Show(title, MessageType.Success, title, detail, source);
+    public void Warn(string title, string detail, string? source = null)
+        => Show(title, MessageType.Warning, title, detail, source);
+    public void Info(string title, string detail, string? source = null)
+        => Show(title, MessageType.Info, title, detail, source);
 }

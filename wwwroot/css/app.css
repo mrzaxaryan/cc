@@ -775,6 +775,47 @@ a:hover {
 .notif-item.notif-warning { border-left: 3px solid var(--c2-accent-yellow); }
 .notif-item.notif-info { border-left: 3px solid var(--c2-accent-blue); }
 
+.notif-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.notif-row {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.notif-source {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--c2-text-dim);
+    background: var(--c2-bg-highlight);
+    padding: 0.05rem 0.35rem;
+    border-radius: 3px;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.notif-title {
+    font-weight: 600;
+    color: var(--c2-text);
+    font-size: 0.78rem;
+    line-height: 1.3;
+}
+
+.notif-detail {
+    font-size: 0.72rem;
+    color: var(--c2-text-muted);
+    line-height: 1.35;
+    word-break: break-word;
+}
+
 .notif-text {
     flex: 1;
     color: var(--c2-text);

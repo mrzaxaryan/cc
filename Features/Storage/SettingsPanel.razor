@@ -305,7 +305,7 @@
         }
         catch (Exception ex)
         {
-            Msg.Error(ex.Message);
+            Msg.Error("Load Failed", $"Could not load storage data: {ex.Message}", "Settings");
         }
         finally
         {
@@ -374,7 +374,7 @@
             await Vfs.RemoveDirectoryAsync(dir.Id);
             await Refresh();
         }
-        catch (Exception ex) { Msg.Error(ex.Message); }
+        catch (Exception ex) { Msg.Error("Delete Failed", $"Could not remove directory: {ex.Message}", "Settings"); }
     }
 
     private async Task DeleteFile(VfsFile file)
@@ -384,7 +384,7 @@
             await Vfs.RemoveFileAsync(file.Id);
             await Refresh();
         }
-        catch (Exception ex) { Msg.Error(ex.Message); }
+        catch (Exception ex) { Msg.Error("Delete Failed", $"Could not remove file: {ex.Message}", "Settings"); }
     }
 
     private async Task DeleteAgentCache(string agentUuid)
@@ -398,7 +398,7 @@
                 await Downloads.RemoveAsync(dl.Id);
             await Refresh();
         }
-        catch (Exception ex) { Msg.Error(ex.Message); }
+        catch (Exception ex) { Msg.Error("Cache Clear Failed", $"Could not clear agent cache: {ex.Message}", "Settings"); }
         finally { loading = false; StateHasChanged(); }
     }
 
@@ -417,10 +417,10 @@
             agentStats = new();
             stats = default;
             blobSize = 0;
-            Msg.Success("Application has been reset. All settings and files deleted.");
+            Msg.Success("Application Reset", "All settings, caches, and files have been deleted", "Settings");
             await NavigateToRoot();
         }
-        catch (Exception ex) { Msg.Error(ex.Message); }
+        catch (Exception ex) { Msg.Error("Reset Failed", $"Could not fully reset application: {ex.Message}", "Settings"); }
         finally { resetting = false; StateHasChanged(); }
     }
 
@@ -431,7 +431,7 @@
             await Cache.PickDirectoryAsync();
             await NavigateToRoot();
         }
-        catch (Exception ex) { Msg.Error(ex.Message); }
+        catch (Exception ex) { Msg.Error("Folder Change Failed", $"Could not select folder: {ex.Message}", "Settings"); }
     }
 
     private VfsDirectory MakeAgentCrumb()
@@ -451,7 +451,7 @@
             var results = await Js.InvokeAsync<DbTableResult[]>("c2DbInfo.getTableStats");
             dbTables = results.Select(r => new DbTable(r.Name, r.Count)).ToList();
         }
-        catch (Exception ex) { Msg.Error($"Failed to read IndexedDB: {ex.Message}"); }
+        catch (Exception ex) { Msg.Error("IndexedDB Error", $"Failed to read database stats: {ex.Message}", "Settings"); }
         finally { dbLoading = false; StateHasChanged(); }
     }
 

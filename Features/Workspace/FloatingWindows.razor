@@ -3,10 +3,11 @@
 @inject WindowManager Wm
 @inject IJSRuntime Js
 
-@* Drag overlay — captures pointer events globally during drag (mouse only; touch uses implicit capture on titlebar) *@
+@* Drag overlay — captures pointer events globally during drag *@
 @if (_dragging is not null)
 {
-    <div style="position:fixed;inset:0;z-index:9999;cursor:grabbing;touch-action:none;"
+    <div @ref="_dragOverlayRef" style="position:fixed;inset:0;z-index:9999;cursor:grabbing;touch-action:none;"
+         @onpointerdown="OnOverlayPointerDown"
          @onpointermove="OnDragMove"
          @onpointerup="OnDragEnd"
          @onpointercancel="OnDragEnd"
@@ -16,7 +17,8 @@
 @* Edge resize overlay *@
 @if (_edgeResizing is not null)
 {
-    <div style="position:fixed;inset:0;z-index:9999;cursor:@EdgeCursor(_edgeResizing.Edge);touch-action:none;"
+    <div @ref="_resizeOverlayRef" style="position:fixed;inset:0;z-index:9999;cursor:@EdgeCursor(_edgeResizing.Edge);touch-action:none;"
+         @onpointerdown="OnOverlayPointerDown"
          @onpointermove="OnEdgeResizeMove"
          @onpointerup="OnEdgeResizeEnd"
          @onpointercancel="OnEdgeResizeEnd"
@@ -36,7 +38,7 @@
         <div class="app-window-titlebar"
              style="touch-action:none;"
              @onpointerdown="(e) => OnDragStart(e, win)"
-             @onpointermove="OnDragMove"
+             @onpointermove="OnTitlebarDragMove"
              @onpointerup="OnDragEnd"
              @onpointercancel="OnDragEnd"
              @onpointermove:preventDefault="true"
@@ -114,6 +116,11 @@
     private EdgeResizeState? _edgeResizing;
     private double _vpWidth;
     private double _vpHeight;
+    private long _pendingPointerId;
+    private DotNetObjectReference<FloatingWindows>? _dotnetRef;
+    private ElementReference _dragOverlayRef;
+    private ElementReference _resizeOverlayRef;
+    private bool _viewportReady;
 
     private enum Edge { N, S, E, W, NW, NE, SW, SE }
 
@@ -141,6 +148,34 @@
     private static readonly Edge[] Edges = [Edge.N, Edge.S, Edge.E, Edge.W, Edge.NW, Edge.NE, Edge.SW, Edge.SE];
 
     protected override void OnInitialized() => On<WindowChangedEvent>();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _dotnetRef = DotNetObjectReference.Create(this);
+            await Js.InvokeVoidAsync("c2Interop.onResize", _dotnetRef);
+        }
+
+        // After overlay renders, capture the pointer for reliable tracking
+        if (_pendingPointerId != 0)
+        {
+            var pid = _pendingPointerId;
+            _pendingPointerId = 0;
+            if (_dragging is not null)
+                await Js.InvokeVoidAsync("c2Interop.setPointerCapture", _dragOverlayRef, pid);
+            else if (_edgeResizing is not null)
+                await Js.InvokeVoidAsync("c2Interop.setPointerCapture", _resizeOverlayRef, pid);
+        }
+    }
+
+    [JSInvokable]
+    public void OnViewportResize(double width, double height)
+    {
+        _vpWidth = width;
+        _vpHeight = height;
+        _viewportReady = true;
+    }
 
     private bool IsTopWindow(WindowState win)
     {
@@ -173,20 +208,33 @@
 
     // --- Drag ---
 
-    private async Task OnDragStart(PointerEventArgs e, WindowState win)
+    private void OnDragStart(PointerEventArgs e, WindowState win)
     {
         if (win.Maximized) return;
+        // On mobile (≤768px), windows are forced fullscreen — skip drag
+        if (_vpWidth <= 768) return;
+
         Wm.BringToFront(win);
-        var vp = await Js.InvokeAsync<ViewportSize>("c2Interop.getViewport");
-        _vpWidth = vp.Width;
-        _vpHeight = vp.Height;
+
+        // Use cached viewport (updated via resize listener); fallback to sync fetch
+        if (!_viewportReady)
+        {
+            // Viewport not yet available — rare edge case on very first interaction
+            _vpWidth = 1920;
+            _vpHeight = 1080;
+        }
+
         _dragging = new DragState
         {
             Window = win,
             StartMouseX = e.ClientX, StartMouseY = e.ClientY,
             StartWinX = win.X, StartWinY = win.Y
         };
+        _pendingPointerId = e.PointerId;
     }
+
+    /// <summary>Handles pointermove on the titlebar (before overlay renders).</summary>
+    private void OnTitlebarDragMove(PointerEventArgs e) => OnDragMove(e);
 
     private void OnDragMove(PointerEventArgs e)
     {
@@ -203,15 +251,31 @@
 
     private void OnDragEnd(PointerEventArgs e) => _dragging = null;
 
+    /// <summary>Captures the pointer on the overlay for reliable cross-element tracking.</summary>
+    private async Task OnOverlayPointerDown(PointerEventArgs e)
+    {
+        if (_dragging is not null)
+            await Js.InvokeVoidAsync("c2Interop.setPointerCapture", _dragOverlayRef, e.PointerId);
+        else if (_edgeResizing is not null)
+            await Js.InvokeVoidAsync("c2Interop.setPointerCapture", _resizeOverlayRef, e.PointerId);
+    }
+
     // --- Edge Resize ---
 
-    private async Task OnEdgeResizeStart(PointerEventArgs e, WindowState win, Edge edge)
+    private void OnEdgeResizeStart(PointerEventArgs e, WindowState win, Edge edge)
     {
         if (win.Maximized) return;
+        // On mobile (≤768px), windows are forced fullscreen — skip resize
+        if (_vpWidth <= 768) return;
+
         Wm.BringToFront(win);
-        var vp = await Js.InvokeAsync<ViewportSize>("c2Interop.getViewport");
-        _vpWidth = vp.Width;
-        _vpHeight = vp.Height;
+
+        if (!_viewportReady)
+        {
+            _vpWidth = 1920;
+            _vpHeight = 1080;
+        }
+
         _edgeResizing = new EdgeResizeState
         {
             Window = win, Edge = edge,
@@ -219,6 +283,7 @@
             StartX = win.X, StartY = win.Y,
             StartWidth = win.Width, StartHeight = win.Height
         };
+        _pendingPointerId = e.PointerId;
     }
 
     private void OnEdgeResizeMove(PointerEventArgs e)
@@ -275,5 +340,10 @@
 
     private record ViewportSize(double Width, double Height);
 
-    public override void Dispose() => base.Dispose();
+    public override void Dispose()
+    {
+        _dotnetRef?.Dispose();
+        _ = Js.InvokeVoidAsync("c2Interop.disposeResize");
+        base.Dispose();
+    }
 }
