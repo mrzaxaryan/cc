@@ -25,4 +25,14 @@ public class WindowState
     public RelaySocket? Relay { get; set; }
     /// <summary>Root path for file search operations scoped to this window.</summary>
     public string? SearchPath { get; set; }
+
+    // --- Snap state ---
+    /// <summary>Position/size before snapping, for restore-on-unsnap.</summary>
+    public double PreSnapX { get; set; }
+    public double PreSnapY { get; set; }
+    public double PreSnapWidth { get; set; }
+    public double PreSnapHeight { get; set; }
+    public bool IsSnapped { get; set; }
+    /// <summary>Active snap zone: left-half, right-half, top-left, top-right, bottom-left, bottom-right, maximize.</summary>
+    public string? SnapZone { get; set; }
 }

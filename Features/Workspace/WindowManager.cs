@@ -147,4 +147,111 @@ public class WindowManager
         }
         NotifyChanged();
     }
+
+    // --- Silent updates (called from JS callbacks — DOM is already correct) ---
+
+    public void UpdatePositionSilent(int id, double x, double y)
+    {
+        var win = Windows.FirstOrDefault(w => w.Id == id);
+        if (win is null) return;
+        win.X = x;
+        win.Y = y;
+        // No NotifyChanged — DOM already matches
+    }
+
+    public void UpdateGeometrySilent(int id, double x, double y, double width, double height)
+    {
+        var win = Windows.FirstOrDefault(w => w.Id == id);
+        if (win is null) return;
+        win.X = x;
+        win.Y = y;
+        win.Width = width;
+        win.Height = height;
+    }
+
+    // --- Snap state ---
+
+    public void ApplySnap(int id, double x, double y, double w, double h, string zone)
+    {
+        var win = Windows.FirstOrDefault(wi => wi.Id == id);
+        if (win is null) return;
+
+        // Save pre-snap geometry for restore
+        if (!win.IsSnapped)
+        {
+            win.PreSnapX = win.X;
+            win.PreSnapY = win.Y;
+            win.PreSnapWidth = win.Width;
+            win.PreSnapHeight = win.Height;
+        }
+
+        win.X = x;
+        win.Y = y;
+        win.Width = w;
+        win.Height = h;
+        win.IsSnapped = true;
+        win.SnapZone = zone;
+        win.Maximized = zone == "maximize";
+    }
+
+    public void ClearSnap(int id)
+    {
+        var win = Windows.FirstOrDefault(w => w.Id == id);
+        if (win is null || !win.IsSnapped) return;
+
+        win.X = win.PreSnapX;
+        win.Y = win.PreSnapY;
+        win.Width = win.PreSnapWidth;
+        win.Height = win.PreSnapHeight;
+        win.IsSnapped = false;
+        win.SnapZone = null;
+        win.Maximized = false;
+    }
+
+    // --- Tiling ---
+
+    public void ApplyTilePositions(int[] ids, double[] xs, double[] ys, double[] ws, double[] hs)
+    {
+        for (int i = 0; i < ids.Length; i++)
+        {
+            var win = Windows.FirstOrDefault(w => w.Id == ids[i]);
+            if (win is null) continue;
+            win.X = xs[i];
+            win.Y = ys[i];
+            win.Width = ws[i];
+            win.Height = hs[i];
+            win.Maximized = false;
+            win.IsSnapped = false;
+            win.SnapZone = null;
+        }
+    }
+
+    // --- Persistence DTO ---
+
+    public WindowLayoutDto[] ExportLayout()
+    {
+        return Windows.Select(w => new WindowLayoutDto
+        {
+            Panel = w.Panel,
+            X = w.X, Y = w.Y,
+            Width = w.Width, Height = w.Height,
+            Minimized = w.Minimized,
+            Maximized = w.Maximized,
+            SnapZone = w.SnapZone,
+            AgentUuid = w.AgentUuid
+        }).ToArray();
+    }
+}
+
+public class WindowLayoutDto
+{
+    public string Panel { get; set; } = "";
+    public double X { get; set; }
+    public double Y { get; set; }
+    public double Width { get; set; }
+    public double Height { get; set; }
+    public bool Minimized { get; set; }
+    public bool Maximized { get; set; }
+    public string? SnapZone { get; set; }
+    public string? AgentUuid { get; set; }
 }
