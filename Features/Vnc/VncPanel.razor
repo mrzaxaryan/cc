@@ -188,22 +188,47 @@
 
     private async Task CaptureFrame()
     {
-        var payload = RelaySocket.BuildGetScreenshot((uint)_selectedDisplay, _quality);
+        // in case of first screenshot if should be full screen after fullscreen = false
+        var fullScreen = _bitmap is null;
+        var payload = RelaySocket.BuildGetScreenshot((uint)_selectedDisplay, fullScreen);
         var response = await Relay!.SendAndReceive(payload);
         if (response is null || response.Length < 8) return;
 
         var status = RelaySocket.ReadStatus(response);
         if (status != 0) return;
 
-        var (_, jpegData) = RelaySocket.ReadScreenshot(response);
+        var (countOfSections, sections) = RelaySocket.ReadScreenshot(response);
+        if (sections.Length == 0) return;
+
+        var (x, y, jpegSize, jpegData) = sections[0];
         if (jpegData.Length == 0) return;
 
         var newBitmap = SKBitmap.Decode(jpegData);
         if (newBitmap is null) return;
 
-        var old = _bitmap;
+        <!-- var old = _bitmap;
         _bitmap = newBitmap;
-        old?.Dispose();
+        old?.Dispose(); -->
+        // Write directly to the existing bitmap to reduce on x,y shifting and potential flicker
+        if (_bitmap is null )
+        {
+            _bitmap?.Dispose();
+            _bitmap = newBitmap;
+        }
+        else
+        {
+            // iterate thought all sections and draw them onto the existing bitmap
+
+            using var canvas = new SKCanvas(_bitmap);
+            foreach (var (sx, sy, sjpegSize, sjpegData) in sections)
+            {
+                var sectionBitmap = SKBitmap.Decode(sjpegData);
+                if (sectionBitmap is null) continue;
+                canvas.DrawBitmap(sectionBitmap, sx, sy);
+                sectionBitmap.Dispose();
+            }
+            newBitmap.Dispose();
+        }
 
         // FPS tracking
         _frameCount++;
