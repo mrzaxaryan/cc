@@ -154,10 +154,9 @@ public class RelaySocket
 
     public static (ulong bytesRead, string output) ReadShellOutput(byte[] response)
     {
-        var bytesRead = BitConverter.ToUInt64(response, 4);
-        var length = (int)Math.Min(bytesRead, (ulong)(response.Length - 12));
-        if (length <= 0) return (bytesRead, "");
-        var output = Encoding.UTF8.GetString(response, 12, length);
+        var bytesRead = (ulong)(response.Length - 4);
+        if (bytesRead <= 0) return (bytesRead, "");
+        var output = Encoding.UTF8.GetString(response, 4, (int)bytesRead);
         return (bytesRead, output);
     }
 
@@ -166,7 +165,7 @@ public class RelaySocket
     public static byte[] BuildGetDisplays() => [AgentCommands.GetDisplays];
 
     /// <summary>Build a GetScreenshot command: [opcode][UINT32 displayIndex][UINT32 quality][UINT32 fullScreen].</summary>
-    public static byte[] BuildGetScreenshot(uint displayIndex, uint quality = 75, bool fullScreen = true)
+    public static byte[] BuildGetScreenshot(uint displayIndex,  bool fullScreen = true,uint quality = 75)
     {
         var payload = new byte[1 + 4 + 4 + 4];
         payload[0] = AgentCommands.GetScreenshot;
@@ -202,14 +201,17 @@ public class RelaySocket
     }
 
     /// <summary>
-    /// Parse GetScreenshot response: [UINT32 status][UINT32 jpegSize][byte[] jpegData].
+    /// Parse GetScreenshot response: [UINT32 status][UINT32 countOfSections][UINT32 x][UINT32 y][UINT32 jpegSize][byte[] jpegData].
     /// </summary>
-    public static (uint jpegSize, byte[] jpegData) ReadScreenshot(byte[] response)
+    public static (uint countOfSections, (uint x, uint y, uint jpegSize, byte[] jpegData)[] sections) ReadScreenshot(byte[] response)
     {
-        var jpegSize = BitConverter.ToUInt32(response, 4);
+        var countOfSections = BitConverter.ToUInt32(response, 4);
+        var x = BitConverter.ToUInt32(response, 8);
+        var y = BitConverter.ToUInt32(response, 12);
+        var jpegSize = BitConverter.ToUInt32(response, 16);
         var data = new byte[jpegSize];
-        Array.Copy(response, 8, data, 0, (int)jpegSize);
-        return (jpegSize, data);
+        Array.Copy(response, 20, data, 0, (int)jpegSize);
+        return (countOfSections, new[] { (x, y, jpegSize, data) });
     }
 }
 
