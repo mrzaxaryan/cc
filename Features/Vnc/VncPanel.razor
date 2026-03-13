@@ -25,18 +25,22 @@
         }
     </HeaderLeft>
     <HeaderRight>
-        @if (_displays.Length > 1)
-        {
-            <select class="vnc-display-select" @onchange="OnDisplayChanged">
+        <select class="vnc-display-select" @onchange="OnDisplayChanged" disabled="@(_displays.Length == 0)">
+            @if (_displays.Length == 0)
+            {
+                <option>No displays</option>
+            }
+            else
+            {
                 @for (var i = 0; i < _displays.Length; i++)
                 {
                     var d = _displays[i];
                     <option value="@i" selected="@(i == _selectedDisplay)">
-                        Display @(i + 1)@(d.Primary ? " *" : "") (@(d.Width)x@(d.Height))
+                        Display @(i + 1)@(d.Primary ? " (Primary)" : "") — @(d.Width)x@(d.Height) @@@(d.Left),@(d.Top)
                     </option>
                 }
-            </select>
-        }
+            }
+        </select>
         <select class="vnc-display-select" @onchange="OnQualityChanged">
             <option value="25" selected="@(_quality == 25)">Low</option>
             <option value="50" selected="@(_quality == 50)">Medium</option>
