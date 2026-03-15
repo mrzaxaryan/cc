@@ -16,7 +16,9 @@ public class RelaySocket
 
     public async Task Connect(string agentId, CancellationToken ct = default)
     {
-        var baseUrl = (BaseUrl ?? "wss://relay.nostdlib.workers.dev").TrimEnd('/');
+        if (string.IsNullOrEmpty(BaseUrl))
+            throw new InvalidOperationException("BaseUrl must be set before connecting.");
+        var baseUrl = BaseUrl.TrimEnd('/');
         _ws = new ClientWebSocket();
         await _ws.ConnectAsync(new Uri($"{baseUrl}/relay/{agentId}"), ct);
         ConnectedAgentId = agentId;
@@ -165,7 +167,7 @@ public class RelaySocket
     public static byte[] BuildGetDisplays() => [AgentCommands.GetDisplays];
 
     /// <summary>Build a GetScreenshot command: [opcode][UINT32 displayIndex][UINT32 quality][UINT32 fullScreen].</summary>
-    public static byte[] BuildGetScreenshot(uint displayIndex,  bool fullScreen = true,uint quality = 75)
+    public static byte[] BuildGetScreenshot(uint displayIndex, bool fullScreen = true, uint quality = 75)
     {
         var payload = new byte[1 + 4 + 4 + 4];
         payload[0] = AgentCommands.GetScreenshot;
@@ -174,53 +176,4 @@ public class RelaySocket
         BitConverter.TryWriteBytes(payload.AsSpan(9), fullScreen ? 1u : 0u);
         return payload;
     }
-
-    /// <summary>
-    /// Parse GetDisplays response: [UINT32 status][UINT32 count][ScreenDevice * count].
-    /// ScreenDevice is packed 17 bytes: INT32 Left, INT32 Top, UINT32 Width, UINT32 Height, BOOL(1) Primary.
-    /// </summary>
-    public static ScreenDeviceInfo[] ReadDisplays(byte[] response)
-    {
-        var count = BitConverter.ToUInt32(response, 4);
-        var devices = new ScreenDeviceInfo[count];
-        const int deviceSize = 17;
-        var offset = 8; // after status + count
-        for (var i = 0; i < count; i++)
-        {
-            devices[i] = new ScreenDeviceInfo
-            {
-                Left = BitConverter.ToInt32(response, offset),
-                Top = BitConverter.ToInt32(response, offset + 4),
-                Width = BitConverter.ToUInt32(response, offset + 8),
-                Height = BitConverter.ToUInt32(response, offset + 12),
-                Primary = response[offset + 16] != 0
-            };
-            offset += deviceSize;
-        }
-        return devices;
-    }
-
-    /// <summary>
-    /// Parse GetScreenshot response: [UINT32 status][UINT32 countOfSections][UINT32 x][UINT32 y][UINT32 jpegSize][byte[] jpegData].
-    /// </summary>
-    public static (uint countOfSections, (uint x, uint y, uint jpegSize, byte[] jpegData)[] sections) ReadScreenshot(byte[] response)
-    {
-        var countOfSections = BitConverter.ToUInt32(response, 4);
-        var x = BitConverter.ToUInt32(response, 8);
-        var y = BitConverter.ToUInt32(response, 12);
-        var jpegSize = BitConverter.ToUInt32(response, 16);
-        var data = new byte[jpegSize];
-        Array.Copy(response, 20, data, 0, (int)jpegSize);
-        return (countOfSections, new[] { (x, y, jpegSize, data) });
-    }
-}
-
-/// <summary>Display device info returned by GetDisplays command.</summary>
-public class ScreenDeviceInfo
-{
-    public int Left { get; set; }
-    public int Top { get; set; }
-    public uint Width { get; set; }
-    public uint Height { get; set; }
-    public bool Primary { get; set; }
 }

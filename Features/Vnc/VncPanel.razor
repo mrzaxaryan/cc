@@ -1,91 +1,105 @@
 @using C2.Features.Relay
-@using SkiaSharp
-@using SkiaSharp.Views.Blazor
 @inject MessageService Msg
 @inject IJSRuntime Js
 @implements IAsyncDisposable
 
-<PanelLayout Title="Screen">
-    <HeaderLeft>
-        @if (IsConnected)
-        {
-            <C2Badge Variant="BadgeVariant.Success" Size="Size.Xs">Connected</C2Badge>
-        }
-        else
-        {
-            <C2Badge Variant="BadgeVariant.Muted" Size="Size.Xs">Disconnected</C2Badge>
-        }
-        @if (_displays.Length > 0)
-        {
-            <C2Badge Variant="BadgeVariant.Muted" Size="Size.Xs">@(_displays[_selectedDisplay].Width)x@(_displays[_selectedDisplay].Height)</C2Badge>
-        }
-        @if (_streaming)
-        {
-            <C2Badge Variant="BadgeVariant.Info" Size="Size.Xs">@(_fps)fps</C2Badge>
-        }
-    </HeaderLeft>
-    <HeaderRight>
-        <select class="vnc-display-select" @onchange="OnDisplayChanged" disabled="@(_displays.Length == 0)">
-            @if (_displays.Length == 0)
+<div class="vnc-root" @ref="_rootEl">
+    @if (!_vnc.IsConnected)
+    {
+        <div class="vnc-overlay">
+            <span class="status-dot dot-off"></span>
+            <span>Agent disconnected</span>
+        </div>
+    }
+    else if (_vnc.IsLoadingDisplays)
+    {
+        <div class="vnc-overlay">
+            <C2Spinner Size="Size.Sm" />
+            <span>Enumerating displays…</span>
+        </div>
+    }
+    else if (_vnc.Displays.Length == 0 && !_vnc.IsLoadingDisplays)
+    {
+        <div class="vnc-overlay">
+            <span>No displays detected</span>
+        </div>
+    }
+
+    <div class="vnc-canvas-wrap" @onclick="FocusCanvas">
+        <canvas @ref="_canvasEl"></canvas>
+    </div>
+
+    <div class="vnc-toolbar @(_toolbarVisible ? "" : "vnc-toolbar--hidden")">
+        <div class="vnc-toolbar-group">
+            @if (_vnc.IsConnected)
             {
-                <option>No displays</option>
+                <span class="vnc-status vnc-status--on"></span>
             }
             else
             {
-                @for (var i = 0; i < _displays.Length; i++)
-                {
-                    var d = _displays[i];
-                    <option value="@i" selected="@(i == _selectedDisplay)">
-                        Display @(i + 1)@(d.Primary ? " (Primary)" : "") — @(d.Width)x@(d.Height) @@@(d.Left),@(d.Top)
-                    </option>
-                }
+                <span class="vnc-status vnc-status--off"></span>
             }
-        </select>
-        <select class="vnc-display-select" @onchange="OnQualityChanged">
-            <option value="25" selected="@(_quality == 25)">Low</option>
-            <option value="50" selected="@(_quality == 50)">Medium</option>
-            <option value="75" selected="@(_quality == 75)">High</option>
-            <option value="95" selected="@(_quality == 95)">Max</option>
-        </select>
-        @if (!_streaming)
-        {
-            <C2Btn OnClick="CaptureOnce" Disabled="@(!IsConnected || _capturing)" Loading="@_capturing" Size="Size.Xs">Capture</C2Btn>
-            <C2Btn OnClick="StartStreaming" Disabled="@(!IsConnected)" Size="Size.Xs" Variant="BtnVariant.Success">Stream</C2Btn>
-        }
-        else
-        {
-            <C2Btn OnClick="StopStreaming" Size="Size.Xs" Variant="BtnVariant.Danger">Stop</C2Btn>
-        }
-    </HeaderRight>
-    <Body>
-        <div class="vnc">
-            @if (!IsConnected)
+            @if (SelectedDisplay is not null)
             {
-                <div class="vnc-banner vnc-banner--warn">
-                    <span class="status-dot dot-off"></span>
-                    Agent disconnected — screen unavailable.
-                </div>
+                <span class="vnc-info">@(SelectedDisplay.Width)x@(SelectedDisplay.Height)</span>
             }
-            else if (_displays.Length == 0 && !_loadingDisplays)
+            @if (_vnc.IsStreaming)
             {
-                <div class="vnc-banner vnc-banner--info">
-                    No displays detected. The agent may not have a graphical session.
-                </div>
+                <span class="vnc-info vnc-info--accent">@(_vnc.Fps) fps</span>
             }
-            else if (_loadingDisplays)
-            {
-                <div class="vnc-banner vnc-banner--info">
-                    <C2Spinner Size="Size.Sm" /> Enumerating displays...
-                </div>
-            }
-
-            <div class="vnc-canvas-wrap" @ref="_wrapEl">
-                <SKCanvasView @ref="_canvasRef"
-                              OnPaintSurface="OnPaintSurface" />
-            </div>
         </div>
-    </Body>
-</PanelLayout>
+
+        <div class="vnc-toolbar-group">
+            <select class="vnc-select" @onchange="OnDisplayChanged" disabled="@(_vnc.Displays.Length == 0)">
+                @if (_vnc.Displays.Length == 0)
+                {
+                    <option>No displays</option>
+                }
+                else
+                {
+                    @foreach (var d in _vnc.Displays)
+                    {
+                        <option value="@d.Index" selected="@(d.Index == _vnc.SelectedDisplay)">@d.Label</option>
+                    }
+                }
+            </select>
+            <select class="vnc-select" @onchange="OnQualityChanged">
+                @foreach (var q in QualityPresets)
+                {
+                    <option value="@q.Value" selected="@(_vnc.Quality == q.Value)">@q.Label</option>
+                }
+            </select>
+        </div>
+
+        <div class="vnc-toolbar-group">
+            @if (!_vnc.IsStreaming)
+            {
+                <button class="vnc-btn" @onclick="CaptureOnce" disabled="@(!_vnc.IsConnected || _vnc.IsCapturing || _vnc.Displays.Length == 0)" title="Capture single frame">
+                    @if (_vnc.IsCapturing)
+                    {
+                        <C2Spinner Size="Size.Xs" />
+                    }
+                    else
+                    {
+                        <C2Icon Name="camera" Size="Size.Xs" />
+                    }
+                </button>
+                <button class="vnc-btn vnc-btn--stream" @onclick="StartStreaming" disabled="@(!_vnc.IsConnected || _vnc.Displays.Length == 0)" title="Start streaming">
+                    <C2Icon Name="play" Size="Size.Xs" />
+                </button>
+            }
+            else
+            {
+                <button class="vnc-btn vnc-btn--stop" @onclick="StopStreaming" title="Stop streaming">
+                    <C2Icon Name="square" Size="Size.Xs" />
+                </button>
+            }
+            <button class="vnc-btn" @onclick="ToggleFullscreen" title="Toggle fullscreen">
+                <C2Icon Name="maximize" Size="Size.Xs" />
+            </button>
+        </div>
+    </div>
+</div>
 
 @code {
     [Parameter] public RelaySocket? Relay { get; set; }
@@ -93,29 +107,35 @@
     [Parameter] public string? AgentName { get; set; }
     [Parameter] public string? AgentUuid { get; set; }
 
-    private ScreenDeviceInfo[] _displays = [];
-    private int _selectedDisplay;
-    private uint _quality = 75;
-    private bool _loadingDisplays;
-    private bool _capturing;
-    private bool _streaming;
-    private int _fps;
-    private SKBitmap? _bitmap;
-    private SKCanvasView? _canvasRef;
-    private ElementReference _wrapEl;
+    private VncService _vnc = null!;
+    private ElementReference _canvasEl;
+    private ElementReference _rootEl;
     private DotNetObjectReference<VncPanel>? _dotnetRef;
-    private CancellationTokenSource? _streamCts;
+    private string _sessionId = Guid.NewGuid().ToString("N")[..8];
+    private bool _toolbarVisible = true;
 
-    // FPS tracking
-    private int _frameCount;
-    private DateTime _fpsStart = DateTime.UtcNow;
+    private static readonly (string Label, uint Value)[] QualityPresets =
+    [
+        ("Low", 25),
+        ("Medium", 50),
+        ("High", 75),
+        ("Max", 95)
+    ];
 
-    private bool IsConnected => Relay is { IsConnected: true };
+    private DisplayInfo? SelectedDisplay =>
+        _vnc.Displays.Length > 0 && _vnc.SelectedDisplay < _vnc.Displays.Length
+            ? _vnc.Displays[_vnc.SelectedDisplay]
+            : null;
 
     protected override async Task OnInitializedAsync()
     {
-        if (IsConnected)
-            await FetchDisplays();
+        _vnc = new VncService(Relay!, Msg);
+        _vnc.StateChanged += OnVncStateChanged;
+        _vnc.FullFrameReady += OnFullFrame;
+        _vnc.SectionsReady += OnSections;
+
+        if (_vnc.IsConnected)
+            await _vnc.FetchDisplaysAsync();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -123,203 +143,91 @@
         if (firstRender)
         {
             _dotnetRef = DotNetObjectReference.Create(this);
-            await Js.InvokeVoidAsync("c2Vnc.observe", _wrapEl, _dotnetRef);
+            await Js.InvokeVoidAsync("c2Vnc.init", _sessionId, _canvasEl, _dotnetRef);
         }
     }
 
-    [JSInvokable]
-    public void OnContainerResized()
+    // --- Frame rendering via JS interop ---
+
+    private async Task OnFullFrame(byte[] jpegData)
     {
-        _canvasRef?.Invalidate();
+        await Js.InvokeVoidAsync("c2Vnc.renderFullFrame", _sessionId, jpegData);
     }
 
-    private async Task FetchDisplays()
+    private async Task OnSections(ScreenSection[] sections)
     {
-        _loadingDisplays = true;
-        StateHasChanged();
-
-        try
-        {
-            var payload = RelaySocket.BuildGetDisplays();
-            var response = await Relay!.SendAndReceive(payload);
-            if (response is null || response.Length < 4) return;
-
-            var status = RelaySocket.ReadStatus(response);
-            if (status != 0)
-            {
-                Msg.Warn("Failed to enumerate displays.");
-                return;
-            }
-
-            _displays = RelaySocket.ReadDisplays(response);
-            // Default to primary display
-            for (var i = 0; i < _displays.Length; i++)
-            {
-                if (_displays[i].Primary) { _selectedDisplay = i; break; }
-            }
-        }
-        catch (Exception ex)
-        {
-            Msg.Error($"Display enumeration failed: {ex.Message}");
-        }
-        finally
-        {
-            _loadingDisplays = false;
-            StateHasChanged();
-        }
+        // Serialize sections as JSON: [{x, y, d (base64 jpeg)}]
+        var json = "[" + string.Join(",", sections.Select(s =>
+            $"{{\"x\":{s.X},\"y\":{s.Y},\"d\":\"{Convert.ToBase64String(s.JpegData)}\"}}")) + "]";
+        await Js.InvokeVoidAsync("c2Vnc.renderSections", _sessionId, json);
     }
 
-    private async Task CaptureOnce()
-    {
-        if (!IsConnected || _displays.Length == 0) return;
-        _capturing = true;
-        StateHasChanged();
+    // --- UI event handlers ---
 
-        try
-        {
-            await CaptureFrame();
-        }
-        finally
-        {
-            _capturing = false;
-            StateHasChanged();
-        }
+    private async Task CaptureOnce() => await _vnc.CaptureOnceAsync();
+
+    private async Task StartStreaming() => await _vnc.StartStreamingAsync();
+
+    private void StopStreaming() => _vnc.StopStreaming();
+
+    private async Task ToggleFullscreen()
+    {
+        await Js.InvokeVoidAsync("c2Vnc.toggleFullscreen", _sessionId);
     }
 
-    private async Task CaptureFrame()
+    private async Task FocusCanvas()
     {
-        // in case of first screenshot if should be full screen after fullscreen = false
-        var fullScreen = _bitmap is null;
-        var payload = RelaySocket.BuildGetScreenshot((uint)_selectedDisplay, fullScreen);
-        var response = await Relay!.SendAndReceive(payload);
-        if (response is null || response.Length < 8) return;
-
-        var status = RelaySocket.ReadStatus(response);
-        if (status != 0) return;
-
-        var (countOfSections, sections) = RelaySocket.ReadScreenshot(response);
-        if (sections.Length == 0) return;
-
-        var (x, y, jpegSize, jpegData) = sections[0];
-        if (jpegData.Length == 0) return;
-
-        var newBitmap = SKBitmap.Decode(jpegData);
-        if (newBitmap is null) return;
-
-        <!-- var old = _bitmap;
-        _bitmap = newBitmap;
-        old?.Dispose(); -->
-        // Write directly to the existing bitmap to reduce on x,y shifting and potential flicker
-        if (_bitmap is null )
-        {
-            _bitmap?.Dispose();
-            _bitmap = newBitmap;
-        }
-        else
-        {
-            // iterate thought all sections and draw them onto the existing bitmap
-
-            using var canvas = new SKCanvas(_bitmap);
-            foreach (var (sx, sy, sjpegSize, sjpegData) in sections)
-            {
-                var sectionBitmap = SKBitmap.Decode(sjpegData);
-                if (sectionBitmap is null) continue;
-                canvas.DrawBitmap(sectionBitmap, sx, sy);
-                sectionBitmap.Dispose();
-            }
-            newBitmap.Dispose();
-        }
-
-        // FPS tracking
-        _frameCount++;
-        var elapsed = (DateTime.UtcNow - _fpsStart).TotalSeconds;
-        if (elapsed >= 1.0)
-        {
-            _fps = (int)(_frameCount / elapsed);
-            _frameCount = 0;
-            _fpsStart = DateTime.UtcNow;
-        }
-
-        _canvasRef?.Invalidate();
-    }
-
-    private async Task StartStreaming()
-    {
-        if (!IsConnected || _displays.Length == 0) return;
-        _streaming = true;
-        _frameCount = 0;
-        _fpsStart = DateTime.UtcNow;
-        _streamCts = new CancellationTokenSource();
-        StateHasChanged();
-
-        var ct = _streamCts.Token;
-        try
-        {
-            while (!ct.IsCancellationRequested && IsConnected)
-            {
-                await CaptureFrame();
-                await InvokeAsync(StateHasChanged);
-            }
-        }
-        catch (OperationCanceledException) { }
-        catch (Exception ex)
-        {
-            Msg.Error($"Stream error: {ex.Message}");
-        }
-        finally
-        {
-            _streaming = false;
-            _fps = 0;
-            await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    private void StopStreaming()
-    {
-        _streamCts?.Cancel();
-        _streamCts?.Dispose();
-        _streamCts = null;
-    }
-
-    private void OnPaintSurface(SKPaintSurfaceEventArgs e)
-    {
-        var canvas = e.Surface.Canvas;
-        canvas.Clear(SKColors.Black);
-
-        if (_bitmap is null) return;
-
-        // Fit-to-canvas with aspect ratio preserved
-        var canvasW = e.Info.Width;
-        var canvasH = e.Info.Height;
-        var imgW = _bitmap.Width;
-        var imgH = _bitmap.Height;
-
-        var scale = Math.Min((float)canvasW / imgW, (float)canvasH / imgH);
-        var drawW = imgW * scale;
-        var drawH = imgH * scale;
-        var x = (canvasW - drawW) / 2f;
-        var y = (canvasH - drawH) / 2f;
-
-        canvas.DrawBitmap(_bitmap, new SKRect(x, y, x + drawW, y + drawH));
+        await Js.InvokeVoidAsync("c2Vnc.focus", _sessionId);
     }
 
     private void OnDisplayChanged(ChangeEventArgs e)
     {
-        if (int.TryParse(e.Value?.ToString(), out var idx) && idx >= 0 && idx < _displays.Length)
-            _selectedDisplay = idx;
+        if (int.TryParse(e.Value?.ToString(), out var idx) && idx >= 0 && idx < _vnc.Displays.Length)
+        {
+            _vnc.SelectedDisplay = idx;
+            _vnc.ResetFrame();
+        }
     }
 
     private void OnQualityChanged(ChangeEventArgs e)
     {
         if (uint.TryParse(e.Value?.ToString(), out var q))
-            _quality = q;
+            _vnc.Quality = q;
+    }
+
+    private async void OnVncStateChanged()
+    {
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // --- Mouse/keyboard events from JS (stubs for future agent input commands) ---
+
+    [JSInvokable]
+    public void OnMouseEvent(string action, int x, int y, int button)
+    {
+        // Future: send mouse input to agent via relay protocol
+    }
+
+    [JSInvokable]
+    public void OnWheelEvent(int x, int y, int delta)
+    {
+        // Future: send scroll input to agent via relay protocol
+    }
+
+    [JSInvokable]
+    public void OnKeyEvent(string action, string key, string code,
+        bool ctrl, bool shift, bool alt, bool meta)
+    {
+        // Future: send keyboard input to agent via relay protocol
     }
 
     public async ValueTask DisposeAsync()
     {
-        StopStreaming();
-        try { await Js.InvokeVoidAsync("c2Vnc.unobserve", _wrapEl); } catch { }
+        _vnc.StateChanged -= OnVncStateChanged;
+        _vnc.FullFrameReady -= OnFullFrame;
+        _vnc.SectionsReady -= OnSections;
+        _vnc.Dispose();
+        try { await Js.InvokeVoidAsync("c2Vnc.dispose", _sessionId); } catch { }
         _dotnetRef?.Dispose();
-        _bitmap?.Dispose();
     }
 }

@@ -14,7 +14,7 @@ public class RelayRecord
 
 public class RelayStore
 {
-    private const string DefaultUrl = "wss://relay.nostdlib.workers.dev";
+    private const string DefaultUrl = "https://relay.nostdlib.workers.dev";
     private const string DefaultName = "Default";
 
     private readonly IJSRuntime _js;

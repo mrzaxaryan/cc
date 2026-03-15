@@ -1,62 +1,176 @@
-.vnc {
+/* Root container — fills the window body, black background */
+.vnc-root {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    height: 100%;
-    min-height: 0;
-    overflow: hidden;
-    background: #000;
 }
 
-.vnc-banner {
+/* Overlay messages (disconnected, loading, no displays) */
+.vnc-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.3rem 0.6rem;
-    font-size: 0.72rem;
-    flex-shrink: 0;
-}
-
-.vnc-banner--warn {
-    background: var(--c2-yellow-10);
-    border-bottom: 1px solid var(--c2-yellow-30);
-    color: var(--c2-accent-yellow);
-}
-
-.vnc-banner--info {
-    background: var(--c2-bg-2);
-    border-bottom: 1px solid var(--c2-border);
+    justify-content: center;
+    gap: 0.5rem;
+    background: rgba(0, 0, 0, 0.7);
     color: var(--c2-text-dim);
+    font-size: 0.78rem;
+    pointer-events: none;
 }
 
-/* Wrapper fills all remaining space; position:relative gives the canvas a sizing context */
+/* Canvas wrapper — fills remaining space */
 .vnc-canvas-wrap {
     flex: 1 1 0%;
     min-height: 0;
     position: relative;
     overflow: hidden;
+    cursor: crosshair;
+}
+
+.vnc-canvas-wrap canvas {
+    position: absolute;
+    inset: 0;
+}
+
+/* Floating toolbar — bottom center, semi-transparent */
+.vnc-toolbar {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.5rem;
+    background: rgba(30, 30, 46, 0.85);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.vnc-toolbar--hidden {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+    pointer-events: none;
+}
+
+.vnc-toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.vnc-toolbar-group + .vnc-toolbar-group {
+    padding-left: 0.35rem;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Status dot */
+.vnc-status {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.vnc-status--on {
+    background: var(--c2-green);
+    box-shadow: 0 0 4px var(--c2-green);
+}
+
+.vnc-status--off {
+    background: var(--c2-text-dim);
+}
+
+/* Info labels */
+.vnc-info {
+    font-size: 0.62rem;
+    color: rgba(255, 255, 255, 0.55);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.vnc-info--accent {
+    color: var(--c2-accent);
+}
+
+/* Select dropdowns */
+.vnc-select {
+    height: 22px;
+    font-size: 0.62rem;
+    padding: 0 0.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    outline: none;
+}
+
+.vnc-select:focus {
+    border-color: var(--c2-accent);
+}
+
+/* Toolbar buttons */
+.vnc-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 22px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.75);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.vnc-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+.vnc-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.vnc-btn--stream {
+    color: var(--c2-green);
+    border-color: rgba(var(--c2-green-rgb, 166, 227, 161), 0.3);
+}
+
+.vnc-btn--stream:hover:not(:disabled) {
+    background: rgba(var(--c2-green-rgb, 166, 227, 161), 0.15);
+}
+
+.vnc-btn--stop {
+    color: var(--c2-red, #f38ba8);
+    border-color: rgba(243, 139, 168, 0.3);
+}
+
+.vnc-btn--stop:hover:not(:disabled) {
+    background: rgba(243, 139, 168, 0.15);
+}
+
+/* Fullscreen adjustments */
+.vnc-root:fullscreen {
     background: #000;
 }
 
-/* Force the SKCanvasView <canvas> to fill the wrapper */
-.vnc-canvas-wrap ::deep canvas {
-    position: absolute;
-    inset: 0;
-    width: 100% !important;
-    height: 100% !important;
-}
-
-.vnc-display-select {
-    height: 22px;
-    font-size: 0.68rem;
-    padding: 0 0.3rem;
-    border: 1px solid var(--c2-border);
-    border-radius: var(--c2-radius-sm);
-    background: var(--c2-bg-2);
-    color: var(--c2-text);
-    cursor: pointer;
-}
-
-.vnc-display-select:focus {
-    outline: none;
-    border-color: var(--c2-accent);
+.vnc-root:fullscreen .vnc-toolbar {
+    bottom: 20px;
 }
