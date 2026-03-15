@@ -26,6 +26,9 @@ window.c2Vnc = (() => {
             this._idleTimer = null;
             this._streaming = false;
 
+            // Scale mode: 'stretch' | 'fit' | 'fill'
+            this._scaleMode = 'stretch';
+
             // Toolbar drag state
             this._dragging = false;
             this._dragOffsetX = 0;
@@ -126,17 +129,38 @@ window.c2Vnc = (() => {
 
             const fw = this.frameW;
             const fh = this.frameH;
-            const scale = Math.min(cw / fw, ch / fh);
-            const dw = fw * scale;
-            const dh = fh * scale;
-            const dx = (cw - dw) / 2;
-            const dy = (ch - dh) / 2;
+            let dx = 0, dy = 0, dw = cw, dh = ch;
+
+            if (this._scaleMode === 'fit') {
+                // Fit inside canvas, preserving aspect ratio (black bars)
+                const scale = Math.min(cw / fw, ch / fh);
+                dw = fw * scale;
+                dh = fh * scale;
+                dx = (cw - dw) / 2;
+                dy = (ch - dh) / 2;
+            } else if (this._scaleMode === 'fill') {
+                // Fill canvas, preserving aspect ratio (cropped)
+                const scale = Math.max(cw / fw, ch / fh);
+                dw = fw * scale;
+                dh = fh * scale;
+                dx = (cw - dw) / 2;
+                dy = (ch - dh) / 2;
+            }
+            // 'stretch': dx=0, dy=0, dw=cw, dh=ch (default)
 
             ctx.drawImage(this.frame, dx, dy, dw, dh);
 
+            // Store for mouse coordinate mapping
             this._dx = dx;
             this._dy = dy;
-            this._scale = scale;
+            this._scaleX = dw / fw;
+            this._scaleY = dh / fh;
+            this._hasFrame = true;
+        }
+
+        setScaleMode(mode) {
+            this._scaleMode = mode;
+            this._requestPaint();
         }
 
         // --- Resize ---
@@ -151,12 +175,15 @@ window.c2Vnc = (() => {
         _syncSize() {
             const parent = this.canvas.parentElement;
             if (!parent) return;
-            const r = parent.getBoundingClientRect();
-            const dpr = window.devicePixelRatio || 1;
-            this.canvas.width = Math.round(r.width * dpr);
-            this.canvas.height = Math.round(r.height * dpr);
-            this.canvas.style.width = r.width + 'px';
-            this.canvas.style.height = r.height + 'px';
+            const w = parent.clientWidth;
+            const h = parent.clientHeight;
+            if (w === 0 || h === 0) return;
+            // Backing store = container size
+            this.canvas.width = w;
+            this.canvas.height = h;
+            // CSS size must match exactly (canvas is position:absolute)
+            this.canvas.style.width = w + 'px';
+            this.canvas.style.height = h + 'px';
         }
 
         // --- Toolbar drag ---
@@ -236,13 +263,14 @@ window.c2Vnc = (() => {
         // --- Mouse ---
 
         _toFrameCoords(e) {
-            if (!this._scale || this._scale === 0) return null;
+            if (!this._hasFrame) return null;
             const rect = this.canvas.getBoundingClientRect();
-            const dpr = window.devicePixelRatio || 1;
-            const cx = (e.clientX - rect.left) * dpr;
-            const cy = (e.clientY - rect.top) * dpr;
-            const fx = (cx - this._dx) / this._scale;
-            const fy = (cy - this._dy) / this._scale;
+            const ratioX = this.canvas.width / rect.width;
+            const ratioY = this.canvas.height / rect.height;
+            const cx = (e.clientX - rect.left) * ratioX;
+            const cy = (e.clientY - rect.top) * ratioY;
+            const fx = (cx - this._dx) / this._scaleX;
+            const fy = (cy - this._dy) / this._scaleY;
             if (fx < 0 || fy < 0 || fx > this.frameW || fy > this.frameH) return null;
             return { x: Math.round(fx), y: Math.round(fy) };
         }
@@ -324,6 +352,11 @@ window.c2Vnc = (() => {
         setStreaming(id, streaming) {
             const s = sessions.get(id);
             if (s) s.setStreaming(streaming);
+        },
+
+        setScaleMode(id, mode) {
+            const s = sessions.get(id);
+            if (s) s.setScaleMode(mode);
         },
 
         async toggleFullscreen(id) {

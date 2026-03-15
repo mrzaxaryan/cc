@@ -114,6 +114,15 @@
                         }
                     </select>
                 </div>
+                <div class="vnc-settings-row">
+                    <label class="vnc-settings-label">Scaling</label>
+                    <select class="vnc-select vnc-select--wide" @onchange="OnScaleModeChanged">
+                        @foreach (var m in ScaleModes)
+                        {
+                            <option value="@m.Value" selected="@(_scaleMode == m.Value)">@m.Label</option>
+                        }
+                    </select>
+                </div>
             </div>
         }
     </div>
@@ -132,6 +141,7 @@
     private readonly string _sessionId = Guid.NewGuid().ToString("N")[..8];
     private bool _jsInitialized;
     private bool _settingsOpen;
+    private string _scaleMode = "stretch";
 
     private static readonly (string Label, uint Value)[] QualityPresets =
     [
@@ -139,6 +149,13 @@
         ("Medium", 50),
         ("High", 75),
         ("Max", 95)
+    ];
+
+    private static readonly (string Label, string Value)[] ScaleModes =
+    [
+        ("Stretch", "stretch"),
+        ("Fit", "fit"),
+        ("Fill", "fill")
     ];
 
     private DisplayInfo? SelectedDisplay =>
@@ -240,6 +257,17 @@
         {
             _vnc.Quality = q;
             _vnc.ResetFrame();
+        }
+    }
+
+    private void OnScaleModeChanged(ChangeEventArgs e)
+    {
+        var mode = e.Value?.ToString();
+        if (mode is "stretch" or "fit" or "fill")
+        {
+            _scaleMode = mode;
+            if (_jsInitialized)
+                _ = Js.InvokeVoidAsync("c2Vnc.setScaleMode", _sessionId, mode);
         }
     }
 

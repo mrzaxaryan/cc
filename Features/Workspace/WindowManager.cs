@@ -8,10 +8,18 @@ public class WindowManager
     private readonly IEventBus _bus;
     private int _nextId;
     private int _topZ = 1040;
+    private double _vpWidth;
+    private double _vpHeight;
 
     public List<WindowState> Windows { get; } = new();
 
     public WindowManager(IEventBus bus) => _bus = bus;
+
+    public void SetViewportSize(double width, double height)
+    {
+        _vpWidth = width;
+        _vpHeight = height;
+    }
 
     private void NotifyChanged() => _bus.Publish(new WindowChangedEvent());
 
@@ -41,7 +49,7 @@ public class WindowManager
 
         _topZ++;
         var offset = Windows.Count * 30;
-        Windows.Add(new WindowState
+        var win = new WindowState
         {
             Id = _nextId++,
             Panel = panel,
@@ -51,7 +59,9 @@ public class WindowManager
             Width = panel switch { "FileManager" => 800, "Settings" => 650, "Relay" => 900, "Agents" => 950, "Downloads" => 600, "SearchJobs" => 700, "ExtensionGroups" => 500, _ => 700 },
             Height = 500,
             ZIndex = _topZ
-        });
+        };
+        ClampToViewport(win);
+        Windows.Add(win);
         NotifyChanged();
     }
 
@@ -71,7 +81,7 @@ public class WindowManager
 
         _topZ++;
         var offset = Windows.Count * 30;
-        Windows.Add(new WindowState
+        var win = new WindowState
         {
             Id = _nextId++,
             Panel = panel,
@@ -86,7 +96,9 @@ public class WindowManager
             Width = panel switch { "FileManager" => 800, "FileSearch" => 600, "AgentInfo" => 480, "Shell" => 700, "Vnc" => 900, _ => 700 },
             Height = panel switch { "Vnc" => 600, _ => 500 },
             ZIndex = _topZ
-        });
+        };
+        ClampToViewport(win);
+        Windows.Add(win);
         NotifyChanged();
     }
 
@@ -121,6 +133,21 @@ public class WindowManager
         win.Maximized = !win.Maximized;
         if (win.Maximized) win.Minimized = false;
         NotifyChanged();
+    }
+
+    private void ClampToViewport(WindowState win)
+    {
+        if (_vpWidth <= 0 || _vpHeight <= 0) return;
+
+        const double taskbarHeight = 40;
+        var maxW = _vpWidth;
+        var maxH = _vpHeight - taskbarHeight;
+
+        if (win.Width > maxW) win.Width = maxW;
+        if (win.Height > maxH) win.Height = maxH;
+
+        if (win.X + win.Width > _vpWidth) win.X = Math.Max(0, _vpWidth - win.Width);
+        if (win.Y + win.Height > _vpHeight - taskbarHeight) win.Y = Math.Max(0, _vpHeight - taskbarHeight - win.Height);
     }
 
     private static string DisplayTitle(string panel) => panel switch
