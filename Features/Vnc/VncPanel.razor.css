@@ -1,4 +1,4 @@
-/* Root container — fills the window body, black background */
+/* Root — fills the window body */
 .vnc-root {
     position: relative;
     width: 100%;
@@ -9,7 +9,7 @@
     flex-direction: column;
 }
 
-/* Overlay messages (disconnected, loading, no displays) */
+/* Status overlays */
 .vnc-overlay {
     position: absolute;
     inset: 0;
@@ -25,7 +25,7 @@
     pointer-events: none;
 }
 
-/* Canvas wrapper — fills remaining space */
+/* Canvas wrapper */
 .vnc-canvas-wrap {
     flex: 1 1 0%;
     min-height: 0;
@@ -39,80 +39,102 @@
     inset: 0;
 }
 
-/* Floating toolbar — bottom center, semi-transparent */
+/* ─── Floating toolbar ─── */
 .vnc-toolbar {
     position: absolute;
-    bottom: 10px;
+    bottom: 8px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 20;
     display: flex;
     align-items: center;
-    gap: 0.35rem;
-    padding: 0.25rem 0.5rem;
-    background: rgba(30, 30, 46, 0.85);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    gap: 0.3rem;
+    padding: 0.2rem 0.4rem;
+    background: rgba(24, 24, 40, 0.88);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.07);
     border-radius: 8px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-    transition: opacity 0.25s ease, transform 0.25s ease;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+    opacity: 1;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    user-select: none;
 }
 
 .vnc-toolbar--hidden {
     opacity: 0;
-    transform: translateX(-50%) translateY(8px);
     pointer-events: none;
+}
+
+/* Drag handle */
+.vnc-drag-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 20px;
+    cursor: grab;
+    color: rgba(255, 255, 255, 0.25);
+    flex-shrink: 0;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    padding-right: 0.3rem;
+    margin-right: 0.05rem;
+}
+
+.vnc-drag-handle:active {
+    cursor: grabbing;
+    color: rgba(255, 255, 255, 0.5);
 }
 
 .vnc-toolbar-group {
     display: flex;
     align-items: center;
-    gap: 0.3rem;
+    gap: 0.25rem;
 }
 
 .vnc-toolbar-group + .vnc-toolbar-group {
-    padding-left: 0.35rem;
-    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    padding-left: 0.3rem;
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* Status dot */
-.vnc-status {
-    width: 6px;
-    height: 6px;
+/* Connection dot */
+.vnc-dot {
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
     flex-shrink: 0;
 }
 
-.vnc-status--on {
+.vnc-dot--on {
     background: var(--c2-green);
-    box-shadow: 0 0 4px var(--c2-green);
+    box-shadow: 0 0 3px var(--c2-green);
 }
 
-.vnc-status--off {
+.vnc-dot--off {
     background: var(--c2-text-dim);
 }
 
 /* Info labels */
 .vnc-info {
-    font-size: 0.62rem;
-    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.6rem;
+    color: rgba(255, 255, 255, 0.5);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+    line-height: 1;
 }
 
 .vnc-info--accent {
     color: var(--c2-accent);
 }
 
-/* Select dropdowns */
+/* Select controls */
 .vnc-select {
-    height: 22px;
-    font-size: 0.62rem;
-    padding: 0 0.25rem;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 4px;
-    background: rgba(255, 255, 255, 0.06);
-    color: rgba(255, 255, 255, 0.8);
+    height: 20px;
+    font-size: 0.6rem;
+    padding: 0 0.2rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.75);
     cursor: pointer;
     outline: none;
 }
@@ -121,56 +143,98 @@
     border-color: var(--c2-accent);
 }
 
-/* Toolbar buttons */
+.vnc-select:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.vnc-select--wide {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Icon buttons */
 .vnc-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 26px;
-    height: 22px;
+    width: 24px;
+    height: 20px;
     padding: 0;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 4px;
-    background: rgba(255, 255, 255, 0.06);
-    color: rgba(255, 255, 255, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.7);
     cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
 
 .vnc-btn:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.18);
     color: #fff;
 }
 
 .vnc-btn:disabled {
-    opacity: 0.35;
+    opacity: 0.3;
     cursor: not-allowed;
+}
+
+.vnc-btn--active {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: var(--c2-accent);
+    color: var(--c2-accent);
 }
 
 .vnc-btn--stream {
     color: var(--c2-green);
-    border-color: rgba(var(--c2-green-rgb, 166, 227, 161), 0.3);
+    border-color: rgba(var(--c2-green-rgb, 166, 227, 161), 0.25);
 }
 
 .vnc-btn--stream:hover:not(:disabled) {
-    background: rgba(var(--c2-green-rgb, 166, 227, 161), 0.15);
+    background: rgba(var(--c2-green-rgb, 166, 227, 161), 0.12);
 }
 
 .vnc-btn--stop {
     color: var(--c2-red, #f38ba8);
-    border-color: rgba(243, 139, 168, 0.3);
+    border-color: rgba(243, 139, 168, 0.25);
 }
 
 .vnc-btn--stop:hover:not(:disabled) {
-    background: rgba(243, 139, 168, 0.15);
+    background: rgba(243, 139, 168, 0.12);
 }
 
-/* Fullscreen adjustments */
-.vnc-root:fullscreen {
-    background: #000;
+/* ─── Settings popover ─── */
+.vnc-settings {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    right: 0;
+    min-width: 220px;
+    padding: 0.4rem;
+    background: rgba(24, 24, 40, 0.94);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
 }
 
+.vnc-settings-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.vnc-settings-label {
+    font-size: 0.6rem;
+    color: rgba(255, 255, 255, 0.5);
+    white-space: nowrap;
+    min-width: 44px;
+}
+
+/* Fullscreen */
 .vnc-root:fullscreen .vnc-toolbar {
-    bottom: 20px;
+    bottom: 16px;
 }

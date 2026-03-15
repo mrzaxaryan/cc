@@ -1,4 +1,5 @@
 @using C2.Features.Relay
+@inherits EventSubscriber
 @inject MessageService Msg
 @inject IJSRuntime Js
 @implements IAsyncDisposable
@@ -18,7 +19,7 @@
             <span>Enumerating displays…</span>
         </div>
     }
-    else if (_vnc.Displays.Length == 0 && !_vnc.IsLoadingDisplays)
+    else if (_vnc.Displays.Length == 0)
     {
         <div class="vnc-overlay">
             <span>No displays detected</span>
@@ -29,16 +30,14 @@
         <canvas @ref="_canvasEl"></canvas>
     </div>
 
-    <div class="vnc-toolbar @(_toolbarVisible ? "" : "vnc-toolbar--hidden")">
+    <div class="vnc-toolbar">
+        @* Drag handle *@
+        <div class="vnc-drag-handle" title="Drag to move">
+            <svg width="6" height="10" viewBox="0 0 6 10"><circle cx="1" cy="1" r="1" fill="currentColor"/><circle cx="5" cy="1" r="1" fill="currentColor"/><circle cx="1" cy="5" r="1" fill="currentColor"/><circle cx="5" cy="5" r="1" fill="currentColor"/><circle cx="1" cy="9" r="1" fill="currentColor"/><circle cx="5" cy="9" r="1" fill="currentColor"/></svg>
+        </div>
+
         <div class="vnc-toolbar-group">
-            @if (_vnc.IsConnected)
-            {
-                <span class="vnc-status vnc-status--on"></span>
-            }
-            else
-            {
-                <span class="vnc-status vnc-status--off"></span>
-            }
+            <span class="vnc-dot @(_vnc.IsConnected ? "vnc-dot--on" : "vnc-dot--off")"></span>
             @if (SelectedDisplay is not null)
             {
                 <span class="vnc-info">@(SelectedDisplay.Width)x@(SelectedDisplay.Height)</span>
@@ -47,28 +46,6 @@
             {
                 <span class="vnc-info vnc-info--accent">@(_vnc.Fps) fps</span>
             }
-        </div>
-
-        <div class="vnc-toolbar-group">
-            <select class="vnc-select" @onchange="OnDisplayChanged" disabled="@(_vnc.Displays.Length == 0)">
-                @if (_vnc.Displays.Length == 0)
-                {
-                    <option>No displays</option>
-                }
-                else
-                {
-                    @foreach (var d in _vnc.Displays)
-                    {
-                        <option value="@d.Index" selected="@(d.Index == _vnc.SelectedDisplay)">@d.Label</option>
-                    }
-                }
-            </select>
-            <select class="vnc-select" @onchange="OnQualityChanged">
-                @foreach (var q in QualityPresets)
-                {
-                    <option value="@q.Value" selected="@(_vnc.Quality == q.Value)">@q.Label</option>
-                }
-            </select>
         </div>
 
         <div class="vnc-toolbar-group">
@@ -94,10 +71,51 @@
                     <C2Icon Name="square" Size="Size.Xs" />
                 </button>
             }
+            <button class="vnc-btn" @onclick="RefreshDisplays" disabled="@(!_vnc.IsConnected || _vnc.IsLoadingDisplays)" title="Refresh displays">
+                <C2Icon Name="refresh" Size="Size.Xs" />
+            </button>
             <button class="vnc-btn" @onclick="ToggleFullscreen" title="Toggle fullscreen">
                 <C2Icon Name="maximize" Size="Size.Xs" />
             </button>
         </div>
+
+        @* Settings popover *@
+        <div class="vnc-toolbar-group">
+            <button class="vnc-btn @(_settingsOpen ? "vnc-btn--active" : "")" @onclick="ToggleSettings" @onclick:stopPropagation="true" title="Settings">
+                <C2Icon Name="settings" Size="Size.Xs" />
+            </button>
+        </div>
+
+        @if (_settingsOpen)
+        {
+            <div class="vnc-settings" @onclick:stopPropagation="true">
+                <div class="vnc-settings-row">
+                    <label class="vnc-settings-label">Display</label>
+                    <select class="vnc-select vnc-select--wide" @onchange="OnDisplayChanged" disabled="@(_vnc.Displays.Length == 0)">
+                        @if (_vnc.Displays.Length == 0)
+                        {
+                            <option>No displays</option>
+                        }
+                        else
+                        {
+                            @foreach (var d in _vnc.Displays)
+                            {
+                                <option value="@d.Index" selected="@(d.Index == _vnc.SelectedDisplay)">@d.Label</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="vnc-settings-row">
+                    <label class="vnc-settings-label">Quality</label>
+                    <select class="vnc-select vnc-select--wide" @onchange="OnQualityChanged">
+                        @foreach (var q in QualityPresets)
+                        {
+                            <option value="@q.Value" selected="@(_vnc.Quality == q.Value)">@q.Label</option>
+                        }
+                    </select>
+                </div>
+            </div>
+        }
     </div>
 </div>
 
@@ -111,8 +129,9 @@
     private ElementReference _canvasEl;
     private ElementReference _rootEl;
     private DotNetObjectReference<VncPanel>? _dotnetRef;
-    private string _sessionId = Guid.NewGuid().ToString("N")[..8];
-    private bool _toolbarVisible = true;
+    private readonly string _sessionId = Guid.NewGuid().ToString("N")[..8];
+    private bool _jsInitialized;
+    private bool _settingsOpen;
 
     private static readonly (string Label, uint Value)[] QualityPresets =
     [
@@ -127,13 +146,23 @@
             ? _vnc.Displays[_vnc.SelectedDisplay]
             : null;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         _vnc = new VncService(Relay!, Msg);
         _vnc.StateChanged += OnVncStateChanged;
         _vnc.FullFrameReady += OnFullFrame;
-        _vnc.SectionsReady += OnSections;
+        _vnc.SectionReady += OnSection;
+        _vnc.StreamingChanged += OnStreamingChanged;
 
+        On<AgentOnlineEvent>(e =>
+        {
+            if (e.AgentId == AgentId && _vnc.IsConnected)
+                _ = InvokeAsync(async () => await _vnc.FetchDisplaysAsync());
+        });
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
         if (_vnc.IsConnected)
             await _vnc.FetchDisplaysAsync();
     }
@@ -143,7 +172,8 @@
         if (firstRender)
         {
             _dotnetRef = DotNetObjectReference.Create(this);
-            await Js.InvokeVoidAsync("c2Vnc.init", _sessionId, _canvasEl, _dotnetRef);
+            await Js.InvokeVoidAsync("c2Vnc.init", _sessionId, _rootEl, _canvasEl, _dotnetRef);
+            _jsInitialized = true;
         }
     }
 
@@ -151,15 +181,20 @@
 
     private async Task OnFullFrame(byte[] jpegData)
     {
+        if (!_jsInitialized) return;
         await Js.InvokeVoidAsync("c2Vnc.renderFullFrame", _sessionId, jpegData);
     }
 
-    private async Task OnSections(ScreenSection[] sections)
+    private async Task OnSection(uint x, uint y, byte[] jpegData)
     {
-        // Serialize sections as JSON: [{x, y, d (base64 jpeg)}]
-        var json = "[" + string.Join(",", sections.Select(s =>
-            $"{{\"x\":{s.X},\"y\":{s.Y},\"d\":\"{Convert.ToBase64String(s.JpegData)}\"}}")) + "]";
-        await Js.InvokeVoidAsync("c2Vnc.renderSections", _sessionId, json);
+        if (!_jsInitialized) return;
+        await Js.InvokeVoidAsync("c2Vnc.renderSection", _sessionId, x, y, jpegData);
+    }
+
+    private void OnStreamingChanged(bool streaming)
+    {
+        if (_jsInitialized)
+            _ = Js.InvokeVoidAsync("c2Vnc.setStreaming", _sessionId, streaming);
     }
 
     // --- UI event handlers ---
@@ -170,15 +205,25 @@
 
     private void StopStreaming() => _vnc.StopStreaming();
 
+    private async Task RefreshDisplays()
+    {
+        _vnc.ResetFrame();
+        await _vnc.FetchDisplaysAsync();
+    }
+
     private async Task ToggleFullscreen()
     {
-        await Js.InvokeVoidAsync("c2Vnc.toggleFullscreen", _sessionId);
+        if (_jsInitialized)
+            await Js.InvokeVoidAsync("c2Vnc.toggleFullscreen", _sessionId);
     }
 
     private async Task FocusCanvas()
     {
-        await Js.InvokeVoidAsync("c2Vnc.focus", _sessionId);
+        if (_jsInitialized)
+            await Js.InvokeVoidAsync("c2Vnc.focus", _sessionId);
     }
+
+    private void ToggleSettings() => _settingsOpen = !_settingsOpen;
 
     private void OnDisplayChanged(ChangeEventArgs e)
     {
@@ -192,7 +237,10 @@
     private void OnQualityChanged(ChangeEventArgs e)
     {
         if (uint.TryParse(e.Value?.ToString(), out var q))
+        {
             _vnc.Quality = q;
+            _vnc.ResetFrame();
+        }
     }
 
     private async void OnVncStateChanged()
@@ -200,34 +248,41 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    // --- Mouse/keyboard events from JS (stubs for future agent input commands) ---
+    // --- Mouse/keyboard events from JS ---
 
     [JSInvokable]
     public void OnMouseEvent(string action, int x, int y, int button)
     {
-        // Future: send mouse input to agent via relay protocol
     }
 
     [JSInvokable]
     public void OnWheelEvent(int x, int y, int delta)
     {
-        // Future: send scroll input to agent via relay protocol
     }
 
     [JSInvokable]
     public void OnKeyEvent(string action, string key, string code,
         bool ctrl, bool shift, bool alt, bool meta)
     {
-        // Future: send keyboard input to agent via relay protocol
+    }
+
+    // --- Cleanup ---
+
+    public new void Dispose()
+    {
+        _vnc.StateChanged -= OnVncStateChanged;
+        _vnc.FullFrameReady -= OnFullFrame;
+        _vnc.SectionReady -= OnSection;
+        _vnc.StreamingChanged -= OnStreamingChanged;
+        _vnc.Dispose();
+        base.Dispose();
     }
 
     public async ValueTask DisposeAsync()
     {
-        _vnc.StateChanged -= OnVncStateChanged;
-        _vnc.FullFrameReady -= OnFullFrame;
-        _vnc.SectionsReady -= OnSections;
-        _vnc.Dispose();
-        try { await Js.InvokeVoidAsync("c2Vnc.dispose", _sessionId); } catch { }
+        Dispose();
+        if (_jsInitialized)
+            try { await Js.InvokeVoidAsync("c2Vnc.dispose", _sessionId); } catch { }
         _dotnetRef?.Dispose();
     }
 }

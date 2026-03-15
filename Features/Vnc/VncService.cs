@@ -36,14 +36,17 @@ public sealed class VncService : IDisposable
     public int Fps { get; private set; }
     public bool IsConnected => _relay is { IsConnected: true };
 
-    /// <summary>Raised when UI state changes (not frame data — frames go through FrameReady).</summary>
+    /// <summary>Raised when UI state changes (streaming toggled, displays loaded, etc.).</summary>
     public event Action? StateChanged;
 
     /// <summary>Raised when a full frame (JPEG bytes) is ready for rendering.</summary>
     public event Func<byte[], Task>? FullFrameReady;
 
-    /// <summary>Raised when incremental sections are ready for rendering.</summary>
-    public event Func<ScreenSection[], Task>? SectionsReady;
+    /// <summary>Raised for each incremental section: (x, y, jpegData).</summary>
+    public event Func<uint, uint, byte[], Task>? SectionReady;
+
+    /// <summary>Raised when streaming starts or stops (bool = isStreaming).</summary>
+    public event Action<bool>? StreamingChanged;
 
     // --- Display enumeration ---
 
@@ -121,6 +124,7 @@ public sealed class VncService : IDisposable
         _fpsWindow = DateTime.UtcNow;
         Fps = 0;
         _streamCts = new CancellationTokenSource();
+        StreamingChanged?.Invoke(true);
         NotifyChanged();
 
         var ct = _streamCts.Token;
@@ -129,6 +133,7 @@ public sealed class VncService : IDisposable
             while (!ct.IsCancellationRequested && IsConnected)
             {
                 await CaptureFrameAsync();
+                // Batch UI updates — only refresh when FPS counter updates
             }
         }
         catch (OperationCanceledException) { }
@@ -140,6 +145,7 @@ public sealed class VncService : IDisposable
         {
             IsStreaming = false;
             Fps = 0;
+            StreamingChanged?.Invoke(false);
             NotifyChanged();
         }
     }
@@ -151,7 +157,7 @@ public sealed class VncService : IDisposable
         _streamCts = null;
     }
 
-    /// <summary>Reset frame state when display changes.</summary>
+    /// <summary>Reset frame state (e.g. when display or quality changes).</summary>
     public void ResetFrame()
     {
         _hasFrame = false;
@@ -174,20 +180,25 @@ public sealed class VncService : IDisposable
 
         if (fullScreen)
         {
-            // First frame — send the raw JPEG of section[0] as a full frame
             _hasFrame = true;
             if (FullFrameReady is not null)
                 await FullFrameReady.Invoke(sections[0].JpegData);
 
-            // If additional sections, send them as incremental
-            if (sections.Length > 1 && SectionsReady is not null)
-                await SectionsReady.Invoke(sections[1..]);
+            // Additional sections drawn incrementally
+            for (var i = 1; i < sections.Length; i++)
+            {
+                if (SectionReady is not null)
+                    await SectionReady.Invoke(sections[i].X, sections[i].Y, sections[i].JpegData);
+            }
         }
         else
         {
-            // Incremental — send all sections
-            if (SectionsReady is not null)
-                await SectionsReady.Invoke(sections);
+            // All sections incremental
+            foreach (var s in sections)
+            {
+                if (SectionReady is not null)
+                    await SectionReady.Invoke(s.X, s.Y, s.JpegData);
+            }
         }
 
         UpdateFps();
@@ -202,6 +213,7 @@ public sealed class VncService : IDisposable
             Fps = (int)(_frameCount / elapsed);
             _frameCount = 0;
             _fpsWindow = DateTime.UtcNow;
+            NotifyChanged(); // Update UI with new FPS
         }
     }
 
