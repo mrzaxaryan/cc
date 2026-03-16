@@ -279,7 +279,7 @@ public class RelayConnectionService : IAsyncDisposable
             {
                 ws = new ClientWebSocket();
                 rs.Ws = ws;
-                await ws.ConnectAsync(new Uri($"{relayUrl}/events"), token);
+                await ws.ConnectAsync(new Uri($"{RelayStore.GetWsBaseUrl(relayUrl)}/events"), token);
                 rs.Connected = true;
                 _bus.Publish(new RelayConnectionChangedEvent(relayUrl, true));
 

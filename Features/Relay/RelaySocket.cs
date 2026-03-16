@@ -18,7 +18,7 @@ public class RelaySocket
     {
         if (string.IsNullOrEmpty(BaseUrl))
             throw new InvalidOperationException("BaseUrl must be set before connecting.");
-        var baseUrl = BaseUrl.TrimEnd('/');
+        var baseUrl = RelayStore.GetWsBaseUrl(BaseUrl.TrimEnd('/'));
         _ws = new ClientWebSocket();
         await _ws.ConnectAsync(new Uri($"{baseUrl}/relay/{agentId}"), ct);
         ConnectedAgentId = agentId;

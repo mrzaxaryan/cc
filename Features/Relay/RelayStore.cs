@@ -42,6 +42,13 @@ public class RelayStore
         return wsUrl;
     }
 
+    public static string GetWsBaseUrl(string httpUrl)
+    {
+        if (httpUrl.StartsWith("https://")) return "wss://" + httpUrl[8..];
+        if (httpUrl.StartsWith("http://")) return "ws://" + httpUrl[7..];
+        return httpUrl;
+    }
+
     public async Task LoadAsync()
     {
         if (_loaded) return;
