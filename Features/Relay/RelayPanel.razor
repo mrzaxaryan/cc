@@ -1,6 +1,5 @@
 @inject HttpClient Http
 @inject RelayStore Store
-@inject RelayConnectionService RelaySvc
 @inject MessageService Msg
 
 <PanelLayout Title="Relay">
@@ -158,14 +157,6 @@
                                     <span class="rp-stat-label">Listeners</span>
                                 </div>
                             </C2Card>
-                        </div>
-
-                        <div class="rp-section-actions">
-                            <C2Btn Variant="BtnVariant.Danger" OnClick="() => DisconnectAll(relay.Url)"
-                                   Disabled="@(status.Agents.Count == 0)"
-                                   Title="Disconnect all agents on this relay">
-                                <C2Icon Name="x" Size="Size.Xs" /> Disconnect All Agents
-                            </C2Btn>
                         </div>
 
                         <h6 class="rp-section-title">Agents</h6>
@@ -404,24 +395,4 @@
         editingUrl = null;
     }
 
-    private async Task DisconnectAll(string relayUrl)
-    {
-        try
-        {
-            var result = await RelaySvc.DisconnectAllAgents(relayUrl);
-            if (result is not null)
-            {
-                Msg.Success("Agents Disconnected", $"Disconnected {result.Value.Disconnected} agent(s)", "Relay");
-                await LoadRelayStatus(relayUrl);
-            }
-            else
-            {
-                Msg.Error("Failed", "Could not disconnect agents", "Relay");
-            }
-        }
-        catch (Exception ex)
-        {
-            Msg.Error("Error", ex.Message, "Relay");
-        }
-    }
 }

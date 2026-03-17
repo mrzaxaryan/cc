@@ -4,6 +4,7 @@
 @inject AgentStore AgentDb
 @inject RelayConnectionService Relay
 @inject CacheManager Cache
+@inject MessageService Msg
 @inject IJSRuntime Js
 
 @{
@@ -60,6 +61,17 @@
                     @relay.Name
                     <span class="ap-relay-count">@relay.AgentCount</span>
                 </button>
+            }
+            @if (selectedRelay is not null)
+            {
+                var relayTab = relays.FirstOrDefault(r => r.Url == selectedRelay);
+                @if (relayTab is not null && relayTab.AgentCount > 0)
+                {
+                    <C2Btn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="DisconnectAllAgents" Disabled="@disconnecting"
+                           Title="Disconnect all agents on this relay">
+                        <C2Icon Name="x" Size="Size.Xs" /> Disconnect All
+                    </C2Btn>
+                }
             }
         </div>
         @if (filtered.Count == 0)
@@ -224,6 +236,7 @@
 @code {
     private Timer? _countdownTimer;
     private string? selectedRelay;
+    private bool disconnecting;
 
     private bool ctxVisible;
     private double ctxX;
@@ -541,6 +554,23 @@
             await AgentDb.RenameAsync(renamingUuid, newName);
         }
         CancelRename();
+    }
+
+    private async Task DisconnectAllAgents()
+    {
+        if (selectedRelay is null) return;
+        disconnecting = true;
+        StateHasChanged();
+        try
+        {
+            var result = await Relay.DisconnectAllAgents(selectedRelay);
+            if (result is not null)
+                Msg.Success("Agents Disconnected", $"Disconnected {result.Value.Disconnected} agent(s)", "Relay");
+            else
+                Msg.Error("Failed", "Could not disconnect agents", "Relay");
+        }
+        catch (Exception ex) { Msg.Error("Error", ex.Message, "Relay"); }
+        finally { disconnecting = false; StateHasChanged(); }
     }
 
     public override void Dispose()
