@@ -87,6 +87,7 @@
     private ElementReference _inputEl;
     private readonly List<string> _history = new();
     private int _historyIndex = -1;
+    private string? _lastSentCommand;
     private const int MaxLines = 2000;
 
     private bool IsConnected => Relay is { IsConnected: true };
@@ -121,7 +122,21 @@
 
     private void AppendOutput(string text)
     {
-        var combined = _pendingOutput + text.Replace("\r\n", "\n").Replace("\r", "");
+        var normalized = text.Replace("\r\n", "\n").Replace("\r", "");
+
+        // Strip PTY command echo to avoid showing the command twice
+        // (we already display it locally via AppendCommand)
+        if (_lastSentCommand is not null)
+        {
+            var cmd = _lastSentCommand;
+            _lastSentCommand = null;
+            if (normalized.StartsWith(cmd + "\n"))
+                normalized = normalized[(cmd.Length + 1)..];
+            else if (normalized == cmd)
+                normalized = "";
+        }
+
+        var combined = _pendingOutput + normalized;
         var parts = combined.Split('\n');
 
         for (var i = 0; i < parts.Length - 1; i++)
@@ -200,6 +215,7 @@
         _historyIndex = _history.Count;
 
         AppendCommand(cmd);
+        _lastSentCommand = cmd;
         _needsScroll = true;
         StateHasChanged();
 
