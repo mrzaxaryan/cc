@@ -390,8 +390,9 @@
     private MarkupString SortArrow(string column)
     {
         if (sortColumn != column) return new MarkupString("");
-        var arrow = sortAscending ? "&#x25B2;" : "&#x25BC;";
-        return new MarkupString($"<span class=\"fm-sort-arrow\">{arrow}</span>");
+        var iconName = sortAscending ? "chevron-up" : "chevron-down";
+        var svg = $"<svg class=\"c2-icon c2-icon-xs\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{C2Icon.GetPath(iconName)}</svg>";
+        return new MarkupString($"<span class=\"fm-sort-arrow\">{svg}</span>");
     }
 
     // --- Selection ---

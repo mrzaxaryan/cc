@@ -38,7 +38,7 @@
                 <div class="tool-section">
                     <button class="tool-section-header" @onclick="() => ToggleSection(0)">
                         <span class="mono">Overview</span>
-                        <span class="section-arrow @(IsSectionOpen(0) ? "open" : "")">&#x25BE;</span>
+                        <span class="section-arrow @(IsSectionOpen(0) ? "open" : "")"><C2Icon Name="chevron-down" Size="Size.Xs" /></span>
                     </button>
                     @if (IsSectionOpen(0))
                     {
@@ -89,7 +89,7 @@
                 <div class="tool-section">
                     <button class="tool-section-header" @onclick="() => ToggleSection(1)">
                         <span class="mono">DOS Header</span>
-                        <span class="section-arrow @(IsSectionOpen(1) ? "open" : "")">&#x25BE;</span>
+                        <span class="section-arrow @(IsSectionOpen(1) ? "open" : "")"><C2Icon Name="chevron-down" Size="Size.Xs" /></span>
                     </button>
                     @if (IsSectionOpen(1))
                     {
@@ -120,7 +120,7 @@
                 <div class="tool-section">
                     <button class="tool-section-header" @onclick="() => ToggleSection(2)">
                         <span class="mono">COFF Header</span>
-                        <span class="section-arrow @(IsSectionOpen(2) ? "open" : "")">&#x25BE;</span>
+                        <span class="section-arrow @(IsSectionOpen(2) ? "open" : "")"><C2Icon Name="chevron-down" Size="Size.Xs" /></span>
                     </button>
                     @if (IsSectionOpen(2))
                     {
@@ -170,7 +170,7 @@
                 <div class="tool-section">
                     <button class="tool-section-header" @onclick="() => ToggleSection(3)">
                         <span class="mono">Optional Header</span>
-                        <span class="section-arrow @(IsSectionOpen(3) ? "open" : "")">&#x25BE;</span>
+                        <span class="section-arrow @(IsSectionOpen(3) ? "open" : "")"><C2Icon Name="chevron-down" Size="Size.Xs" /></span>
                     </button>
                     @if (IsSectionOpen(3))
                     {
@@ -256,7 +256,7 @@
                 <div class="tool-section">
                     <button class="tool-section-header" @onclick="() => ToggleSection(4)">
                         <span class="mono">Data Directories</span>
-                        <span class="section-arrow @(IsSectionOpen(4) ? "open" : "")">&#x25BE;</span>
+                        <span class="section-arrow @(IsSectionOpen(4) ? "open" : "")"><C2Icon Name="chevron-down" Size="Size.Xs" /></span>
                     </button>
                     @if (IsSectionOpen(4))
                     {
@@ -293,7 +293,7 @@
                 <div class="tool-section">
                     <button class="tool-section-header" @onclick="() => ToggleSection(5)">
                         <span class="mono">Sections (@Pe.SectionHeaders.Count)</span>
-                        <span class="section-arrow @(IsSectionOpen(5) ? "open" : "")">&#x25BE;</span>
+                        <span class="section-arrow @(IsSectionOpen(5) ? "open" : "")"><C2Icon Name="chevron-down" Size="Size.Xs" /></span>
                     </button>
                     @if (IsSectionOpen(5))
                     {
@@ -340,7 +340,7 @@
                     <div class="tool-section">
                         <button class="tool-section-header" @onclick="() => ToggleSection(6)">
                             <span class="mono">Imports (@Pe.Imports.Modules.Count modules)</span>
-                            <span class="section-arrow @(IsSectionOpen(6) ? "open" : "")">&#x25BE;</span>
+                            <span class="section-arrow @(IsSectionOpen(6) ? "open" : "")"><C2Icon Name="chevron-down" Size="Size.Xs" /></span>
                         </button>
                         @if (IsSectionOpen(6))
                         {
@@ -351,7 +351,7 @@
                                         <button class="pe-module-header" @onclick="() => ToggleModule(module.Name)">
                                             <span class="mono">@module.Name</span>
                                             <span class="pe-module-count mono">@module.Functions.Count functions</span>
-                                            <span class="section-arrow @(IsModuleOpen(module.Name) ? "open" : "")">&#x25BE;</span>
+                                            <span class="section-arrow @(IsModuleOpen(module.Name) ? "open" : "")"><C2Icon Name="chevron-down" Size="Size.Xs" /></span>
                                         </button>
                                         @if (IsModuleOpen(module.Name))
                                         {
@@ -385,7 +385,7 @@
                     <div class="tool-section">
                         <button class="tool-section-header" @onclick="() => ToggleSection(7)">
                             <span class="mono">Exports (@Pe.Exports.Functions.Count functions)</span>
-                            <span class="section-arrow @(IsSectionOpen(7) ? "open" : "")">&#x25BE;</span>
+                            <span class="section-arrow @(IsSectionOpen(7) ? "open" : "")"><C2Icon Name="chevron-down" Size="Size.Xs" /></span>
                         </button>
                         @if (IsSectionOpen(7))
                         {
@@ -434,7 +434,7 @@
                     <div class="tool-section">
                         <button class="tool-section-header" @onclick="() => ToggleSection(8)">
                             <span class="mono">Resources (@Pe.Resources.Entries.Count entries)</span>
-                            <span class="section-arrow @(IsSectionOpen(8) ? "open" : "")">&#x25BE;</span>
+                            <span class="section-arrow @(IsSectionOpen(8) ? "open" : "")"><C2Icon Name="chevron-down" Size="Size.Xs" /></span>
                         </button>
                         @if (IsSectionOpen(8))
                         {
@@ -456,7 +456,7 @@
                     <div class="tool-section">
                         <button class="tool-section-header" @onclick="() => ToggleSection(9)">
                             <span class="mono">Debug Info (@Pe.DebugInfo.Entries.Count entries)</span>
-                            <span class="section-arrow @(IsSectionOpen(9) ? "open" : "")">&#x25BE;</span>
+                            <span class="section-arrow @(IsSectionOpen(9) ? "open" : "")"><C2Icon Name="chevron-down" Size="Size.Xs" /></span>
                         </button>
                         @if (IsSectionOpen(9))
                         {
@@ -495,7 +495,7 @@
                     <div class="tool-section">
                         <button class="tool-section-header" @onclick="() => ToggleSection(10)">
                             <span class="mono">Relocations (@Pe.Relocations.Blocks.Count blocks)</span>
-                            <span class="section-arrow @(IsSectionOpen(10) ? "open" : "")">&#x25BE;</span>
+                            <span class="section-arrow @(IsSectionOpen(10) ? "open" : "")"><C2Icon Name="chevron-down" Size="Size.Xs" /></span>
                         </button>
                         @if (IsSectionOpen(10))
                         {
