@@ -137,6 +137,20 @@
     opacity: 1;
 }
 
+/* User agent fallback (merged columns) */
+.ap-col-ua {
+    max-width: 300px;
+}
+
+.ap-ua-text {
+    font-size: 0.72rem;
+    color: var(--c2-text-dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+}
+
 /* System column */
 .ap-sys {
     font-weight: 500;

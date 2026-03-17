@@ -46,6 +46,31 @@
             {
                 <span class="vnc-info vnc-info--accent">@(_vnc.Fps) fps</span>
             }
+            <select class="vnc-select" @onchange="OnDisplayChanged" disabled="@(_vnc.Displays.Length == 0)" title="Display">
+                @if (_vnc.Displays.Length == 0)
+                {
+                    <option>No displays</option>
+                }
+                else
+                {
+                    @foreach (var d in _vnc.Displays)
+                    {
+                        <option value="@d.Index" selected="@(d.Index == _vnc.SelectedDisplay)">@d.Label</option>
+                    }
+                }
+            </select>
+            <select class="vnc-select" @onchange="OnQualityChanged" title="Quality">
+                @foreach (var q in QualityPresets)
+                {
+                    <option value="@q.Value" selected="@(_vnc.Quality == q.Value)">@q.Label</option>
+                }
+            </select>
+            <select class="vnc-select" @onchange="OnScaleModeChanged" title="Scaling">
+                @foreach (var m in ScaleModes)
+                {
+                    <option value="@m.Value" selected="@(_scaleMode == m.Value)">@m.Label</option>
+                }
+            </select>
         </div>
 
         <div class="vnc-toolbar-group">
@@ -75,56 +100,10 @@
                 <C2Icon Name="refresh" Size="Size.Xs" />
             </button>
             <button class="vnc-btn" @onclick="ToggleFullscreen" title="Toggle fullscreen">
-                <C2Icon Name="maximize" Size="Size.Xs" />
+                <C2Icon Name="@(_isFullscreen ? "minimize" : "maximize")" Size="Size.Xs" />
             </button>
         </div>
 
-        @* Settings popover *@
-        <div class="vnc-toolbar-group">
-            <button class="vnc-btn @(_settingsOpen ? "vnc-btn--active" : "")" @onclick="ToggleSettings" @onclick:stopPropagation="true" title="Settings">
-                <C2Icon Name="settings" Size="Size.Xs" />
-            </button>
-        </div>
-
-        @if (_settingsOpen)
-        {
-            <div class="vnc-settings" @onclick:stopPropagation="true">
-                <div class="vnc-settings-row">
-                    <label class="vnc-settings-label">Display</label>
-                    <select class="vnc-select vnc-select--wide" @onchange="OnDisplayChanged" disabled="@(_vnc.Displays.Length == 0)">
-                        @if (_vnc.Displays.Length == 0)
-                        {
-                            <option>No displays</option>
-                        }
-                        else
-                        {
-                            @foreach (var d in _vnc.Displays)
-                            {
-                                <option value="@d.Index" selected="@(d.Index == _vnc.SelectedDisplay)">@d.Label</option>
-                            }
-                        }
-                    </select>
-                </div>
-                <div class="vnc-settings-row">
-                    <label class="vnc-settings-label">Quality</label>
-                    <select class="vnc-select vnc-select--wide" @onchange="OnQualityChanged">
-                        @foreach (var q in QualityPresets)
-                        {
-                            <option value="@q.Value" selected="@(_vnc.Quality == q.Value)">@q.Label</option>
-                        }
-                    </select>
-                </div>
-                <div class="vnc-settings-row">
-                    <label class="vnc-settings-label">Scaling</label>
-                    <select class="vnc-select vnc-select--wide" @onchange="OnScaleModeChanged">
-                        @foreach (var m in ScaleModes)
-                        {
-                            <option value="@m.Value" selected="@(_scaleMode == m.Value)">@m.Label</option>
-                        }
-                    </select>
-                </div>
-            </div>
-        }
     </div>
 </div>
 
@@ -140,7 +119,7 @@
     private DotNetObjectReference<VncPanel>? _dotnetRef;
     private readonly string _sessionId = Guid.NewGuid().ToString("N")[..8];
     private bool _jsInitialized;
-    private bool _settingsOpen;
+    private bool _isFullscreen;
     private string _scaleMode = "stretch";
 
     private static readonly (string Label, uint Value)[] QualityPresets =
@@ -229,8 +208,9 @@
 
     private async Task ToggleFullscreen()
     {
-        if (_jsInitialized)
-            await Js.InvokeVoidAsync("c2Vnc.toggleFullscreen", _sessionId);
+        if (!_jsInitialized) return;
+        await Js.InvokeVoidAsync("c2Vnc.toggleFullscreen", _sessionId);
+        _isFullscreen = !_isFullscreen;
     }
 
     private async Task FocusCanvas()
@@ -238,8 +218,6 @@
         if (_jsInitialized)
             await Js.InvokeVoidAsync("c2Vnc.focus", _sessionId);
     }
-
-    private void ToggleSettings() => _settingsOpen = !_settingsOpen;
 
     private void OnDisplayChanged(ChangeEventArgs e)
     {

@@ -78,9 +78,9 @@
                             <th class="ap-col-ip" title="IP Address">IP Address</th>
                             <th class="ap-col-host" title="Hostname">Hostname</th>
                             <th class="ap-col-sys" title="Operating System / Architecture">System</th>
+                            <th class="ap-col-build" title="Agent Build">Build</th>
                             <th class="ap-col-loc">Location</th>
                             <th class="ap-col-net" title="Network / ISP">Network</th>
-                            <th class="ap-col-build" title="Agent Build">Build</th>
                             <th class="ap-col-seen">Last Seen</th>
                         </tr>
                     </thead>
@@ -121,17 +121,24 @@
                                     </div>
                                 </td>
                                 <td class="ap-col-ip"><code>@row.Ip</code></td>
-                                <td class="ap-col-host">@row.Hostname</td>
-                                <td class="ap-col-sys">
-                                    <span class="ap-sys">@row.Os</span>
-                                    @if (row.Arch != "\u2014")
-                                    {
-                                        <span class="ap-arch">@row.Arch</span>
-                                    }
-                                </td>
+                                @if (row.HasAgentInfo)
+                                {
+                                    <td class="ap-col-host">@row.Hostname</td>
+                                    <td class="ap-col-sys">
+                                        <span class="ap-sys">@row.Os</span>
+                                        @if (row.Arch != "\u2014")
+                                        {
+                                            <span class="ap-arch">@row.Arch</span>
+                                        }
+                                    </td>
+                                    <td class="ap-col-build"><code>@row.Build</code></td>
+                                }
+                                else
+                                {
+                                    <td class="ap-col-ua" colspan="3"><span class="ap-ua-text">@row.UserAgent</span></td>
+                                }
                                 <td class="ap-col-loc">@row.Location</td>
                                 <td class="ap-col-net ap-net-cell">@row.Network</td>
-                                <td class="ap-col-build"><code>@row.Build</code></td>
                                 <td class="ap-col-seen ap-seen-cell">@row.LastSeen</td>
                             </C2Tr>
                         }
@@ -265,6 +272,7 @@
         public string Location { get; set; } = "";
         public string Network { get; set; } = "";
         public string Build { get; set; } = "";
+        public bool HasAgentInfo { get; set; }
         public bool Paired { get; set; }
         public bool PairedByUs { get; set; }
         public string LastSeen { get; set; } = "";
@@ -332,6 +340,9 @@
                 Location = Formatters.FormatLocation(agent),
                 Network = Formatters.FormatNetwork(agent),
                 Build = FormatBuild(agent.BuildNumber, agent.CommitHash),
+                HasAgentInfo = !string.IsNullOrEmpty(agent.Hostname) || !string.IsNullOrEmpty(record?.Hostname)
+                    || !string.IsNullOrEmpty(agent.Os) || !string.IsNullOrEmpty(record?.Os)
+                    || agent.BuildNumber > 0,
                 Paired = agent.Paired,
                 PairedByUs = agent.Paired && Wm.ConnectedAgentIds.Contains(agent.Id),
                 LastSeen = "Now",
@@ -375,6 +386,9 @@
                 Location = Formatters.FormatLocation(record),
                 Network = "\u2014",
                 Build = FormatBuild(record.BuildNumber, record.CommitHash),
+                HasAgentInfo = !string.IsNullOrEmpty(record.Hostname)
+                    || !string.IsNullOrEmpty(record.Os)
+                    || record.BuildNumber > 0,
                 Paired = false,
                 LastSeen = Formatters.FormatTimestamp(record.LastSeen),
                 Country = record.Country,

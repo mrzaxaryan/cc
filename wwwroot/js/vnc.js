@@ -237,8 +237,8 @@ window.c2Vnc = (() => {
         _centerToolbar() {
             if (!this._toolbarEl) return;
             this._toolbarEl.style.left = '50%';
-            this._toolbarEl.style.top = '';
-            this._toolbarEl.style.bottom = '8px';
+            this._toolbarEl.style.top = '8px';
+            this._toolbarEl.style.bottom = 'auto';
             this._toolbarEl.style.transform = 'translateX(-50%)';
         }
 

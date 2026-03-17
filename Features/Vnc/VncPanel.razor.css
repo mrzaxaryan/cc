@@ -46,7 +46,7 @@
 /* ─── Floating toolbar ─── */
 .vnc-toolbar {
     position: absolute;
-    bottom: 8px;
+    top: 8px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 20;
@@ -219,37 +219,8 @@
     background: rgba(243, 139, 168, 0.12);
 }
 
-/* ─── Settings popover ─── */
-.vnc-settings {
-    position: absolute;
-    bottom: calc(100% + 6px);
-    right: 0;
-    min-width: 220px;
-    padding: 0.4rem;
-    background: rgba(24, 24, 40, 0.94);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 6px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-}
-
-.vnc-settings-row {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-}
-
-.vnc-settings-label {
-    font-size: 0.6rem;
-    color: rgba(255, 255, 255, 0.5);
-    white-space: nowrap;
-    min-width: 44px;
-}
 
 /* Fullscreen */
 .vnc-root:fullscreen .vnc-toolbar {
-    bottom: 16px;
+    top: 16px;
 }
