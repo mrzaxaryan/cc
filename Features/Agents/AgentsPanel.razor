@@ -113,7 +113,7 @@
                                 <td class="ap-col-paired">
                                     @if (row.Paired)
                                     {
-                                        <span class="status-dot dot-on" title="Paired with relay"></span>
+                                        <span class="status-dot @(row.PairedByUs ? "dot-on" : "dot-red")" title="@(row.PairedByUs ? "Paired with this C2" : "Paired with another C2")"></span>
                                     }
                                 </td>
                                 <td class="ap-col-seen ap-seen-cell">@row.LastSeen</td>
@@ -135,7 +135,7 @@
                             <span class="ap-card-name">@row.Name</span>
                             @if (row.Paired)
                             {
-                                <span class="status-dot dot-on ap-card-paired" title="Paired with relay"></span>
+                                <span class="status-dot @(row.PairedByUs ? "dot-on" : "dot-red") ap-card-paired" title="@(row.PairedByUs ? "Paired with this C2" : "Paired with another C2")"></span>
                             }
                             <span class="ap-card-seen">@row.LastSeen</span>
                         </div>
@@ -232,6 +232,7 @@
         public string Location { get; set; } = "";
         public string Network { get; set; } = "";
         public bool Paired { get; set; }
+        public bool PairedByUs { get; set; }
         public string LastSeen { get; set; } = "";
         public string Country { get; set; } = "";
         public string City { get; set; } = "";
@@ -295,6 +296,7 @@
                 Location = Formatters.FormatLocation(agent),
                 Network = Formatters.FormatNetwork(agent),
                 Paired = agent.Paired,
+                PairedByUs = agent.Paired && Wm.ConnectedAgentIds.Contains(agent.Id),
                 LastSeen = "Now",
                 Country = agent.Country,
                 City = agent.City,
