@@ -117,7 +117,7 @@
                                 <td>
                                     <div class="ap-name-cell">
                                         <span class="ap-name">@row.Name</span>
-                                        <code class="ap-uuid" title="@row.Uuid">@(row.Uuid is not null ? row.Uuid[..Math.Min(8, row.Uuid.Length)] : "...")</code>
+                                        <code class="ap-uuid" title="@(row.Uuid ?? row.AgentId)">@(row.Uuid is not null ? row.Uuid[..Math.Min(8, row.Uuid.Length)] : !string.IsNullOrEmpty(row.AgentId) ? row.AgentId[..Math.Min(8, row.AgentId.Length)] : "...")</code>
                                     </div>
                                 </td>
                                 <td class="ap-col-ip"><code>@row.Ip</code></td>
@@ -163,7 +163,7 @@
                             {
                                 <span class="status-dot dot-on" title="Online"></span>
                             }
-                            <span class="ap-card-name">@row.Name</span>
+                            <span class="ap-card-name">@(row.Name != "\u2014" ? row.Name : !string.IsNullOrEmpty(row.AgentId) ? row.AgentId[..Math.Min(8, row.AgentId.Length)] : "\u2014")</span>
                             <span class="ap-card-seen">@row.LastSeen</span>
                         </div>
                         <div class="ap-card-details">
