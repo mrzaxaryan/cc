@@ -876,23 +876,22 @@
 
         tileWindows(layout, windowIds) {
             const tiles = computeTileLayout(layout, windowIds);
-            const promises = [];
             tiles.forEach(t => {
                 const el = _windows.get(t.id);
                 if (el) {
                     el.classList.remove('maximized');
-                    promises.push(animateWindow(el, t.rect));
+                    animateWindow(el, t.rect);
                 }
             });
-            // Sync positions back to C#
-            if (_dotnetRef && tiles.length > 0) {
-                _dotnetRef.invokeMethodAsync('OnTileApplied', layout,
-                    tiles.map(t => t.id),
-                    tiles.map(t => t.rect.x), tiles.map(t => t.rect.y),
-                    tiles.map(t => t.rect.w), tiles.map(t => t.rect.h));
-            }
             autoSave();
-            return Promise.all(promises);
+            // Return tile data so C# can update model synchronously before re-render
+            return tiles.map(t => ({
+                id: t.id,
+                x: t.rect.x,
+                y: t.rect.y,
+                w: t.rect.w,
+                h: t.rect.h
+            }));
         },
 
         // Persistence

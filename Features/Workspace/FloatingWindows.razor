@@ -333,10 +333,18 @@
             await Js.InvokeVoidAsync("c2Windows.setMinimized", win.Id, false);
         }
         var ids = Wm.Windows.Select(w => w.Id).ToArray();
-        await Js.InvokeVoidAsync("c2Windows.tileWindows", layout, ids);
-        // Sync positions back to C#
-        // The JS tileWindows already calls OnTileApplied via dotnetRef
+        var tiles = await Js.InvokeAsync<TilePosition[]>("c2Windows.tileWindows", layout, ids);
+        // Update model synchronously before Blazor re-renders
+        if (tiles is { Length: > 0 })
+            Wm.ApplyTilePositions(
+                tiles.Select(t => t.Id).ToArray(),
+                tiles.Select(t => t.X).ToArray(),
+                tiles.Select(t => t.Y).ToArray(),
+                tiles.Select(t => t.W).ToArray(),
+                tiles.Select(t => t.H).ToArray());
     }
+
+    private record TilePosition(int Id, double X, double Y, double W, double H);
 
     private void MinimizeAll()
     {
