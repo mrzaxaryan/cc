@@ -178,6 +178,7 @@ public class RelayConnectionService : IAsyncDisposable
                 {
                     var (guid, hostname, architecture, platform) = RelaySocket.ReadSystemInfo(response);
                     var uuid = guid.ToString();
+                    agent.Hostname = hostname;
                     agent.Os = platform;
                     agent.Arch = architecture;
 
@@ -188,6 +189,7 @@ public class RelayConnectionService : IAsyncDisposable
                         var liveAgent = rs.Agents.Connections.FirstOrDefault(a => a.Id == agent.Id);
                         if (liveAgent is not null && liveAgent != agent)
                         {
+                            liveAgent.Hostname = hostname;
                             liveAgent.Os = platform;
                             liveAgent.Arch = architecture;
                         }

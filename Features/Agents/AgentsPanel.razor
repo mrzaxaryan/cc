@@ -76,6 +76,7 @@
                             <th class="ap-col-status" title="Connection status">Status</th>
                             <th>Name</th>
                             <th class="ap-col-ip" title="IP Address">IP Address</th>
+                            <th class="ap-col-host" title="Hostname">Hostname</th>
                             <th class="ap-col-sys" title="Operating System / Architecture">System</th>
                             <th class="ap-col-loc">Location</th>
                             <th class="ap-col-net" title="Network / ISP">Network</th>
@@ -101,6 +102,7 @@
                                     </div>
                                 </td>
                                 <td class="ap-col-ip"><code>@row.Ip</code></td>
+                                <td class="ap-col-host">@row.Hostname</td>
                                 <td class="ap-col-sys">
                                     <span class="ap-sys">@row.Os</span>
                                     @if (row.Arch != "\u2014")
@@ -141,6 +143,10 @@
                         </div>
                         <div class="ap-card-details">
                             <span class="ap-card-detail"><code>@row.Ip</code></span>
+                            @if (!string.IsNullOrEmpty(row.Hostname) && row.Hostname != "\u2014")
+                            {
+                                <span class="ap-card-detail">@row.Hostname</span>
+                            }
                             <span class="ap-card-detail">@row.Os @(row.Arch != "\u2014" ? row.Arch : "")</span>
                             @if (!string.IsNullOrEmpty(row.Location) && row.Location != "\u2014")
                             {
@@ -227,6 +233,7 @@
         public string AgentId { get; set; } = "";
         public string RelayUrl { get; set; } = "";
         public string Ip { get; set; } = "";
+        public string Hostname { get; set; } = "";
         public string Os { get; set; } = "";
         public string Arch { get; set; } = "";
         public string Location { get; set; } = "";
@@ -289,6 +296,8 @@
                 AgentId = agent.Id,
                 RelayUrl = relayUrl,
                 Ip = agent.Ip,
+                Hostname = !string.IsNullOrEmpty(agent.Hostname) ? agent.Hostname
+                    : !string.IsNullOrEmpty(record?.Hostname) ? record.Hostname : "\u2014",
                 Os = !string.IsNullOrEmpty(agent.Os) ? agent.Os
                     : !string.IsNullOrEmpty(record?.Os) ? record.Os : "\u2014",
                 Arch = !string.IsNullOrEmpty(agent.Arch) ? agent.Arch
@@ -332,6 +341,7 @@
                 AgentId = "",
                 RelayUrl = relayEntry?.Url ?? "",
                 Ip = record.Ip,
+                Hostname = !string.IsNullOrEmpty(record.Hostname) ? record.Hostname : "\u2014",
                 Os = !string.IsNullOrEmpty(record.Os) ? record.Os : "\u2014",
                 Arch = !string.IsNullOrEmpty(record.Arch) ? record.Arch : "\u2014",
                 Location = Formatters.FormatLocation(record),
@@ -363,6 +373,7 @@
         if (IsCopyable(row.Name)) items.Add(new("Name", row.Name));
         if (row.Uuid is not null) items.Add(new("UUID", row.Uuid));
         if (IsCopyable(row.Ip)) items.Add(new("IP", row.Ip));
+        if (IsCopyable(row.Hostname)) items.Add(new("Hostname", row.Hostname));
         var sys = row.Arch != "\u2014" ? $"{row.Os} {row.Arch}" : row.Os;
         if (IsCopyable(sys)) items.Add(new("System", sys));
         if (IsCopyable(row.Location)) items.Add(new("Location", row.Location));

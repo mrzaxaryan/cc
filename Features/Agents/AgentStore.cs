@@ -18,6 +18,8 @@ public class AgentRecord
     [JsonPropertyName("region")] public string Region { get; set; } = "";
     [JsonPropertyName("continent")] public string Continent { get; set; } = "";
     [JsonPropertyName("timezone")] public string Timezone { get; set; } = "";
+    /// <summary>Hostname of the agent machine.</summary>
+    [JsonPropertyName("hostname")] public string Hostname { get; set; } = "";
     /// <summary>Operating system of the agent (e.g. "Windows", "Linux").</summary>
     [JsonPropertyName("os")] public string Os { get; set; } = "";
     /// <summary>CPU architecture of the agent (e.g. "x64", "arm64").</summary>
@@ -70,6 +72,7 @@ public class AgentStore
             Region = agent.Region,
             Continent = agent.Continent,
             Timezone = agent.Timezone,
+            Hostname = agent.Hostname,
             Os = agent.Os,
             Arch = agent.Arch,
             FirstSeen = now,

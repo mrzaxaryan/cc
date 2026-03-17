@@ -44,6 +44,8 @@ public class AgentConnection
     public string TlsVersion { get; set; } = "";
     /// <summary>HTTP protocol version (e.g. "h2", "HTTP/2").</summary>
     public string HttpVersion { get; set; } = "";
+    /// <summary>Hostname of the agent machine.</summary>
+    public string Hostname { get; set; } = "";
     /// <summary>Operating system of the agent (e.g. "Windows", "Linux").</summary>
     public string Os { get; set; } = "";
     /// <summary>CPU architecture of the agent (e.g. "x64", "arm64").</summary>
