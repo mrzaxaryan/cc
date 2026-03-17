@@ -62,6 +62,24 @@ else
             </button>
         }
 
+        <div class="tools-menu" @onfocusout="OnToolsFocusOut" tabindex="-1">
+            <button class="mdi-menu-item" @onclick="ToggleToolsMenu">
+                <C2Icon Name="tool" Size="Size.Xs" /> Tools <C2Icon Name="chevron-down" Size="Size.Xs" CssClass="brand-chevron" />
+            </button>
+            @if (toolsMenuOpen)
+            {
+                <div class="tools-popup">
+                    @foreach (var tool in ToolItems)
+                    {
+                        var panel = tool.Panel;
+                        <button class="brand-popup-item" @onclick="() => OpenTool(panel)">
+                            <C2Icon Name="@tool.Icon" Size="Size.Xs" /> @tool.Label
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+
         <div class="mdi-spacer"></div>
 
         @* Notifications *@
@@ -172,6 +190,10 @@ else
         new("Uploads", "sync", "Uploads"),
         new("SearchJobs", "search", "Search"),
         new("ExtensionGroups", "database", "Extensions"),
+    ];
+
+    private static readonly MenuItem[] ToolItems =
+    [
         new("PeParser", "file", "PE Parser"),
         new("Base64", "code", "Base64"),
         new("LnkTool", "link", "LNK Tool"),
@@ -182,6 +204,7 @@ else
     private bool dropdownOpen;
     private bool updateAvailable;
     private bool brandMenuOpen;
+    private bool toolsMenuOpen;
     private bool isShutdown;
     private Timer? _updateTimer;
 
@@ -268,6 +291,24 @@ else
         if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
         if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h ago";
         return dt.ToString("MMM d");
+    }
+
+    private void ToggleToolsMenu() => toolsMenuOpen = !toolsMenuOpen;
+
+    private void OpenTool(string panel)
+    {
+        toolsMenuOpen = false;
+        Wm.OpenWindow(panel);
+    }
+
+    private async void OnToolsFocusOut()
+    {
+        await Task.Delay(200);
+        await InvokeAsync(() =>
+        {
+            toolsMenuOpen = false;
+            StateHasChanged();
+        });
     }
 
     private void ToggleBrandMenu() => brandMenuOpen = !brandMenuOpen;

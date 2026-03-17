@@ -1,6 +1,8 @@
 /* Dropdown item */
 .c2-dropdown-item {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 6px;
     width: 100%;
     background: none;
     border: none;
