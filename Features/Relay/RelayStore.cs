@@ -10,6 +10,7 @@ public class RelayRecord
     [JsonPropertyName("url")] public string Url { get; set; } = "";
     [JsonPropertyName("name")] public string Name { get; set; } = "";
     [JsonPropertyName("active")] public bool Enabled { get; set; }
+    [JsonPropertyName("token")] public string Token { get; set; } = "";
 }
 
 public class RelayStore
@@ -80,11 +81,11 @@ public class RelayStore
         }
     }
 
-    public async Task AddRelay(string name, string url)
+    public async Task AddRelay(string name, string url, string token = "")
     {
         url = url.TrimEnd('/');
         if (_relays!.Any(r => r.Url == url)) return;
-        var entry = new RelayRecord { Id = Guid.NewGuid().ToString("N")[..8], Url = url, Name = name };
+        var entry = new RelayRecord { Id = Guid.NewGuid().ToString("N")[..8], Url = url, Name = name, Token = token };
         _relays!.Add(entry);
         await _js.InvokeVoidAsync("c2RelayDb.put", entry);
         _bus.Publish(new RelayStoreChangedEvent());
@@ -117,7 +118,7 @@ public class RelayStore
         }
     }
 
-    public async Task UpdateRelay(string oldUrl, string newName, string newUrl)
+    public async Task UpdateRelay(string oldUrl, string newName, string newUrl, string token = "")
     {
         newUrl = newUrl.TrimEnd('/');
         var entry = _relays?.FirstOrDefault(r => r.Url == oldUrl);
@@ -131,7 +132,10 @@ public class RelayStore
         }
 
         entry.Name = newName;
+        entry.Token = token;
         await _js.InvokeVoidAsync("c2RelayDb.put", entry);
         _bus.Publish(new RelayStoreChangedEvent());
     }
+
+    public string GetTokenByUrl(string url) => _relays?.FirstOrDefault(r => r.Url == url)?.Token ?? "";
 }

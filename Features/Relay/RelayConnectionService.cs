@@ -131,6 +131,20 @@ public class RelayConnectionService : IAsyncDisposable
         return (agentId, relayEntry.Url);
     }
 
+    public async Task<(int Disconnected, string[] AgentIds)?> DisconnectAllAgents(string relayUrl)
+    {
+        var httpUrl = RelayStore.GetHttpBaseUrl(relayUrl);
+        using var client = new HttpClient();
+        var token = _relayStore.GetTokenByUrl(relayUrl);
+        if (!string.IsNullOrEmpty(token))
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        var response = await client.PostAsync($"{httpUrl}/disconnect-all-agents", null);
+        if (!response.IsSuccessStatusCode) return null;
+        var json = await response.Content.ReadAsStringAsync();
+        var result = JsonSerializer.Deserialize<DisconnectAllResult>(json, JsonOptions);
+        return result is not null ? (result.Disconnected, result.AgentIds) : null;
+    }
+
     public void ForceReconnect(string url)
     {
         if (_relayStates.TryGetValue(url, out var rs))
@@ -147,7 +161,7 @@ public class RelayConnectionService : IAsyncDisposable
         if (existingWin?.Relay is not null)
             return existingWin.Relay;
 
-        var relay = new RelaySocket { BaseUrl = relayUrl };
+        var relay = new RelaySocket { BaseUrl = relayUrl, Token = _relayStore.GetTokenByUrl(relayUrl) };
         try
         {
             await relay.Connect(agentId);
@@ -166,7 +180,7 @@ public class RelayConnectionService : IAsyncDisposable
     private async Task FetchUuid(AgentConnection agent, string relayUrl, int attempt = 0)
     {
         const int maxRetries = 2;
-        var relay = new RelaySocket { BaseUrl = relayUrl };
+        var relay = new RelaySocket { BaseUrl = relayUrl, Token = _relayStore.GetTokenByUrl(relayUrl) };
         try
         {
             await relay.Connect(agent.Id);
@@ -285,7 +299,11 @@ public class RelayConnectionService : IAsyncDisposable
             {
                 ws = new ClientWebSocket();
                 rs.Ws = ws;
-                await ws.ConnectAsync(new Uri($"{RelayStore.GetWsBaseUrl(relayUrl)}/events"), token);
+                var eventsUri = $"{RelayStore.GetWsBaseUrl(relayUrl)}/events";
+                var authToken = _relayStore.GetTokenByUrl(relayUrl);
+                if (!string.IsNullOrEmpty(authToken))
+                    eventsUri += $"?token={Uri.EscapeDataString(authToken)}";
+                await ws.ConnectAsync(new Uri(eventsUri), token);
                 rs.Connected = true;
                 _bus.Publish(new RelayConnectionChangedEvent(relayUrl, true));
 

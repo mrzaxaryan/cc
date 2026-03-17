@@ -24,13 +24,18 @@ public class RelaySocket
     public void AddRef() => Interlocked.Increment(ref InUseCount);
     public void Release() => Interlocked.Decrement(ref InUseCount);
 
+    public string? Token { get; set; }
+
     public async Task Connect(string agentId, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(BaseUrl))
             throw new InvalidOperationException("BaseUrl must be set before connecting.");
         var baseUrl = RelayStore.GetWsBaseUrl(BaseUrl.TrimEnd('/'));
+        var uri = $"{baseUrl}/relay/{agentId}";
+        if (!string.IsNullOrEmpty(Token))
+            uri += $"?token={Uri.EscapeDataString(Token)}";
         _ws = new ClientWebSocket();
-        await _ws.ConnectAsync(new Uri($"{baseUrl}/relay/{agentId}"), ct);
+        await _ws.ConnectAsync(new Uri(uri), ct);
         ConnectedAgentId = agentId;
     }
 

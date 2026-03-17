@@ -86,6 +86,12 @@ public class EventListenerConnection
     public string HttpVersion { get; set; } = "";
 }
 
+public class DisconnectAllResult
+{
+    public int Disconnected { get; set; }
+    public string[] AgentIds { get; set; } = [];
+}
+
 // WebSocket event models
 public class AgentEvent
 {

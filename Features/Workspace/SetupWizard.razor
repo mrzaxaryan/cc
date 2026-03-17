@@ -131,6 +131,7 @@
                                 <div class="su-relay-info">
                                     <span class="su-relay-name">@relay.Name</span>
                                     <span class="su-relay-url">@relay.Url</span>
+                                    <span class="su-relay-token">Token: @(string.IsNullOrEmpty(relay.Token) ? "not set" : "configured")</span>
                                 </div>
                                 <div class="su-relay-actions">
                                     <C2Btn Size="Size.Xs" OnClick="() => EditRelay(relay)" Title="Edit">EDIT</C2Btn>
@@ -160,6 +161,11 @@
                         <label class="su-label">Relay URL</label>
                         <C2Input @bind-Value="relayUrl" Size="Size.Md" Placeholder="wss://relay.example.com" Monospace Disabled="@(editingRelay is not null)" />
                         <span class="su-field-hint">Must start with wss:// or ws://</span>
+                    </div>
+                    <div class="su-field">
+                        <label class="su-label">Auth Token</label>
+                        <C2Input @bind-Value="relayToken" Size="Size.Md" Placeholder="Bearer token for relay authentication" Monospace Type="password" />
+                        <span class="su-field-hint">Required for authenticated relay servers</span>
                     </div>
                 </div>
 
@@ -260,6 +266,7 @@
     private bool saving;
     private string relayName = "";
     private string relayUrl = "";
+    private string relayToken = "";
     private RelayRecord? editingRelay;
     private HashSet<string> selectedExtGroups = new(ExtensionGroupStore.DefaultGroups.Keys);
     private HashSet<Step> completedSteps = new();
@@ -318,6 +325,7 @@
         var enabled = Relay.EnabledRelays.FirstOrDefault();
         relayName = enabled?.Name ?? "";
         relayUrl = enabled?.Url ?? "";
+        relayToken = enabled?.Token ?? "";
     }
 
     private static string StepLabel(Step s) => StepLabels.GetValueOrDefault(s, s.ToString());
@@ -399,10 +407,11 @@
         StateHasChanged();
         try
         {
-            await Relay.AddRelay(name, url);
+            await Relay.AddRelay(name, url, relayToken.Trim());
             await Relay.SetEnabled(url, true);
             relayName = "";
             relayUrl = "";
+            relayToken = "";
         }
         catch (Exception ex) { Msg.Error("Add Relay Failed", ex.Message, "Setup"); }
         finally { saving = false; }
@@ -413,6 +422,7 @@
         editingRelay = relay;
         relayName = relay.Name;
         relayUrl = relay.Url;
+        relayToken = relay.Token;
     }
 
     private async Task UpdateRelay()
@@ -425,7 +435,7 @@
         StateHasChanged();
         try
         {
-            await Relay.UpdateRelayName(editingRelay.Url, name);
+            await Relay.UpdateRelay(editingRelay.Url, name, editingRelay.Url, relayToken.Trim());
             CancelEditRelay();
         }
         catch (Exception ex) { Msg.Error("Update Relay Failed", ex.Message, "Setup"); }
@@ -437,6 +447,7 @@
         editingRelay = null;
         relayName = "";
         relayUrl = "";
+        relayToken = "";
     }
 
     private async Task ToggleRelay(RelayRecord relay)

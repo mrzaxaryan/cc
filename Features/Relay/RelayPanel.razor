@@ -1,5 +1,6 @@
 @inject HttpClient Http
 @inject RelayStore Store
+@inject RelayConnectionService RelaySvc
 @inject MessageService Msg
 
 <PanelLayout Title="Relay">
@@ -29,6 +30,10 @@
                                 <label class="rp-label">URL</label>
                                 <C2Input @bind-Value="newUrl" BindOnInput Placeholder="wss://relay.example.com" Monospace />
                             </div>
+                            <div class="rp-add-field rp-add-field-wide">
+                                <label class="rp-label">Token</label>
+                                <C2Input @bind-Value="newToken" BindOnInput Placeholder="Bearer token" Monospace Type="password" />
+                            </div>
                             <div class="rp-add-action">
                                 <C2Btn Variant="BtnVariant.Success" OnClick="AddRelay"
                                        Disabled="@(string.IsNullOrWhiteSpace(newName) || string.IsNullOrWhiteSpace(newUrl))">
@@ -45,6 +50,7 @@
                             <th style="width:80px">ID</th>
                             <th>Name</th>
                             <th>URL</th>
+                            <th>Token</th>
                             <th style="width:160px"></th>
                         </tr>
                     </thead>
@@ -65,6 +71,7 @@
                                 {
                                     <td><C2Input @bind-Value="editName" /></td>
                                     <td><C2Input @bind-Value="editUrl" Monospace /></td>
+                                    <td><C2Input @bind-Value="editToken" Monospace Type="password" Placeholder="Bearer token" /></td>
                                     <td class="rp-actions">
                                         <C2Btn Variant="BtnVariant.Success" OnClick="SaveEdit"
                                                Disabled="@(string.IsNullOrWhiteSpace(editName) || string.IsNullOrWhiteSpace(editUrl))"
@@ -76,6 +83,7 @@
                                 {
                                     <td>@relay.Name</td>
                                     <td><code class="rp-code">@relay.Url</code></td>
+                                    <td><code class="rp-code">@(string.IsNullOrEmpty(relay.Token) ? "-" : "***")</code></td>
                                     <td class="rp-actions">
                                         <C2Btn OnClick="() => StartEdit(relay)" Title="Edit"><C2Icon Name="edit" Size="Size.Xs" /></C2Btn>
                                         @if (isEnabled)
@@ -150,6 +158,14 @@
                                     <span class="rp-stat-label">Listeners</span>
                                 </div>
                             </C2Card>
+                        </div>
+
+                        <div class="rp-section-actions">
+                            <C2Btn Variant="BtnVariant.Danger" OnClick="() => DisconnectAll(relay.Url)"
+                                   Disabled="@(status.Agents.Count == 0)"
+                                   Title="Disconnect all agents on this relay">
+                                <C2Icon Name="x" Size="Size.Xs" /> Disconnect All Agents
+                            </C2Btn>
                         </div>
 
                         <h6 class="rp-section-title">Agents</h6>
@@ -281,10 +297,12 @@
     private bool showAdd;
     private string newName = "";
     private string newUrl = "";
+    private string newToken = "";
 
     private string? editingUrl;
     private string editName = "";
     private string editUrl = "";
+    private string editToken = "";
 
     private readonly Dictionary<string, HealthStatus> relayHealth = new();
     private readonly Dictionary<string, string> relayErrors = new();
@@ -320,7 +338,13 @@
         var httpUrl = RelayStore.GetHttpBaseUrl(relayUrl);
         try
         {
-            var status = await Http.GetFromJsonAsync<HealthStatus>($"{httpUrl}/status");
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"{httpUrl}/status");
+            var token = Store.GetTokenByUrl(relayUrl);
+            if (!string.IsNullOrEmpty(token))
+                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            var response = await Http.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            var status = await response.Content.ReadFromJsonAsync<HealthStatus>();
             if (status is not null)
                 relayHealth[relayUrl] = status;
         }
@@ -338,9 +362,10 @@
     private async Task AddRelay()
     {
         if (string.IsNullOrWhiteSpace(newName) || string.IsNullOrWhiteSpace(newUrl)) return;
-        await Store.AddRelay(newName.Trim(), newUrl.Trim());
+        await Store.AddRelay(newName.Trim(), newUrl.Trim(), newToken.Trim());
         newName = "";
         newUrl = "";
+        newToken = "";
         showAdd = false;
     }
 
@@ -361,6 +386,7 @@
         editingUrl = relay.Url;
         editName = relay.Name;
         editUrl = relay.Url;
+        editToken = relay.Token;
     }
 
     private void ToggleCollapse(string url)
@@ -374,7 +400,28 @@
     private async Task SaveEdit()
     {
         if (editingUrl is null || string.IsNullOrWhiteSpace(editName) || string.IsNullOrWhiteSpace(editUrl)) return;
-        await Store.UpdateRelay(editingUrl, editName.Trim(), editUrl.Trim());
+        await Store.UpdateRelay(editingUrl, editName.Trim(), editUrl.Trim(), editToken.Trim());
         editingUrl = null;
+    }
+
+    private async Task DisconnectAll(string relayUrl)
+    {
+        try
+        {
+            var result = await RelaySvc.DisconnectAllAgents(relayUrl);
+            if (result is not null)
+            {
+                Msg.Success("Agents Disconnected", $"Disconnected {result.Value.Disconnected} agent(s)", "Relay");
+                await LoadRelayStatus(relayUrl);
+            }
+            else
+            {
+                Msg.Error("Failed", "Could not disconnect agents", "Relay");
+            }
+        }
+        catch (Exception ex)
+        {
+            Msg.Error("Error", ex.Message, "Relay");
+        }
     }
 }
