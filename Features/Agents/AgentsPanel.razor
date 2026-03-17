@@ -429,6 +429,7 @@
         ctxAgentId = row.AgentId;
         ctxRelayUrl = row.RelayUrl;
         ctxIsOnline = row.IsOnline;
+        ctxPairedOther = row.Paired && !row.PairedByUs;
         ctxHasCache = Cache.HasDirectory && !string.IsNullOrEmpty(row.Uuid);
         ctxRow = row;
         ctxVisible = true;
