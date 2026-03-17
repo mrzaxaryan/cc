@@ -80,31 +80,43 @@ window.c2Vnc = (() => {
 
         // --- Rendering ---
 
-        async renderFullFrame(jpegBytes) {
-            const blob = new Blob([jpegBytes], { type: 'image/jpeg' });
-            const bmp = await createImageBitmap(blob);
-            this.frame?.close();
-            this.frame = bmp;
-            this.frameW = bmp.width;
-            this.frameH = bmp.height;
+        async renderFrame(isFullFrame, sections) {
+            if (!sections || sections.length === 0) return;
 
-            this.offscreen = new OffscreenCanvas(bmp.width, bmp.height);
-            this.offCtx = this.offscreen.getContext('2d', { alpha: false });
-            this.offCtx.drawImage(bmp, 0, 0);
+            // Decode all JPEG sections in parallel
+            const decoded = await Promise.all(
+                sections.map(s => createImageBitmap(new Blob([s.data], { type: 'image/jpeg' })))
+            );
 
-            this._requestPaint();
-        }
+            if (isFullFrame) {
+                // First section is the full frame — sets dimensions and resets offscreen
+                const bmp = decoded[0];
+                this.frame?.close();
+                this.frame = bmp;
+                this.frameW = bmp.width;
+                this.frameH = bmp.height;
 
-        async renderSection(x, y, jpegBytes) {
-            if (!this.offscreen || !this.offCtx) return;
+                this.offscreen = new OffscreenCanvas(bmp.width, bmp.height);
+                this.offCtx = this.offscreen.getContext('2d', { alpha: false });
+                this.offCtx.drawImage(bmp, 0, 0);
 
-            const blob = new Blob([jpegBytes], { type: 'image/jpeg' });
-            const bmp = await createImageBitmap(blob);
-            this.offCtx.drawImage(bmp, x, y);
-            bmp.close();
+                // Draw any additional sections
+                for (let i = 1; i < decoded.length; i++) {
+                    this.offCtx.drawImage(decoded[i], sections[i].x, sections[i].y);
+                    decoded[i].close();
+                }
+            } else {
+                if (!this.offscreen || !this.offCtx) {
+                    for (const bmp of decoded) bmp.close();
+                    return;
+                }
+                // All sections are incremental
+                for (let i = 0; i < decoded.length; i++) {
+                    this.offCtx.drawImage(decoded[i], sections[i].x, sections[i].y);
+                    decoded[i].close();
+                }
+            }
 
-            this.frame?.close();
-            this.frame = await createImageBitmap(this.offscreen);
             this._requestPaint();
         }
 
@@ -125,7 +137,8 @@ window.c2Vnc = (() => {
             ctx.fillStyle = '#000';
             ctx.fillRect(0, 0, cw, ch);
 
-            if (!this.frame) return;
+            const src = this.offscreen || this.frame;
+            if (!src) return;
 
             const fw = this.frameW;
             const fh = this.frameH;
@@ -148,7 +161,7 @@ window.c2Vnc = (() => {
             }
             // 'stretch': dx=0, dy=0, dw=cw, dh=ch (default)
 
-            ctx.drawImage(this.frame, dx, dy, dw, dh);
+            ctx.drawImage(src, dx, dy, dw, dh);
 
             // Store for mouse coordinate mapping
             this._dx = dx;
@@ -339,14 +352,9 @@ window.c2Vnc = (() => {
             sessions.set(id, new VncSession(rootEl, canvas, dotnetRef));
         },
 
-        async renderFullFrame(id, jpegBytes) {
+        async renderFrame(id, isFullFrame, sections) {
             const s = sessions.get(id);
-            if (s) await s.renderFullFrame(jpegBytes);
-        },
-
-        async renderSection(id, x, y, jpegBytes) {
-            const s = sessions.get(id);
-            if (s) await s.renderSection(x, y, jpegBytes);
+            if (s) await s.renderFrame(isFullFrame, sections);
         },
 
         setStreaming(id, streaming) {

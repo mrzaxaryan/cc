@@ -39,11 +39,8 @@ public sealed class VncService : IDisposable
     /// <summary>Raised when UI state changes (streaming toggled, displays loaded, etc.).</summary>
     public event Action? StateChanged;
 
-    /// <summary>Raised when a full frame (JPEG bytes) is ready for rendering.</summary>
-    public event Func<byte[], Task>? FullFrameReady;
-
-    /// <summary>Raised for each incremental section: (x, y, jpegData).</summary>
-    public event Func<uint, uint, byte[], Task>? SectionReady;
+    /// <summary>Raised with the full parsed frame: (isFullFrame, sections). Single JS interop call per frame.</summary>
+    public event Func<bool, ScreenSection[], Task>? FrameReady;
 
     /// <summary>Raised when streaming starts or stops (bool = isStreaming).</summary>
     public event Action<bool>? StreamingChanged;
@@ -179,27 +176,10 @@ public sealed class VncService : IDisposable
         if (sections.Length == 0) return;
 
         if (fullScreen)
-        {
             _hasFrame = true;
-            if (FullFrameReady is not null)
-                await FullFrameReady.Invoke(sections[0].JpegData);
 
-            // Additional sections drawn incrementally
-            for (var i = 1; i < sections.Length; i++)
-            {
-                if (SectionReady is not null)
-                    await SectionReady.Invoke(sections[i].X, sections[i].Y, sections[i].JpegData);
-            }
-        }
-        else
-        {
-            // All sections incremental
-            foreach (var s in sections)
-            {
-                if (SectionReady is not null)
-                    await SectionReady.Invoke(s.X, s.Y, s.JpegData);
-            }
-        }
+        if (FrameReady is not null)
+            await FrameReady.Invoke(fullScreen, sections);
 
         UpdateFps();
     }

@@ -7,6 +7,8 @@ public class RelaySocket
 {
     private ClientWebSocket? _ws;
     private readonly SemaphoreSlim _sendLock = new(1, 1);
+    private readonly byte[] _recvBuffer = new byte[256 * 1024];
+    private readonly MemoryStream _recvMs = new(256 * 1024);
 
     public ClientWebSocket? WebSocket => _ws;
     public bool IsConnected => _ws is not null && _ws.State == WebSocketState.Open;
@@ -54,16 +56,15 @@ public class RelaySocket
 
             await _ws!.SendAsync(payload, WebSocketMessageType.Binary, true, CancellationToken.None);
 
-            var buffer = new byte[65536];
-            using var ms = new MemoryStream();
+            _recvMs.SetLength(0);
             WebSocketReceiveResult result;
             do
             {
-                result = await _ws.ReceiveAsync(buffer, CancellationToken.None);
-                ms.Write(buffer, 0, result.Count);
+                result = await _ws.ReceiveAsync(_recvBuffer, CancellationToken.None);
+                _recvMs.Write(_recvBuffer, 0, result.Count);
             } while (!result.EndOfMessage);
 
-            return ms.ToArray();
+            return _recvMs.ToArray();
         }
         finally
         {

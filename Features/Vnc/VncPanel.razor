@@ -167,8 +167,7 @@
     {
         _vnc = new VncService(Relay!, Msg);
         _vnc.StateChanged += OnVncStateChanged;
-        _vnc.FullFrameReady += OnFullFrame;
-        _vnc.SectionReady += OnSection;
+        _vnc.FrameReady += OnFrame;
         _vnc.StreamingChanged += OnStreamingChanged;
 
         On<AgentOnlineEvent>(e =>
@@ -194,18 +193,18 @@
         }
     }
 
-    // --- Frame rendering via JS interop ---
+    // --- Frame rendering via JS interop (single call per frame) ---
 
-    private async Task OnFullFrame(byte[] jpegData)
+    private async Task OnFrame(bool isFullFrame, ScreenSection[] sections)
     {
         if (!_jsInitialized) return;
-        await Js.InvokeVoidAsync("c2Vnc.renderFullFrame", _sessionId, jpegData);
-    }
 
-    private async Task OnSection(uint x, uint y, byte[] jpegData)
-    {
-        if (!_jsInitialized) return;
-        await Js.InvokeVoidAsync("c2Vnc.renderSection", _sessionId, x, y, jpegData);
+        // Build a flat array of section descriptors for JS: [{x, y, data}, ...]
+        var jsSections = new object[sections.Length];
+        for (var i = 0; i < sections.Length; i++)
+            jsSections[i] = new { x = sections[i].X, y = sections[i].Y, data = sections[i].JpegData };
+
+        await Js.InvokeVoidAsync("c2Vnc.renderFrame", _sessionId, isFullFrame, jsSections);
     }
 
     private void OnStreamingChanged(bool streaming)
@@ -299,8 +298,7 @@
     public new void Dispose()
     {
         _vnc.StateChanged -= OnVncStateChanged;
-        _vnc.FullFrameReady -= OnFullFrame;
-        _vnc.SectionReady -= OnSection;
+        _vnc.FrameReady -= OnFrame;
         _vnc.StreamingChanged -= OnStreamingChanged;
         _vnc.Dispose();
         base.Dispose();
