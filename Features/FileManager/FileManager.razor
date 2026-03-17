@@ -600,8 +600,10 @@
         var parentId = await Vfs.ResolveOrCreatePathAsync(AgentUuid, parentRemotePath);
         var vfsFile = await Vfs.PutFileAsync(AgentUuid, parentId, entry.Name, remotePath.Replace('\\', '/'), totalSize);
         var record = Downloads.Find(AgentUuid, remotePath);
-        if (record is null || record.Status == DownloadStatus.Completed || record.Status == DownloadStatus.Failed)
+        if (record is null)
             await Downloads.AddAsync(AgentUuid, AgentName ?? "", remotePath, entry.Name, vfsFile.Id, totalSize);
+        else if (record.Status is DownloadStatus.Completed or DownloadStatus.Failed)
+            await Downloads.RequeueAsync(record.Id, vfsFile.Id, totalSize);
         else if (record.Status == DownloadStatus.Paused)
             await Downloads.QueueAsync(record.Id);
     }

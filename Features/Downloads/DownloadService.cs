@@ -99,6 +99,7 @@ public class DownloadService : IDisposable
         {
             relay = await _relaySvc.CreateRelay(agentId, relayUrl);
             if (relay is null) return;
+            relay.AddRef();
 
             while (!_disposing && !_relaySvc.IsDisposing)
             {
@@ -142,8 +143,10 @@ public class DownloadService : IDisposable
         catch { }
         finally
         {
+            if (relay is not null)
+                relay.Release();
             _processingAgents.Remove(uuid);
-            if (relay is not null && !_wm.Windows.Any(w => w.Relay == relay))
+            if (relay is not null && !_wm.Windows.Any(w => w.Relay == relay) && relay.InUseCount <= 0)
                 await relay.Disconnect();
         }
     }

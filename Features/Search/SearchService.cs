@@ -103,6 +103,7 @@ public class SearchService : IDisposable
         {
             relay = await _relaySvc.CreateRelay(agentId, relayUrl);
             if (relay is null) return;
+            relay.AddRef();
 
             while (!_disposing && !_relaySvc.IsDisposing)
             {
@@ -145,8 +146,10 @@ public class SearchService : IDisposable
         catch { }
         finally
         {
+            if (relay is not null)
+                relay.Release();
             _searchingAgents.Remove(uuid);
-            if (relay is not null && !_wm.Windows.Any(w => w.Relay == relay))
+            if (relay is not null && !_wm.Windows.Any(w => w.Relay == relay) && relay.InUseCount <= 0)
                 await relay.Disconnect();
         }
     }
@@ -209,9 +212,14 @@ public class SearchService : IDisposable
                         if (scan.AutoDownload && _cache.HasDirectory)
                         {
                             var existing = _downloads.Find(scan.AgentUuid, entryRemotePath);
-                            if (existing is null || existing.Status == DownloadStatus.Failed)
+                            if (existing is null)
                             {
                                 await _downloads.AddAsync(scan.AgentUuid, scan.AgentName, entryRemotePath, entry.Name, vfsFile.Id, (long)entry.Size);
+                                scan.FilesQueued++;
+                            }
+                            else if (existing.Status == DownloadStatus.Failed)
+                            {
+                                await _downloads.RequeueAsync(existing.Id, vfsFile.Id, (long)entry.Size);
                                 scan.FilesQueued++;
                             }
                         }

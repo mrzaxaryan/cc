@@ -106,7 +106,8 @@ public class WindowManager
     {
         Windows.Remove(win);
         // Only disconnect relay if no other window still uses it
-        if (win.Relay is not null && !Windows.Any(w => w.Relay == win.Relay))
+        // and no background service (e.g. upload) is actively using it
+        if (win.Relay is not null && !Windows.Any(w => w.Relay == win.Relay) && win.Relay.InUseCount <= 0)
             await win.Relay.Disconnect();
         NotifyChanged();
     }
@@ -115,7 +116,7 @@ public class WindowManager
     {
         foreach (var win in Windows)
         {
-            if (win.Relay is not null)
+            if (win.Relay is not null && win.Relay.InUseCount <= 0)
                 await win.Relay.Disconnect();
         }
         Windows.Clear();
@@ -170,7 +171,7 @@ public class WindowManager
         var agentWindows = Windows.Where(w => w.AgentId == agentId).ToList();
         foreach (var win in agentWindows)
         {
-            if (win.Relay is not null)
+            if (win.Relay is not null && win.Relay.InUseCount <= 0)
                 await win.Relay.Disconnect();
         }
         NotifyChanged();

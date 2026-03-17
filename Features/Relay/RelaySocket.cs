@@ -14,6 +14,14 @@ public class RelaySocket
 
     public string? BaseUrl { get; set; }
 
+    /// <summary>
+    /// Number of background consumers (e.g. upload service) actively using this relay.
+    /// WindowManager should not disconnect a relay while InUseCount > 0.
+    /// </summary>
+    public int InUseCount;
+    public void AddRef() => Interlocked.Increment(ref InUseCount);
+    public void Release() => Interlocked.Decrement(ref InUseCount);
+
     public async Task Connect(string agentId, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(BaseUrl))

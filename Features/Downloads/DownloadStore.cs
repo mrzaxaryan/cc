@@ -116,6 +116,24 @@ public class DownloadStore
         _bus.Publish(new DownloadItemQueuedEvent(record.AgentUuid));
     }
 
+    /// <summary>Reset a completed or failed record and re-queue it for upload.</summary>
+    public async Task RequeueAsync(int id, string cacheSubPath, long totalSize)
+    {
+        var record = _cache.FirstOrDefault(r => r.Id == id);
+        if (record is null) return;
+
+        record.CacheSubPath = cacheSubPath;
+        record.TotalSize = totalSize;
+        record.DownloadedSize = 0;
+        record.Status = DownloadStatus.Queued;
+        record.Error = null;
+        record.CompletedAt = null;
+        record.SpeedBytesPerSec = 0;
+        await _js.InvokeVoidAsync("c2DownloadDb.put", record);
+        _bus.Publish(new DownloadStoreChangedEvent());
+        _bus.Publish(new DownloadItemQueuedEvent(record.AgentUuid));
+    }
+
     public async Task UpdateProgressAsync(int id, long downloadedSize)
     {
         var record = _cache.FirstOrDefault(r => r.Id == id);
