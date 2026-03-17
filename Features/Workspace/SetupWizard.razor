@@ -323,9 +323,9 @@
         step = Step.Welcome;
 
         var enabled = Relay.EnabledRelays.FirstOrDefault();
-        relayName = enabled?.Name ?? "";
-        relayUrl = enabled?.Url ?? "";
-        relayToken = enabled?.Token ?? "";
+        relayName = enabled?.Name ?? (needsRelay ? RelayStore.DefaultName : "");
+        relayUrl = enabled?.Url ?? (needsRelay ? RelayStore.DefaultUrl : "");
+        relayToken = enabled?.Token ?? (needsRelay ? RelayStore.DefaultToken : "");
     }
 
     private static string StepLabel(Step s) => StepLabels.GetValueOrDefault(s, s.ToString());

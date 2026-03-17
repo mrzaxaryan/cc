@@ -15,8 +15,9 @@ public class RelayRecord
 
 public class RelayStore
 {
-    private const string DefaultUrl = "https://relay.nostdlib.workers.dev";
-    private const string DefaultName = "Default";
+    public const string DefaultUrl = "wss://relay.nostdlib.workers.dev";
+    public const string DefaultName = "Default";
+    public const string DefaultToken = "*";
 
     private readonly IJSRuntime _js;
     private readonly IEventBus _bus;
@@ -75,9 +76,6 @@ public class RelayStore
         if (_relays.Count == 0)
         {
             SetupRequired = true;
-            var entry = new RelayRecord { Id = Guid.NewGuid().ToString("N")[..8], Url = DefaultUrl, Name = DefaultName, Enabled = true };
-            _relays.Add(entry);
-            await _js.InvokeVoidAsync("c2RelayDb.put", entry);
         }
     }
 
