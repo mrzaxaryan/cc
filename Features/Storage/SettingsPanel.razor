@@ -409,9 +409,6 @@
         StateHasChanged();
         try
         {
-            foreach (var agent in AgentDb.Agents.Values)
-                await Vfs.ClearAgentAsync(agent.Uuid);
-            await Downloads.ClearAsync();
             await Cache.ClearAllDataAsync();
             dbTables = new();
             agentStats = new();

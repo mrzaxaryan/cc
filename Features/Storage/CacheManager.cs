@@ -174,9 +174,10 @@ public class CacheManager
         _bus.Publish(new CacheChangedEvent());
     }
 
-    /// <summary>Clear all application data: all IndexedDB stores + persisted file handle.</summary>
+    /// <summary>Clear all application data: all IndexedDB stores + cached files + persisted file handle.</summary>
     public async Task ClearAllDataAsync()
     {
+        await _js.InvokeVoidAsync("c2FileSystem.clearAllBlobs");
         await _js.InvokeVoidAsync("c2ClearAll");
         await _js.InvokeVoidAsync("c2FileSystem.clearHandle");
         HasDirectory = false;

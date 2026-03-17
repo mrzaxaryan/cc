@@ -235,6 +235,19 @@ window.c2FileSystem = {
         URL.revokeObjectURL(url);
     },
 
+    // Delete all blob files in .fs/ directory
+    async clearAllBlobs() {
+        if (!_rootHandle) return;
+        try {
+            const fsDir = await _rootHandle.getDirectoryHandle('.fs', { create: false });
+            const entries = [];
+            for await (const [name] of fsDir) entries.push(name);
+            for (const name of entries) {
+                try { await fsDir.removeEntry(name); } catch { }
+            }
+        } catch { }
+    },
+
     // Clear the persisted handle (reset)
     async clearHandle() {
         _rootHandle = null;
