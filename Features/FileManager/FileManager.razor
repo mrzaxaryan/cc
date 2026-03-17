@@ -220,7 +220,7 @@
     private bool IsAgentOnline => AgentId is not null && RelaySvc.GetAllAgents().Any(a => a.Agent.Id == AgentId);
     private bool HasCache => Cache.HasDirectory && !string.IsNullOrEmpty(AgentUuid);
 
-    private bool IsWindowsAgent
+    private string AgentOs
     {
         get
         {
@@ -230,13 +230,15 @@
                 .FirstOrDefault();
             if (string.IsNullOrEmpty(os) && !string.IsNullOrEmpty(AgentUuid))
                 os = AgentDb.GetByUuid(AgentUuid)?.Os;
-            return string.Equals(os, "Windows", StringComparison.OrdinalIgnoreCase);
+            return os ?? "";
         }
     }
 
+    private bool IsWindowsAgent => string.Equals(AgentOs, "Windows", StringComparison.OrdinalIgnoreCase);
+    private bool IsAndroidAgent => string.Equals(AgentOs, "Android", StringComparison.OrdinalIgnoreCase);
     private bool IsUnixAgent => !IsWindowsAgent;
     private string PathSep => IsUnixAgent ? "/" : @"\";
-    private string RootPath => IsWindowsAgent ? "" : "/";
+    private string RootPath => IsWindowsAgent ? "" : IsAndroidAgent ? "/storage/emulated/0/" : "/";
 
     // Core state
     private string currentPath = "";
