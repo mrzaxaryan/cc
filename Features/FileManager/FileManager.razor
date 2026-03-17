@@ -286,8 +286,21 @@
 
     private bool ShouldPreventKeyDefault => true;
 
+    private RelaySocket? _prevRelay;
+
     protected override async Task OnParametersSetAsync()
     {
+        // Detect relay reconnection: if we had no connected relay before
+        // but now we do, refresh the current directory
+        var relayChanged = Relay != _prevRelay && IsConnected;
+        _prevRelay = Relay;
+
+        if (relayChanged && entries is not null)
+        {
+            await NavigateTo(currentPath ?? RootPath);
+            return;
+        }
+
         if (entries is not null) return;
         await Downloads.LoadAsync();
 
