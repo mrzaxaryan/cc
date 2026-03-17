@@ -18,6 +18,8 @@ public class RelayConnectionService : IAsyncDisposable
     private readonly IEventBus _bus;
 
     private readonly Dictionary<string, RelayState> _relayStates = new();
+    /// <summary>Active relay connections per agent, shared across windows and background services.</summary>
+    private readonly Dictionary<string, RelaySocket> _activeRelays = new();
     /// <summary>Agents whose system info fetch failed (e.g. relay was paired). Key: agentId, Value: relayUrl.</summary>
     private readonly Dictionary<string, string> _pendingInfoFetch = new();
     private IDisposable? _relayStoreSub;
@@ -25,6 +27,9 @@ public class RelayConnectionService : IAsyncDisposable
     private bool _disposing;
 
     public IReadOnlyDictionary<string, RelayState> RelayStates => _relayStates;
+    /// <summary>Agent IDs with active relay connections (windows + background services).</summary>
+    public IEnumerable<string> ActiveRelayAgentIds =>
+        _activeRelays.Where(kv => kv.Value.IsConnected).Select(kv => kv.Key);
     public bool IsDisposing => _disposing;
 
     public class RelayState
@@ -157,14 +162,22 @@ public class RelayConnectionService : IAsyncDisposable
 
     public async Task<RelaySocket?> CreateRelay(string agentId, string relayUrl)
     {
+        // Reuse any active relay for this agent (from windows or background services)
+        if (_activeRelays.TryGetValue(agentId, out var cached) && cached.IsConnected)
+            return cached;
+
         var existingWin = _wm.Windows.FirstOrDefault(w => w.AgentId == agentId && w.Relay is { IsConnected: true });
         if (existingWin?.Relay is not null)
+        {
+            _activeRelays[agentId] = existingWin.Relay;
             return existingWin.Relay;
+        }
 
         var relay = new RelaySocket { BaseUrl = relayUrl, Token = _relayStore.GetTokenByUrl(relayUrl) };
         try
         {
             await relay.Connect(agentId);
+            _activeRelays[agentId] = relay;
             return relay;
         }
         catch (Exception ex)
@@ -508,6 +521,7 @@ public class RelayConnectionService : IAsyncDisposable
     {
         _disposing = true;
         _relayStoreSub?.Dispose();
+        _activeRelays.Clear();
         foreach (var rs in _relayStates.Values)
         {
             rs.Cts?.Cancel();

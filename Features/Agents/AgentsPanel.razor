@@ -357,7 +357,7 @@
                     || !string.IsNullOrEmpty(agent.Os) || !string.IsNullOrEmpty(record?.Os)
                     || agent.BuildNumber > 0,
                 Paired = agent.Paired,
-                PairedByUs = agent.Paired && Wm.ConnectedAgentIds.Contains(agent.Id),
+                PairedByUs = agent.Paired && (Wm.ConnectedAgentIds.Contains(agent.Id) || Relay.ActiveRelayAgentIds.Contains(agent.Id)),
                 LastSeen = "Now",
                 Country = agent.Country,
                 City = agent.City,
