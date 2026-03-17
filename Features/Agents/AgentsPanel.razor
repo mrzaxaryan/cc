@@ -204,8 +204,8 @@
     }
     <C2DropdownItem OnClick="CtxStartRename" Disabled="@(ctxRow?.Uuid is null)">Rename</C2DropdownItem>
     <C2DropdownItem OnClick="CtxOpenFiles" Disabled="@(!ctxIsOnline && !ctxHasCache)">File Manager</C2DropdownItem>
-    <C2DropdownItem OnClick="CtxOpenShell" Disabled="@(!ctxIsOnline)">Shell</C2DropdownItem>
-    <C2DropdownItem OnClick="CtxOpenScreen" Disabled="@(!ctxIsOnline)">Screen</C2DropdownItem>
+    <C2DropdownItem OnClick="CtxOpenShell" Disabled="@(!ctxIsOnline || ctxPairedOther)">Shell</C2DropdownItem>
+    <C2DropdownItem OnClick="CtxOpenScreen" Disabled="@(!ctxIsOnline || ctxPairedOther)">Screen</C2DropdownItem>
 </C2Dropdown>
 
 <C2Dialog Visible="@renameVisible" Title="Rename Agent" ConfirmText="Rename"
@@ -224,6 +224,7 @@
     private string? ctxAgentId;
     private string? ctxRelayUrl;
     private bool ctxIsOnline;
+    private bool ctxPairedOther;
     private bool ctxHasCache;
     private AgentRow? ctxRow;
 
