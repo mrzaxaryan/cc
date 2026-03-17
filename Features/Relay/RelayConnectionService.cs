@@ -445,17 +445,12 @@ public class RelayConnectionService : IAsyncDisposable
 
                     if (!paired)
                     {
-                        if (_wm.ConnectedAgentIds.Contains(eventAgentId))
-                        {
-                            _ = _wm.DisconnectAgent(eventAgentId);
-                            var unpairedUuid = _agentDb.GetUuidByAgentId(eventAgentId);
-                            var unpairedName = unpairedUuid is not null ? _agentDb.GetDisplayName(unpairedUuid) : eventAgentId;
-                            _msg.Warn("Agent Unpaired", $"{unpairedName} relay connection lost", "Relay");
-                        }
-
                         // Relay is now free — if info fetch is still pending, retry
                         if (existing is not null && _pendingInfoFetch.Remove(eventAgentId))
                             _ = FetchUuid(existing, relayUrl);
+
+                        // Reconnect any open windows for this agent that have no active relay
+                        _ = ReconnectWindowsForAgent(eventAgentId, relayUrl);
                     }
 
                     _bus.Publish(new AgentPairingChangedEvent(eventAgentId, paired, relayUrl));
@@ -466,6 +461,29 @@ public class RelayConnectionService : IAsyncDisposable
         {
             _msg.Error("Event Parse Error", $"Failed to parse relay event: {ex.Message}", "Relay");
         }
+    }
+
+    /// <summary>
+    /// When an agent becomes unpaired, reconnect any open windows that have
+    /// a disconnected or null relay for that agent.
+    /// </summary>
+    private async Task ReconnectWindowsForAgent(string agentId, string relayUrl)
+    {
+        var windowsToReconnect = _wm.Windows
+            .Where(w => w.AgentId == agentId && w.Relay is not { IsConnected: true })
+            .ToList();
+
+        if (windowsToReconnect.Count == 0) return;
+
+        var relay = await CreateRelay(agentId, relayUrl);
+        if (relay is null) return;
+
+        foreach (var win in windowsToReconnect)
+        {
+            win.Relay = relay;
+        }
+
+        _bus.Publish(new WindowChangedEvent());
     }
 
     public async ValueTask DisposeAsync()

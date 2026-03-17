@@ -81,7 +81,6 @@
                             <th class="ap-col-loc">Location</th>
                             <th class="ap-col-net" title="Network / ISP">Network</th>
                             <th class="ap-col-build" title="Agent Build">Build</th>
-                            <th class="ap-col-paired" title="Paired with relay">Paired</th>
                             <th class="ap-col-seen">Last Seen</th>
                         </tr>
                     </thead>
@@ -94,7 +93,26 @@
                                   OnContextMenu="(e) => ShowContextMenu(e, row)"
                                   PreventDefault>
                                 <td class="ap-col-status">
-                                    <span class="status-dot @(row.IsOnline ? "dot-on" : "dot-off")" title="@(row.IsOnline ? "Online" : "Offline")"></span>
+                                    @if (!row.IsOnline)
+                                    {
+                                        <span class="status-dot dot-off" title="Offline"></span>
+                                        <span class="ap-status-label">Offline</span>
+                                    }
+                                    else if (row.PairedByUs)
+                                    {
+                                        <span class="status-dot dot-on dot-pulse" title="Paired with this C2"></span>
+                                        <span class="ap-status-label ap-status-paired">Paired</span>
+                                    }
+                                    else if (row.Paired)
+                                    {
+                                        <span class="status-dot dot-red" title="Paired with another C2"></span>
+                                        <span class="ap-status-label ap-status-other">Paired</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="status-dot dot-on" title="Online"></span>
+                                        <span class="ap-status-label ap-status-online">Online</span>
+                                    }
                                 </td>
                                 <td>
                                     <div class="ap-name-cell">
@@ -114,12 +132,6 @@
                                 <td class="ap-col-loc">@row.Location</td>
                                 <td class="ap-col-net ap-net-cell">@row.Network</td>
                                 <td class="ap-col-build"><code>@row.Build</code></td>
-                                <td class="ap-col-paired">
-                                    @if (row.Paired)
-                                    {
-                                        <span class="status-dot @(row.PairedByUs ? "dot-on" : "dot-red")" title="@(row.PairedByUs ? "Paired with this C2" : "Paired with another C2")"></span>
-                                    }
-                                </td>
                                 <td class="ap-col-seen ap-seen-cell">@row.LastSeen</td>
                             </C2Tr>
                         }
@@ -135,12 +147,23 @@
                          @oncontextmenu="(e) => ShowContextMenu(e, row)"
                          @oncontextmenu:preventDefault>
                         <div class="ap-card-top">
-                            <span class="status-dot @(row.IsOnline ? "dot-on" : "dot-off")" title="@(row.IsOnline ? "Online" : "Offline")"></span>
-                            <span class="ap-card-name">@row.Name</span>
-                            @if (row.Paired)
+                            @if (!row.IsOnline)
                             {
-                                <span class="status-dot @(row.PairedByUs ? "dot-on" : "dot-red") ap-card-paired" title="@(row.PairedByUs ? "Paired with this C2" : "Paired with another C2")"></span>
+                                <span class="status-dot dot-off" title="Offline"></span>
                             }
+                            else if (row.PairedByUs)
+                            {
+                                <span class="status-dot dot-on dot-pulse" title="Paired with this C2"></span>
+                            }
+                            else if (row.Paired)
+                            {
+                                <span class="status-dot dot-red" title="Paired with another C2"></span>
+                            }
+                            else
+                            {
+                                <span class="status-dot dot-on" title="Online"></span>
+                            }
+                            <span class="ap-card-name">@row.Name</span>
                             <span class="ap-card-seen">@row.LastSeen</span>
                         </div>
                         <div class="ap-card-details">

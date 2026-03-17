@@ -75,13 +75,42 @@
 }
 
 .ap-col-status {
-    width: 28px;
+    width: 64px;
     text-align: center;
+    white-space: nowrap;
 }
 
-.ap-col-paired {
-    width: 48px;
-    text-align: center;
+/* Combined status indicator: dot + label */
+.ap-status-label {
+    display: block;
+    font-size: 0.58rem;
+    margin-top: 0.15rem;
+    color: var(--c2-text-dim);
+    letter-spacing: 0.02em;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.ap-status-online {
+    color: var(--c2-accent-green);
+}
+
+.ap-status-paired {
+    color: var(--c2-accent-green);
+}
+
+.ap-status-other {
+    color: var(--c2-accent-red);
+}
+
+/* Pulse animation for paired-by-us dot */
+.dot-pulse {
+    animation: dot-pulse 2s ease-in-out infinite;
+}
+
+@keyframes dot-pulse {
+    0%, 100% { box-shadow: 0 0 4px var(--c2-accent-green); }
+    50% { box-shadow: 0 0 8px var(--c2-accent-green), 0 0 12px var(--c2-accent-green); }
 }
 
 /* Name + UUID stacked cell */
@@ -231,12 +260,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-
-.ap-card-paired {
-    width: 7px;
-    height: 7px;
-    flex-shrink: 0;
 }
 
 .ap-card-seen {
