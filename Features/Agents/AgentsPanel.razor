@@ -80,6 +80,7 @@
                             <th class="ap-col-sys" title="Operating System / Architecture">System</th>
                             <th class="ap-col-loc">Location</th>
                             <th class="ap-col-net" title="Network / ISP">Network</th>
+                            <th class="ap-col-build" title="Agent Build">Build</th>
                             <th class="ap-col-paired" title="Paired with relay">Paired</th>
                             <th class="ap-col-seen">Last Seen</th>
                         </tr>
@@ -112,6 +113,7 @@
                                 </td>
                                 <td class="ap-col-loc">@row.Location</td>
                                 <td class="ap-col-net ap-net-cell">@row.Network</td>
+                                <td class="ap-col-build"><code>@row.Build</code></td>
                                 <td class="ap-col-paired">
                                     @if (row.Paired)
                                     {
@@ -238,6 +240,7 @@
         public string Arch { get; set; } = "";
         public string Location { get; set; } = "";
         public string Network { get; set; } = "";
+        public string Build { get; set; } = "";
         public bool Paired { get; set; }
         public bool PairedByUs { get; set; }
         public string LastSeen { get; set; } = "";
@@ -304,6 +307,7 @@
                     : !string.IsNullOrEmpty(record?.Arch) ? record.Arch : "\u2014",
                 Location = Formatters.FormatLocation(agent),
                 Network = Formatters.FormatNetwork(agent),
+                Build = FormatBuild(agent.BuildNumber, agent.CommitHash),
                 Paired = agent.Paired,
                 PairedByUs = agent.Paired && Wm.ConnectedAgentIds.Contains(agent.Id),
                 LastSeen = "Now",
@@ -346,6 +350,7 @@
                 Arch = !string.IsNullOrEmpty(record.Arch) ? record.Arch : "\u2014",
                 Location = Formatters.FormatLocation(record),
                 Network = "\u2014",
+                Build = FormatBuild(record.BuildNumber, record.CommitHash),
                 Paired = false,
                 LastSeen = Formatters.FormatTimestamp(record.LastSeen),
                 Country = record.Country,
@@ -380,6 +385,15 @@
         if (IsCopyable(row.Network)) items.Add(new("Network", row.Network));
         if (IsCopyable(row.LastSeen) && row.LastSeen != "Now") items.Add(new("Last Seen", row.LastSeen));
         return items;
+    }
+
+    private static string FormatBuild(uint buildNumber, string? commitHash)
+    {
+        var hasHash = !string.IsNullOrEmpty(commitHash);
+        if (buildNumber > 0 && hasHash) return $"#{buildNumber} ({commitHash})";
+        if (buildNumber > 0) return $"#{buildNumber}";
+        if (hasHash) return commitHash!;
+        return "\u2014";
     }
 
     private static bool IsCopyable(string? v) => !string.IsNullOrWhiteSpace(v) && v != "\u2014";

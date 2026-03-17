@@ -100,6 +100,18 @@
         var arch = Pick(live?.Arch, stored?.Arch);
         if (HasValue(arch)) rows.Add(new("Architecture", arch!));
 
+        // Build info
+        var buildNumber = live?.BuildNumber ?? stored?.BuildNumber ?? 0;
+        var commitHash = Pick(live?.CommitHash, stored?.CommitHash);
+        if (buildNumber > 0 || HasValue(commitHash))
+        {
+            var buildStr = buildNumber > 0 && HasValue(commitHash)
+                ? $"#{buildNumber} (<code>{commitHash}</code>)"
+                : buildNumber > 0 ? $"#{buildNumber}"
+                : $"<code>{commitHash}</code>";
+            rows.Add(new("Build", buildStr));
+        }
+
         // Geo
         var country = Pick(live?.Country, stored?.Country);
         var city = Pick(live?.City, stored?.City);

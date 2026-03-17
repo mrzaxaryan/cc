@@ -24,6 +24,10 @@ public class AgentRecord
     [JsonPropertyName("os")] public string Os { get; set; } = "";
     /// <summary>CPU architecture of the agent (e.g. "x64", "arm64").</summary>
     [JsonPropertyName("arch")] public string Arch { get; set; } = "";
+    /// <summary>Agent build number (auto-incrementing git commit count).</summary>
+    [JsonPropertyName("buildNumber")] public uint BuildNumber { get; set; }
+    /// <summary>Short git commit hash of the agent build.</summary>
+    [JsonPropertyName("commitHash")] public string CommitHash { get; set; } = "";
     /// <summary>Unix timestamp (ms) when this agent was first observed.</summary>
     [JsonPropertyName("firstSeen")] public double FirstSeen { get; set; }
     /// <summary>Unix timestamp (ms) when this agent was last observed.</summary>
@@ -75,6 +79,8 @@ public class AgentStore
             Hostname = agent.Hostname,
             Os = agent.Os,
             Arch = agent.Arch,
+            BuildNumber = agent.BuildNumber,
+            CommitHash = agent.CommitHash,
             FirstSeen = now,
             LastSeen = now
         };

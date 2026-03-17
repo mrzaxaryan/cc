@@ -111,17 +111,29 @@ public class RelaySocket
     public static Guid ReadUuid(byte[] response) => new(response.AsSpan(4, 16));
 
     // SystemInfo layout: UUID (16) + Hostname (256) + Architecture (32) + Platform (32) = 336 bytes
-    // Response: UINT32 status + SystemInfo
+    // AgentBuildInfo layout: BuildNumber (4) + CommitHash (9) = 13 bytes
+    // Response: UINT32 status + SystemInfo + AgentBuildInfo
     public const int SystemInfoOffset = 4;
     public const int SystemInfoSize = 16 + 256 + 32 + 32; // 336
+    public const int AgentBuildInfoSize = 4 + 9; // 13
 
-    public static (Guid uuid, string hostname, string architecture, string platform) ReadSystemInfo(byte[] response)
+    public static (Guid uuid, string hostname, string architecture, string platform, uint buildNumber, string commitHash) ReadSystemInfo(byte[] response)
     {
         var uuid = new Guid(response.AsSpan(SystemInfoOffset, 16));
         var hostname = ReadNullTerminatedString(response, SystemInfoOffset + 16, 256);
         var architecture = ReadNullTerminatedString(response, SystemInfoOffset + 16 + 256, 32);
         var platform = ReadNullTerminatedString(response, SystemInfoOffset + 16 + 256 + 32, 32);
-        return (uuid, hostname, architecture, platform);
+
+        uint buildNumber = 0;
+        var commitHash = "";
+        var buildInfoOffset = SystemInfoOffset + SystemInfoSize;
+        if (response.Length >= buildInfoOffset + AgentBuildInfoSize)
+        {
+            buildNumber = BitConverter.ToUInt32(response, buildInfoOffset);
+            commitHash = ReadNullTerminatedString(response, buildInfoOffset + 4, 9);
+        }
+
+        return (uuid, hostname, architecture, platform, buildNumber, commitHash);
     }
 
     private static string ReadNullTerminatedString(byte[] data, int offset, int maxLength)

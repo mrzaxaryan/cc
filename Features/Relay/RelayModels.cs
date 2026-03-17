@@ -50,6 +50,10 @@ public class AgentConnection
     public string Os { get; set; } = "";
     /// <summary>CPU architecture of the agent (e.g. "x64", "arm64").</summary>
     public string Arch { get; set; } = "";
+    /// <summary>Agent build number (auto-incrementing git commit count).</summary>
+    public uint BuildNumber { get; set; }
+    /// <summary>Short git commit hash of the agent build.</summary>
+    public string CommitHash { get; set; } = "";
 }
 
 public class RelayConnection
