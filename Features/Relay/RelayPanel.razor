@@ -57,7 +57,7 @@
                                 <td class="rp-active-cell">
                                     @if (isEnabled)
                                     {
-                                        <span class="rp-active-dot" title="Enabled">&#9679;</span>
+                                        <span class="rp-active-dot" title="Enabled"><C2Icon Name="dot" Size="Size.Xs" /></span>
                                     }
                                 </td>
                                 <td><code class="rp-code">@relay.Id</code></td>
@@ -68,8 +68,8 @@
                                     <td class="rp-actions">
                                         <C2Btn Variant="BtnVariant.Success" OnClick="SaveEdit"
                                                Disabled="@(string.IsNullOrWhiteSpace(editName) || string.IsNullOrWhiteSpace(editUrl))"
-                                               Title="Save">&#10003;</C2Btn>
-                                        <C2Btn OnClick="CancelEdit" Title="Cancel">&#10007;</C2Btn>
+                                               Title="Save"><C2Icon Name="check" Size="Size.Xs" /></C2Btn>
+                                        <C2Btn OnClick="CancelEdit" Title="Cancel"><C2Icon Name="x" Size="Size.Xs" /></C2Btn>
                                     </td>
                                 }
                                 else
@@ -77,7 +77,7 @@
                                     <td>@relay.Name</td>
                                     <td><code class="rp-code">@relay.Url</code></td>
                                     <td class="rp-actions">
-                                        <C2Btn OnClick="() => StartEdit(relay)" Title="Edit">&#9998;</C2Btn>
+                                        <C2Btn OnClick="() => StartEdit(relay)" Title="Edit"><C2Icon Name="edit" Size="Size.Xs" /></C2Btn>
                                         @if (isEnabled)
                                         {
                                             <C2Btn Variant="BtnVariant.Warning" OnClick="() => ToggleEnabled(relay)" Title="Disable">Disable</C2Btn>
@@ -86,7 +86,7 @@
                                         {
                                             <C2Btn Variant="BtnVariant.Success" OnClick="() => ToggleEnabled(relay)" Title="Enable">Enable</C2Btn>
                                         }
-                                        <C2Btn Variant="BtnVariant.Danger" OnClick="() => RemoveRelay(relay.Url)" Title="Remove">&times;</C2Btn>
+                                        <C2Btn Variant="BtnVariant.Danger" OnClick="() => RemoveRelay(relay.Url)" Title="Remove"><C2Icon Name="x" Size="Size.Xs" /></C2Btn>
                                     </td>
                                 }
                             </C2Tr>
@@ -108,7 +108,7 @@
             <C2Card CssClass="rp-section">
                 <Header>
                     <span class="rp-collapse-toggle" @onclick="() => ToggleCollapse(relay.Url)">
-                        <span class="rp-chevron @(isCollapsed ? "" : "rp-chevron--open")">&#9656;</span>
+                        <span class="rp-chevron @(isCollapsed ? "" : "rp-chevron--open")"><C2Icon Name="chevron-right" Size="Size.Xs" /></span>
                         @relay.Name
                     </span>
                     @if (relay.Enabled)

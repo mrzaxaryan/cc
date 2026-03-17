@@ -21,9 +21,9 @@
     @* Toolbar *@
     <div class="fm-toolbar">
         <C2Btn OnClick="NavigateUp" Disabled="@(loading || (!IsConnected && !HasCache))" Title="Up">
-            <span class="fm-icon">&#x2191;</span>
+            <C2Icon Name="arrow-up" Size="Size.Xs" />
         </C2Btn>
-        <C2Btn OnClick="() => NavigateTo(currentPath)" Disabled="@(loading || (!IsConnected && !HasCache))" Title="Refresh">&#x21bb;</C2Btn>
+        <C2Btn OnClick="() => NavigateTo(currentPath)" Disabled="@(loading || (!IsConnected && !HasCache))" Title="Refresh"><C2Icon Name="refresh" Size="Size.Xs" /></C2Btn>
         <div class="fm-path-bar">
             <C2Input @bind-Value="currentPath" OnKeyDown="OnPathKeyDown" Monospace />
         </div>
@@ -32,10 +32,10 @@
             <C2Badge Variant="BadgeVariant.Info" Size="Size.Xs">@selectedEntries.Count selected</C2Badge>
         }
         <C2Btn Variant="BtnVariant.Primary" OnClick="OpenFullSearchWindow" Disabled="@(!IsConnected)" Title="Search entire filesystem">
-            <span class="fm-icon">&#x1F50D;</span> SEARCH
+            <C2Icon Name="search" Size="Size.Xs" /> SEARCH
         </C2Btn>
         <C2Btn Variant="BtnVariant.Primary" OnClick="OpenDownloadsWindow" Title="Upload Manager">
-            <span class="fm-icon">&#x21C5;</span> UPLOADS
+            <C2Icon Name="arrow-up-down" Size="Size.Xs" /> UPLOADS
         </C2Btn>
     </div>
 
@@ -105,7 +105,7 @@
                             {
                                 <tr class="fm-row-parent" @onclick="NavigateUp">
                                     <td class="fm-col-check"></td>
-                                    <td class="fm-col-icon">&#x2191;</td>
+                                    <td class="fm-col-icon"><C2Icon Name="arrow-up" Size="Size.Xs" /></td>
                                     <td colspan="4" class="fm-parent-label">..</td>
                                 </tr>
                             }
@@ -127,7 +127,7 @@
                                         <input type="checkbox" checked="@isSelected"
                                                @onchange="() => ToggleCheckbox(e)" />
                                     </td>
-                                    <td class="fm-col-icon @IconClass(e)" @ondblclick="() => OnEntryDoubleClick(e)" @ondblclick:stopPropagation="true">@GetIcon(e)</td>
+                                    <td class="fm-col-icon" @ondblclick="() => OnEntryDoubleClick(e)" @ondblclick:stopPropagation="true"><C2Icon Name="@GetIcon(e)" Size="Size.Xs" CssClass="@IconClass(e)" /></td>
                                     <td class="fm-col-name" @ondblclick="() => OnEntryDoubleClick(e)" @ondblclick:stopPropagation="true">
                                         <span class="fm-name-text">@e.Name</span>
                                         @if (!isDir && Cache.HasDirectory)
@@ -628,19 +628,19 @@
 
     private static string GetIcon(DirEntry e)
     {
-        if (e.IsDrive) return "\U0001F4BD";
-        if (e.IsDirectory) return "\U0001F4C1";
+        if (e.IsDrive) return "hard-drive";
+        if (e.IsDirectory) return "folder";
         var ext = System.IO.Path.GetExtension(e.Name).ToLowerInvariant();
         return ext switch
         {
-            ".exe" or ".dll" or ".sys" => "\u2699",
-            ".txt" or ".log" or ".cfg" or ".ini" or ".conf" or ".yaml" or ".yml" or ".json" or ".xml" or ".csv" => "\U0001F4C4",
-            ".zip" or ".rar" or ".7z" or ".tar" or ".gz" or ".bz2" => "\U0001F4E6",
-            ".jpg" or ".jpeg" or ".png" or ".bmp" or ".gif" or ".ico" or ".svg" or ".webp" => "\U0001F5BC",
-            ".pdf" => "\U0001F4D1",
-            ".mp3" or ".wav" or ".flac" or ".ogg" or ".aac" => "\U0001F3B5",
-            ".mp4" or ".mkv" or ".avi" or ".mov" or ".wmv" => "\U0001F3AC",
-            _ => "\U0001F4C4"
+            ".exe" or ".dll" or ".sys" => "file-code",
+            ".txt" or ".log" or ".cfg" or ".ini" or ".conf" or ".yaml" or ".yml" or ".json" or ".xml" or ".csv" => "file-text",
+            ".zip" or ".rar" or ".7z" or ".tar" or ".gz" or ".bz2" => "package",
+            ".jpg" or ".jpeg" or ".png" or ".bmp" or ".gif" or ".ico" or ".svg" or ".webp" => "image",
+            ".pdf" => "bookmark",
+            ".mp3" or ".wav" or ".flac" or ".ogg" or ".aac" => "music",
+            ".mp4" or ".mkv" or ".avi" or ".mov" or ".wmv" => "film",
+            _ => "file"
         };
     }
 

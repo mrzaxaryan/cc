@@ -40,7 +40,7 @@
                 <C2Btn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="() => confirmClear = true" Title="Clear paused/failed">CLEAR</C2Btn>
             }
         }
-        <C2Btn Size="Size.Xs" OnClick="Refresh" Title="Refresh">&#x21bb;</C2Btn>
+        <C2Btn Size="Size.Xs" OnClick="Refresh" Title="Refresh"><C2Icon Name="refresh" Size="Size.Xs" /></C2Btn>
     </HeaderRight>
     <Toolbar>
         <div class="panel-tabs">
@@ -81,7 +81,7 @@
                     var pct = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
                     <div class="sm-item @StatusClass(dl.Status)">
                         <div class="sm-item-row">
-                            <span class="sm-item-icon" title="@StatusLabel(dl.Status)">@StatusIcon(dl.Status)</span>
+                            <span class="sm-item-icon" title="@StatusLabel(dl.Status)"><C2Icon Name="@StatusIcon(dl.Status)" Size="Size.Xs" /></span>
                             <div class="sm-item-info">
                                 <span class="sm-item-name" title="@dl.RemotePath">@dl.FileName</span>
                                 <span class="sm-item-meta">
@@ -101,18 +101,18 @@
                                         {
                                             <span class="sm-speed">@Formatters.FormatSpeed(dl.SpeedBytesPerSec)</span>
                                         }
-                                        <C2Btn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseDownload(rec)" Title="Pause">&#x23F8;</C2Btn>
+                                        <C2Btn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseDownload(rec)" Title="Pause"><C2Icon Name="pause" Size="Size.Xs" /></C2Btn>
                                         break;
 
                                     case DownloadStatus.Queued:
                                         <C2Badge Variant="BadgeVariant.Muted" Size="Size.Xs">QUEUED</C2Badge>
-                                        <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => BumpPriority(rec, -1)" Title="Higher priority">&#x25B2;</C2Btn>
-                                        <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => BumpPriority(rec, 1)" Title="Lower priority">&#x25BC;</C2Btn>
+                                        <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => BumpPriority(rec, -1)" Title="Higher priority"><C2Icon Name="chevron-up" Size="Size.Xs" /></C2Btn>
+                                        <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => BumpPriority(rec, 1)" Title="Lower priority"><C2Icon Name="chevron-down" Size="Size.Xs" /></C2Btn>
                                         break;
 
                                     case DownloadStatus.Paused:
                                         <C2Badge Variant="BadgeVariant.Warning" Size="Size.Xs">PAUSED @pct%</C2Badge>
-                                        <C2Btn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeDownload(rec)" Disabled="@(Downloads.Cts.HasActive(rec.Id))" Title="Resume">&#x25B6;</C2Btn>
+                                        <C2Btn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeDownload(rec)" Disabled="@(Downloads.Cts.HasActive(rec.Id))" Title="Resume"><C2Icon Name="play" Size="Size.Xs" /></C2Btn>
                                         break;
 
                                     case DownloadStatus.Completed:
@@ -123,7 +123,7 @@
                                         <C2Badge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@dl.Error">FAILED</C2Badge>
                                         break;
                                 }
-                                <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => RemoveDownload(rec)" Title="Remove" CssClass="panel-remove-btn">&#x2715;</C2Btn>
+                                <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => RemoveDownload(rec)" Title="Remove" CssClass="panel-remove-btn"><C2Icon Name="x" Size="Size.Xs" /></C2Btn>
                             </div>
                         </div>
                         @if (dl.Status is DownloadStatus.Downloading or DownloadStatus.Queued or DownloadStatus.Paused)
@@ -186,12 +186,12 @@
 
     private static string StatusIcon(string s) => s switch
     {
-        DownloadStatus.Downloading => "\u25CF", // filled circle
-        DownloadStatus.Queued => "\u25CB",      // empty circle
-        DownloadStatus.Paused => "\u25A0",      // filled square
-        DownloadStatus.Completed => "\u2713",   // check mark
-        DownloadStatus.Failed => "\u2717",      // X mark
-        _ => "\u25CB"
+        DownloadStatus.Downloading => "dot",
+        DownloadStatus.Queued => "dot-outline",
+        DownloadStatus.Paused => "stop",
+        DownloadStatus.Completed => "check",
+        DownloadStatus.Failed => "x",
+        _ => "dot-outline"
     };
 
     private static string StatusLabel(string s) => s switch

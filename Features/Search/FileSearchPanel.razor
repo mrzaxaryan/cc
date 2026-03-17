@@ -35,7 +35,7 @@
         {
             <C2Btn Variant="BtnVariant.Success" Size="Size.Xs" OnClick="ResumeAllAgent" Title="Resume all searches for this agent">RESUME ALL</C2Btn>
         }
-        <C2Btn Size="Size.Xs" OnClick="Refresh" Title="Refresh">&#x21bb;</C2Btn>
+        <C2Btn Size="Size.Xs" OnClick="Refresh" Title="Refresh"><C2Icon Name="refresh" Size="Size.Xs" /></C2Btn>
     </HeaderRight>
     <Toolbar>
         @* New search form *@
@@ -133,7 +133,7 @@
                     var pct = s.DirsTotal > 0 ? (int)(s.DirsScanned * 100 / s.DirsTotal) : 0;
                     <div class="scan-item @StatusClass(s.Status)">
                         <div class="scan-item-row">
-                            <span class="scan-item-icon" title="@StatusLabel(s.Status)">@StatusIcon(s.Status)</span>
+                            <span class="scan-item-icon" title="@StatusLabel(s.Status)"><C2Icon Name="@StatusIcon(s.Status)" Size="Size.Xs" /></span>
                             <div class="scan-item-info">
                                 <span class="scan-item-path" title="@(string.IsNullOrEmpty(s.RootPath) ? "Full filesystem" : s.RootPath)">@(string.IsNullOrEmpty(s.RootPath) ? "Full filesystem" : s.RootPath)</span>
                                 <span class="scan-item-meta">
@@ -148,10 +148,10 @@
                                 @switch (s.Status)
                                 {
                                     case SearchStatus.Scanning:
-                                        <C2Btn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseScan(s)" Title="Pause">&#x23F8;</C2Btn>
+                                        <C2Btn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseScan(s)" Title="Pause"><C2Icon Name="pause" Size="Size.Xs" /></C2Btn>
                                         break;
                                     case SearchStatus.Paused:
-                                        <C2Btn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeScan(s)" Title="Resume">&#x25B6;</C2Btn>
+                                        <C2Btn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeScan(s)" Title="Resume"><C2Icon Name="play" Size="Size.Xs" /></C2Btn>
                                         break;
                                     case SearchStatus.Completed:
                                         <C2Badge Variant="BadgeVariant.Success" Size="Size.Xs">DONE</C2Badge>
@@ -160,7 +160,7 @@
                                         <C2Badge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@s.Error">FAILED</C2Badge>
                                         break;
                                 }
-                                <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => RemoveScan(s)" Title="Remove" CssClass="panel-remove-btn">&#x2715;</C2Btn>
+                                <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => RemoveScan(s)" Title="Remove" CssClass="panel-remove-btn"><C2Icon Name="x" Size="Size.Xs" /></C2Btn>
                             </div>
                         </div>
                         <div class="scan-item-stats">
@@ -407,11 +407,11 @@
 
     private static string StatusIcon(string s) => s switch
     {
-        SearchStatus.Scanning => "\u25CF",  // filled circle
-        SearchStatus.Paused => "\u25A0",    // filled square
-        SearchStatus.Completed => "\u2713", // check mark
-        SearchStatus.Failed => "\u2717",    // X mark
-        _ => "\u25CB"                       // empty circle
+        SearchStatus.Scanning => "dot",
+        SearchStatus.Paused => "stop",
+        SearchStatus.Completed => "check",
+        SearchStatus.Failed => "x",
+        _ => "dot-outline"
     };
 
     private static string StatusLabel(string s) => s switch

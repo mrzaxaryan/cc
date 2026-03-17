@@ -9,7 +9,7 @@
             {
                 <C2Btn OnClick="HashFile" Title="Compute SHA-256 hash of this file" Disabled="@(!IsConnected)">SHA-256</C2Btn>
             }
-            <C2Btn Variant="BtnVariant.Danger" OnClick="Close" Title="Close file viewer">&#x2715;</C2Btn>
+            <C2Btn Variant="BtnVariant.Danger" OnClick="Close" Title="Close file viewer"><C2Icon Name="x" Size="Size.Xs" /></C2Btn>
         </div>
     </div>
     @if (fileLoading)
@@ -32,11 +32,11 @@
             <div class="fm-viewer-pager">
                 @if (fileViewOffset > 0)
                 {
-                    <C2Btn OnClick="PrevPage" Disabled="@(!IsConnected)">&#x25C0; Prev</C2Btn>
+                    <C2Btn OnClick="PrevPage" Disabled="@(!IsConnected)"><C2Icon Name="chevron-left" Size="Size.Xs" /> Prev</C2Btn>
                 }
                 @if (fileBytesRead >= PageSize)
                 {
-                    <C2Btn OnClick="NextPage" Disabled="@(!IsConnected)">Next &#x25B6;</C2Btn>
+                    <C2Btn OnClick="NextPage" Disabled="@(!IsConnected)">Next <C2Icon Name="chevron-right" Size="Size.Xs" /></C2Btn>
                 }
             </div>
         </div>

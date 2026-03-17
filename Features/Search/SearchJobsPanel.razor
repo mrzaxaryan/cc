@@ -84,18 +84,18 @@
                             <C2Badge Variant="BadgeVariant.Danger" Size="Size.Xs">Paused</C2Badge>
                         }
                         <span class="panel-card-summary">
-                            @if (group.Scanning > 0) { <span class="panel-count-active">@group.Scanning&#x25CF;</span> }
-                            @if (group.Paused > 0) { <span class="panel-count-paused">@group.Paused&#x25A0;</span> }
-                            <span class="panel-count-done">@group.Completed&#x2713;</span>
-                            @if (group.Failed > 0) { <span class="panel-count-fail">@group.Failed&#x2717;</span> }
+                            @if (group.Scanning > 0) { <span class="panel-count-active">@group.Scanning<C2Icon Name="dot" Size="Size.Xs" /></span> }
+                            @if (group.Paused > 0) { <span class="panel-count-paused">@group.Paused<C2Icon Name="stop" Size="Size.Xs" /></span> }
+                            <span class="panel-count-done">@group.Completed<C2Icon Name="check" Size="Size.Xs" /></span>
+                            @if (group.Failed > 0) { <span class="panel-count-fail">@group.Failed<C2Icon Name="x" Size="Size.Xs" /></span> }
                         </span>
                         @if (isAgentPaused)
                         {
-                            <C2Btn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeAgentService(group.Uuid)" Title="Resume search service for this agent">&#x25B6;</C2Btn>
+                            <C2Btn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeAgentService(group.Uuid)" Title="Resume search service for this agent"><C2Icon Name="play" Size="Size.Xs" /></C2Btn>
                         }
                         else
                         {
-                            <C2Btn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseAgentService(group.Uuid)" Title="Pause search service for this agent">&#x23F8;</C2Btn>
+                            <C2Btn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseAgentService(group.Uuid)" Title="Pause search service for this agent"><C2Icon Name="pause" Size="Size.Xs" /></C2Btn>
                         }
                     </div>
 
@@ -105,14 +105,14 @@
                         var pct = scan.DirsTotal > 0 ? (int)(scan.DirsScanned * 100 / scan.DirsTotal) : 0;
                         <div class="panel-row-item">
                             <div class="panel-row">
-                                <span class="panel-row-icon active">&#x25CF;</span>
+                                <span class="panel-row-icon active"><C2Icon Name="dot" Size="Size.Xs" /></span>
                                 <div class="panel-row-info">
                                     <span class="panel-row-name" title="@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)">@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)</span>
                                     <span class="panel-row-meta">@scan.Extensions</span>
                                 </div>
                                 <span class="panel-row-status">
                                     <span class="panel-row-meta">@scan.DirsScanned/@scan.DirsTotal dirs &middot; @scan.FilesFound files</span>
-                                    <C2Btn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseScan(scan)" Title="Pause">&#x23F8;</C2Btn>
+                                    <C2Btn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseScan(scan)" Title="Pause"><C2Icon Name="pause" Size="Size.Xs" /></C2Btn>
                                 </span>
                             </div>
                             <C2Progress Size="Size.Xs" Variant="ProgressVariant.Info" Percent="@pct" />
@@ -125,14 +125,14 @@
                         var pctP = scan.DirsTotal > 0 ? (int)(scan.DirsScanned * 100 / scan.DirsTotal) : 0;
                         <div class="panel-row-item">
                             <div class="panel-row">
-                                <span class="panel-row-icon">&#x25A0;</span>
+                                <span class="panel-row-icon"><C2Icon Name="stop" Size="Size.Xs" /></span>
                                 <div class="panel-row-info">
                                     <span class="panel-row-name" title="@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)">@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)</span>
                                     <span class="panel-row-meta">@scan.Extensions &middot; @scan.FilesFound files found</span>
                                 </div>
                                 <span class="panel-row-status">
                                     <C2Badge Variant="BadgeVariant.Warning" Size="Size.Xs">@pctP%</C2Badge>
-                                    <C2Btn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeScan(scan)" Title="Resume">&#x25B6;</C2Btn>
+                                    <C2Btn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeScan(scan)" Title="Resume"><C2Icon Name="play" Size="Size.Xs" /></C2Btn>
                                 </span>
                             </div>
                         </div>
@@ -143,14 +143,14 @@
                     {
                         <div class="panel-row-item">
                             <div class="panel-row">
-                                <span class="panel-row-icon fail">&#x2717;</span>
+                                <span class="panel-row-icon fail"><C2Icon Name="x" Size="Size.Xs" /></span>
                                 <div class="panel-row-info">
                                     <span class="panel-row-name" title="@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)">@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)</span>
                                     <span class="panel-row-meta">@scan.Extensions &middot; @scan.FilesFound files found</span>
                                 </div>
                                 <span class="panel-row-status">
                                     <C2Badge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@scan.Error">FAILED</C2Badge>
-                                    <C2Btn Size="Size.Xs" OnClick="() => ResumeScan(scan)" Title="Retry">&#x21bb;</C2Btn>
+                                    <C2Btn Size="Size.Xs" OnClick="() => ResumeScan(scan)" Title="Retry"><C2Icon Name="refresh" Size="Size.Xs" /></C2Btn>
                                 </span>
                             </div>
                         </div>
@@ -161,10 +161,10 @@
                     {
                         <div class="panel-row-item panel-done-summary" @onclick="() => ToggleCompleted(group.Uuid)">
                             <div class="panel-row">
-                                <span class="panel-row-icon done">&#x2713;</span>
+                                <span class="panel-row-icon done"><C2Icon Name="check" Size="Size.Xs" /></span>
                                 <span class="panel-row-name">@group.Completed completed searches (@group.TotalFiles files found)</span>
                                 <span class="panel-row-status">
-                                    <span class="panel-expand">@(expandedAgents.Contains(group.Uuid) ? "&#x25B2;" : "&#x25BC;")</span>
+                                    <span class="panel-expand"><C2Icon Name="@(expandedAgents.Contains(group.Uuid) ? "chevron-up" : "chevron-down")" Size="Size.Xs" /></span>
                                 </span>
                             </div>
                         </div>
@@ -174,13 +174,13 @@
                             {
                                 <div class="panel-row-item panel-done-item">
                                     <div class="panel-row">
-                                        <span class="panel-row-icon done">&#x2713;</span>
+                                        <span class="panel-row-icon done"><C2Icon Name="check" Size="Size.Xs" /></span>
                                         <div class="panel-row-info">
                                             <span class="panel-row-name" title="@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)">@(string.IsNullOrEmpty(scan.RootPath) ? "Full filesystem" : scan.RootPath)</span>
                                             <span class="panel-row-meta">@scan.Extensions &middot; @scan.DirsScanned dirs &middot; @scan.FilesFound files</span>
                                         </div>
                                         <span class="panel-row-status">
-                                            <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => RemoveScan(scan)" Title="Remove">&#x2715;</C2Btn>
+                                            <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => RemoveScan(scan)" Title="Remove"><C2Icon Name="x" Size="Size.Xs" /></C2Btn>
                                         </span>
                                     </div>
                                 </div>

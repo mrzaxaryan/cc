@@ -21,16 +21,16 @@
             break;
 
         case DownloadStatus.Completed:
-            <C2Badge Variant="BadgeVariant.Success" Size="Size.Xs">&#x2713;</C2Badge>
+            <C2Badge Variant="BadgeVariant.Success" Size="Size.Xs"><C2Icon Name="check" Size="Size.Xs" /></C2Badge>
             break;
 
         case DownloadStatus.Paused:
             var pctP = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
-            <C2Badge Variant="BadgeVariant.Warning" Size="Size.Xs">&#x23F8; @pctP%</C2Badge>
+            <C2Badge Variant="BadgeVariant.Warning" Size="Size.Xs"><C2Icon Name="pause" Size="Size.Xs" /> @pctP%</C2Badge>
             break;
 
         case DownloadStatus.Failed:
-            <C2Badge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@dl.Error">&#x2717;</C2Badge>
+            <C2Badge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@dl.Error"><C2Icon Name="x" Size="Size.Xs" /></C2Badge>
             break;
     }
 }

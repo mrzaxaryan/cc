@@ -33,8 +33,8 @@
             <div class="cm-toolbar">
                 <C2Badge Variant="BadgeVariant.Info">@(Cache.DirectoryName ?? "No folder")</C2Badge>
                 <div class="cm-toolbar-actions">
-                    <C2Btn OnClick="Refresh" Disabled="@loading" Title="Refresh">&#x21bb;</C2Btn>
-                    <C2Btn Variant="BtnVariant.Warning" OnClick="ChangeFolder" Title="Change folder">&#x1f4c1;</C2Btn>
+                    <C2Btn OnClick="Refresh" Disabled="@loading" Title="Refresh"><C2Icon Name="refresh" Size="Size.Xs" /></C2Btn>
+                    <C2Btn Variant="BtnVariant.Warning" OnClick="ChangeFolder" Title="Change folder"><C2Icon Name="folder" Size="Size.Xs" /></C2Btn>
                 </div>
             </div>
 
@@ -121,13 +121,13 @@
                     else
                     {
                         <button class="cm-item cm-item-nav" @onclick="NavigateUp">
-                            <span class="cm-item-icon">&#x2191;</span>
+                            <span class="cm-item-icon"><C2Icon Name="arrow-up" Size="Size.Xs" /></span>
                             <span class="cm-item-name">..</span>
                         </button>
                         @foreach (var dir in childDirs)
                         {
                             <div class="cm-item">
-                                <span class="cm-item-icon">&#x1f4c1;</span>
+                                <span class="cm-item-icon"><C2Icon Name="folder" Size="Size.Xs" /></span>
                                 <a href="javascript:void(0)" class="cm-item-name" @onclick="() => NavigateToDirectory(dir.Id)" @onclick:preventDefault>@dir.Name</a>
                                 <C2ConfirmBtn OnConfirm="() => DeleteDir(dir)" Title="Delete">DEL</C2ConfirmBtn>
                             </div>
@@ -135,7 +135,7 @@
                         @foreach (var file in childFiles)
                         {
                             <div class="cm-item">
-                                <span class="cm-item-icon">&#x1f4c4;</span>
+                                <span class="cm-item-icon"><C2Icon Name="file" Size="Size.Xs" /></span>
                                 <span class="cm-item-name">@file.Name</span>
                                 <span class="cm-item-meta">@Formatters.FormatSize((ulong)file.Size)</span>
                                 <C2ConfirmBtn OnConfirm="() => DeleteFile(file)" Title="Delete">DEL</C2ConfirmBtn>
@@ -156,7 +156,7 @@
                     <C2Badge Variant="BadgeVariant.Dark">c2-agents</C2Badge>
                     <span class="cm-db-version">v4</span>
                     <div class="cm-toolbar-actions">
-                        <C2Btn OnClick="LoadDbStats" Disabled="@dbLoading" Title="Refresh">&#x21bb;</C2Btn>
+                        <C2Btn OnClick="LoadDbStats" Disabled="@dbLoading" Title="Refresh"><C2Icon Name="refresh" Size="Size.Xs" /></C2Btn>
                     </div>
                 </div>
                 @if (dbLoading)

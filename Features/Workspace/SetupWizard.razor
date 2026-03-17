@@ -19,7 +19,7 @@
                         @onclick="() => GoToStep(navStep)" disabled="@(!CanNavigateTo(navStep))">
                     <span class="su-nav-num">@StepNumber(navStep)</span>
                     <span class="su-nav-label">@StepLabel(navStep)</span>
-                    @if (IsStepDone(navStep)) { <span class="su-nav-check">&#x2713;</span> }
+                    @if (IsStepDone(navStep)) { <span class="su-nav-check"><C2Icon Name="check" Size="Size.Xs" /></span> }
                 </button>
             }
         </nav>
@@ -42,7 +42,7 @@
                     @foreach (var item in HowItWorks)
                     {
                         <div class="su-feature">
-                            <span class="su-feature-icon">@item.Icon</span>
+                            <span class="su-feature-icon"><C2Icon Name="@item.Icon" Size="Size.Md" /></span>
                             <div class="su-feature-text">
                                 <strong>@item.Title</strong>
                                 <span>@item.Desc</span>
@@ -56,7 +56,7 @@
                     @foreach (var item in Features)
                     {
                         <div class="su-feature">
-                            <span class="su-feature-icon">@item.Icon</span>
+                            <span class="su-feature-icon"><C2Icon Name="@item.Icon" Size="Size.Md" /></span>
                             <div class="su-feature-text">
                                 <strong>@item.Title</strong>
                                 <span>@item.Desc</span>
@@ -70,7 +70,7 @@
                     @foreach (var link in RepoLinks)
                     {
                         <a class="su-link" href="@link.Url" target="_blank" rel="noopener">
-                            <span class="su-link-icon">@link.Icon</span> @link.Label
+                            <span class="su-link-icon"><C2Icon Name="@link.Icon" Size="Size.Xs" /></span> @link.Label
                         </a>
                     }
                 </div>
@@ -85,7 +85,7 @@
                 @if (!Cache.IsSupported)
                 {
                     <div class="su-info-box su-info-box-danger">
-                        <span class="su-info-icon">&#x26A0;</span>
+                        <span class="su-info-icon"><C2Icon Name="alert-triangle" Size="Size.Md" /></span>
                         <div class="su-info-text">
                             <strong>Browser not supported</strong>
                             <span>Your browser does not support the File System Access API. A cache folder is required for C2 to function. Please use a Chromium-based browser (Chrome, Edge, Brave).</span>
@@ -104,7 +104,7 @@
                 {
                     <p class="su-desc">Select a folder on your device to use as the local file cache. This is required &mdash; all files downloaded from agents are stored here for offline browsing, searching, and analysis.</p>
                     <div class="su-info-box">
-                        <span class="su-info-icon">&#x1f4c1;</span>
+                        <span class="su-info-icon"><C2Icon Name="folder" Size="Size.Md" /></span>
                         <div class="su-info-text">
                             <strong>Why a cache folder?</strong>
                             <span>C2 stores agent data locally on your machine. Downloaded files, filesystem metadata, and search results all require a cache directory. Choose a folder with enough free space.</span>
@@ -142,7 +142,7 @@
                                     </C2Btn>
                                     @if (Relay.Relays.Count > 1)
                                     {
-                                        <button class="su-ext-remove" @onclick="() => RemoveRelay(relay)" title="Remove">&#x2715;</button>
+                                        <button class="su-ext-remove" @onclick="() => RemoveRelay(relay)" title="Remove"><C2Icon Name="x" Size="Size.Xs" /></button>
                                     }
                                 </div>
                             </div>
@@ -199,7 +199,7 @@
                         var isActive = selectedExtGroups.Contains(g.Key);
                         <button class="su-ext-group @(isActive ? "active" : "")" @onclick="() => ToggleExtGroup(g.Key)">
                             <div class="su-ext-group-top">
-                                <span class="su-ext-group-check">@(isActive ? "\u2713" : "")</span>
+                                @if (isActive) { <span class="su-ext-group-check"><C2Icon Name="check" Size="Size.Xs" /></span> }
                                 <span class="su-ext-group-name">@g.Key</span>
                             </div>
                             <span class="su-ext-group-exts">@string.Join(", ", g.Value)</span>
@@ -216,9 +216,9 @@
                             var c = cg;
                             <div class="su-ext-group active">
                                 <div class="su-ext-group-top">
-                                    <span class="su-ext-group-check">&#x2713;</span>
+                                    <span class="su-ext-group-check"><C2Icon Name="check" Size="Size.Xs" /></span>
                                     <span class="su-ext-group-name">@c.Name</span>
-                                    <button class="su-ext-remove" @onclick="() => RemoveCustomGroup(c.Name)" title="Remove">&#x2715;</button>
+                                    <button class="su-ext-remove" @onclick="() => RemoveCustomGroup(c.Name)" title="Remove"><C2Icon Name="x" Size="Size.Xs" /></button>
                                 </div>
                                 <span class="su-ext-group-exts">@c.Extensions</span>
                             </div>
@@ -274,24 +274,24 @@
 
     private static readonly InfoItem[] HowItWorks =
     [
-        new("\U0001f4bb", "Agent", "Cross-platform remote agent built on PIR (Position-Independent Runtime) \u2014 a zero-dependency C++23 shellcode runtime with cryptography, networking, and TLS 1.3. Communicates via a binary command protocol over WebSocket."),
-        new("\U0001f310", "Relay", "WebSocket relay running on Cloudflare Workers with Durable Objects. Pairs agents with dashboard connections 1:1 \u2014 no direct inbound connections to agents needed."),
-        new("\U0001f5a5", "C2 (this dashboard)", "Blazor WebAssembly app that runs entirely in your browser. Connects to the relay, sends commands to agents, and caches downloaded files locally using the File System Access API and IndexedDB."),
+        new("laptop", "Agent", "Cross-platform remote agent built on PIR (Position-Independent Runtime) \u2014 a zero-dependency C++23 shellcode runtime with cryptography, networking, and TLS 1.3. Communicates via a binary command protocol over WebSocket."),
+        new("globe", "Relay", "WebSocket relay running on Cloudflare Workers with Durable Objects. Pairs agents with dashboard connections 1:1 \u2014 no direct inbound connections to agents needed."),
+        new("monitor", "C2 (this dashboard)", "Blazor WebAssembly app that runs entirely in your browser. Connects to the relay, sends commands to agents, and caches downloaded files locally using the File System Access API and IndexedDB."),
     ];
 
     private static readonly InfoItem[] Features =
     [
-        new("\U0001f4c1", "Remote File Browser", "Navigate agent filesystems, view file contents, and upload files to the local cache."),
-        new("\U0001f50d", "File Search", "Recursively search entire filesystems by file extension with configurable extension groups and auto-download."),
-        new("\U0001f4be", "Local-only Storage", "All data stays on your machine. Files are cached to a local folder, metadata is stored in IndexedDB. Nothing is sent to external servers."),
+        new("folder", "Remote File Browser", "Navigate agent filesystems, view file contents, and upload files to the local cache."),
+        new("search", "File Search", "Recursively search entire filesystems by file extension with configurable extension groups and auto-download."),
+        new("save", "Local-only Storage", "All data stays on your machine. Files are cached to a local folder, metadata is stored in IndexedDB. Nothing is sent to external servers."),
     ];
 
     private static readonly LinkItem[] RepoLinks =
     [
-        new("\U0001f5a5", "C2 Dashboard", "https://github.com/mrzaxaryan/C2"),
-        new("\U0001f310", "Relay Server", "https://github.com/mrzaxaryan/relay"),
-        new("\U0001f4bb", "Agent", "https://github.com/mrzaxaryan/Position-Independent-Agent"),
-        new("\u2699", "PIR Runtime", "https://github.com/mrzaxaryan/Position-Independent-Runtime"),
+        new("monitor", "C2 Dashboard", "https://github.com/mrzaxaryan/C2"),
+        new("globe", "Relay Server", "https://github.com/mrzaxaryan/relay"),
+        new("laptop", "Agent", "https://github.com/mrzaxaryan/Position-Independent-Agent"),
+        new("cog", "PIR Runtime", "https://github.com/mrzaxaryan/Position-Independent-Runtime"),
     ];
 
     private static readonly Dictionary<Step, string> StepLabels = new()
