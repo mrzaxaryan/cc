@@ -1,0 +1,2337 @@
+@inject IJSRuntime JS
+@using ShortcutLib
+@using System.IO.Compression
+
+        <div class="tool-header">
+            <h1 class="mono">LNK <span class="accent">Tool</span></h1>
+            <p class="tool-subtitle">Generate and edit Windows shortcut (.lnk) files directly in your browser.</p>
+        </div>
+
+        @if (!IsParsed)
+        {
+            <div class="upload-strip @(IsDragOver ? "drag-over" : "")"
+                 @ondragenter="OnDragEnter" @ondragleave="OnDragLeave" @ondragover:preventDefault>
+                <span class="mono upload-strip-label">Drop .lnk to edit</span>
+                <span class="upload-strip-sep mono">|</span>
+                <span class="upload-strip-hint">or click to browse</span>
+                <InputFile OnChange="OnFileSelected" accept=".lnk" class="upload-input" />
+            </div>
+
+            @if (IsLoading)
+            {
+                <div class="loading-banner mono">Parsing...</div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(ParseError))
+            {
+                <div class="parse-error-wrapper">
+                    <div class="error-banner">
+                        <span>@ParseError</span>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <!-- Overview -->
+            <div class="lnk-results">
+                <div class="tool-section">
+                    <button class="tool-section-header" @onclick="() => ToggleSection(0)">
+                        <span class="mono">Overview</span>
+                        <span class="section-arrow @(IsSectionOpen(0) ? "open" : "")">&#x25BE;</span>
+                    </button>
+                    @if (IsSectionOpen(0))
+                    {
+                        <div class="tool-section-body">
+                            <div class="tool-info-grid tool-info-grid--single-col">
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">File</span>
+                                    <span class="tool-info-value">@OriginalFileName</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Size</span>
+                                    <span class="tool-info-value">@FormatSize((ulong)OriginalFileSize)</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Target</span>
+                                    <span class="tool-info-value mono">@(Target ?? "—")</span>
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(Arguments))
+                                {
+                                    <div class="tool-info-item">
+                                        <span class="tool-info-label mono">Arguments</span>
+                                        <span class="tool-info-value mono">@Arguments</span>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(WorkingDirectory))
+                                {
+                                    <div class="tool-info-item">
+                                        <span class="tool-info-label mono">Working Dir</span>
+                                        <span class="tool-info-value mono">@WorkingDirectory</span>
+                                    </div>
+                                }
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Window Style</span>
+                                    <span class="tool-info-value">@WindowStyle</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Run as Admin</span>
+                                    <span class="tool-info-value">@(RunAsAdmin ? "Yes" : "No")</span>
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(IconLocation))
+                                {
+                                    <div class="tool-info-item">
+                                        <span class="tool-info-label mono">Icon</span>
+                                        <span class="tool-info-value mono">@IconLocation, @IconIndex</span>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(Description))
+                                {
+                                    <div class="tool-info-item">
+                                        <span class="tool-info-label mono">Description</span>
+                                        <span class="tool-info-value">@Description</span>
+                                    </div>
+                                }
+                                @if (HotkeyKeyValue != 0)
+                                {
+                                    <div class="tool-info-item">
+                                        <span class="tool-info-label mono">Hotkey</span>
+                                        <span class="tool-info-value mono">@FormatHotkey()</span>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(RelativePath))
+                                {
+                                    <div class="tool-info-item">
+                                        <span class="tool-info-label mono">Relative Path</span>
+                                        <span class="tool-info-value mono">@RelativePath</span>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(IconEnvironmentPath))
+                                {
+                                    <div class="tool-info-item">
+                                        <span class="tool-info-label mono">Icon Env Path</span>
+                                        <span class="tool-info-value mono">@IconEnvironmentPath</span>
+                                    </div>
+                                }
+                                @if (TargetFileSize > 0)
+                                {
+                                    <div class="tool-info-item">
+                                        <span class="tool-info-label mono">Target File Size</span>
+                                        <span class="tool-info-value mono">@FormatSize(TargetFileSize)</span>
+                                    </div>
+                                }
+                                @if (UseUnicode)
+                                {
+                                    <div class="tool-info-item">
+                                        <span class="tool-info-label mono">Unicode</span>
+                                        <span class="tool-info-value">Yes</span>
+                                    </div>
+                                }
+                                @if (IsPrinterLink)
+                                {
+                                    <div class="tool-info-item">
+                                        <span class="tool-info-label mono">Printer Link</span>
+                                        <span class="tool-info-value">Yes</span>
+                                    </div>
+                                }
+                            </div>
+
+                            @{ var parsedFileAttrFlags = GetParsedFileAttributeNames(); }
+                            @if (parsedFileAttrFlags.Length > 0)
+                            {
+                                <div class="lnk-flags">
+                                    <span class="lnk-flags-label mono">File Attributes:</span>
+                                    @foreach (var flag in parsedFileAttrFlags)
+                                    {
+                                        <span class="lnk-flag">@flag</span>
+                                    }
+                                </div>
+                            }
+
+                            @{ var activeLinkFlags = GetActiveLinkFlagNames(); }
+                            @if (activeLinkFlags.Length > 0)
+                            {
+                                <div class="lnk-flags">
+                                    <span class="lnk-flags-label mono">Link Flags:</span>
+                                    @foreach (var flag in activeLinkFlags)
+                                    {
+                                        <span class="lnk-flag">@flag</span>
+                                    }
+                                </div>
+                            }
+
+                            @if (ParsedExtraConsoleCodePage != null || !string.IsNullOrWhiteSpace(ParsedExtraDarwinData) || !string.IsNullOrWhiteSpace(ParsedExtraShimLayerName)
+                                || !string.IsNullOrWhiteSpace(KnownFolderGuid) || SpecialFolderCsidl > 0)
+                            {
+                                <div class="tool-info-grid tool-info-grid--single-col" style="margin-top: 0.75rem;">
+                                    @if (ParsedExtraConsoleCodePage != null)
+                                    {
+                                        <div class="tool-info-item">
+                                            <span class="tool-info-label mono">Console Code Page</span>
+                                            <span class="tool-info-value mono">@ParsedExtraConsoleCodePage</span>
+                                        </div>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(ParsedExtraDarwinData))
+                                    {
+                                        <div class="tool-info-item">
+                                            <span class="tool-info-label mono">Darwin Data</span>
+                                            <span class="tool-info-value mono">@ParsedExtraDarwinData</span>
+                                        </div>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(ParsedExtraShimLayerName))
+                                    {
+                                        <div class="tool-info-item">
+                                            <span class="tool-info-label mono">Shim Layer</span>
+                                            <span class="tool-info-value mono">@ParsedExtraShimLayerName</span>
+                                        </div>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(KnownFolderGuid))
+                                    {
+                                        <div class="tool-info-item">
+                                            <span class="tool-info-label mono">Known Folder</span>
+                                            <span class="tool-info-value mono">@KnownFolderGuid (offset: @KnownFolderOffset)</span>
+                                        </div>
+                                    }
+                                    @if (SpecialFolderCsidl > 0)
+                                    {
+                                        <div class="tool-info-item">
+                                            <span class="tool-info-label mono">Special Folder</span>
+                                            <span class="tool-info-value mono">CSIDL @SpecialFolderCsidl (offset: @SpecialFolderOffset)</span>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <!-- Tracking Info -->
+                @if (HasTrackingData)
+                {
+                    <div class="tool-section tracking-section">
+                        <button class="tool-section-header" @onclick="() => ToggleSection(1)">
+                            <span class="mono">Tracking Info</span>
+                            <span class="section-arrow @(IsSectionOpen(1) ? "open" : "")">&#x25BE;</span>
+                        </button>
+                        @if (IsSectionOpen(1))
+                        {
+                            <div class="tool-section-body">
+                                <div class="warning-banner">
+                                    <span>This file contains embedded tracking data that can identify the machine it was created on.</span>
+                                </div>
+
+                                <div class="tool-info-grid tool-info-grid--single-col">
+                                    @if (ParsedTracker != null)
+                                    {
+                                        <div class="tool-info-item tracking-item">
+                                            <span class="tool-info-label mono">Machine ID</span>
+                                            <span class="tool-info-value mono">@ParsedTracker.MachineId</span>
+                                        </div>
+                                        <div class="tool-info-item tracking-item">
+                                            <span class="tool-info-label mono">Volume ID</span>
+                                            <span class="tool-info-value mono">@ParsedTracker.VolumeId</span>
+                                        </div>
+                                        <div class="tool-info-item tracking-item">
+                                            <span class="tool-info-label mono">Object ID</span>
+                                            <span class="tool-info-value mono">@ParsedTracker.ObjectId</span>
+                                        </div>
+                                        @if (ParsedTracker.BirthVolumeId != null)
+                                        {
+                                            <div class="tool-info-item tracking-item">
+                                                <span class="tool-info-label mono">Birth Volume ID</span>
+                                                <span class="tool-info-value mono">@ParsedTracker.BirthVolumeId</span>
+                                            </div>
+                                        }
+                                        @if (ParsedTracker.BirthObjectId != null)
+                                        {
+                                            <div class="tool-info-item tracking-item">
+                                                <span class="tool-info-label mono">Birth Object ID</span>
+                                                <span class="tool-info-value mono">@ParsedTracker.BirthObjectId</span>
+                                            </div>
+                                        }
+                                    }
+
+                                    @if (ParsedLinkInfo?.Local != null)
+                                    {
+                                        <div class="tool-info-item tracking-item">
+                                            <span class="tool-info-label mono">Local Path</span>
+                                            <span class="tool-info-value mono">@ParsedLinkInfo.Local.BasePath</span>
+                                        </div>
+                                        <div class="tool-info-item tracking-item">
+                                            <span class="tool-info-label mono">Drive Serial</span>
+                                            <span class="tool-info-value mono">@($"0x{ParsedLinkInfo.Local.DriveSerialNumber:X8}")</span>
+                                        </div>
+                                        @if (!string.IsNullOrWhiteSpace(ParsedLinkInfo.Local.VolumeLabel))
+                                        {
+                                            <div class="tool-info-item tracking-item">
+                                                <span class="tool-info-label mono">Volume Label</span>
+                                                <span class="tool-info-value mono">@ParsedLinkInfo.Local.VolumeLabel</span>
+                                            </div>
+                                        }
+                                    }
+                                    @if (ParsedLinkInfo?.Network != null)
+                                    {
+                                        <div class="tool-info-item tracking-item">
+                                            <span class="tool-info-label mono">Network Share</span>
+                                            <span class="tool-info-value mono">@ParsedLinkInfo.Network.ShareName</span>
+                                        </div>
+                                        @if (!string.IsNullOrWhiteSpace(ParsedLinkInfo.Network.DeviceName))
+                                        {
+                                            <div class="tool-info-item tracking-item">
+                                                <span class="tool-info-label mono">Device Name</span>
+                                                <span class="tool-info-value mono">@ParsedLinkInfo.Network.DeviceName</span>
+                                            </div>
+                                        }
+                                        @if (ParsedLinkInfo.Network.NetworkProviderType != null)
+                                        {
+                                            <div class="tool-info-item tracking-item">
+                                                <span class="tool-info-label mono">Network Provider</span>
+                                                <span class="tool-info-value mono">@($"0x{ParsedLinkInfo.Network.NetworkProviderType.Value:X8}")</span>
+                                            </div>
+                                        }
+                                    }
+
+                                    @if (ParsedCreationTime != null)
+                                    {
+                                        <div class="tool-info-item tracking-item">
+                                            <span class="tool-info-label mono">Created</span>
+                                            <span class="tool-info-value mono">@ParsedCreationTime.Value.ToString("yyyy-MM-dd HH:mm:ss")</span>
+                                        </div>
+                                    }
+                                    @if (ParsedAccessTime != null)
+                                    {
+                                        <div class="tool-info-item tracking-item">
+                                            <span class="tool-info-label mono">Accessed</span>
+                                            <span class="tool-info-value mono">@ParsedAccessTime.Value.ToString("yyyy-MM-dd HH:mm:ss")</span>
+                                        </div>
+                                    }
+                                    @if (ParsedWriteTime != null)
+                                    {
+                                        <div class="tool-info-item tracking-item">
+                                            <span class="tool-info-label mono">Modified</span>
+                                            <span class="tool-info-value mono">@ParsedWriteTime.Value.ToString("yyyy-MM-dd HH:mm:ss")</span>
+                                        </div>
+                                    }
+
+                                    @if (ParsedPropertyStore != null)
+                                    {
+                                        <div class="tool-info-item tracking-item">
+                                            <span class="tool-info-label mono">Property Store</span>
+                                            <span class="tool-info-value mono">@FormatSize((ulong)ParsedPropertyStore.Length)</span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+
+                <!-- Console Data (parsed) -->
+                @if (ParsedConsoleData != null)
+                {
+                    <div class="tool-section">
+                        <button class="tool-section-header" @onclick="() => ToggleSection(2)">
+                            <span class="mono">Console Data</span>
+                            <span class="section-arrow @(IsSectionOpen(2) ? "open" : "")">&#x25BE;</span>
+                        </button>
+                        @if (IsSectionOpen(2))
+                        {
+                            <div class="tool-section-body">
+                                <div class="tool-info-grid">
+                                    <div class="tool-info-item">
+                                        <span class="tool-info-label mono">Buffer Size</span>
+                                        <span class="tool-info-value mono">@(ParsedConsoleData.ScreenBufferSizeX)x@(ParsedConsoleData.ScreenBufferSizeY)</span>
+                                    </div>
+                                    <div class="tool-info-item">
+                                        <span class="tool-info-label mono">Window Size</span>
+                                        <span class="tool-info-value mono">@(ParsedConsoleData.WindowSizeX)x@(ParsedConsoleData.WindowSizeY)</span>
+                                    </div>
+                                    <div class="tool-info-item">
+                                        <span class="tool-info-label mono">Font</span>
+                                        <span class="tool-info-value mono">@ParsedConsoleData.FaceName</span>
+                                    </div>
+                                    <div class="tool-info-item">
+                                        <span class="tool-info-label mono">Font Weight</span>
+                                        <span class="tool-info-value mono">@ParsedConsoleData.FontWeight</span>
+                                    </div>
+                                    <div class="tool-info-item">
+                                        <span class="tool-info-label mono">Cursor Size</span>
+                                        <span class="tool-info-value mono">@ParsedConsoleData.CursorSize%</span>
+                                    </div>
+                                    <div class="tool-info-item">
+                                        <span class="tool-info-label mono">History Buffer</span>
+                                        <span class="tool-info-value mono">@ParsedConsoleData.HistoryBufferSize</span>
+                                    </div>
+                                </div>
+
+                                @{ var consoleFlags = GetParsedConsoleFlagNames(); }
+                                @if (consoleFlags.Length > 0)
+                                {
+                                    <div class="lnk-flags">
+                                        <span class="lnk-flags-label mono">Options:</span>
+                                        @foreach (var flag in consoleFlags)
+                                        {
+                                            <span class="lnk-flag">@flag</span>
+                                        }
+                                    </div>
+                                }
+
+                                @if (ParsedConsoleData.ColorTable is { Length: 16 })
+                                {
+                                    <div class="color-preview-row">
+                                        @for (int i = 0; i < 16; i++)
+                                        {
+                                            <div class="color-preview-swatch"
+                                                 style="background: @BbggrrToHex(ParsedConsoleData.ColorTable[i])" title="Color @i">
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+        <!-- Shared Form -->
+        <div class="tool-form-wrapper">
+            @if (!IsParsed)
+            {
+                <div class="form-group template-selector">
+                    <label class="mono" for="template">Template</label>
+                    <select id="template" class="form-input" value="@SelectedTemplateName" @onchange="OnTemplateSelected">
+                        <option value="">Custom</option>
+                        @foreach (var tpl in LnkTemplates)
+                        {
+                            <option value="@tpl.Name">@tpl.Name</option>
+                        }
+                    </select>
+                </div>
+            }
+
+            <div class="form-group">
+                <label class="mono" for="target">Target Path <span class="required">*</span></label>
+                <input id="target" type="text" @bind="Target" placeholder="C:\Windows\notepad.exe" class="form-input" />
+            </div>
+
+            <div class="form-group">
+                <label class="mono" for="arguments">Arguments</label>
+                <input id="arguments" type="text" @bind="Arguments" placeholder="--flag value" class="form-input" />
+            </div>
+
+            <div class="form-group">
+                <label class="mono" for="workingDir">Working Directory</label>
+                <input id="workingDir" type="text" @bind="WorkingDirectory" placeholder="C:\MyApp" class="form-input" />
+            </div>
+
+            <div class="form-group">
+                <label class="mono" for="description">Description</label>
+                <input id="description" type="text" @bind="Description" placeholder="My Shortcut" class="form-input" />
+            </div>
+
+            <div class="form-group">
+                <label class="mono" for="iconTemplate">Icon Template</label>
+                <select id="iconTemplate" class="form-input" value="@SelectedIconTemplateName" @onchange="OnIconTemplateSelected">
+                    <option value="">None</option>
+                    @foreach (var tpl in IconTemplates)
+                    {
+                        <option value="@tpl.Label">@tpl.Symbol @tpl.Label</option>
+                    }
+                </select>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="mono" for="iconLocation">Icon Location</label>
+                    <input id="iconLocation" type="text" @bind="IconLocation"
+                           placeholder="%SystemRoot%\system32\shell32.dll" class="form-input" />
+                </div>
+                <div class="form-group">
+                    <label class="mono" for="iconIndex">Icon Index</label>
+                    <input id="iconIndex" type="number" @bind="IconIndex" class="form-input" />
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="mono" for="windowStyle">Window Style</label>
+                    <select id="windowStyle" @bind="WindowStyle" class="form-input">
+                        <option value="@ShortcutWindowStyle.Normal">Normal</option>
+                        <option value="@ShortcutWindowStyle.Maximized">Maximized</option>
+                        <option value="@ShortcutWindowStyle.Minimized">Minimized</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="mono" for="fileName">File Name</label>
+                    <input id="fileName" type="text" @bind="FileName" placeholder="shortcut" class="form-input" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="mono">Hotkey</label>
+                <span class="form-hint">Global keyboard shortcut to launch this shortcut</span>
+                <div class="hotkey-row">
+                    <div class="hotkey-modifiers">
+                        <label class="checkbox-label">
+                            <input type="checkbox" @bind="HotkeyCtrl" />
+                            <span class="checkmark"></span>
+                            <span class="mono">Ctrl</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" @bind="HotkeyAlt" />
+                            <span class="checkmark"></span>
+                            <span class="mono">Alt</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" @bind="HotkeyShift" />
+                            <span class="checkmark"></span>
+                            <span class="mono">Shift</span>
+                        </label>
+                    </div>
+                    <select @bind="HotkeyKeyValue" class="form-input hotkey-key-select">
+                        <option value="0">None</option>
+                        @foreach (var kv in HotkeyKeyOptions)
+                        {
+                            <option value="@kv.Value">@kv.Label</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="mono" for="relativePath">Relative Path</label>
+                <span class="form-hint">Relative path from the .lnk file to its target</span>
+                <input id="relativePath" type="text" @bind="RelativePath" placeholder="..\..\target.exe" class="form-input" />
+            </div>
+
+            <div class="form-group">
+                <label class="mono" for="iconEnvPath">Icon Environment Path</label>
+                <span class="form-hint">Icon path using environment variables like %ProgramFiles%</span>
+                <input id="iconEnvPath" type="text" @bind="IconEnvironmentPath" placeholder="%ProgramFiles%\app\icon.ico" class="form-input" />
+            </div>
+
+            <div class="form-checkboxes">
+                <label class="checkbox-label">
+                    <input type="checkbox" @bind="RunAsAdmin" />
+                    <span class="checkmark"></span>
+                    <span class="checkbox-text">
+                        <span class="mono">Run as Administrator</span>
+                        <span class="form-hint">Launch the target with elevated privileges (UAC prompt)</span>
+                    </span>
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" @bind="UseUnicode" />
+                    <span class="checkmark"></span>
+                    <span class="checkbox-text">
+                        <span class="mono">Use Unicode</span>
+                        <span class="form-hint">Store string data as Unicode instead of ANSI</span>
+                    </span>
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" @bind="IsPrinterLink" />
+                    <span class="checkmark"></span>
+                    <span class="checkbox-text">
+                        <span class="mono">Printer Link</span>
+                        <span class="form-hint">Target is a network printer</span>
+                    </span>
+                </label>
+                @if (IsParsed && HasTrackingData)
+                {
+                    <label class="checkbox-label">
+                        <input type="checkbox" @bind="StripTrackingData" />
+                        <span class="checkmark"></span>
+                        <span class="checkbox-text">
+                            <span class="mono">Strip Tracking Data</span>
+                            <span class="form-hint">Remove machine-identifying metadata from the file</span>
+                        </span>
+                    </label>
+                }
+            </div>
+
+            <!-- File Attributes -->
+            <div class="tool-section form-section">
+                <button class="tool-section-header" @onclick="() => ToggleSection(10)">
+                    <span class="mono">File Attributes</span>
+                    <span class="section-arrow @(IsSectionOpen(10) ? "open" : "")">&#x25BE;</span>
+                </button>
+                @if (IsSectionOpen(10))
+                {
+                    <div class="tool-section-body">
+                        <div class="form-checkboxes checkbox-grid">
+                            @foreach (var attr in AllFileAttributes)
+                            {
+                                <label class="checkbox-label">
+                                    <input type="checkbox" checked="@SelectedFileAttributes.Contains(attr)"
+                                           @onchange="() => ToggleFileAttribute(attr)" />
+                                    <span class="checkmark"></span>
+                                    <span class="checkbox-text">
+                                        <span class="mono">@attr</span>
+                                        <span class="form-hint">@GetFileAttributeHint(attr)</span>
+                                    </span>
+                                </label>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Link Flags -->
+            <div class="tool-section form-section">
+                <button class="tool-section-header" @onclick="() => ToggleSection(11)">
+                    <span class="mono">Link Flags</span>
+                    <span class="section-arrow @(IsSectionOpen(11) ? "open" : "")">&#x25BE;</span>
+                </button>
+                @if (IsSectionOpen(11))
+                {
+                    <div class="tool-section-body">
+                        <div class="form-checkboxes checkbox-grid">
+                            <label class="checkbox-label">
+                                <input type="checkbox" @bind="ForceNoLinkInfo" />
+                                <span class="checkmark"></span>
+                                <span class="checkbox-text">
+                                    <span class="mono">Force No Link Info</span>
+                                    <span class="form-hint">Ignore LinkInfo when resolving the shortcut</span>
+                                </span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" @bind="RunInSeparateProcess" />
+                                <span class="checkmark"></span>
+                                <span class="checkbox-text">
+                                    <span class="mono">Run In Separate Process</span>
+                                    <span class="form-hint">Run 16-bit target in a separate Virtual DOS Machine</span>
+                                </span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" @bind="NoPidlAlias" />
+                                <span class="checkmark"></span>
+                                <span class="checkbox-text">
+                                    <span class="mono">No PIDL Alias</span>
+                                    <span class="form-hint">Do not use shell namespace aliasing for the IDList</span>
+                                </span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" @bind="ForceNoLinkTrack" />
+                                <span class="checkmark"></span>
+                                <span class="checkbox-text">
+                                    <span class="mono">Force No Link Track</span>
+                                    <span class="form-hint">Ignore distributed link tracking data</span>
+                                </span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" @bind="EnableTargetMetadata" />
+                                <span class="checkmark"></span>
+                                <span class="checkbox-text">
+                                    <span class="mono">Enable Target Metadata</span>
+                                    <span class="form-hint">Populate PropertyStore when target is set</span>
+                                </span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" @bind="DisableLinkPathTracking" />
+                                <span class="checkmark"></span>
+                                <span class="checkbox-text">
+                                    <span class="mono">Disable Link Path Tracking</span>
+                                    <span class="form-hint">Ignore environment variable expansion data</span>
+                                </span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" @bind="DisableKnownFolderTracking" />
+                                <span class="checkmark"></span>
+                                <span class="checkbox-text">
+                                    <span class="mono">Disable Known Folder Tracking</span>
+                                    <span class="form-hint">Ignore known folder tracking data blocks</span>
+                                </span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" @bind="DisableKnownFolderAlias" />
+                                <span class="checkmark"></span>
+                                <span class="checkbox-text">
+                                    <span class="mono">Disable Known Folder Alias</span>
+                                    <span class="form-hint">Store the full unaliased IDList form</span>
+                                </span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" @bind="AllowLinkToLink" />
+                                <span class="checkmark"></span>
+                                <span class="checkbox-text">
+                                    <span class="mono">Allow Link To Link</span>
+                                    <span class="form-hint">Allow the target to be another .lnk file</span>
+                                </span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" @bind="UnaliasOnSave" />
+                                <span class="checkmark"></span>
+                                <span class="checkbox-text">
+                                    <span class="mono">Unalias On Save</span>
+                                    <span class="form-hint">Remove alias from target IDList when saving</span>
+                                </span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" @bind="KeepLocalIDListForUNCTarget" />
+                                <span class="checkmark"></span>
+                                <span class="checkbox-text">
+                                    <span class="mono">Keep Local IDList for UNC</span>
+                                    <span class="form-hint">Store local IDList for UNC network paths</span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Console Settings -->
+            <div class="tool-section form-section">
+                <button class="tool-section-header" @onclick="() => ToggleSection(12)">
+                    <span class="mono">Console Settings</span>
+                    <span class="section-arrow @(IsSectionOpen(12) ? "open" : "")">&#x25BE;</span>
+                </button>
+                @if (IsSectionOpen(12))
+                {
+                    <div class="tool-section-body">
+                        <label class="checkbox-label" style="margin-bottom: 1rem;">
+                            <input type="checkbox" @bind="EnableConsoleSettings" />
+                            <span class="checkmark"></span>
+                            <span class="checkbox-text">
+                                <span class="mono">Enable Console Data</span>
+                                <span class="form-hint">Embed console window settings (font, colors, buffer) for console-based targets</span>
+                            </span>
+                        </label>
+
+                        @if (EnableConsoleSettings)
+                        {
+                            <div class="console-subgroup">
+                                <span class="console-subgroup-label mono">Buffer & Window</span>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="mono">Buffer Width</label>
+                                        <span class="form-hint">Number of character columns in the screen buffer</span>
+                                        <input type="number" @bind="ConsoleBufferSizeX" class="form-input" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="mono">Buffer Height</label>
+                                        <span class="form-hint">Number of rows in the screen buffer (scrollback)</span>
+                                        <input type="number" @bind="ConsoleBufferSizeY" class="form-input" />
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="mono">Window Width</label>
+                                        <span class="form-hint">Visible columns in the console window</span>
+                                        <input type="number" @bind="ConsoleWindowSizeX" class="form-input" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="mono">Window Height</label>
+                                        <span class="form-hint">Visible rows in the console window</span>
+                                        <input type="number" @bind="ConsoleWindowSizeY" class="form-input" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="console-subgroup">
+                                <span class="console-subgroup-label mono">Font</span>
+                                <div class="form-group">
+                                    <label class="mono">Face Name</label>
+                                    <span class="form-hint">Console font family (e.g. Consolas, Cascadia Mono, Lucida Console)</span>
+                                    <input type="text" @bind="ConsoleFaceName" placeholder="Consolas" class="form-input" />
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="mono">Font Size</label>
+                                        <span class="form-hint">Font height in pixels (0 = system default)</span>
+                                        <input type="number" @bind="ConsoleFontSize" class="form-input" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="mono">Font Weight</label>
+                                        <span class="form-hint">400 = normal, 700 = bold</span>
+                                        <input type="number" @bind="ConsoleFontWeight" placeholder="400" class="form-input" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="console-subgroup">
+                                <span class="console-subgroup-label mono">Display</span>
+                                <div class="form-checkboxes checkbox-grid">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" @bind="ConsoleFullScreen" />
+                                        <span class="checkmark"></span>
+                                        <span class="checkbox-text">
+                                            <span class="mono">Full Screen</span>
+                                            <span class="form-hint">Launch console in full-screen mode</span>
+                                        </span>
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" @bind="ConsoleQuickEdit" />
+                                        <span class="checkmark"></span>
+                                        <span class="checkbox-text">
+                                            <span class="mono">Quick Edit</span>
+                                            <span class="form-hint">Select text with mouse without entering mark mode</span>
+                                        </span>
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" @bind="ConsoleInsertMode" />
+                                        <span class="checkmark"></span>
+                                        <span class="checkbox-text">
+                                            <span class="mono">Insert Mode</span>
+                                            <span class="form-hint">Insert text instead of overwriting at cursor</span>
+                                        </span>
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" @bind="ConsoleAutoPosition" />
+                                        <span class="checkmark"></span>
+                                        <span class="checkbox-text">
+                                            <span class="mono">Auto Position</span>
+                                            <span class="form-hint">Let the system position the console window automatically</span>
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="console-subgroup">
+                                <span class="console-subgroup-label mono">History</span>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="mono">History Buffer Size</label>
+                                        <span class="form-hint">Number of commands stored per buffer</span>
+                                        <input type="number" @bind="ConsoleHistoryBufferSize" class="form-input" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="mono">Number of Buffers</label>
+                                        <span class="form-hint">Number of separate history buffers to maintain</span>
+                                        <input type="number" @bind="ConsoleNumberOfHistoryBuffers" class="form-input" />
+                                    </div>
+                                </div>
+                                <div class="form-checkboxes">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" @bind="ConsoleHistoryNoDup" />
+                                        <span class="checkmark"></span>
+                                        <span class="checkbox-text">
+                                            <span class="mono">Discard Duplicates</span>
+                                            <span class="form-hint">Remove duplicate entries from command history</span>
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="console-subgroup">
+                                <span class="console-subgroup-label mono">Color Table</span>
+                                <div class="color-table-grid">
+                                    @for (int i = 0; i < 16; i++)
+                                    {
+                                        var idx = i;
+                                        <input type="color" class="color-swatch"
+                                               value="@ConsoleColorHexValues[idx]"
+                                               @onchange="e => OnColorChanged(idx, e)"
+                                               title="Color @idx" />
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="console-subgroup">
+                                <span class="console-subgroup-label mono">Position & Attributes</span>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="mono">Window Origin X</label>
+                                        <span class="form-hint">Horizontal screen position in pixels</span>
+                                        <input type="number" @bind="ConsoleWindowOriginX" class="form-input" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="mono">Window Origin Y</label>
+                                        <span class="form-hint">Vertical screen position in pixels</span>
+                                        <input type="number" @bind="ConsoleWindowOriginY" class="form-input" />
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="mono">Cursor Size (%)</label>
+                                        <span class="form-hint">Cursor fill percentage (25 = small, 100 = block)</span>
+                                        <input type="number" @bind="ConsoleCursorSize" min="1" max="100" class="form-input" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="mono">Fill Attributes</label>
+                                        <span class="form-hint">Foreground/background color index for main text</span>
+                                        <input type="number" @bind="ConsoleFillAttributes" class="form-input" />
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="mono">Popup Fill Attributes</label>
+                                    <span class="form-hint">Foreground/background color index for popup windows</span>
+                                    <input type="number" @bind="ConsolePopupFillAttributes" class="form-input" />
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- Property Store -->
+            <div class="tool-section form-section">
+                <button class="tool-section-header" @onclick="() => ToggleSection(13)">
+                    <span class="mono">Property Store</span>
+                    <span class="section-arrow @(IsSectionOpen(13) ? "open" : "")">&#x25BE;</span>
+                </button>
+                @if (IsSectionOpen(13))
+                {
+                    <div class="tool-section-body">
+                        <label class="checkbox-label" style="margin-bottom: 1rem;">
+                            <input type="checkbox" @bind="EnablePropertyStore" />
+                            <span class="checkmark"></span>
+                            <span class="checkbox-text">
+                                <span class="mono">Enable Property Store</span>
+                                <span class="form-hint">Embed serialized properties for taskbar grouping, relaunch, and toast activation</span>
+                            </span>
+                        </label>
+
+                        @if (EnablePropertyStore)
+                        {
+                            @if (IsParsed && ParsedPropertyStore != null)
+                            {
+                                <div class="info-banner">
+                                    <span>Enabling this will replace the existing property store from the parsed file.</span>
+                                </div>
+                            }
+
+                            <div class="form-group">
+                                <label class="mono">App User Model ID</label>
+                                <span class="form-hint">Controls taskbar grouping — windows with the same ID share a button</span>
+                                <input type="text" @bind="PropAppUserModelId" placeholder="com.company.app" class="form-input" />
+                            </div>
+
+                            <div class="form-group">
+                                <label class="mono">Relaunch Command</label>
+                                <span class="form-hint">Command line used when re-launching the application from the taskbar</span>
+                                <input type="text" @bind="PropRelaunchCommand" class="form-input" />
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="mono">Relaunch Display Name</label>
+                                    <span class="form-hint">Friendly name shown in taskbar tooltip</span>
+                                    <input type="text" @bind="PropRelaunchDisplayNameResource" class="form-input" />
+                                </div>
+                                <div class="form-group">
+                                    <label class="mono">Relaunch Icon</label>
+                                    <span class="form-hint">Icon resource path for taskbar button</span>
+                                    <input type="text" @bind="PropRelaunchIconResource" class="form-input" />
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="mono">Toast Activator CLSID</label>
+                                <span class="form-hint">COM class ID for handling Windows toast notification activations</span>
+                                <input type="text" @bind="PropToastActivatorCLSID"
+                                       placeholder="00000000-0000-0000-0000-000000000000" class="form-input" />
+                            </div>
+
+                            <div class="console-subgroup">
+                                <span class="console-subgroup-label mono">System.Link Properties</span>
+                                <div class="form-group">
+                                    <label class="mono">Target Parsing Path</label>
+                                    <span class="form-hint">Canonical parsing path to the link target (System.Link.TargetParsingPath)</span>
+                                    <input type="text" @bind="PropTargetParsingPath" class="form-input" />
+                                </div>
+                                <div class="form-group">
+                                    <label class="mono">Target SFGAO Flags</label>
+                                    <span class="form-hint">Shell attributes (SFGAO) of the target as a decimal value (System.Link.TargetSFGAOFlags)</span>
+                                    <input type="number" @bind="PropTargetSFGAOFlags" class="form-input" />
+                                </div>
+                            </div>
+
+                            <div class="console-subgroup">
+                                <span class="console-subgroup-label mono">System Properties</span>
+                                <div class="form-group">
+                                    <label class="mono">Item Type Text</label>
+                                    <span class="form-hint">File type description e.g. "Text Document" (System.ItemTypeText)</span>
+                                    <input type="text" @bind="PropItemTypeText" class="form-input" />
+                                </div>
+                                <div class="form-group">
+                                    <label class="mono">MIME Type</label>
+                                    <span class="form-hint">MIME type of the target e.g. "text/plain" (System.MIMEType)</span>
+                                    <input type="text" @bind="PropMimeType" placeholder="application/octet-stream" class="form-input" />
+                                </div>
+                            </div>
+
+                            <div class="console-subgroup">
+                                <span class="console-subgroup-label mono">Named Properties</span>
+                                @for (int i = 0; i < NamedProperties.Count; i++)
+                                {
+                                    var idx = i;
+                                    <div class="form-row" style="align-items: flex-end;">
+                                        <div class="form-group" style="flex: 1;">
+                                            <label class="mono">Name</label>
+                                            <input type="text" value="@NamedProperties[idx].Name"
+                                                   @onchange="e => UpdateNamedProperty(idx, e.Value?.ToString(), null, null)"
+                                                   class="form-input" />
+                                        </div>
+                                        <div class="form-group" style="flex: 0 0 120px;">
+                                            <label class="mono">Type</label>
+                                            <select value="@NamedProperties[idx].Type"
+                                                    @onchange="e => UpdateNamedProperty(idx, null, e.Value?.ToString(), null)"
+                                                    class="form-input">
+                                                <option value="String">String</option>
+                                                <option value="UInt32">UInt32</option>
+                                                <option value="Bool">Bool</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group" style="flex: 1;">
+                                            <label class="mono">Value</label>
+                                            <input type="text" value="@NamedProperties[idx].Value"
+                                                   @onchange="e => UpdateNamedProperty(idx, null, null, e.Value?.ToString())"
+                                                   class="form-input" />
+                                        </div>
+                                        <button class="btn btn-secondary" style="margin-bottom: 0.5rem; padding: 0.4rem 0.6rem;"
+                                                @onclick="() => RemoveNamedProperty(idx)">✕</button>
+                                    </div>
+                                }
+                                <button class="btn btn-secondary" style="margin-top: 0.25rem;" @onclick="AddNamedProperty">
+                                    + Add Property
+                                </button>
+                            </div>
+
+                            <div class="form-checkboxes checkbox-grid">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" @bind="PropPreventPinning" />
+                                    <span class="checkmark"></span>
+                                    <span class="checkbox-text">
+                                        <span class="mono">Prevent Pinning</span>
+                                        <span class="form-hint">Prevent user from pinning this shortcut to taskbar or Start</span>
+                                    </span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" @bind="PropExcludeFromShowInNewInstall" />
+                                    <span class="checkmark"></span>
+                                    <span class="checkbox-text">
+                                        <span class="mono">Exclude From New Install List</span>
+                                        <span class="form-hint">Hide from "newly installed programs" highlight in Start menu</span>
+                                    </span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" @bind="PropIsDestListSeparator" />
+                                    <span class="checkmark"></span>
+                                    <span class="checkbox-text">
+                                        <span class="mono">Destination List Separator</span>
+                                        <span class="form-hint">Marks this item as a visual separator in jump lists</span>
+                                    </span>
+                                </label>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- Extra Data -->
+            <div class="tool-section form-section">
+                <button class="tool-section-header" @onclick="() => ToggleSection(14)">
+                    <span class="mono">Extra Data</span>
+                    <span class="section-arrow @(IsSectionOpen(14) ? "open" : "")">&#x25BE;</span>
+                </button>
+                @if (IsSectionOpen(14))
+                {
+                    <div class="tool-section-body">
+                        <div class="form-group">
+                            <label class="mono">Target File Size (bytes)</label>
+                            <span class="form-hint">Override the file size stored in the shortcut header (0 = auto)</span>
+                            <input type="number" @bind="TargetFileSize" placeholder="0" class="form-input" />
+                        </div>
+                        <div class="form-group">
+                            <label class="mono">Console Code Page</label>
+                            <span class="form-hint">Character encoding for console targets (e.g. 65001 = UTF-8, 437 = US)</span>
+                            <input type="number" @bind="ExtraConsoleCodePage" placeholder="65001" class="form-input" />
+                        </div>
+                        <div class="form-group">
+                            <label class="mono">Darwin Data (MSI)</label>
+                            <span class="form-hint">Windows Installer (MSI) application identifier for advertised shortcuts</span>
+                            <input type="text" @bind="ExtraDarwinData" class="form-input" />
+                        </div>
+                        <div class="form-group">
+                            <label class="mono">Shim Layer Name</label>
+                            <span class="form-hint">Application compatibility layer — select a preset or type a custom value (prefix with ~ for single layer)</span>
+                            <select class="form-input" value="@ExtraShimLayerName" @onchange="OnShimLayerSelected" style="margin-bottom: 0.35rem;">
+                                <option value="">None</option>
+                                @foreach (var shim in ShimLayerOptions)
+                                {
+                                    <option value="@shim.Value">@shim.Label</option>
+                                }
+                            </select>
+                            <input type="text" @bind="ExtraShimLayerName" placeholder="~ WIN7RTM" class="form-input" />
+                        </div>
+
+                        <div class="console-subgroup">
+                            <span class="console-subgroup-label mono">Known Folder</span>
+                            <div class="form-group">
+                                <label class="mono">Preset</label>
+                                <span class="form-hint">Select a well-known folder or enter a custom GUID below</span>
+                                <select class="form-input" value="@KnownFolderGuid" @onchange="OnKnownFolderSelected">
+                                    <option value="">None</option>
+                                    @foreach (var kf in KnownFolderOptions)
+                                    {
+                                        <option value="@kf.Value">@kf.Label</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="mono">Folder GUID</label>
+                                    <span class="form-hint">KNOWNFOLDERID GUID for a shell known folder</span>
+                                    <input type="text" @bind="KnownFolderGuid"
+                                           placeholder="00000000-0000-0000-0000-000000000000" class="form-input" />
+                                </div>
+                                <div class="form-group">
+                                    <label class="mono">Offset</label>
+                                    <span class="form-hint">Byte offset into the link target ID list</span>
+                                    <input type="number" @bind="KnownFolderOffset" class="form-input" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="console-subgroup">
+                            <span class="console-subgroup-label mono">Special Folder</span>
+                            <div class="form-group">
+                                <label class="mono">Preset</label>
+                                <span class="form-hint">Select a CSIDL folder or enter a custom value below</span>
+                                <select class="form-input" value="@SpecialFolderCsidl" @onchange="OnCsidlSelected">
+                                    <option value="0">None</option>
+                                    @foreach (var csidl in CsidlOptions)
+                                    {
+                                        <option value="@csidl.Value">@csidl.Label (0x@(csidl.Value.ToString("X4")))</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="mono">CSIDL Value</label>
+                                    <span class="form-hint">CSIDL constant identifying a special folder</span>
+                                    <input type="number" @bind="SpecialFolderCsidl" class="form-input" />
+                                </div>
+                                <div class="form-group">
+                                    <label class="mono">Offset</label>
+                                    <span class="form-hint">Byte offset into the link target ID list</span>
+                                    <input type="number" @bind="SpecialFolderOffset" class="form-input" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @if (!IsParsed)
+            {
+                @if (!string.IsNullOrWhiteSpace(GenerateError))
+                {
+                    <div class="error-banner">
+                        <span>@GenerateError</span>
+                    </div>
+                }
+
+                @if (IsGenerated)
+                {
+                    <div class="success-banner">
+                        <span>Shortcut generated and downloaded as .zip successfully.</span>
+                    </div>
+                }
+
+                <button class="btn btn-primary generate-btn" @onclick="GenerateLnk" disabled="@IsGenerating">
+                    @if (IsGenerating)
+                    {
+                        <span>Generating...</span>
+                    }
+                    else
+                    {
+                        <span>Generate .lnk</span>
+                    }
+                </button>
+            }
+            else
+            {
+                @if (!string.IsNullOrWhiteSpace(DownloadError))
+                {
+                    <div class="error-banner">
+                        <span>@DownloadError</span>
+                    </div>
+                }
+
+                @if (IsDownloaded)
+                {
+                    <div class="success-banner">
+                        <span>Shortcut downloaded as .zip successfully.</span>
+                    </div>
+                }
+
+                <div class="lnk-actions">
+                    <button class="btn btn-primary action-btn" @onclick="DownloadLnk" disabled="@IsDownloading">
+                        @if (IsDownloading)
+                        {
+                            <span>Downloading...</span>
+                        }
+                        else
+                        {
+                            <span>Download .lnk</span>
+                        }
+                    </button>
+                    <button class="btn btn-secondary action-btn" @onclick="ResetParse">
+                        Back to Generator
+                    </button>
+                </div>
+            }
+        </div>
+
+        <div class="powered-by">
+            <div class="powered-by-header">
+                <span class="mono powered-by-label">Powered by</span>
+                <a href="https://github.com/mrzaxaryan/ShortcutLib" target="_blank" rel="noopener noreferrer"
+                   class="mono powered-by-link">ShortcutLib</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+@code {
+    // Shared form fields
+    private string Target { get; set; } = "";
+    private string? Arguments { get; set; }
+    private string? WorkingDirectory { get; set; }
+    private string? Description { get; set; }
+    private string? IconLocation { get; set; }
+    private int IconIndex { get; set; }
+    private ShortcutWindowStyle WindowStyle { get; set; } = ShortcutWindowStyle.Normal;
+    private bool RunAsAdmin { get; set; }
+    private string FileName { get; set; } = "shortcut";
+
+    // Hotkey
+    private byte HotkeyKeyValue { get; set; }
+    private bool HotkeyCtrl { get; set; }
+    private bool HotkeyAlt { get; set; }
+    private bool HotkeyShift { get; set; }
+
+    // Additional core fields
+    private bool IsPrinterLink { get; set; }
+    private bool UseUnicode { get; set; }
+    private uint TargetFileSize { get; set; }
+    private string? RelativePath { get; set; }
+    private string? IconEnvironmentPath { get; set; }
+
+    // Known Folder
+    private string? KnownFolderGuid { get; set; }
+    private uint KnownFolderOffset { get; set; }
+
+    // Special Folder
+    private uint SpecialFolderCsidl { get; set; }
+    private uint SpecialFolderOffset { get; set; }
+
+    // File Attributes
+    private HashSet<ShortcutLib.FileAttributes> SelectedFileAttributes { get; set; } = [];
+    private static readonly ShortcutLib.FileAttributes[] AllFileAttributes = Enum.GetValues<ShortcutLib.FileAttributes>();
+
+    // Link Flags
+    private bool ForceNoLinkInfo { get; set; }
+    private bool RunInSeparateProcess { get; set; }
+    private bool NoPidlAlias { get; set; }
+    private bool ForceNoLinkTrack { get; set; }
+    private bool EnableTargetMetadata { get; set; }
+    private bool DisableLinkPathTracking { get; set; }
+    private bool DisableKnownFolderTracking { get; set; }
+    private bool DisableKnownFolderAlias { get; set; }
+    private bool AllowLinkToLink { get; set; }
+    private bool UnaliasOnSave { get; set; }
+    private bool KeepLocalIDListForUNCTarget { get; set; }
+
+    // Console Settings
+    private bool EnableConsoleSettings { get; set; }
+    private short ConsoleBufferSizeX { get; set; } = 120;
+    private short ConsoleBufferSizeY { get; set; } = 9001;
+    private short ConsoleWindowSizeX { get; set; } = 120;
+    private short ConsoleWindowSizeY { get; set; } = 30;
+    private string ConsoleFaceName { get; set; } = "Consolas";
+    private uint ConsoleFontSize { get; set; }
+    private uint ConsoleFontWeight { get; set; } = 400;
+    private bool ConsoleFullScreen { get; set; }
+    private bool ConsoleQuickEdit { get; set; }
+    private bool ConsoleInsertMode { get; set; }
+    private bool ConsoleAutoPosition { get; set; } = true;
+    private uint ConsoleHistoryBufferSize { get; set; } = 50;
+    private uint ConsoleNumberOfHistoryBuffers { get; set; } = 4;
+    private bool ConsoleHistoryNoDup { get; set; }
+    private short ConsoleWindowOriginX { get; set; }
+    private short ConsoleWindowOriginY { get; set; }
+    private uint ConsoleCursorSize { get; set; } = 25;
+    private ushort ConsoleFillAttributes { get; set; }
+    private ushort ConsolePopupFillAttributes { get; set; }
+    private string[] ConsoleColorHexValues { get; set; } = DefaultConsoleColors();
+
+    // Property Store
+    private bool EnablePropertyStore { get; set; }
+    private string? PropAppUserModelId { get; set; }
+    private bool PropPreventPinning { get; set; }
+    private string? PropRelaunchCommand { get; set; }
+    private string? PropRelaunchDisplayNameResource { get; set; }
+    private string? PropRelaunchIconResource { get; set; }
+    private bool PropExcludeFromShowInNewInstall { get; set; }
+    private bool PropIsDestListSeparator { get; set; }
+    private string? PropToastActivatorCLSID { get; set; }
+    private string? PropTargetParsingPath { get; set; }
+    private uint? PropTargetSFGAOFlags { get; set; }
+    private string? PropItemTypeText { get; set; }
+    private string? PropMimeType { get; set; }
+
+    // Named Properties
+    private record NamedPropertyEntry(string Name, string Type, string Value);
+    private List<NamedPropertyEntry> NamedProperties { get; set; } = [];
+
+    private void AddNamedProperty() =>
+        NamedProperties.Add(new NamedPropertyEntry("", "String", ""));
+
+    private void RemoveNamedProperty(int index) =>
+        NamedProperties.RemoveAt(index);
+
+    private void UpdateNamedProperty(int index, string? name, string? type, string? value)
+    {
+        var p = NamedProperties[index];
+        NamedProperties[index] = new NamedPropertyEntry(
+            name ?? p.Name,
+            type ?? p.Type,
+            value ?? p.Value);
+    }
+
+    // Extra Data
+    private uint? ExtraConsoleCodePage { get; set; }
+    private string? ExtraDarwinData { get; set; }
+    private string? ExtraShimLayerName { get; set; }
+
+    // Generator state
+    private string SelectedTemplateName { get; set; } = "";
+    private bool IsGenerating { get; set; }
+    private bool IsGenerated { get; set; }
+    private string? GenerateError { get; set; }
+
+    // Parser state
+    private string? OriginalFileName { get; set; }
+    private long OriginalFileSize { get; set; }
+    private bool IsParsed { get; set; }
+    private bool IsLoading { get; set; }
+    private bool IsDragOver { get; set; }
+    private string? ParseError { get; set; }
+    private bool IsDownloading { get; set; }
+    private bool IsDownloaded { get; set; }
+    private string? DownloadError { get; set; }
+    private readonly HashSet<int> OpenSections = [0, 1];
+    private const long MaxFileSize = 10 * 1024 * 1024;
+
+    // Tracking data from parsed file
+    private TrackerData? ParsedTracker { get; set; }
+    private LinkInfo? ParsedLinkInfo { get; set; }
+    private DateTime? ParsedCreationTime { get; set; }
+    private DateTime? ParsedAccessTime { get; set; }
+    private DateTime? ParsedWriteTime { get; set; }
+    private byte[]? ParsedPropertyStore { get; set; }
+    private bool StripTrackingData { get; set; } = true;
+
+    // Parsed new fields
+    private ConsoleData? ParsedConsoleData { get; set; }
+    private uint? ParsedExtraConsoleCodePage { get; set; }
+    private string? ParsedExtraDarwinData { get; set; }
+    private string? ParsedExtraShimLayerName { get; set; }
+
+    private bool HasTrackingData => ParsedTracker != null || ParsedLinkInfo != null ||
+        ParsedCreationTime != null || ParsedAccessTime != null || ParsedWriteTime != null ||
+        ParsedPropertyStore != null;
+
+    // --- Templates ---
+
+    private record LnkTemplate(
+        string Name, string Target, string? Arguments, string? WorkingDirectory,
+        string? ShortcutDescription, string? IconLocation, int IconIndex,
+        ShortcutWindowStyle WindowStyle, bool RunAsAdmin, string FileName,
+        ConsoleData? Console = null, string? AppUserModelId = null,
+        bool ForceNoLinkTrack = false, bool ForceNoLinkInfo = false);
+
+    private static readonly LnkTemplate[] LnkTemplates =
+    [
+        new("PowerShell Hello World",
+            @"C:\Windows\System32\conhost.exe",
+            "--headless powershell.exe \"(New-Object -ComObject WScript.Shell).Popup('Hello World')\"",
+            null, "Headless launching a PowerShell popup",
+            @"%SystemRoot%\system32\WindowsPowerShell\v1.0\powershell.exe", 0,
+            ShortcutWindowStyle.Minimized, false, "ps-helloworld"),
+
+        new("Admin Command Prompt PowerShell Base64 Hello World",
+            @"C:\Windows\System32\conhost.exe",
+            $"--headless powershell.exe -e {Convert.ToBase64String(System.Text.Encoding.Unicode.GetBytes("(New-Object -ComObject WScript.Shell).Popup('Elevated Hello World')"))}",
+            @"C:\", "Elevated Command Prompt",
+            @"%SystemRoot%\system32\cmd.exe", 0,
+            ShortcutWindowStyle.Minimized, true, "admin-cmd"),
+
+        new("Admin PowerShell",
+            @"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe",
+            "-NoExit", @"C:\", "Elevated PowerShell",
+            @"%SystemRoot%\system32\WindowsPowerShell\v1.0\powershell.exe", 0,
+            ShortcutWindowStyle.Normal, true, "admin-powershell"),
+
+        new("Developer Console",
+            @"C:\Windows\System32\cmd.exe",
+            "/k echo Developer Console Ready",
+            @"C:\", "Custom developer console with console settings",
+            @"%SystemRoot%\system32\cmd.exe", 0,
+            ShortcutWindowStyle.Normal, false, "dev-console",
+            Console: new ConsoleData
+            {
+                ScreenBufferSizeX = 160,
+                ScreenBufferSizeY = 9001,
+                WindowSizeX = 160,
+                WindowSizeY = 40,
+                FaceName = "Cascadia Mono",
+                FontWeight = 400,
+                QuickEdit = true,
+                InsertMode = true,
+                AutoPosition = true,
+                HistoryBufferSize = 50,
+                HistoryNoDup = true,
+                CursorSize = 25
+            },
+            ForceNoLinkTrack: true),
+
+        new("Taskbar PowerShell",
+            @"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe",
+            "-NoExit -Command \"$Host.UI.RawUI.WindowTitle = 'My PowerShell'\"",
+            @"C:\", "PowerShell with custom taskbar grouping",
+            @"%SystemRoot%\system32\WindowsPowerShell\v1.0\powershell.exe", 0,
+            ShortcutWindowStyle.Normal, false, "taskbar-powershell",
+            AppUserModelId: "Custom.PowerShell.Instance"),
+    ];
+
+    private void OnTemplateSelected(ChangeEventArgs e)
+    {
+        SelectedTemplateName = e.Value?.ToString() ?? "";
+        var template = LnkTemplates.FirstOrDefault(t => t.Name == SelectedTemplateName);
+        if (template is null)
+        {
+            Target = "";
+            Arguments = null;
+            WorkingDirectory = null;
+            Description = null;
+            IconLocation = null;
+            IconIndex = 0;
+            WindowStyle = ShortcutWindowStyle.Normal;
+            RunAsAdmin = false;
+            FileName = "shortcut";
+            RelativePath = null;
+            IconEnvironmentPath = null;
+            ResetAdvancedFields();
+        }
+        else
+        {
+            Target = template.Target;
+            Arguments = template.Arguments;
+            WorkingDirectory = template.WorkingDirectory;
+            Description = template.ShortcutDescription;
+            IconLocation = template.IconLocation;
+            IconIndex = template.IconIndex;
+            WindowStyle = template.WindowStyle;
+            RunAsAdmin = template.RunAsAdmin;
+            FileName = template.FileName;
+
+            ResetAdvancedFields();
+
+            // Apply template console settings
+            if (template.Console is { } c)
+            {
+                EnableConsoleSettings = true;
+                ConsoleBufferSizeX = c.ScreenBufferSizeX;
+                ConsoleBufferSizeY = c.ScreenBufferSizeY;
+                ConsoleWindowSizeX = c.WindowSizeX;
+                ConsoleWindowSizeY = c.WindowSizeY;
+                ConsoleFaceName = c.FaceName;
+                ConsoleFontSize = c.FontSize;
+                ConsoleFontWeight = c.FontWeight;
+                ConsoleFullScreen = c.FullScreen;
+                ConsoleQuickEdit = c.QuickEdit;
+                ConsoleInsertMode = c.InsertMode;
+                ConsoleAutoPosition = c.AutoPosition;
+                ConsoleHistoryBufferSize = c.HistoryBufferSize;
+                ConsoleNumberOfHistoryBuffers = c.NumberOfHistoryBuffers;
+                ConsoleHistoryNoDup = c.HistoryNoDup;
+                ConsoleWindowOriginX = c.WindowOriginX;
+                ConsoleWindowOriginY = c.WindowOriginY;
+                ConsoleCursorSize = c.CursorSize;
+                ConsoleFillAttributes = c.FillAttributes;
+                ConsolePopupFillAttributes = c.PopupFillAttributes;
+                if (c.ColorTable is { Length: 16 })
+                    for (int i = 0; i < 16; i++)
+                        ConsoleColorHexValues[i] = BbggrrToHex(c.ColorTable[i]);
+            }
+
+            // Apply template property store
+            if (!string.IsNullOrWhiteSpace(template.AppUserModelId))
+            {
+                EnablePropertyStore = true;
+                PropAppUserModelId = template.AppUserModelId;
+            }
+
+            // Apply template link flags
+            ForceNoLinkTrack = template.ForceNoLinkTrack;
+            ForceNoLinkInfo = template.ForceNoLinkInfo;
+        }
+        GenerateError = null;
+        IsGenerated = false;
+    }
+
+    // --- Icon Templates ---
+
+    private record IconTemplate(string Symbol, string Label, string Path, int Index);
+
+    private static readonly IconTemplate[] IconTemplates =
+    [
+        new("📁", "Folder", @"%SystemRoot%\system32\shell32.dll", 3),
+        new("📄", "Document", @"%SystemRoot%\system32\shell32.dll", 1),
+        new("🌐", "Network", @"%SystemRoot%\system32\shell32.dll", 17),
+        new("💻", "Computer", @"%SystemRoot%\system32\shell32.dll", 15),
+        new("🔍", "Search", @"%SystemRoot%\system32\shell32.dll", 22),
+        new("⚙️", "Settings", @"%SystemRoot%\system32\shell32.dll", 316),
+        new("🛡️", "Shield", @"%SystemRoot%\system32\shell32.dll", 77),
+        new("🔒", "Lock", @"%SystemRoot%\system32\shell32.dll", 47),
+        new("⌨️", "CMD", @"%SystemRoot%\system32\cmd.exe", 0),
+        new("🟦", "PowerShell", @"%SystemRoot%\system32\WindowsPowerShell\v1.0\powershell.exe", 0),
+        new("📝", "Notepad", @"%SystemRoot%\system32\notepad.exe", 0),
+        new("🧮", "Calc", @"%SystemRoot%\system32\calc.exe", 0),
+        new("🗑️", "Recycle", @"%SystemRoot%\system32\shell32.dll", 31),
+        new("💾", "Disk", @"%SystemRoot%\system32\shell32.dll", 8),
+        new("🖨️", "Printer", @"%SystemRoot%\system32\shell32.dll", 16),
+        new("🔑", "Key", @"%SystemRoot%\system32\shell32.dll", 44),
+        new("📕", "PDF", @"%SystemRoot%\system32\imageres.dll", 187),
+        new("🖼️", "JPEG", @"%SystemRoot%\system32\imageres.dll", 67),
+        new("🎵", "MP3", @"%SystemRoot%\system32\imageres.dll", 85),
+    ];
+
+    private string SelectedIconTemplateName =>
+        IconTemplates.FirstOrDefault(t => t.Path == IconLocation && t.Index == IconIndex)?.Label ?? "";
+
+    private void OnIconTemplateSelected(ChangeEventArgs e)
+    {
+        var label = e.Value?.ToString() ?? "";
+        var template = IconTemplates.FirstOrDefault(t => t.Label == label);
+        if (template != null)
+        {
+            IconLocation = template.Path;
+            IconIndex = template.Index;
+        }
+        else
+        {
+            IconLocation = null;
+            IconIndex = 0;
+        }
+    }
+
+    // --- Build ShortcutOptions ---
+
+    private ShortcutOptions BuildOptions()
+    {
+        var opts = new ShortcutOptions
+        {
+            Target = Target,
+            Arguments = Arguments,
+            WorkingDirectory = WorkingDirectory,
+            Description = Description,
+            IconLocation = IconLocation,
+            IconIndex = IconIndex,
+            WindowStyle = WindowStyle,
+            RunAsAdmin = RunAsAdmin,
+
+            // Hotkey
+            HotkeyKey = HotkeyKeyValue,
+            HotkeyModifiers = (HotkeyCtrl ? HotkeyModifiers.Control : HotkeyModifiers.None)
+                | (HotkeyAlt ? HotkeyModifiers.Alt : HotkeyModifiers.None)
+                | (HotkeyShift ? HotkeyModifiers.Shift : HotkeyModifiers.None),
+
+            // Additional core
+            IsPrinterLink = IsPrinterLink,
+            UseUnicode = UseUnicode,
+            FileSize = TargetFileSize,
+            RelativePath = RelativePath,
+            IconEnvironmentPath = IconEnvironmentPath,
+
+            // File Attributes
+            FileAttributes = SelectedFileAttributes.Count > 0
+                ? SelectedFileAttributes.Aggregate((a, b) => a | b)
+                : null,
+
+            // Link Flags
+            ForceNoLinkInfo = ForceNoLinkInfo,
+            RunInSeparateProcess = RunInSeparateProcess,
+            NoPidlAlias = NoPidlAlias,
+            ForceNoLinkTrack = ForceNoLinkTrack,
+            EnableTargetMetadata = EnableTargetMetadata,
+            DisableLinkPathTracking = DisableLinkPathTracking,
+            DisableKnownFolderTracking = DisableKnownFolderTracking,
+            DisableKnownFolderAlias = DisableKnownFolderAlias,
+            AllowLinkToLink = AllowLinkToLink,
+            UnaliasOnSave = UnaliasOnSave,
+            KeepLocalIDListForUNCTarget = KeepLocalIDListForUNCTarget,
+
+            // Extra Data
+            ConsoleCodePage = ExtraConsoleCodePage,
+            DarwinData = ExtraDarwinData,
+            ShimLayerName = ExtraShimLayerName
+        };
+
+        // Known Folder
+        if (!string.IsNullOrWhiteSpace(KnownFolderGuid) && Guid.TryParse(KnownFolderGuid, out var kfGuid))
+            opts.KnownFolder = new KnownFolderData { FolderId = kfGuid, Offset = KnownFolderOffset };
+
+        // Special Folder
+        if (SpecialFolderCsidl > 0)
+            opts.SpecialFolder = new SpecialFolderData { FolderId = SpecialFolderCsidl, Offset = SpecialFolderOffset };
+
+        // Console Settings
+        if (EnableConsoleSettings)
+        {
+            opts.Console = new ConsoleData
+            {
+                ScreenBufferSizeX = ConsoleBufferSizeX,
+                ScreenBufferSizeY = ConsoleBufferSizeY,
+                WindowSizeX = ConsoleWindowSizeX,
+                WindowSizeY = ConsoleWindowSizeY,
+                FaceName = ConsoleFaceName,
+                FontSize = ConsoleFontSize,
+                FontWeight = ConsoleFontWeight,
+                FullScreen = ConsoleFullScreen,
+                QuickEdit = ConsoleQuickEdit,
+                InsertMode = ConsoleInsertMode,
+                AutoPosition = ConsoleAutoPosition,
+                HistoryBufferSize = ConsoleHistoryBufferSize,
+                NumberOfHistoryBuffers = ConsoleNumberOfHistoryBuffers,
+                HistoryNoDup = ConsoleHistoryNoDup,
+                WindowOriginX = ConsoleWindowOriginX,
+                WindowOriginY = ConsoleWindowOriginY,
+                CursorSize = ConsoleCursorSize,
+                FillAttributes = ConsoleFillAttributes,
+                PopupFillAttributes = ConsolePopupFillAttributes,
+                ColorTable = ConsoleColorHexValues.Select(HexToBbggrr).ToArray()
+            };
+        }
+
+        // Property Store
+        if (EnablePropertyStore)
+        {
+            var builder = new PropertyStoreBuilder();
+            if (!string.IsNullOrWhiteSpace(PropAppUserModelId))
+                builder.AppUserModelId = PropAppUserModelId;
+            if (PropPreventPinning)
+                builder.PreventPinning = true;
+            if (!string.IsNullOrWhiteSpace(PropRelaunchCommand))
+                builder.RelaunchCommand = PropRelaunchCommand;
+            if (!string.IsNullOrWhiteSpace(PropRelaunchDisplayNameResource))
+                builder.RelaunchDisplayNameResource = PropRelaunchDisplayNameResource;
+            if (!string.IsNullOrWhiteSpace(PropRelaunchIconResource))
+                builder.RelaunchIconResource = PropRelaunchIconResource;
+            if (PropExcludeFromShowInNewInstall)
+                builder.ExcludeFromShowInNewInstall = true;
+            if (PropIsDestListSeparator)
+                builder.IsDestListSeparator = true;
+            if (!string.IsNullOrWhiteSpace(PropToastActivatorCLSID)
+                && Guid.TryParse(PropToastActivatorCLSID, out var clsid))
+                builder.ToastActivatorCLSID = clsid;
+
+            // System.Link properties
+            if (!string.IsNullOrWhiteSpace(PropTargetParsingPath))
+                builder.TargetParsingPath = PropTargetParsingPath;
+            if (PropTargetSFGAOFlags is { } sfgao and not 0)
+                builder.TargetSFGAOFlags = sfgao;
+
+            // System properties
+            if (!string.IsNullOrWhiteSpace(PropItemTypeText))
+                builder.ItemTypeText = PropItemTypeText;
+            if (!string.IsNullOrWhiteSpace(PropMimeType))
+                builder.MimeType = PropMimeType;
+
+            // Named properties
+            foreach (var np in NamedProperties)
+            {
+                if (string.IsNullOrWhiteSpace(np.Name)) continue;
+                switch (np.Type)
+                {
+                    case "String":
+                        builder.AddNamedStringProperty(np.Name, np.Value ?? "");
+                        break;
+                    case "UInt32" when uint.TryParse(np.Value, out var u):
+                        builder.AddNamedUInt32Property(np.Name, u);
+                        break;
+                    case "Bool":
+                        builder.AddNamedBoolProperty(np.Name,
+                            np.Value?.Equals("true", StringComparison.OrdinalIgnoreCase) == true);
+                        break;
+                }
+            }
+
+            opts.PropertyStoreData = builder.Build();
+        }
+
+        return opts;
+    }
+
+    // --- Generate ---
+
+    private async Task GenerateLnk()
+    {
+        GenerateError = null;
+        IsGenerated = false;
+
+        if (string.IsNullOrWhiteSpace(Target))
+        {
+            GenerateError = "Target path is required.";
+            return;
+        }
+
+        IsGenerating = true;
+        StateHasChanged();
+
+        try
+        {
+            var lnkBytes = Shortcut.Create(BuildOptions());
+
+            var safeName = string.IsNullOrWhiteSpace(FileName) ? "shortcut" : FileName.Trim();
+            if (!safeName.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase))
+                safeName += ".lnk";
+
+            using var zipStream = new MemoryStream();
+            using (var archive = new ZipArchive(zipStream, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                var entry = archive.CreateEntry(safeName, CompressionLevel.SmallestSize);
+                using var entryStream = entry.Open();
+                entryStream.Write(lnkBytes, 0, lnkBytes.Length);
+            }
+
+            var zipName = Path.ChangeExtension(safeName, ".zip");
+            await JS.InvokeVoidAsync("downloadFile", zipName, Convert.ToBase64String(zipStream.ToArray()));
+            IsGenerated = true;
+        }
+        catch (Exception ex)
+        {
+            GenerateError = $"Failed to generate shortcut: {ex.Message}";
+        }
+        finally
+        {
+            IsGenerating = false;
+        }
+    }
+
+    // --- Parse ---
+
+    private void OnDragEnter() => IsDragOver = true;
+    private void OnDragLeave() => IsDragOver = false;
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        IsDragOver = false;
+        ParseError = null;
+        IsParsed = false;
+
+        var file = e.File;
+        OriginalFileName = file.Name;
+        OriginalFileSize = file.Size;
+
+        if (file.Size > MaxFileSize)
+        {
+            ParseError = $"File too large ({FormatSize((ulong)file.Size)}). Maximum is 10 MB.";
+            return;
+        }
+
+        IsLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            using var stream = file.OpenReadStream(MaxFileSize);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            var bytes = ms.ToArray();
+
+            var options = Shortcut.Open(bytes);
+
+            // Core fields
+            Target = options.Target ?? "";
+            Arguments = options.Arguments;
+            WorkingDirectory = options.WorkingDirectory;
+            Description = options.Description;
+            IconLocation = options.IconLocation;
+            IconIndex = options.IconIndex;
+            WindowStyle = options.WindowStyle;
+            RunAsAdmin = options.RunAsAdmin;
+            FileName = Path.GetFileNameWithoutExtension(file.Name);
+
+            // Hotkey
+            HotkeyKeyValue = options.HotkeyKey;
+            HotkeyCtrl = options.HotkeyModifiers.HasFlag(HotkeyModifiers.Control);
+            HotkeyAlt = options.HotkeyModifiers.HasFlag(HotkeyModifiers.Alt);
+            HotkeyShift = options.HotkeyModifiers.HasFlag(HotkeyModifiers.Shift);
+
+            // Additional core
+            IsPrinterLink = options.IsPrinterLink;
+            UseUnicode = options.UseUnicode;
+            TargetFileSize = options.FileSize;
+            RelativePath = options.RelativePath;
+            IconEnvironmentPath = options.IconEnvironmentPath;
+
+            // Known Folder
+            if (options.KnownFolder is { } kf)
+            {
+                KnownFolderGuid = kf.FolderId.ToString();
+                KnownFolderOffset = kf.Offset;
+            }
+            else
+            {
+                KnownFolderGuid = null;
+                KnownFolderOffset = 0;
+            }
+
+            // Special Folder
+            if (options.SpecialFolder is { } sf)
+            {
+                SpecialFolderCsidl = sf.FolderId;
+                SpecialFolderOffset = sf.Offset;
+            }
+            else
+            {
+                SpecialFolderCsidl = 0;
+                SpecialFolderOffset = 0;
+            }
+
+            // Tracking data
+            ParsedTracker = options.Tracker;
+            ParsedLinkInfo = options.LinkInfo;
+            ParsedCreationTime = options.CreationTime;
+            ParsedAccessTime = options.AccessTime;
+            ParsedWriteTime = options.WriteTime;
+            ParsedPropertyStore = options.PropertyStoreData;
+            StripTrackingData = true;
+
+            // File Attributes
+            SelectedFileAttributes.Clear();
+            if (options.FileAttributes is { } fa)
+                foreach (var attr in AllFileAttributes)
+                    if (fa.HasFlag(attr))
+                        SelectedFileAttributes.Add(attr);
+
+            // Link Flags
+            ForceNoLinkInfo = options.ForceNoLinkInfo;
+            RunInSeparateProcess = options.RunInSeparateProcess;
+            NoPidlAlias = options.NoPidlAlias;
+            ForceNoLinkTrack = options.ForceNoLinkTrack;
+            EnableTargetMetadata = options.EnableTargetMetadata;
+            DisableLinkPathTracking = options.DisableLinkPathTracking;
+            DisableKnownFolderTracking = options.DisableKnownFolderTracking;
+            DisableKnownFolderAlias = options.DisableKnownFolderAlias;
+            AllowLinkToLink = options.AllowLinkToLink;
+            UnaliasOnSave = options.UnaliasOnSave;
+            KeepLocalIDListForUNCTarget = options.KeepLocalIDListForUNCTarget;
+
+            // Console Data
+            ParsedConsoleData = options.Console;
+            if (options.Console is { } cd)
+            {
+                EnableConsoleSettings = true;
+                ConsoleBufferSizeX = cd.ScreenBufferSizeX;
+                ConsoleBufferSizeY = cd.ScreenBufferSizeY;
+                ConsoleWindowSizeX = cd.WindowSizeX;
+                ConsoleWindowSizeY = cd.WindowSizeY;
+                ConsoleFaceName = cd.FaceName;
+                ConsoleFontSize = cd.FontSize;
+                ConsoleFontWeight = cd.FontWeight;
+                ConsoleFullScreen = cd.FullScreen;
+                ConsoleQuickEdit = cd.QuickEdit;
+                ConsoleInsertMode = cd.InsertMode;
+                ConsoleAutoPosition = cd.AutoPosition;
+                ConsoleHistoryBufferSize = cd.HistoryBufferSize;
+                ConsoleNumberOfHistoryBuffers = cd.NumberOfHistoryBuffers;
+                ConsoleHistoryNoDup = cd.HistoryNoDup;
+                ConsoleWindowOriginX = cd.WindowOriginX;
+                ConsoleWindowOriginY = cd.WindowOriginY;
+                ConsoleCursorSize = cd.CursorSize;
+                ConsoleFillAttributes = cd.FillAttributes;
+                ConsolePopupFillAttributes = cd.PopupFillAttributes;
+                if (cd.ColorTable is { Length: 16 })
+                    for (int i = 0; i < 16; i++)
+                        ConsoleColorHexValues[i] = BbggrrToHex(cd.ColorTable[i]);
+            }
+            else
+            {
+                EnableConsoleSettings = false;
+            }
+
+            // Extra Data
+            ParsedExtraConsoleCodePage = options.ConsoleCodePage;
+            ParsedExtraDarwinData = options.DarwinData;
+            ParsedExtraShimLayerName = options.ShimLayerName;
+            ExtraConsoleCodePage = options.ConsoleCodePage;
+            ExtraDarwinData = options.DarwinData;
+            ExtraShimLayerName = options.ShimLayerName;
+
+            // Property Store (keep raw for display, don't enable builder for parsed data)
+            EnablePropertyStore = false;
+
+            IsParsed = true;
+            IsDownloaded = false;
+            DownloadError = null;
+            OpenSections.Clear();
+            OpenSections.Add(0);
+            OpenSections.Add(1);
+            if (ParsedConsoleData != null)
+                OpenSections.Add(2);
+        }
+        catch (ArgumentException ex)
+        {
+            ParseError = $"Invalid LNK file: {ex.Message}";
+        }
+        catch (FormatException ex)
+        {
+            ParseError = $"Invalid LNK file: {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            ParseError = $"Failed to parse file: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task DownloadLnk()
+    {
+        DownloadError = null;
+        IsDownloaded = false;
+
+        if (string.IsNullOrWhiteSpace(Target))
+        {
+            DownloadError = "Target path is required.";
+            return;
+        }
+
+        IsDownloading = true;
+        StateHasChanged();
+
+        try
+        {
+            var opts = BuildOptions();
+
+            // Preserve original tracking data if not stripping
+            if (!StripTrackingData)
+            {
+                opts.Tracker = ParsedTracker;
+                opts.LinkInfo = ParsedLinkInfo;
+                opts.CreationTime = ParsedCreationTime;
+                opts.AccessTime = ParsedAccessTime;
+                opts.WriteTime = ParsedWriteTime;
+                if (!EnablePropertyStore)
+                    opts.PropertyStoreData = ParsedPropertyStore;
+            }
+            else
+            {
+                ShortcutSanitizer.Sanitize(opts);
+            }
+
+            var lnkBytes = Shortcut.Create(opts);
+
+            var safeName = string.IsNullOrWhiteSpace(FileName) ? "shortcut" : FileName.Trim();
+            if (!safeName.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase))
+                safeName += ".lnk";
+
+            using var zipStream = new MemoryStream();
+            using (var archive = new ZipArchive(zipStream, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                var entry = archive.CreateEntry(safeName, CompressionLevel.SmallestSize);
+                using var entryStream = entry.Open();
+                entryStream.Write(lnkBytes, 0, lnkBytes.Length);
+            }
+
+            var zipName = Path.ChangeExtension(safeName, ".zip");
+            await JS.InvokeVoidAsync("downloadFile", zipName, Convert.ToBase64String(zipStream.ToArray()));
+            IsDownloaded = true;
+        }
+        catch (Exception ex)
+        {
+            DownloadError = $"Failed to generate shortcut: {ex.Message}";
+        }
+        finally
+        {
+            IsDownloading = false;
+        }
+    }
+
+    private void ResetParse()
+    {
+        IsParsed = false;
+        ParseError = null;
+        DownloadError = null;
+        IsDownloaded = false;
+        Target = "";
+        Arguments = null;
+        WorkingDirectory = null;
+        Description = null;
+        IconLocation = null;
+        IconIndex = 0;
+        WindowStyle = ShortcutWindowStyle.Normal;
+        RunAsAdmin = false;
+        FileName = "shortcut";
+        HotkeyKeyValue = 0;
+        HotkeyCtrl = false;
+        HotkeyAlt = false;
+        HotkeyShift = false;
+        IsPrinterLink = false;
+        UseUnicode = false;
+        TargetFileSize = 0;
+        RelativePath = null;
+        IconEnvironmentPath = null;
+        KnownFolderGuid = null;
+        KnownFolderOffset = 0;
+        SpecialFolderCsidl = 0;
+        SpecialFolderOffset = 0;
+        OriginalFileName = null;
+        OriginalFileSize = 0;
+        ParsedTracker = null;
+        ParsedLinkInfo = null;
+        ParsedCreationTime = null;
+        ParsedAccessTime = null;
+        ParsedWriteTime = null;
+        ParsedPropertyStore = null;
+        StripTrackingData = true;
+        ParsedConsoleData = null;
+        ParsedExtraConsoleCodePage = null;
+        ParsedExtraDarwinData = null;
+        ParsedExtraShimLayerName = null;
+        ResetAdvancedFields();
+    }
+
+    private void ResetAdvancedFields()
+    {
+        HotkeyKeyValue = 0;
+        HotkeyCtrl = false;
+        HotkeyAlt = false;
+        HotkeyShift = false;
+        IsPrinterLink = false;
+        UseUnicode = false;
+        TargetFileSize = 0;
+        RelativePath = null;
+        IconEnvironmentPath = null;
+        KnownFolderGuid = null;
+        KnownFolderOffset = 0;
+        SpecialFolderCsidl = 0;
+        SpecialFolderOffset = 0;
+        SelectedFileAttributes.Clear();
+        ForceNoLinkInfo = false;
+        RunInSeparateProcess = false;
+        NoPidlAlias = false;
+        ForceNoLinkTrack = false;
+        EnableTargetMetadata = false;
+        DisableLinkPathTracking = false;
+        DisableKnownFolderTracking = false;
+        DisableKnownFolderAlias = false;
+        AllowLinkToLink = false;
+        UnaliasOnSave = false;
+        KeepLocalIDListForUNCTarget = false;
+        EnableConsoleSettings = false;
+        ConsoleBufferSizeX = 120;
+        ConsoleBufferSizeY = 9001;
+        ConsoleWindowSizeX = 120;
+        ConsoleWindowSizeY = 30;
+        ConsoleFaceName = "Consolas";
+        ConsoleFontSize = 0;
+        ConsoleFontWeight = 400;
+        ConsoleFullScreen = false;
+        ConsoleQuickEdit = false;
+        ConsoleInsertMode = false;
+        ConsoleAutoPosition = true;
+        ConsoleHistoryBufferSize = 50;
+        ConsoleNumberOfHistoryBuffers = 4;
+        ConsoleHistoryNoDup = false;
+        ConsoleWindowOriginX = 0;
+        ConsoleWindowOriginY = 0;
+        ConsoleCursorSize = 25;
+        ConsoleFillAttributes = 0;
+        ConsolePopupFillAttributes = 0;
+        ConsoleColorHexValues = DefaultConsoleColors();
+        EnablePropertyStore = false;
+        PropAppUserModelId = null;
+        PropPreventPinning = false;
+        PropRelaunchCommand = null;
+        PropRelaunchDisplayNameResource = null;
+        PropRelaunchIconResource = null;
+        PropExcludeFromShowInNewInstall = false;
+        PropIsDestListSeparator = false;
+        PropToastActivatorCLSID = null;
+        PropTargetParsingPath = null;
+        PropTargetSFGAOFlags = null;
+        PropItemTypeText = null;
+        PropMimeType = null;
+        NamedProperties.Clear();
+        ExtraConsoleCodePage = null;
+        ExtraDarwinData = null;
+        ExtraShimLayerName = null;
+    }
+
+    private void ToggleSection(int index)
+    {
+        if (!OpenSections.Remove(index))
+            OpenSections.Add(index);
+    }
+
+    private bool IsSectionOpen(int index) => OpenSections.Contains(index);
+
+    // --- Hotkey Options ---
+
+    private record HotkeyOption(string Label, byte Value);
+
+    private static readonly HotkeyOption[] HotkeyKeyOptions =
+    [
+        ..Enumerable.Range('A', 26).Select(c => new HotkeyOption(((char)c).ToString(), (byte)c)),
+        ..Enumerable.Range('0', 10).Select(c => new HotkeyOption(((char)c).ToString(), (byte)c)),
+        ..Enumerable.Range(0, 12).Select(i => new HotkeyOption($"F{i + 1}", (byte)(0x70 + i))),
+        new("Numpad 0", 0x60), new("Numpad 1", 0x61), new("Numpad 2", 0x62),
+        new("Numpad 3", 0x63), new("Numpad 4", 0x64), new("Numpad 5", 0x65),
+        new("Numpad 6", 0x66), new("Numpad 7", 0x67), new("Numpad 8", 0x68),
+        new("Numpad 9", 0x69),
+    ];
+
+    private string FormatHotkey()
+    {
+        var parts = new List<string>();
+        if (HotkeyCtrl) parts.Add("Ctrl");
+        if (HotkeyAlt) parts.Add("Alt");
+        if (HotkeyShift) parts.Add("Shift");
+        var key = HotkeyKeyOptions.FirstOrDefault(k => k.Value == HotkeyKeyValue);
+        parts.Add(key?.Label ?? $"0x{HotkeyKeyValue:X2}");
+        return string.Join(" + ", parts);
+    }
+
+    // --- Shim Layer Options ---
+
+    private record ShimLayerOption(string Label, string Value);
+
+    private static readonly ShimLayerOption[] ShimLayerOptions =
+    [
+        new("Windows XP SP3", "~ " + ShimLayerNames.WinXPSP3),
+        new("Windows XP SP2", "~ " + ShimLayerNames.WinXPSP2),
+        new("Windows Vista SP2", "~ " + ShimLayerNames.WinVistaSP2),
+        new("Windows 7 RTM", "~ " + ShimLayerNames.Win7RTM),
+        new("Windows 8 RTM", "~ " + ShimLayerNames.Win8RTM),
+        new("256 Colors", "~ " + ShimLayerNames.Color256),
+        new("640×480 Resolution", "~ " + ShimLayerNames.Resolution640x480),
+        new("High DPI Aware", "~ " + ShimLayerNames.HighDpiAware),
+        new("Disable Themes", "~ " + ShimLayerNames.DisableThemes),
+        new("Run as Admin", "~ " + ShimLayerNames.RunAsAdmin),
+        new("Disable NX (Show UI)", "~ " + ShimLayerNames.DisableNXShowUI),
+        new("Force DirectDraw Emulation", "~ " + ShimLayerNames.ForceDirectDrawEmulation),
+    ];
+
+    private void OnShimLayerSelected(ChangeEventArgs e)
+    {
+        ExtraShimLayerName = e.Value?.ToString();
+    }
+
+    // --- CSIDL Options ---
+
+    private record CsidlOption(string Label, uint Value);
+
+    private static readonly CsidlOption[] CsidlOptions =
+    [
+        new("Desktop", CsidlFolderIds.Desktop),
+        new("Programs", CsidlFolderIds.Programs),
+        new("Personal (Documents)", CsidlFolderIds.Personal),
+        new("Favorites", CsidlFolderIds.Favorites),
+        new("Startup", CsidlFolderIds.Startup),
+        new("Recent", CsidlFolderIds.Recent),
+        new("SendTo", CsidlFolderIds.SendTo),
+        new("Start Menu", CsidlFolderIds.StartMenu),
+        new("My Music", CsidlFolderIds.MyMusic),
+        new("My Video", CsidlFolderIds.MyVideo),
+        new("Desktop Directory", CsidlFolderIds.DesktopDirectory),
+        new("My Computer", CsidlFolderIds.Drives),
+        new("Network", CsidlFolderIds.Network),
+        new("Fonts", CsidlFolderIds.Fonts),
+        new("Templates", CsidlFolderIds.Templates),
+        new("Common Start Menu", CsidlFolderIds.CommonStartMenu),
+        new("Common Programs", CsidlFolderIds.CommonPrograms),
+        new("Common Startup", CsidlFolderIds.CommonStartup),
+        new("AppData (Roaming)", CsidlFolderIds.AppData),
+        new("Local AppData", CsidlFolderIds.LocalAppData),
+        new("Common AppData", CsidlFolderIds.CommonAppData),
+        new("Windows", CsidlFolderIds.Windows),
+        new("System (System32)", CsidlFolderIds.System),
+        new("Program Files", CsidlFolderIds.ProgramFiles),
+        new("My Pictures", CsidlFolderIds.MyPictures),
+        new("Profile", CsidlFolderIds.Profile),
+        new("System x86", CsidlFolderIds.SystemX86),
+        new("Program Files x86", CsidlFolderIds.ProgramFilesX86),
+        new("Common Files", CsidlFolderIds.CommonFiles),
+        new("Common Files x86", CsidlFolderIds.CommonFilesX86),
+        new("Admin Tools", CsidlFolderIds.AdminTools),
+        new("Common Admin Tools", CsidlFolderIds.CommonAdminTools),
+    ];
+
+    private void OnCsidlSelected(ChangeEventArgs e)
+    {
+        if (uint.TryParse(e.Value?.ToString(), out var val))
+            SpecialFolderCsidl = val;
+    }
+
+    // --- Known Folder Options ---
+
+    private record KnownFolderOption(string Label, Guid Value);
+
+    private static readonly KnownFolderOption[] KnownFolderOptions =
+    [
+        new("Desktop", KnownFolderIds.Desktop),
+        new("Documents", KnownFolderIds.Documents),
+        new("Downloads", KnownFolderIds.Downloads),
+        new("Music", KnownFolderIds.Music),
+        new("Pictures", KnownFolderIds.Pictures),
+        new("Videos", KnownFolderIds.Videos),
+        new("Profile", KnownFolderIds.Profile),
+        new("Saved Games", KnownFolderIds.SavedGames),
+        new("Contacts", KnownFolderIds.Contacts),
+        new("Searches", KnownFolderIds.Searches),
+        new("Favorites", KnownFolderIds.Favorites),
+        new("Links", KnownFolderIds.Links),
+        new("Templates", KnownFolderIds.Templates),
+        new("Program Files", KnownFolderIds.ProgramFiles),
+        new("Program Files x86", KnownFolderIds.ProgramFilesX86),
+        new("Common Files", KnownFolderIds.ProgramFilesCommon),
+        new("Common Files x86", KnownFolderIds.ProgramFilesCommonX86),
+        new("System (System32)", KnownFolderIds.System),
+        new("System x86", KnownFolderIds.SystemX86),
+        new("Windows", KnownFolderIds.Windows),
+        new("Fonts", KnownFolderIds.Fonts),
+        new("AppData (Roaming)", KnownFolderIds.AppData),
+        new("Local AppData", KnownFolderIds.LocalAppData),
+        new("Local AppData Low", KnownFolderIds.LocalAppDataLow),
+        new("ProgramData", KnownFolderIds.ProgramData),
+        new("Start Menu", KnownFolderIds.StartMenu),
+        new("Programs", KnownFolderIds.Programs),
+        new("Startup", KnownFolderIds.Startup),
+        new("Admin Tools", KnownFolderIds.AdminTools),
+        new("Common Start Menu", KnownFolderIds.CommonStartMenu),
+        new("Common Programs", KnownFolderIds.CommonPrograms),
+        new("Common Startup", KnownFolderIds.CommonStartup),
+        new("Common Desktop", KnownFolderIds.CommonDesktopDir),
+        new("Common Templates", KnownFolderIds.CommonTemplates),
+        new("Common Admin Tools", KnownFolderIds.CommonAdminTools),
+        new("User Profiles", KnownFolderIds.UserProfiles),
+        new("Public", KnownFolderIds.Public),
+        new("Public Documents", KnownFolderIds.PublicDocuments),
+        new("Public Downloads", KnownFolderIds.PublicDownloads),
+        new("Public Music", KnownFolderIds.PublicMusic),
+        new("Public Pictures", KnownFolderIds.PublicPictures),
+        new("Public Videos", KnownFolderIds.PublicVideos),
+        new("Recycle Bin", KnownFolderIds.RecycleBin),
+        new("Quick Launch", KnownFolderIds.QuickLaunch),
+        new("SendTo", KnownFolderIds.SendTo),
+        new("Recent", KnownFolderIds.Recent),
+        new("User Program Files", KnownFolderIds.UserProgramFiles),
+    ];
+
+    private void OnKnownFolderSelected(ChangeEventArgs e)
+    {
+        var val = e.Value?.ToString();
+        if (!string.IsNullOrWhiteSpace(val) && Guid.TryParse(val, out _))
+            KnownFolderGuid = val;
+        else
+            KnownFolderGuid = null;
+    }
+
+    // --- Helpers ---
+
+    private void ToggleFileAttribute(ShortcutLib.FileAttributes attr)
+    {
+        if (!SelectedFileAttributes.Remove(attr))
+            SelectedFileAttributes.Add(attr);
+    }
+
+    private void OnColorChanged(int index, ChangeEventArgs e)
+    {
+        ConsoleColorHexValues[index] = e.Value?.ToString() ?? "#000000";
+    }
+
+    private string[] GetParsedFileAttributeNames()
+    {
+        if (SelectedFileAttributes.Count == 0) return [];
+        return SelectedFileAttributes.Select(a => a.ToString()).ToArray();
+    }
+
+    private string[] GetActiveLinkFlagNames()
+    {
+        var flags = new List<string>();
+        if (ForceNoLinkInfo) flags.Add("ForceNoLinkInfo");
+        if (RunInSeparateProcess) flags.Add("RunInSeparateProcess");
+        if (NoPidlAlias) flags.Add("NoPidlAlias");
+        if (ForceNoLinkTrack) flags.Add("ForceNoLinkTrack");
+        if (EnableTargetMetadata) flags.Add("EnableTargetMetadata");
+        if (DisableLinkPathTracking) flags.Add("DisableLinkPathTracking");
+        if (DisableKnownFolderTracking) flags.Add("DisableKnownFolderTracking");
+        if (DisableKnownFolderAlias) flags.Add("DisableKnownFolderAlias");
+        if (AllowLinkToLink) flags.Add("AllowLinkToLink");
+        if (UnaliasOnSave) flags.Add("UnaliasOnSave");
+        if (KeepLocalIDListForUNCTarget) flags.Add("KeepLocalIDListForUNCTarget");
+        return flags.ToArray();
+    }
+
+    private string[] GetParsedConsoleFlagNames()
+    {
+        if (ParsedConsoleData is null) return [];
+        var flags = new List<string>();
+        if (ParsedConsoleData.FullScreen) flags.Add("FullScreen");
+        if (ParsedConsoleData.QuickEdit) flags.Add("QuickEdit");
+        if (ParsedConsoleData.InsertMode) flags.Add("InsertMode");
+        if (ParsedConsoleData.AutoPosition) flags.Add("AutoPosition");
+        if (ParsedConsoleData.HistoryNoDup) flags.Add("HistoryNoDup");
+        return flags.ToArray();
+    }
+
+    private static string BbggrrToHex(uint bbggrr)
+    {
+        byte r = (byte)(bbggrr & 0xFF);
+        byte g = (byte)((bbggrr >> 8) & 0xFF);
+        byte b = (byte)((bbggrr >> 16) & 0xFF);
+        return $"#{r:X2}{g:X2}{b:X2}";
+    }
+
+    private static uint HexToBbggrr(string hex)
+    {
+        hex = hex.TrimStart('#');
+        if (hex.Length != 6) return 0;
+        var color = Convert.ToUInt32(hex, 16);
+        byte r = (byte)((color >> 16) & 0xFF);
+        byte g = (byte)((color >> 8) & 0xFF);
+        byte b = (byte)(color & 0xFF);
+        return (uint)((b << 16) | (g << 8) | r);
+    }
+
+    private static string[] DefaultConsoleColors() =>
+    [
+        "#000000", "#000080", "#008000", "#008080",
+        "#800000", "#800080", "#808000", "#C0C0C0",
+        "#808080", "#0000FF", "#00FF00", "#00FFFF",
+        "#FF0000", "#FF00FF", "#FFFF00", "#FFFFFF"
+    ];
+
+    private static string GetFileAttributeHint(ShortcutLib.FileAttributes attr) => attr switch
+    {
+        ShortcutLib.FileAttributes.ReadOnly => "Target file cannot be modified",
+        ShortcutLib.FileAttributes.Hidden => "Target file is hidden in Explorer",
+        ShortcutLib.FileAttributes.System => "Target is a system file",
+        ShortcutLib.FileAttributes.Directory => "Target is a directory",
+        ShortcutLib.FileAttributes.Archive => "Modified since last backup",
+        ShortcutLib.FileAttributes.Normal => "No other attributes set",
+        ShortcutLib.FileAttributes.Temporary => "Used for temporary storage",
+        ShortcutLib.FileAttributes.SparseFile => "File is a sparse file",
+        ShortcutLib.FileAttributes.ReparsePoint => "Has reparse point data (junction, symlink)",
+        ShortcutLib.FileAttributes.Compressed => "File or directory is compressed",
+        ShortcutLib.FileAttributes.Offline => "Data not immediately available",
+        ShortcutLib.FileAttributes.NotContentIndexed => "Not indexed by Windows Search",
+        ShortcutLib.FileAttributes.Encrypted => "Encrypted with EFS",
+        _ => ""
+    };
+
+    private static string FormatSize(ulong bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes / (1024.0 * 1024.0):F1} MB";
+    }
+}

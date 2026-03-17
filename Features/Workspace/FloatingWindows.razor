@@ -56,6 +56,9 @@
                 case "AgentInfo":         <AgentInfoPanel AgentId="@win.AgentId" AgentUuid="@win.AgentUuid" /> break;
                 case "Shell":            <ShellPanel Relay="win.Relay" AgentId="@win.AgentId" AgentName="@win.AgentName" AgentUuid="@win.AgentUuid" /> break;
                 case "Vnc":              <VncPanel Relay="win.Relay" AgentId="@win.AgentId" AgentName="@win.AgentName" AgentUuid="@win.AgentUuid" /> break;
+                case "PeParser":         <PeParserPanel /> break;
+                case "Base64":           <Base64Panel /> break;
+                case "LnkTool":          <LnkToolPanel /> break;
             }
         </div>
         @if (!win.Maximized)
@@ -270,6 +273,9 @@
         "ExtensionGroups" => "database",
         "Shell" => "monitor",
         "Vnc" => "monitor",
+        "PeParser" => "file",
+        "Base64" => "code",
+        "LnkTool" => "link",
         _ => "monitor"
     };
 

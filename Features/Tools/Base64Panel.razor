@@ -1,0 +1,140 @@
+@inject IJSRuntime JS
+@using System.Text
+
+<div class="tool-header">
+<h3 class="tool-title">Base64 Converter</h3>
+<p class="tool-subtitle">Encode and decode with ASCII and Unicode (PowerShell) support.</p>
+        </div>
+
+        <div class="tool-form-wrapper">
+            <div class="form-group">
+                <label class="mono">Encoding Mode</label>
+                <div class="mode-toggle">
+                    <button type="button" class="mode-btn @(IsUnicodeMode ? "" : "active")" @onclick="() => SetMode(false)">
+                        ASCII (UTF-8)
+                    </button>
+                    <button type="button" class="mode-btn @(IsUnicodeMode ? "active" : "")" @onclick="() => SetMode(true)">
+                        Unicode (UTF-16LE)
+                    </button>
+                </div>
+                <span class="mode-hint mono">
+                    @if (IsUnicodeMode)
+                    {
+                        <text>PowerShell compatible — used with <code>powershell -e</code></text>
+                    }
+                    else
+                    {
+                        <text>Standard Base64 encoding</text>
+                    }
+                </span>
+            </div>
+
+            <div class="form-group">
+                <label class="mono" for="b64-input">Input</label>
+                <textarea id="b64-input" class="form-input b64-textarea" @bind="InputText"
+                          placeholder="Enter text to encode or Base64 to decode..." rows="6"></textarea>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+            {
+                <div class="error-banner">
+                    <span>@ErrorMessage</span>
+                </div>
+            }
+
+            <div class="action-buttons">
+                <button class="btn btn-primary action-btn" @onclick="Encode">
+                    Encode
+                </button>
+                <button class="btn btn-primary action-btn" @onclick="Decode">
+                    Decode
+                </button>
+            </div>
+
+            <div class="form-group">
+                <label class="mono" for="b64-output">Output</label>
+                <textarea id="b64-output" class="form-input b64-textarea" readonly value="@OutputText"
+                          placeholder="Result will appear here..." rows="6"></textarea>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(OutputText))
+            {
+                <button class="btn btn-secondary copy-btn" @onclick="CopyToClipboard">
+                    @(IsCopied ? "Copied!" : "Copy to Clipboard")
+                </button>
+            }
+        </div>
+    </div>
+
+@code {
+    private string InputText { get; set; } = "";
+    private string OutputText { get; set; } = "";
+    private string? ErrorMessage { get; set; }
+    private bool IsUnicodeMode { get; set; }
+    private bool IsCopied { get; set; }
+
+    private void SetMode(bool unicode)
+    {
+        IsUnicodeMode = unicode;
+        ErrorMessage = null;
+    }
+
+    private void Encode()
+    {
+        ErrorMessage = null;
+        OutputText = "";
+        IsCopied = false;
+
+        if (string.IsNullOrEmpty(InputText))
+        {
+            ErrorMessage = "Input is empty.";
+            return;
+        }
+
+        try
+        {
+            var encoding = IsUnicodeMode ? Encoding.Unicode : Encoding.UTF8;
+            var bytes = encoding.GetBytes(InputText);
+            OutputText = Convert.ToBase64String(bytes);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Encoding failed: {ex.Message}";
+        }
+    }
+
+    private void Decode()
+    {
+        ErrorMessage = null;
+        OutputText = "";
+        IsCopied = false;
+
+        if (string.IsNullOrEmpty(InputText))
+        {
+            ErrorMessage = "Input is empty.";
+            return;
+        }
+
+        try
+        {
+            var bytes = Convert.FromBase64String(InputText.Trim());
+            var encoding = IsUnicodeMode ? Encoding.Unicode : Encoding.UTF8;
+            OutputText = encoding.GetString(bytes);
+        }
+        catch (FormatException)
+        {
+            ErrorMessage = "Invalid Base64 string. Please check the input.";
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Decoding failed: {ex.Message}";
+        }
+    }
+
+    private async Task CopyToClipboard()
+    {
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", OutputText);
+        IsCopied = true;
+        StateHasChanged();
+    }
+}

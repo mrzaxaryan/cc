@@ -1,0 +1,705 @@
+@inject IJSRuntime JS
+@using PeSharp
+@using PeSharp.Headers
+@using PeSharp.DataDirectories
+
+        <div class="tool-header">
+            <h1 class="mono">PE <span class="accent">Parser</span></h1>
+            <p class="tool-subtitle">Analyze Windows PE files (EXE, DLL, SYS) directly in your browser.</p>
+        </div>
+
+        <div class="pe-form-wrapper">
+            <div class="upload-strip @(IsDragOver ? "drag-over" : "")"
+                 @ondragenter="OnDragEnter" @ondragleave="OnDragLeave" @ondragover:preventDefault>
+                <span class="mono upload-strip-label">Drop PE file to parse</span>
+                <span class="upload-strip-sep mono">|</span>
+                <span class="upload-strip-hint">.exe .dll .sys .ocx — max 50 MB</span>
+                <InputFile OnChange="OnFileSelected" accept=".exe,.dll,.sys,.ocx,.efi,.scr,.cpl" class="upload-input" />
+            </div>
+
+            @if (IsLoading)
+            {
+                <div class="loading-banner mono">Parsing...</div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+            {
+                <div class="error-banner">
+                    <span>@ErrorMessage</span>
+                </div>
+            }
+        </div>
+
+        @if (Pe is not null)
+        {
+            <div class="pe-results">
+                <!-- Overview -->
+                <div class="tool-section">
+                    <button class="tool-section-header" @onclick="() => ToggleSection(0)">
+                        <span class="mono">Overview</span>
+                        <span class="section-arrow @(IsSectionOpen(0) ? "open" : "")">&#x25BE;</span>
+                    </button>
+                    @if (IsSectionOpen(0))
+                    {
+                        <div class="tool-section-body">
+                            <div class="tool-info-grid">
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">File</span>
+                                    <span class="tool-info-value">@FileName</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Type</span>
+                                    <span class="tool-info-value">@(Pe.IsDll ? "DLL" : "EXE")</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Architecture</span>
+                                    <span class="tool-info-value">@(Pe.Is64Bit ? "64-bit (PE32+)" : "32-bit (PE32)")</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Machine</span>
+                                    <span class="tool-info-value">@Pe.CoffHeader.Machine</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Subsystem</span>
+                                    <span class="tool-info-value">@Pe.OptionalHeader.Subsystem</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Entry Point</span>
+                                    <span class="tool-info-value mono">0x@(Pe.OptionalHeader.AddressOfEntryPoint.ToString("X8"))</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Image Base</span>
+                                    <span class="tool-info-value mono">0x@(Pe.OptionalHeader.ImageBase.ToString("X"))</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Timestamp</span>
+                                    <span class="tool-info-value">@Pe.CoffHeader.Timestamp.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss UTC")</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Sections</span>
+                                    <span class="tool-info-value">@Pe.SectionHeaders.Count</span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- DOS Header -->
+                <div class="tool-section">
+                    <button class="tool-section-header" @onclick="() => ToggleSection(1)">
+                        <span class="mono">DOS Header</span>
+                        <span class="section-arrow @(IsSectionOpen(1) ? "open" : "")">&#x25BE;</span>
+                    </button>
+                    @if (IsSectionOpen(1))
+                    {
+                        <div class="tool-section-body">
+                            <div class="tool-info-grid">
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Magic</span>
+                                    <span class="tool-info-value mono">0x@(Pe.DosHeader.Magic.ToString("X4")) (@(Pe.DosHeader.IsValid ? "MZ" : "Invalid"))</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">PE Header Offset</span>
+                                    <span class="tool-info-value mono">0x@(Pe.DosHeader.PeHeaderOffset.ToString("X"))</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Pages</span>
+                                    <span class="tool-info-value">@Pe.DosHeader.PageCount</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Checksum</span>
+                                    <span class="tool-info-value mono">0x@(Pe.DosHeader.Checksum.ToString("X4"))</span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- COFF Header -->
+                <div class="tool-section">
+                    <button class="tool-section-header" @onclick="() => ToggleSection(2)">
+                        <span class="mono">COFF Header</span>
+                        <span class="section-arrow @(IsSectionOpen(2) ? "open" : "")">&#x25BE;</span>
+                    </button>
+                    @if (IsSectionOpen(2))
+                    {
+                        <div class="tool-section-body">
+                            <div class="tool-info-grid">
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Machine</span>
+                                    <span class="tool-info-value">@Pe.CoffHeader.Machine (0x@(((ushort)Pe.CoffHeader.Machine).ToString("X4")))</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Sections</span>
+                                    <span class="tool-info-value">@Pe.CoffHeader.NumberOfSections</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Timestamp</span>
+                                    <span class="tool-info-value">@Pe.CoffHeader.Timestamp.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss UTC")</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Symbol Table</span>
+                                    <span class="tool-info-value mono">0x@(Pe.CoffHeader.PointerToSymbolTable.ToString("X8"))</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Symbols</span>
+                                    <span class="tool-info-value">@Pe.CoffHeader.NumberOfSymbols</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Optional Header Size</span>
+                                    <span class="tool-info-value">@Pe.CoffHeader.SizeOfOptionalHeader bytes</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Characteristics</span>
+                                    <span class="tool-info-value mono">0x@(((ushort)Pe.CoffHeader.Characteristics).ToString("X4"))</span>
+                                </div>
+                            </div>
+                            <div class="pe-flags">
+                                <span class="pe-flags-label mono">Flags:</span>
+                                @foreach (var flag in GetCoffCharacteristics())
+                                {
+                                    <span class="pe-flag">@flag</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Optional Header -->
+                <div class="tool-section">
+                    <button class="tool-section-header" @onclick="() => ToggleSection(3)">
+                        <span class="mono">Optional Header</span>
+                        <span class="section-arrow @(IsSectionOpen(3) ? "open" : "")">&#x25BE;</span>
+                    </button>
+                    @if (IsSectionOpen(3))
+                    {
+                        <div class="tool-section-body">
+                            <div class="tool-info-grid">
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Magic</span>
+                                    <span class="tool-info-value">@Pe.OptionalHeader.Magic</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Linker Version</span>
+                                    <span class="tool-info-value">@Pe.OptionalHeader.MajorLinkerVersion.@Pe.OptionalHeader.MinorLinkerVersion</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Size of Code</span>
+                                    <span class="tool-info-value">@FormatSize(Pe.OptionalHeader.SizeOfCode)</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Image Base</span>
+                                    <span class="tool-info-value mono">0x@(Pe.OptionalHeader.ImageBase.ToString("X"))</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Section Alignment</span>
+                                    <span class="tool-info-value mono">0x@(Pe.OptionalHeader.SectionAlignment.ToString("X"))</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">File Alignment</span>
+                                    <span class="tool-info-value mono">0x@(Pe.OptionalHeader.FileAlignment.ToString("X"))</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">OS Version</span>
+                                    <span class="tool-info-value">@Pe.OptionalHeader.MajorOperatingSystemVersion.@Pe.OptionalHeader.MinorOperatingSystemVersion</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Subsystem</span>
+                                    <span class="tool-info-value">@Pe.OptionalHeader.Subsystem</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Size of Image</span>
+                                    <span class="tool-info-value">@FormatSize(Pe.OptionalHeader.SizeOfImage)</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Size of Headers</span>
+                                    <span class="tool-info-value">@FormatSize(Pe.OptionalHeader.SizeOfHeaders)</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Checksum</span>
+                                    <span class="tool-info-value mono">0x@(Pe.OptionalHeader.CheckSum.ToString("X8"))</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Stack Reserve</span>
+                                    <span class="tool-info-value">@FormatSize(Pe.OptionalHeader.SizeOfStackReserve)</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Stack Commit</span>
+                                    <span class="tool-info-value">@FormatSize(Pe.OptionalHeader.SizeOfStackCommit)</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Heap Reserve</span>
+                                    <span class="tool-info-value">@FormatSize(Pe.OptionalHeader.SizeOfHeapReserve)</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Heap Commit</span>
+                                    <span class="tool-info-value">@FormatSize(Pe.OptionalHeader.SizeOfHeapCommit)</span>
+                                </div>
+                                <div class="tool-info-item">
+                                    <span class="tool-info-label mono">Data Directories</span>
+                                    <span class="tool-info-value">@Pe.OptionalHeader.NumberOfRvaAndSizes</span>
+                                </div>
+                            </div>
+                            <div class="pe-flags">
+                                <span class="pe-flags-label mono">DLL Characteristics:</span>
+                                @foreach (var flag in GetDllCharacteristics())
+                                {
+                                    <span class="pe-flag">@flag</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Data Directories -->
+                <div class="tool-section">
+                    <button class="tool-section-header" @onclick="() => ToggleSection(4)">
+                        <span class="mono">Data Directories</span>
+                        <span class="section-arrow @(IsSectionOpen(4) ? "open" : "")">&#x25BE;</span>
+                    </button>
+                    @if (IsSectionOpen(4))
+                    {
+                        <div class="tool-section-body">
+                            <div class="pe-table-wrapper">
+                                <table class="pe-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="mono">#</th>
+                                            <th class="mono">Name</th>
+                                            <th class="mono">RVA</th>
+                                            <th class="mono">Size</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (var i = 0; i < Pe.OptionalHeader.DataDirectories.Count; i++)
+                                        {
+                                            var dir = Pe.OptionalHeader.DataDirectories[i];
+                                            <tr class="@(dir.IsEmpty ? "pe-row-muted" : "")">
+                                                <td class="mono">@i</td>
+                                                <td>@GetDataDirectoryName(i)</td>
+                                                <td class="mono">0x@(dir.VirtualAddress.ToString("X8"))</td>
+                                                <td class="mono">@FormatSize(dir.Size)</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Sections -->
+                <div class="tool-section">
+                    <button class="tool-section-header" @onclick="() => ToggleSection(5)">
+                        <span class="mono">Sections (@Pe.SectionHeaders.Count)</span>
+                        <span class="section-arrow @(IsSectionOpen(5) ? "open" : "")">&#x25BE;</span>
+                    </button>
+                    @if (IsSectionOpen(5))
+                    {
+                        <div class="tool-section-body">
+                            <div class="pe-table-wrapper">
+                                <table class="pe-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="mono">Name</th>
+                                            <th class="mono">Virtual Addr</th>
+                                            <th class="mono">Virtual Size</th>
+                                            <th class="mono">Raw Size</th>
+                                            <th class="mono">Raw Offset</th>
+                                            <th class="mono">Characteristics</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var section in Pe.SectionHeaders)
+                                        {
+                                            <tr>
+                                                <td class="mono">@(section.Name)</td>
+                                                <td class="mono">0x@(section.VirtualAddress.ToString("X8"))</td>
+                                                <td class="mono">@FormatSize(section.VirtualSize)</td>
+                                                <td class="mono">@FormatSize(section.SizeOfRawData)</td>
+                                                <td class="mono">0x@(section.PointerToRawData.ToString("X8"))</td>
+                                                <td>
+                                                    @foreach (var flag in GetSectionFlags(section.Characteristics))
+                                                    {
+                                                        <span class="pe-flag pe-flag-small">@flag</span>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Imports -->
+                @if (Pe.Imports is not null && Pe.Imports.Modules.Count > 0)
+                {
+                    <div class="tool-section">
+                        <button class="tool-section-header" @onclick="() => ToggleSection(6)">
+                            <span class="mono">Imports (@Pe.Imports.Modules.Count modules)</span>
+                            <span class="section-arrow @(IsSectionOpen(6) ? "open" : "")">&#x25BE;</span>
+                        </button>
+                        @if (IsSectionOpen(6))
+                        {
+                            <div class="tool-section-body">
+                                @foreach (var module in Pe.Imports.Modules)
+                                {
+                                    <div class="pe-import-module">
+                                        <button class="pe-module-header" @onclick="() => ToggleModule(module.Name)">
+                                            <span class="mono">@module.Name</span>
+                                            <span class="pe-module-count mono">@module.Functions.Count functions</span>
+                                            <span class="section-arrow @(IsModuleOpen(module.Name) ? "open" : "")">&#x25BE;</span>
+                                        </button>
+                                        @if (IsModuleOpen(module.Name))
+                                        {
+                                            <div class="pe-module-functions">
+                                                @foreach (var func in module.Functions)
+                                                {
+                                                    <div class="pe-function mono">
+                                                        @if (func.IsByOrdinal)
+                                                        {
+                                                            <span class="pe-func-ordinal">Ordinal @func.Ordinal</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="pe-func-hint">@func.Hint</span>
+                                                            <span class="pe-func-name">@func.Name</span>
+                                                        }
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+
+                <!-- Exports -->
+                @if (Pe.Exports is not null && Pe.Exports.Functions.Count > 0)
+                {
+                    <div class="tool-section">
+                        <button class="tool-section-header" @onclick="() => ToggleSection(7)">
+                            <span class="mono">Exports (@Pe.Exports.Functions.Count functions)</span>
+                            <span class="section-arrow @(IsSectionOpen(7) ? "open" : "")">&#x25BE;</span>
+                        </button>
+                        @if (IsSectionOpen(7))
+                        {
+                            <div class="tool-section-body">
+                                <div class="tool-info-grid" style="margin-bottom: 1rem;">
+                                    <div class="tool-info-item">
+                                        <span class="tool-info-label mono">DLL Name</span>
+                                        <span class="tool-info-value">@Pe.Exports.Name</span>
+                                    </div>
+                                    <div class="tool-info-item">
+                                        <span class="tool-info-label mono">Ordinal Base</span>
+                                        <span class="tool-info-value">@Pe.Exports.OrdinalBase</span>
+                                    </div>
+                                </div>
+                                <div class="pe-table-wrapper">
+                                    <table class="pe-table">
+                                        <thead>
+                                            <tr>
+                                                <th class="mono">Ordinal</th>
+                                                <th class="mono">RVA</th>
+                                                <th class="mono">Name</th>
+                                                <th class="mono">Forwarder</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var func in Pe.Exports.Functions)
+                                            {
+                                                <tr>
+                                                    <td class="mono">@func.Ordinal</td>
+                                                    <td class="mono">0x@(func.Address.ToString("X8"))</td>
+                                                    <td class="mono">@(func.Name ?? "—")</td>
+                                                    <td class="mono">@(func.ForwarderName ?? "—")</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+
+                <!-- Resources -->
+                @if (Pe.Resources is not null && Pe.Resources.Entries.Count > 0)
+                {
+                    <div class="tool-section">
+                        <button class="tool-section-header" @onclick="() => ToggleSection(8)">
+                            <span class="mono">Resources (@Pe.Resources.Entries.Count entries)</span>
+                            <span class="section-arrow @(IsSectionOpen(8) ? "open" : "")">&#x25BE;</span>
+                        </button>
+                        @if (IsSectionOpen(8))
+                        {
+                            <div class="tool-section-body">
+                                <div class="pe-tree">
+                                    @foreach (var entry in Pe.Resources.Entries)
+                                    {
+                                        @RenderResourceEntry(entry, 0)
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+
+                <!-- Debug Info -->
+                @if (Pe.DebugInfo is not null && Pe.DebugInfo.Entries.Count > 0)
+                {
+                    <div class="tool-section">
+                        <button class="tool-section-header" @onclick="() => ToggleSection(9)">
+                            <span class="mono">Debug Info (@Pe.DebugInfo.Entries.Count entries)</span>
+                            <span class="section-arrow @(IsSectionOpen(9) ? "open" : "")">&#x25BE;</span>
+                        </button>
+                        @if (IsSectionOpen(9))
+                        {
+                            <div class="tool-section-body">
+                                <div class="pe-table-wrapper">
+                                    <table class="pe-table">
+                                        <thead>
+                                            <tr>
+                                                <th class="mono">Type</th>
+                                                <th class="mono">Size</th>
+                                                <th class="mono">Address</th>
+                                                <th class="mono">Pointer</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var entry in Pe.DebugInfo.Entries)
+                                            {
+                                                <tr>
+                                                    <td>@entry.Type</td>
+                                                    <td class="mono">@FormatSize(entry.SizeOfData)</td>
+                                                    <td class="mono">0x@(entry.AddressOfRawData.ToString("X8"))</td>
+                                                    <td class="mono">0x@(entry.PointerToRawData.ToString("X8"))</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+
+                <!-- Relocations -->
+                @if (Pe.Relocations is not null && Pe.Relocations.Blocks.Count > 0)
+                {
+                    <div class="tool-section">
+                        <button class="tool-section-header" @onclick="() => ToggleSection(10)">
+                            <span class="mono">Relocations (@Pe.Relocations.Blocks.Count blocks)</span>
+                            <span class="section-arrow @(IsSectionOpen(10) ? "open" : "")">&#x25BE;</span>
+                        </button>
+                        @if (IsSectionOpen(10))
+                        {
+                            <div class="tool-section-body">
+                                <div class="pe-table-wrapper">
+                                    <table class="pe-table">
+                                        <thead>
+                                            <tr>
+                                                <th class="mono">Page RVA</th>
+                                                <th class="mono">Entries</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var block in Pe.Relocations.Blocks)
+                                            {
+                                                <tr>
+                                                    <td class="mono">0x@(block.PageRva.ToString("X8"))</td>
+                                                    <td class="mono">@block.Entries.Count</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="powered-by">
+                <div class="powered-by-header">
+                    <span class="mono powered-by-label">Powered by</span>
+                    <a href="https://github.com/mrzaxaryan/pe" target="_blank" rel="noopener noreferrer"
+                       class="mono powered-by-link">PeSharp</a>
+                </div>
+            </div>
+        }
+    </div>
+
+@code {
+    private PeFile? Pe { get; set; }
+    private string? FileName { get; set; }
+    private string? ErrorMessage { get; set; }
+    private bool IsLoading { get; set; }
+    private bool IsDragOver { get; set; }
+
+    private readonly HashSet<int> OpenSections = [0];
+    private readonly HashSet<string> OpenModules = [];
+
+    private const long MaxFileSize = 50 * 1024 * 1024; // 50 MB
+
+    private void OnDragEnter() => IsDragOver = true;
+    private void OnDragLeave() => IsDragOver = false;
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        IsDragOver = false;
+        ErrorMessage = null;
+        Pe?.Dispose();
+        Pe = null;
+
+        var file = e.File;
+        FileName = file.Name;
+
+        if (file.Size > MaxFileSize)
+        {
+            ErrorMessage = $"File too large ({FormatSize((ulong)file.Size)}). Maximum is 50 MB.";
+            return;
+        }
+
+        IsLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            using var stream = file.OpenReadStream(MaxFileSize);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            var bytes = ms.ToArray();
+
+            Pe = new PeFile(bytes);
+            OpenSections.Clear();
+            OpenSections.Add(0);
+            OpenModules.Clear();
+        }
+        catch (PeFormatException ex)
+        {
+            ErrorMessage = $"Invalid PE file: {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to parse file: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void ToggleSection(int index)
+    {
+        if (!OpenSections.Remove(index))
+            OpenSections.Add(index);
+    }
+
+    private bool IsSectionOpen(int index) => OpenSections.Contains(index);
+
+    private void ToggleModule(string name)
+    {
+        if (!OpenModules.Remove(name))
+            OpenModules.Add(name);
+    }
+
+    private bool IsModuleOpen(string name) => OpenModules.Contains(name);
+
+    private static string FormatSize(ulong bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes / (1024.0 * 1024.0):F1} MB";
+    }
+
+    private static string FormatSize(uint bytes) => FormatSize((ulong)bytes);
+
+    private IEnumerable<string> GetCoffCharacteristics()
+    {
+        var chars = Pe!.CoffHeader.Characteristics;
+        foreach (FileCharacteristics flag in Enum.GetValues<FileCharacteristics>())
+        {
+            if (flag != 0 && chars.HasFlag(flag))
+                yield return flag.ToString();
+        }
+    }
+
+    private IEnumerable<string> GetDllCharacteristics()
+    {
+        var chars = Pe!.OptionalHeader.DllCharacteristics;
+        foreach (DllCharacteristics flag in Enum.GetValues<DllCharacteristics>())
+        {
+            if (flag != 0 && chars.HasFlag(flag))
+                yield return flag.ToString();
+        }
+    }
+
+    private static IEnumerable<string> GetSectionFlags(SectionCharacteristics chars)
+    {
+        if (chars.HasFlag(SectionCharacteristics.MemRead)) yield return "R";
+        if (chars.HasFlag(SectionCharacteristics.MemWrite)) yield return "W";
+        if (chars.HasFlag(SectionCharacteristics.MemExecute)) yield return "X";
+        if (chars.HasFlag(SectionCharacteristics.ContainsCode)) yield return "Code";
+        if (chars.HasFlag(SectionCharacteristics.ContainsInitializedData)) yield return "Data";
+        if (chars.HasFlag(SectionCharacteristics.ContainsUninitializedData)) yield return "BSS";
+        if (chars.HasFlag(SectionCharacteristics.MemDiscardable)) yield return "Discard";
+    }
+
+    private static string GetDataDirectoryName(int index) => index switch
+    {
+        0 => "Export Table",
+        1 => "Import Table",
+        2 => "Resource Table",
+        3 => "Exception Table",
+        4 => "Certificate Table",
+        5 => "Base Relocation Table",
+        6 => "Debug",
+        7 => "Architecture",
+        8 => "Global Pointer",
+        9 => "TLS Table",
+        10 => "Load Config Table",
+        11 => "Bound Import",
+        12 => "Import Address Table",
+        13 => "Delay Import Descriptor",
+        14 => "CLR Runtime Header",
+        15 => "Reserved",
+        _ => $"Unknown ({index})"
+    };
+
+    private RenderFragment RenderResourceEntry(ResourceDirectoryEntry entry, int depth) => __builder =>
+    {
+        <div class="pe-tree-node" style="padding-left: @(depth * 1.25)rem;">
+            <span class="pe-tree-icon mono">@(entry.IsDirectory ? "+" : "-")</span>
+            <span class="pe-tree-label">
+                @if (entry.IsNamed)
+                {
+                    <span>@entry.Name</span>
+                }
+                else if (depth == 0 && entry.Id.HasValue && Enum.IsDefined(typeof(ResourceType), entry.Id.Value)) 
+                {
+                    <span>@((ResourceType)entry.Id.Value)</span>
+                }
+                else
+                {
+                    <span class="mono">ID @entry.Id</span>
+                }
+            </span>
+            @if (entry.Data is not null)
+            {
+                <span class="pe-tree-data mono">@FormatSize(entry.Data.Size)</span>
+            }
+        </div>
+        @if (entry.IsDirectory && entry.Subdirectory is not null)
+        {
+            foreach (var child in entry.Subdirectory.Entries)
+            {
+                @RenderResourceEntry(child, depth + 1)
+            }
+        }
+    };
+}

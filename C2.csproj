@@ -37,6 +37,8 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.2" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.2" PrivateAssets="all" />
+    <PackageReference Include="PeSharp" Version="1.*" />
+    <PackageReference Include="ShortcutLib" Version="1.0.5-alpha.3" />
   </ItemGroup>
 
 </Project>

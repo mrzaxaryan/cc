@@ -1,0 +1,92 @@
+/* Mode toggle */
+.mode-toggle {
+    display: flex;
+    background: var(--c2-bg-deep);
+    border: 1px solid var(--c2-border);
+    border-radius: var(--c2-radius-md);
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.mode-btn {
+    flex: 1;
+    padding: 0.65rem 1rem;
+    background: transparent;
+    border: none;
+    color: var(--c2-text-dim);
+    font-family: var(--c2-font-mono, "JetBrains Mono", monospace);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: var(--c2-transition-fast);
+    letter-spacing: 0.05em;
+}
+
+.mode-btn:hover {
+    color: var(--c2-text-muted);
+    background: rgba(137, 180, 250, 0.04);
+}
+
+.mode-btn.active {
+    background: rgba(137, 180, 250, 0.1);
+    color: var(--c2-accent-blue);
+    box-shadow: inset 0 -2px 0 var(--c2-accent-blue);
+}
+
+.mode-hint {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--c2-text-dim);
+    letter-spacing: 0.05em;
+}
+
+.mode-hint code {
+    font-family: var(--c2-font-mono, "JetBrains Mono", monospace);
+    font-size: 0.75rem;
+    background: var(--c2-bg-deep);
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    color: var(--c2-accent-blue);
+}
+
+/* Textareas */
+.b64-textarea {
+    resize: vertical;
+    min-height: 120px;
+    line-height: 1.5;
+    word-break: break-all;
+}
+
+/* Action buttons */
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.action-btn {
+    flex: 1;
+    padding: 0.85rem 1rem;
+    font-size: 0.95rem;
+    text-align: center;
+    letter-spacing: 0.05em;
+}
+
+/* Copy button */
+.copy-btn {
+    width: 100%;
+    padding: 0.7rem 1rem;
+    font-size: 0.9rem;
+    text-align: center;
+    letter-spacing: 0.05em;
+}
+
+@media (max-width: 768px) {
+    .action-buttons {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .mode-toggle {
+        flex-direction: column;
+    }
+}
