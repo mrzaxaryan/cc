@@ -193,12 +193,12 @@
 </PanelLayout>
 
 <C2Dropdown Visible="@ctxVisible" X="@ctxX" Y="@ctxY" OnClose="HideContextMenu">
-    <C2DropdownItem OnClick="CtxShowInfo">Information</C2DropdownItem>
+    <C2DropdownItem OnClick="CtxShowInfo"><C2Icon Name="info" Size="Size.Xs" /> Information</C2DropdownItem>
     @if (ctxRow is not null)
     {
         <div class="ap-ctx-submenu-wrap">
             <button class="ap-ctx-sub-trigger" type="button">
-                Copy <span class="ap-ctx-arrow"><C2Icon Name="chevron-right" Size="Size.Xs" /></span>
+                <C2Icon Name="copy" Size="Size.Xs" /> Copy <span class="ap-ctx-arrow"><C2Icon Name="chevron-right" Size="Size.Xs" /></span>
             </button>
             <div class="ap-ctx-submenu">
                 @foreach (var item in GetCopyItems(ctxRow))
@@ -209,10 +209,10 @@
             </div>
         </div>
     }
-    <C2DropdownItem OnClick="CtxStartRename" Disabled="@(ctxRow?.Uuid is null)">Rename</C2DropdownItem>
-    <C2DropdownItem OnClick="CtxOpenFiles" Disabled="@(!ctxIsOnline && !ctxHasCache)">File Manager</C2DropdownItem>
-    <C2DropdownItem OnClick="CtxOpenShell" Disabled="@(!ctxIsOnline || ctxPairedOther)">Shell</C2DropdownItem>
-    <C2DropdownItem OnClick="CtxOpenScreen" Disabled="@(!ctxIsOnline || ctxPairedOther)">Screen</C2DropdownItem>
+    <C2DropdownItem OnClick="CtxStartRename" Disabled="@(ctxRow?.Uuid is null)"><C2Icon Name="edit" Size="Size.Xs" /> Rename</C2DropdownItem>
+    <C2DropdownItem OnClick="CtxOpenFiles" Disabled="@(!ctxIsOnline && !ctxHasCache)"><C2Icon Name="folder" Size="Size.Xs" /> File Manager</C2DropdownItem>
+    <C2DropdownItem OnClick="CtxOpenShell" Disabled="@(!ctxIsOnline || ctxPairedOther)"><C2Icon Name="terminal" Size="Size.Xs" /> Shell</C2DropdownItem>
+    <C2DropdownItem OnClick="CtxOpenScreen" Disabled="@(!ctxIsOnline || ctxPairedOther)"><C2Icon Name="monitor" Size="Size.Xs" /> Screen</C2DropdownItem>
 </C2Dropdown>
 
 <C2Dialog Visible="@renameVisible" Title="Rename Agent" ConfirmText="Rename"

@@ -7,7 +7,7 @@
         <div class="fm-viewer-actions">
             @if (!fileLoading)
             {
-                <C2Btn OnClick="HashFile" Title="Compute SHA-256 hash of this file" Disabled="@(!IsConnected)">SHA-256</C2Btn>
+                <C2Btn OnClick="HashFile" Title="Compute SHA-256 hash of this file" Disabled="@(!IsConnected)"><C2Icon Name="hash" Size="Size.Xs" /> SHA-256</C2Btn>
             }
             <C2Btn Variant="BtnVariant.Danger" OnClick="Close" Title="Close file viewer"><C2Icon Name="x" Size="Size.Xs" /></C2Btn>
         </div>

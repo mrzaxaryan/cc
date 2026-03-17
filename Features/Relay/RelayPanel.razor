@@ -80,11 +80,11 @@
                                         <C2Btn OnClick="() => StartEdit(relay)" Title="Edit"><C2Icon Name="edit" Size="Size.Xs" /></C2Btn>
                                         @if (isEnabled)
                                         {
-                                            <C2Btn Variant="BtnVariant.Warning" OnClick="() => ToggleEnabled(relay)" Title="Disable">Disable</C2Btn>
+                                            <C2Btn Variant="BtnVariant.Warning" OnClick="() => ToggleEnabled(relay)" Title="Disable"><C2Icon Name="pause" Size="Size.Xs" /> Disable</C2Btn>
                                         }
                                         else
                                         {
-                                            <C2Btn Variant="BtnVariant.Success" OnClick="() => ToggleEnabled(relay)" Title="Enable">Enable</C2Btn>
+                                            <C2Btn Variant="BtnVariant.Success" OnClick="() => ToggleEnabled(relay)" Title="Enable"><C2Icon Name="play" Size="Size.Xs" /> Enable</C2Btn>
                                         }
                                         <C2Btn Variant="BtnVariant.Danger" OnClick="() => RemoveRelay(relay.Url)" Title="Remove"><C2Icon Name="x" Size="Size.Xs" /></C2Btn>
                                     </td>

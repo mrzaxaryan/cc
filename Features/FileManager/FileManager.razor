@@ -185,27 +185,27 @@
         var isDir = ctxEntry.IsDirectory || ctxEntry.IsDrive;
         @if (isDir)
         {
-            <C2DropdownItem OnClick="CtxOpen">Open</C2DropdownItem>
-            <C2DropdownItem OnClick="CtxSearch" Disabled="@(!IsConnected)">Search</C2DropdownItem>
+            <C2DropdownItem OnClick="CtxOpen"><C2Icon Name="external" Size="Size.Xs" /> Open</C2DropdownItem>
+            <C2DropdownItem OnClick="CtxSearch" Disabled="@(!IsConnected)"><C2Icon Name="search" Size="Size.Xs" /> Search</C2DropdownItem>
             <div class="fm-ctx-sep"></div>
-            <C2DropdownItem OnClick="CtxCopyPath">Copy Path</C2DropdownItem>
+            <C2DropdownItem OnClick="CtxCopyPath"><C2Icon Name="copy" Size="Size.Xs" /> Copy Path</C2DropdownItem>
         }
         else
         {
             @if (IsFileSynced(ctxEntry.Name))
             {
-                <C2DropdownItem OnClick="CtxView">View</C2DropdownItem>
-                <C2DropdownItem OnClick="CtxSaveToBrowser">Save to Browser</C2DropdownItem>
+                <C2DropdownItem OnClick="CtxView"><C2Icon Name="file-text" Size="Size.Xs" /> View</C2DropdownItem>
+                <C2DropdownItem OnClick="CtxSaveToBrowser"><C2Icon Name="save" Size="Size.Xs" /> Save to Browser</C2DropdownItem>
                 <div class="fm-ctx-sep"></div>
             }
             else
             {
-                <C2DropdownItem OnClick="CtxUpload" Disabled="@(!IsConnected || !Cache.HasDirectory)">Upload to Cache</C2DropdownItem>
+                <C2DropdownItem OnClick="CtxUpload" Disabled="@(!IsConnected || !Cache.HasDirectory)"><C2Icon Name="download" Size="Size.Xs" /> Upload to Cache</C2DropdownItem>
                 <div class="fm-ctx-sep"></div>
             }
-            <C2DropdownItem OnClick="CtxHash" Disabled="@(!IsConnected)">SHA-256 Hash</C2DropdownItem>
-            <C2DropdownItem OnClick="CtxCopyPath">Copy Path</C2DropdownItem>
-            <C2DropdownItem OnClick="CtxSearchDir" Disabled="@(!IsConnected)">Search in Directory</C2DropdownItem>
+            <C2DropdownItem OnClick="CtxHash" Disabled="@(!IsConnected)"><C2Icon Name="hash" Size="Size.Xs" /> SHA-256 Hash</C2DropdownItem>
+            <C2DropdownItem OnClick="CtxCopyPath"><C2Icon Name="copy" Size="Size.Xs" /> Copy Path</C2DropdownItem>
+            <C2DropdownItem OnClick="CtxSearchDir" Disabled="@(!IsConnected)"><C2Icon Name="search" Size="Size.Xs" /> Search in Directory</C2DropdownItem>
         }
     }
 </C2Dropdown>

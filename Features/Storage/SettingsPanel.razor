@@ -106,7 +106,7 @@
                                 <a href="javascript:void(0)" class="cm-item-name" @onclick="() => NavigateToAgent(agent.uuid)" @onclick:preventDefault>@agent.name</a>
                                 <span class="cm-item-meta">@agent.dirs directories / @agent.files files</span>
                                 <span class="cm-item-meta">@Formatters.FormatSize((ulong)agent.size)</span>
-                                <C2ConfirmBtn OnConfirm="() => DeleteAgentCache(agent.uuid)" Title="Delete agent cache">DEL</C2ConfirmBtn>
+                                <C2ConfirmBtn OnConfirm="() => DeleteAgentCache(agent.uuid)" Title="Delete agent cache"><C2Icon Name="trash" Size="Size.Xs" /></C2ConfirmBtn>
                             </div>
                         }
                     }
@@ -129,7 +129,7 @@
                             <div class="cm-item">
                                 <span class="cm-item-icon"><C2Icon Name="folder" Size="Size.Xs" /></span>
                                 <a href="javascript:void(0)" class="cm-item-name" @onclick="() => NavigateToDirectory(dir.Id)" @onclick:preventDefault>@dir.Name</a>
-                                <C2ConfirmBtn OnConfirm="() => DeleteDir(dir)" Title="Delete">DEL</C2ConfirmBtn>
+                                <C2ConfirmBtn OnConfirm="() => DeleteDir(dir)" Title="Delete"><C2Icon Name="trash" Size="Size.Xs" /></C2ConfirmBtn>
                             </div>
                         }
                         @foreach (var file in childFiles)
@@ -138,7 +138,7 @@
                                 <span class="cm-item-icon"><C2Icon Name="file" Size="Size.Xs" /></span>
                                 <span class="cm-item-name">@file.Name</span>
                                 <span class="cm-item-meta">@Formatters.FormatSize((ulong)file.Size)</span>
-                                <C2ConfirmBtn OnConfirm="() => DeleteFile(file)" Title="Delete">DEL</C2ConfirmBtn>
+                                <C2ConfirmBtn OnConfirm="() => DeleteFile(file)" Title="Delete"><C2Icon Name="trash" Size="Size.Xs" /></C2ConfirmBtn>
                             </div>
                         }
                         @if (childDirs.Count == 0 && childFiles.Count == 0)

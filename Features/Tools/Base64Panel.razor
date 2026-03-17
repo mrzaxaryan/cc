@@ -45,10 +45,10 @@
 
             <div class="action-buttons">
                 <button class="btn btn-primary action-btn" @onclick="Encode">
-                    Encode
+                    <C2Icon Name="code" Size="Size.Xs" /> Encode
                 </button>
                 <button class="btn btn-primary action-btn" @onclick="Decode">
-                    Decode
+                    <C2Icon Name="code" Size="Size.Xs" /> Decode
                 </button>
             </div>
 
@@ -61,7 +61,7 @@
             @if (!string.IsNullOrWhiteSpace(OutputText))
             {
                 <button class="btn btn-secondary copy-btn" @onclick="CopyToClipboard">
-                    @(IsCopied ? "Copied!" : "Copy to Clipboard")
+                    <C2Icon Name="@(IsCopied ? "check" : "copy")" Size="Size.Xs" /> @(IsCopied ? "Copied!" : "Copy to Clipboard")
                 </button>
             }
         </div>
