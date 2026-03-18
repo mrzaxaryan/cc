@@ -8,11 +8,12 @@
 @inject WindowManager Wm
 @inject IJSRuntime Js
 @inject IEventBus Bus
+@inject VfsStore Vfs
 
 <div class="fm">
     @* Navigation toolbar *@
     <div class="fm-toolbar">
-        <C2Btn OnClick="NavigateUp" Disabled="@(loading || !IsConnected)" Title="Up" Size="Size.Xs">
+        <C2Btn OnClick="NavigateUp" Disabled="@(loading || (!IsConnected && entries is null))" Title="Up" Size="Size.Xs">
             <C2Icon Name="arrow-up" Size="Size.Xs" />
         </C2Btn>
         <C2Btn OnClick="Refresh" Disabled="@(loading || !IsConnected)" Title="Refresh" Size="Size.Xs">
@@ -25,7 +26,7 @@
         {
             <div class="fm-offline-badge">
                 <span class="fm-offline-dot"></span>
-                Offline
+                @(_usingCachedData ? "Cached" : "Offline")
             </div>
         }
     </div>
@@ -103,7 +104,7 @@
                        Mode="FilePanel.PanelMode.Remote"
                        AgentUuid="@AgentUuid"
                        CurrentPath="@currentPath"
-                       Entries="@FilteredEntries"
+                       Entries="@(IsConnected ? FilteredEntries : null)"
                        Loading="@loading"
                        IsActive="@(activePanel == ActivePanel.Remote)"
                        OnActivate="() => SetActive(ActivePanel.Remote)"
@@ -175,6 +176,7 @@ private HashSet<DirEntry> ActiveSelection =>
     private bool loading;
     private string sortColumn = "name";
     private bool sortAscending = true;
+    private bool _usingCachedData;
 
     // Filter state
     private bool filterActive;
@@ -246,6 +248,7 @@ private HashSet<DirEntry> ActiveSelection =>
         await Downloads.LoadAsync();
         if (string.IsNullOrEmpty(currentPath)) currentPath = RootPath;
         if (IsConnected) await NavigateTo(currentPath);
+        else if (!string.IsNullOrEmpty(AgentUuid)) await NavigateToCached(currentPath);
     }
 
     private IDisposable? _dlSub;
@@ -324,6 +327,7 @@ private HashSet<DirEntry> ActiveSelection =>
         pathSegments = [];
         entries = null;
         viewingFile = false;
+        _usingCachedData = false;
     }
 
     private void ToggleFilter()
@@ -343,6 +347,10 @@ private HashSet<DirEntry> ActiveSelection =>
 
     // --- Navigation (single source of truth) ---
 
+    // Routes to live fetch or cached browse depending on connection state.
+    private Task Navigate(string path) =>
+        IsConnected ? NavigateTo(path) : NavigateToCached(path);
+
     private async Task NavigateTo(string path)
     {
         if (loading || !IsConnected) return;
@@ -361,26 +369,75 @@ private HashSet<DirEntry> ActiveSelection =>
             var (parsed, parseError) = DirEntry.ParseDirectoryResponse(response);
             if (parseError is not null) { Msg.Show(parseError, MessageType.Error, source: "File Manager"); return; }
             entries = parsed;
+            _usingCachedData = false;
         }
         catch (Exception ex) { Msg.Error("Browse Failed", $"Could not list directory: {ex.Message}", "File Manager"); }
         finally { loading = false; StateHasChanged(); }
     }
 
+    private async Task NavigateToCached(string path)
+    {
+        if (loading || string.IsNullOrEmpty(AgentUuid)) return;
+
+        currentPath = FileManagerPath.Normalize(path, IsUnixAgent);
+        pathSegments = FileManagerPath.GetSegments(currentPath);
+        filterText = null;
+        _inlineView = false; if (_inlineViewUrl is not null) { _ = Js.InvokeVoidAsync("c2RevokeObjectUrl", _inlineViewUrl).AsTask(); _inlineViewUrl = null; _inlineViewName = null; }
+        loading = true; entries = null; _scrollSyncSetup = false; StateHasChanged();
+
+        try
+        {
+            var dirId = await Vfs.FindDirectoryIdAsync(AgentUuid, currentPath);
+            if (dirId is null) return; // no cache for this path
+
+            var dirs = await Vfs.GetChildDirectoriesAsync(AgentUuid, dirId);
+
+            var downloads = Downloads.GetByAgent(AgentUuid)
+                .Where(r => r.Status is DownloadStatus.Queued or DownloadStatus.Downloading or DownloadStatus.Paused or DownloadStatus.Completed
+                         && r.RemotePath.StartsWith(currentPath, StringComparison.OrdinalIgnoreCase)
+                         && r.RemotePath.Length > currentPath.Length)
+                .Where(r => { var tail = r.RemotePath[currentPath.Length..]; return !tail.Contains('\\') && !tail.Contains('/'); })
+                .ToList();
+
+            var result = new List<DirEntry>(dirs.Count + downloads.Count);
+            foreach (var d in dirs)
+                result.Add(new DirEntry(d.Name, d.CreationTime, d.LastModifiedTime, 0, 0, !d.IsDrive, d.IsDrive, false, false, false));
+            foreach (var f in downloads)
+                result.Add(new DirEntry(f.FileName, 0, 0, (ulong)Math.Max(0, f.TotalSize), 0, false, false, false, false, false));
+
+            entries = result;
+            _usingCachedData = true;
+        }
+        catch { }
+        finally { loading = false; StateHasChanged(); }
+    }
+
+    private async Task SaveToVfsCacheAsync(string agentUuid, string path, List<DirEntry> dirEntries)
+    {
+        try
+        {
+            var parentId = await Vfs.ResolveOrCreatePathAsync(agentUuid, path);
+            foreach (var e in dirEntries.Where(e => e.IsDirectory || e.IsDrive))
+                await Vfs.PutDirectoryAsync(agentUuid, parentId, e.Name, path + e.Name, e.IsDrive, e.CreationTime, e.LastModifiedTime);
+        }
+        catch { }
+    }
+
     private async Task NavigateUp()
     {
         var parent = FileManagerPath.GetParent(pathSegments, PathSep, IsUnixAgent, RootPath);
-        await NavigateTo(parent);
+        await Navigate(parent);
     }
 
-    private async Task NavigateToRoot() => await NavigateTo(RootPath);
+    private async Task NavigateToRoot() => await Navigate(RootPath);
 
     private async Task NavigateToBreadcrumb(int index)
     {
         var path = FileManagerPath.BuildBreadcrumbPath(pathSegments, index, PathSep, IsUnixAgent);
-        await NavigateTo(path);
+        await Navigate(path);
     }
 
-    private async Task OnPathKeyDown(KeyboardEventArgs e) { if (e.Key == "Enter") await NavigateTo(currentPath); }
+    private async Task OnPathKeyDown(KeyboardEventArgs e) { if (e.Key == "Enter") await Navigate(currentPath); }
     private async Task Refresh() => await NavigateTo(currentPath);
 
     // --- Panel action handlers ---
@@ -392,7 +449,7 @@ private HashSet<DirEntry> ActiveSelection =>
         {
             case FilePanel.PanelAction.Open:
                 if (entry is null) await NavigateUp();
-                else if (entry.IsDirectory || entry.IsDrive) await NavigateTo(currentPath + entry.Name);
+                else if (entry.IsDirectory || entry.IsDrive) await Navigate(currentPath + entry.Name);
                 break;
             case FilePanel.PanelAction.View:
                 ViewFile(entry);
@@ -422,7 +479,7 @@ private HashSet<DirEntry> ActiveSelection =>
         {
             case FilePanel.PanelAction.Open:
                 if (entry is null) await NavigateUp();
-                else if (entry.IsDirectory || entry.IsDrive) await NavigateTo(currentPath + entry.Name);
+                else if (entry.IsDirectory || entry.IsDrive) await Navigate(currentPath + entry.Name);
                 break;
             case FilePanel.PanelAction.View:
                 await ShowInRemotePanel(entry);
@@ -456,6 +513,8 @@ private HashSet<DirEntry> ActiveSelection =>
         {
             var fileId = Guid.NewGuid().ToString("N");
             await Downloads.AddAsync(AgentUuid, AgentName ?? "", remotePath, entry.Name, fileId, totalSize);
+            if (entries is not null)
+                _ = SaveToVfsCacheAsync(AgentUuid, currentPath, entries);
         }
         else if (record.Status is DownloadStatus.Completed or DownloadStatus.Failed)
             await Downloads.RequeueAsync(record.Id, record.CacheSubPath, totalSize);

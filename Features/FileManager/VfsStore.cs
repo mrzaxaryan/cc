@@ -13,6 +13,8 @@ public class VfsDirectory
     [JsonPropertyName("name")] public string Name { get; set; } = "";
     [JsonPropertyName("remotePath")] public string RemotePath { get; set; } = "";
     [JsonPropertyName("isDrive")] public bool IsDrive { get; set; }
+    [JsonPropertyName("creationTime")] public ulong CreationTime { get; set; }
+    [JsonPropertyName("lastModifiedTime")] public ulong LastModifiedTime { get; set; }
     [JsonPropertyName("createdAt")] public double CreatedAt { get; set; }
 }
 
@@ -24,6 +26,8 @@ public class VfsFile
     [JsonPropertyName("name")] public string Name { get; set; } = "";
     [JsonPropertyName("remotePath")] public string RemotePath { get; set; } = "";
     [JsonPropertyName("size")] public long Size { get; set; }
+    [JsonPropertyName("creationTime")] public ulong CreationTime { get; set; }
+    [JsonPropertyName("lastModifiedTime")] public ulong LastModifiedTime { get; set; }
     [JsonPropertyName("createdAt")] public double CreatedAt { get; set; }
 }
 
@@ -46,12 +50,21 @@ public class VfsStore
 
     // --- Directories ---
 
-    public async Task<VfsDirectory> PutDirectoryAsync(string agentUuid, string parentId, string name, string remotePath, bool isDrive = false)
+    public async Task<VfsDirectory> PutDirectoryAsync(string agentUuid, string parentId, string name, string remotePath, bool isDrive = false, ulong creationTime = 0, ulong lastModifiedTime = 0)
     {
         name = name.TrimEnd('\\', '/');
 
         var existing = await FindDirectoryAsync(agentUuid, parentId, name);
-        if (existing is not null) return existing;
+        if (existing is not null)
+        {
+            if (creationTime != 0 || lastModifiedTime != 0)
+            {
+                existing.CreationTime = creationTime;
+                existing.LastModifiedTime = lastModifiedTime;
+                await _js.InvokeVoidAsync("c2DirectoryDb.put", existing);
+            }
+            return existing;
+        }
 
         var dir = new VfsDirectory
         {
@@ -61,6 +74,8 @@ public class VfsStore
             Name = name,
             RemotePath = remotePath,
             IsDrive = isDrive,
+            CreationTime = creationTime,
+            LastModifiedTime = lastModifiedTime,
             CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
         };
         await _js.InvokeVoidAsync("c2DirectoryDb.put", dir);
@@ -179,12 +194,14 @@ public class VfsStore
 
     // --- Files ---
 
-    public async Task<VfsFile> PutFileAsync(string agentUuid, string directoryId, string name, string remotePath, long size)
+    public async Task<VfsFile> PutFileAsync(string agentUuid, string directoryId, string name, string remotePath, long size, ulong creationTime = 0, ulong lastModifiedTime = 0)
     {
         var existing = await FindFileAsync(agentUuid, directoryId, name);
         if (existing is not null)
         {
             existing.Size = size;
+            existing.CreationTime = creationTime;
+            existing.LastModifiedTime = lastModifiedTime;
             await _js.InvokeVoidAsync("c2FileDb.put", existing);
             return existing;
         }
@@ -197,6 +214,8 @@ public class VfsStore
             Name = name,
             RemotePath = remotePath,
             Size = size,
+            CreationTime = creationTime,
+            LastModifiedTime = lastModifiedTime,
             CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
         };
         await _js.InvokeVoidAsync("c2FileDb.put", file);
