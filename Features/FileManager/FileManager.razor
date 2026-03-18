@@ -57,8 +57,9 @@
         <C2Btn Size="Size.Xs" OnClick="OpenFullSearchWindow" Disabled="@(!IsConnected)" Title="Search agent filesystem">
             <C2Icon Name="search" Size="Size.Xs" /> Search
         </C2Btn>
-        <C2Btn Size="Size.Xs" OnClick="OpenDownloadsWindow" Title="Download queue">
-            <C2Icon Name="arrow-up-down" Size="Size.Xs" /> Transfers
+        <C2Btn Size="Size.Xs" OnClick="ToggleUploads" Title="File transfers"
+               CssClass="@(_uploadsOpen ? "fm-filter-btn-active" : "")">
+            <C2Icon Name="arrow-up-down" Size="Size.Xs" /> Uploads
         </C2Btn>
         <div class="fm-actions-spacer"></div>
         <C2Btn Size="Size.Xs" OnClick="ToggleFilter" Title="Filter by name"
@@ -82,8 +83,62 @@
         </div>
     }
 
+    @* Uploads panel *@
+    @if (_uploadsOpen)
+    {
+        <div class="fm-uploads">
+            @if (_uploads.Count == 0)
+            {
+                <div class="fm-uploads-empty">No transfers.</div>
+            }
+            else
+            {
+                @foreach (var rec in _uploads)
+                {
+                    var r = rec;
+                    var pct = rec.TotalSize > 0 ? (int)(rec.DownloadedSize * 100 / rec.TotalSize) : 0;
+                    <div class="fm-ul-row fm-ul-@rec.Status">
+                        <span class="fm-ul-icon"><C2Icon Name="@UlIcon(rec.Status)" Size="Size.Xs" /></span>
+                        <span class="fm-ul-name" title="@rec.RemotePath">@rec.FileName</span>
+                        <span class="fm-ul-size">@Formatters.FormatSize((ulong)rec.DownloadedSize) / @Formatters.FormatSize((ulong)rec.TotalSize)</span>
+                        <span class="fm-ul-status">
+                            @switch (rec.Status)
+                            {
+                                case DownloadStatus.Downloading:
+                                    <span class="fm-ul-pct">@pct%</span>
+                                    @if (rec.SpeedBytesPerSec > 0) { <span class="fm-ul-speed">@Formatters.FormatSpeed(rec.SpeedBytesPerSec)</span> }
+                                    <C2Btn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => UlPause(r)" Title="Pause"><C2Icon Name="pause" Size="Size.Xs" /></C2Btn>
+                                    break;
+                                case DownloadStatus.Queued:
+                                    <C2Badge Variant="BadgeVariant.Muted" Size="Size.Xs">QUEUED</C2Badge>
+                                    break;
+                                case DownloadStatus.Paused:
+                                    <C2Badge Variant="BadgeVariant.Warning" Size="Size.Xs">PAUSED @pct%</C2Badge>
+                                    <C2Btn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => UlResume(r)" Title="Resume"><C2Icon Name="play" Size="Size.Xs" /></C2Btn>
+                                    break;
+                                case DownloadStatus.Completed:
+                                    <C2Badge Variant="BadgeVariant.Success" Size="Size.Xs">DONE</C2Badge>
+                                    break;
+                                case DownloadStatus.Failed:
+                                    <C2Badge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@rec.Error">FAILED</C2Badge>
+                                    break;
+                            }
+                        </span>
+                        <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => UlRemove(r)" Title="Remove"><C2Icon Name="x" Size="Size.Xs" /></C2Btn>
+                        @if (rec.Status is DownloadStatus.Downloading or DownloadStatus.Queued or DownloadStatus.Paused)
+                        {
+                            <div class="fm-ul-bar" style="width:@pct%"></div>
+                        }
+                    </div>
+                }
+            }
+        </div>
+    }
+
     @* Dual pane area *@
-    <div class="fm-panels @(viewingFile ? "fm-panels-with-viewer" : "")">
+    @if (!_uploadsOpen)
+    {
+        <div class="fm-panels @(viewingFile ? "fm-panels-with-viewer" : "")">
         <div class="fm-pane fm-pane-left">
             <FilePanel @ref="localPanel"
                        Mode="FilePanel.PanelMode.Local"
@@ -125,6 +180,7 @@
             }
         </div>
     </div>
+    }
 
     @* File viewer *@
     @if (viewingFile)
@@ -181,6 +237,10 @@ private HashSet<DirEntry> ActiveSelection =>
     // Filter state
     private bool filterActive;
     private string? filterText;
+
+    // Uploads panel
+    private bool _uploadsOpen;
+    private List<DownloadRecord> _uploads = [];
 
     // Cached filtered entries — avoids creating a new list on every render
     private List<DirEntry>? _filteredCache;
@@ -333,7 +393,44 @@ private HashSet<DirEntry> ActiveSelection =>
         remotePanel?.RebuildDownloadLookup();
         localPanel?.NotifyStateChanged();
         remotePanel?.NotifyStateChanged();
+        if (_uploadsOpen) RefreshUploads();
     }
+
+    // --- Uploads panel ---
+
+    private void ToggleUploads()
+    {
+        _uploadsOpen = !_uploadsOpen;
+        if (_uploadsOpen) RefreshUploads();
+    }
+
+    private void RefreshUploads()
+    {
+        _uploads = string.IsNullOrEmpty(AgentUuid)
+            ? Downloads.Downloads
+                .Where(r => r.Status is not DownloadStatus.Pending)
+                .OrderBy(r => r.Status == DownloadStatus.Downloading ? 0 : r.Status == DownloadStatus.Queued ? 1 : r.Status == DownloadStatus.Paused ? 2 : r.Status == DownloadStatus.Failed ? 3 : 4)
+                .ThenBy(r => r.Priority).ThenBy(r => r.CreatedAt).ToList()
+            : Downloads.GetByAgent(AgentUuid)
+                .Where(r => r.Status is not DownloadStatus.Pending)
+                .OrderBy(r => r.Status == DownloadStatus.Downloading ? 0 : r.Status == DownloadStatus.Queued ? 1 : r.Status == DownloadStatus.Paused ? 2 : r.Status == DownloadStatus.Failed ? 3 : 4)
+                .ThenBy(r => r.Priority).ThenBy(r => r.CreatedAt).ToList();
+        StateHasChanged();
+    }
+
+    private void UlPause(DownloadRecord r) => Downloads.Cts.Cancel(r.Id);
+    private async Task UlResume(DownloadRecord r) { if (!Downloads.Cts.HasActive(r.Id)) await Downloads.QueueAsync(r.Id); }
+    private async Task UlRemove(DownloadRecord r) { Downloads.Cts.Cancel(r.Id); await Downloads.RemoveAsync(r.Id); }
+
+    private static string UlIcon(string status) => status switch
+    {
+        DownloadStatus.Downloading => "dot",
+        DownloadStatus.Queued     => "dot-outline",
+        DownloadStatus.Paused     => "stop",
+        DownloadStatus.Completed  => "check",
+        DownloadStatus.Failed     => "x",
+        _                         => "dot-outline"
+    };
 
     public void Reset()
     {
@@ -610,12 +707,6 @@ private HashSet<DirEntry> ActiveSelection =>
     {
         if (string.IsNullOrEmpty(AgentId)) return;
         Wm.OpenAgentWindow("FileSearch", AgentId, agentName: AgentName, agentUuid: AgentUuid);
-    }
-
-    private void OpenDownloadsWindow()
-    {
-        if (!string.IsNullOrEmpty(AgentId)) Wm.OpenAgentWindow("Downloads", AgentId, agentName: AgentName, agentUuid: AgentUuid);
-        else Wm.OpenWindow("Downloads");
     }
 
     // --- Agent communication ---
