@@ -341,18 +341,15 @@ private HashSet<DirEntry> ActiveSelection =>
     private string? _inlineViewName;
 
     private RelaySocket? _prevRelay;
-    private bool _prevIsConnected;
 
     protected override async Task OnParametersSetAsync()
     {
-        var wasConnected = _prevIsConnected;
-        _prevIsConnected = IsConnected;
         var relayChanged = Relay != _prevRelay;
         _prevRelay = Relay;
 
-        // Agent just came online — refresh both panels regardless of relay object identity
-        if (IsConnected && (!wasConnected || relayChanged))
+        if (IsConnected && (_pendingNavigate || relayChanged))
         {
+            _pendingNavigate = false;
             await NavigateTo(currentPath.Length > 0 ? currentPath : RootPath);
             return;
         }
@@ -367,7 +364,9 @@ private HashSet<DirEntry> ActiveSelection =>
 
     private IDisposable? _dlSub;
     private IDisposable? _disconnectSub;
+    private IDisposable? _onlineSub;
     private bool _agentOffline;
+    private bool _pendingNavigate;
     private bool _scrollSyncSetup;
 
     protected override void OnInitialized()
@@ -377,6 +376,13 @@ private HashSet<DirEntry> ActiveSelection =>
         {
             if (e.Uuid != AgentUuid && e.AgentId != AgentId) return;
             _agentOffline = true;
+            _ = InvokeAsync(StateHasChanged);
+        });
+        _onlineSub = Bus.Subscribe<AgentOnlineEvent>(e =>
+        {
+            if (e.Uuid != AgentUuid) return;
+            _agentOffline = false;
+            _pendingNavigate = true;
             _ = InvokeAsync(StateHasChanged);
         });
     }
@@ -396,7 +402,7 @@ private HashSet<DirEntry> ActiveSelection =>
         }
     }
 
-    public void Dispose() { _dlSub?.Dispose(); _disconnectSub?.Dispose(); _pendingRefresh?.Cancel(); }
+    public void Dispose() { _dlSub?.Dispose(); _disconnectSub?.Dispose(); _onlineSub?.Dispose(); _pendingRefresh?.Cancel(); }
 
     private void OnSortChanged((string column, bool ascending) sort)
     {
