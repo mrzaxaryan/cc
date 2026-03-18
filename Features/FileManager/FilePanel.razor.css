@@ -1,4 +1,4 @@
-/* ===== FilePanel — Display-only panel ===== */
+/* ===== FilePanel — Virtualized display panel ===== */
 
 .fp {
     display: flex;
@@ -41,72 +41,53 @@
     color: var(--c2-accent-blue);
 }
 
-/* Entries scroll area */
+/* Entries area */
 .fp-entries {
     flex: 1;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
     min-height: 0;
     outline: none;
 }
 
-/* ===== Table ===== */
+/* ===== Column header (fixed) ===== */
 
-.fp-table {
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed;
-}
-
-.fp-table thead {
-    position: sticky;
-    top: 0;
-    z-index: 1;
+.fp-table-head {
+    display: flex;
+    align-items: center;
+    padding: 0.25rem 0;
     background: var(--c2-bg-deep);
-}
-
-.fp-table th {
-    padding: 0.25rem 0.4rem;
-    text-align: left;
+    border-bottom: 1px solid var(--c2-border);
     font-size: 0.68rem;
     font-weight: 600;
     color: var(--c2-text-muted);
-    border-bottom: 1px solid var(--c2-border);
+    flex-shrink: 0;
 }
 
-.fp-table td {
-    padding: 0.15rem 0.4rem;
-    border: none;
-    vertical-align: middle;
-}
-
-/* Columns */
-.fp-col-icon {
+.fp-th-icon {
     width: 1.8rem;
-    text-align: center;
-    padding-left: 0.2rem !important;
-    padding-right: 0.2rem !important;
+    flex-shrink: 0;
 }
 
-.fp-col-name {
-    overflow: hidden;
+.fp-th-name {
+    flex: 1;
+    min-width: 0;
+    padding: 0 0.3rem;
 }
 
-.fp-col-size {
-    width: 12%;
+.fp-th-size {
+    width: 5.5rem;
     text-align: right;
-    color: var(--c2-text-dim);
-    font-size: 0.7rem;
-    white-space: nowrap;
+    padding: 0 0.4rem;
+    flex-shrink: 0;
 }
 
-.fp-col-modified {
-    width: 20%;
-    color: var(--c2-text-dim);
-    font-size: 0.7rem;
-    white-space: nowrap;
+.fp-th-modified {
+    width: 9rem;
+    padding: 0 0.4rem;
+    flex-shrink: 0;
 }
 
-/* Sortable headers */
 .fp-col-sortable {
     cursor: pointer;
     user-select: none;
@@ -126,19 +107,70 @@
     vertical-align: middle;
 }
 
-/* ===== Row styles ===== */
+/* ===== Virtualized list ===== */
+
+.fp-vlist {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+/* ===== Row ===== */
 
 .fp-row {
+    display: flex;
+    align-items: center;
+    height: 26px;
     cursor: pointer;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.73rem;
 }
 
-/* --- Hover --- */
+/* Cells */
+.fp-cell-icon {
+    width: 1.8rem;
+    flex-shrink: 0;
+    text-align: center;
+}
+
+.fp-cell-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0 0.3rem;
+}
+
+.fp-cell-size {
+    width: 5.5rem;
+    text-align: right;
+    color: var(--c2-text-dim);
+    font-size: 0.7rem;
+    white-space: nowrap;
+    padding: 0 0.4rem;
+    flex-shrink: 0;
+}
+
+.fp-cell-modified {
+    width: 9rem;
+    color: var(--c2-text-dim);
+    font-size: 0.7rem;
+    white-space: nowrap;
+    padding: 0 0.4rem;
+    flex-shrink: 0;
+}
+
+/* --- Directory hover --- */
 .fp-row-dir:hover {
     background: var(--c2-yellow-10, rgba(255, 193, 7, 0.06));
 }
 
+.fp-row-dir.fp-row-active {
+    background: var(--c2-yellow-10, rgba(255, 193, 7, 0.1));
+}
+
+/* --- File hover --- */
 .fp-row-file:hover {
     background: var(--c2-bg-overlay);
 }
@@ -146,15 +178,6 @@
 /* --- Selected --- */
 .fp-row-active {
     background: var(--c2-blue-10);
-}
-
-.fp-row-dir.fp-row-active {
-    background: var(--c2-yellow-10, rgba(255, 193, 7, 0.1));
-}
-
-/* --- Focused --- */
-.fp-row-focused > td:first-child {
-    box-shadow: inset 2px 0 0 var(--c2-accent-blue);
 }
 
 /* --- Dimmed --- */
@@ -166,25 +189,22 @@
     opacity: 0.6;
 }
 
-/* ===== Download status — left accent via box-shadow (no layout shift) ===== */
+/* ===== Download status accents ===== */
 
-.fp-row-synced > td:first-child {
+.fp-row-synced {
     box-shadow: inset 3px 0 0 var(--c2-accent-green);
 }
 
-.fp-row-queued > td:first-child {
+.fp-row-queued {
     box-shadow: inset 3px 0 0 var(--c2-text-dim);
 }
 
-.fp-row-paused > td:first-child {
+.fp-row-paused {
     box-shadow: inset 3px 0 0 var(--c2-accent-yellow);
 }
 
-.fp-row-downloading > td:first-child {
-    box-shadow: inset 3px 0 0 var(--c2-accent-blue);
-}
-
 .fp-row-downloading {
+    box-shadow: inset 3px 0 0 var(--c2-accent-blue);
     animation: fp-pulse 1.5s ease-in-out infinite;
 }
 
@@ -193,7 +213,7 @@
     50% { opacity: 0.85; }
 }
 
-/* ===== Download badge (inline) ===== */
+/* ===== Download badge ===== */
 
 .fp-dl-badge {
     display: inline-block;
@@ -232,17 +252,6 @@
     color: var(--c2-accent-yellow);
 }
 
-/* ===== File name ===== */
-
-.fp-name-text {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    display: inline-block;
-    max-width: calc(100% - 6rem);
-    vertical-align: middle;
-}
-
 /* ===== Icon colors ===== */
 
 ::deep .fp-icon-dir {
@@ -257,9 +266,8 @@
     color: var(--c2-accent-blue);
 }
 
+/* ===== Empty / loading ===== */
 
-
-/* Empty / loading */
 .fp-empty {
     padding: 1.5rem 1rem;
     text-align: center;
@@ -282,7 +290,7 @@
     margin: 0.2rem 0;
 }
 
-/* ===== Narrow panels ===== */
+/* ===== Narrow ===== */
 @media (max-width: 1200px) {
     .fp-hide-narrow {
         display: none;

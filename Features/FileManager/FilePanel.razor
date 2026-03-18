@@ -15,76 +15,44 @@
     <div class="fp-entries" @onkeydown="OnKeyDown" @onkeydown:preventDefault="true" tabindex="0" @ref="entriesRef">
         @if (Entries is not null)
         {
-            <table class="fp-table">
-                <thead>
-                    <tr>
-                        <th class="fp-col-icon"></th>
-                        <th class="fp-col-name @SortClass("name")" @onclick='() => ToggleSort("name")'>
-                            Name @SortArrow("name")
-                        </th>
-                        <th class="fp-col-size @SortClass("size")" @onclick='() => ToggleSort("size")'>
-                            Size @SortArrow("size")
-                        </th>
-                        <th class="fp-col-modified @SortClass("modified")" @onclick='() => ToggleSort("modified")'>
-                            Modified @SortArrow("modified")
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @{ var sorted = SortedEntries; var rowIdx = 0; }
-                    @foreach (var entry in sorted)
-                    {
-                        var e = entry;
-                        var idx = rowIdx++;
+            <div class="fp-table-head">
+                <span class="fp-th-icon"></span>
+                <span class="fp-th-name @SortClass("name")" @onclick='() => ToggleSort("name")'>Name @SortArrow("name")</span>
+                <span class="fp-th-size @SortClass("size")" @onclick='() => ToggleSort("size")'>Size @SortArrow("size")</span>
+                <span class="fp-th-modified fp-hide-narrow @SortClass("modified")" @onclick='() => ToggleSort("modified")'>Modified @SortArrow("modified")</span>
+            </div>
+            <div class="fp-vlist">
+                <Virtualize Items="SortedEntries" Context="e" ItemSize="26" OverscanCount="5">
+                    @{
                         var isDir = e.IsDirectory || e.IsDrive;
                         var isSelected = selectedEntries.Contains(e);
-                        var isFocused = idx == focusIndex;
                         var isDim = e.IsHidden || e.IsSystem || (Mode == PanelMode.Local && !isDir && e.Size > 0 && !HasDownloadRecord(e.Name));
                         var dlInfo = !isDir ? GetDlInfo(e.Name) : null;
-                        var dlClass = dlInfo?.Status switch
-                        {
-                            DownloadStatus.Downloading => "fp-row-downloading",
-                            DownloadStatus.Queued => "fp-row-queued",
-                            DownloadStatus.Completed => "fp-row-synced",
-                            DownloadStatus.Paused => "fp-row-paused",
-                            _ => ""
-                        };
-                        <tr @key="e.Name" class="fp-row @(isDir ? "fp-row-dir" : "fp-row-file") @(isSelected ? "fp-row-active" : "") @(isDim ? "fp-row-dim" : "") @(isFocused ? "fp-row-focused" : "") @dlClass"
-                            @onclick="(ev) => OnRowClick(ev, e)"
-                            @oncontextmenu="(ev) => ShowContextMenu(ev, e)"
-                            @oncontextmenu:preventDefault
-                            @ondblclick="() => OnDblClick(e)"
-                            style="@(dlInfo?.Status == DownloadStatus.Downloading ? $"background:linear-gradient(90deg, var(--c2-blue-10) {dlInfo.Value.Pct}%, transparent {dlInfo.Value.Pct}%)" : "")">
-                            <td class="fp-col-icon">
-                                <C2Icon Name="@GetIcon(e)" Size="Size.Xs" CssClass="@IconClass(e)" />
-                            </td>
-                            <td class="fp-col-name">
-                                <span class="fp-name-text">@e.Name</span>
-                                @if (dlInfo is not null)
-                                {
-                                    switch (dlInfo.Value.Status)
-                                    {
-                                        case DownloadStatus.Downloading:
-                                            <span class="fp-dl-badge fp-dl-active">@(dlInfo.Value.Pct)% @Formatters.FormatSpeed(dlInfo.Value.Speed)</span>
-                                            break;
-                                        case DownloadStatus.Queued:
-                                            <span class="fp-dl-badge fp-dl-queued">QUEUED</span>
-                                            break;
-                                        case DownloadStatus.Completed:
-                                            <span class="fp-dl-badge fp-dl-done">&#10003;</span>
-                                            break;
-                                        case DownloadStatus.Paused:
-                                            <span class="fp-dl-badge fp-dl-paused">PAUSED</span>
-                                            break;
-                                    }
-                                }
-                            </td>
-                            <td class="fp-col-size">@(isDir ? "" : Formatters.FormatSize(e.Size))</td>
-                            <td class="fp-col-modified fp-hide-narrow">@Formatters.FormatFileTime(e.LastModifiedTime)</td>
-                        </tr>
+                        var dlCls = dlInfo?.Status switch { DownloadStatus.Downloading => "fp-row-downloading", DownloadStatus.Queued => "fp-row-queued", DownloadStatus.Completed => "fp-row-synced", DownloadStatus.Paused => "fp-row-paused", _ => "" };
                     }
-                </tbody>
-            </table>
+                    <div @key="e.Name"
+                         class="fp-row @(isDir ? "fp-row-dir" : "fp-row-file") @(isSelected ? "fp-row-active" : "") @(isDim ? "fp-row-dim" : "") @dlCls"
+                         @onclick="(ev) => OnRowClick(ev, e)"
+                         @oncontextmenu="(ev) => ShowContextMenu(ev, e)"
+                         @oncontextmenu:preventDefault
+                         @ondblclick="() => OnDblClick(e)"
+                         style="@(dlInfo?.Status == DownloadStatus.Downloading ? $"background:linear-gradient(90deg, var(--c2-blue-10) {dlInfo.Value.Pct}%, transparent {dlInfo.Value.Pct}%)" : "")">
+                        <span class="fp-cell-icon"><C2Icon Name="@GetIcon(e)" Size="Size.Xs" CssClass="@IconClass(e)" /></span>
+                        <span class="fp-cell-name">@e.Name@if (dlInfo is not null)
+                            {
+                                switch (dlInfo.Value.Status)
+                                {
+                                    case DownloadStatus.Downloading: <span class="fp-dl-badge fp-dl-active">@(dlInfo.Value.Pct)% @Formatters.FormatSpeed(dlInfo.Value.Speed)</span> break;
+                                    case DownloadStatus.Queued: <span class="fp-dl-badge fp-dl-queued">QUEUED</span> break;
+                                    case DownloadStatus.Completed: <span class="fp-dl-badge fp-dl-done">&#10003;</span> break;
+                                    case DownloadStatus.Paused: <span class="fp-dl-badge fp-dl-paused">PAUSED</span> break;
+                                }
+                            }</span>
+                        <span class="fp-cell-size">@(isDir ? "" : Formatters.FormatSize(e.Size))</span>
+                        <span class="fp-cell-modified fp-hide-narrow">@Formatters.FormatFileTime(e.LastModifiedTime)</span>
+                    </div>
+                </Virtualize>
+            </div>
 
             @if (Entries.Count == 0)
             {
