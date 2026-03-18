@@ -54,10 +54,7 @@ public class DownloadService : IDisposable
         if (!_cache.HasDirectory) return;
         await _store.LoadAsync();
 
-        var paused = _store.GetByAgent(uuid)
-            .Where(r => r.Status == DownloadStatus.Paused)
-            .ToList();
-        foreach (var dl in paused)
+        foreach (var dl in _store.GetByAgent(uuid).Where(r => r.Status == DownloadStatus.Paused))
             await _store.QueueAsync(dl.Id);
 
         await TryProcessQueue(uuid, agentId, relayUrl);
