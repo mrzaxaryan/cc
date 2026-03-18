@@ -167,6 +167,7 @@
                                 { <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => UlResume(r)" Title="Resume"><C2Icon Name="play" Size="Size.Xs" /></C2Btn> }
                                 @if (rec.Status == DownloadStatus.Failed)
                                 { <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => UlRetry(r)" Title="Retry"><C2Icon Name="refresh" Size="Size.Xs" /></C2Btn> }
+                                <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => UlRemove(r)" Title="Remove"><C2Icon Name="x" Size="Size.Xs" /></C2Btn>
                             </span>
                             @if (rec.Status is DownloadStatus.Downloading or DownloadStatus.Paused)
                             {
@@ -522,6 +523,7 @@ private HashSet<DirEntry> ActiveSelection =>
     private void UlPause(DownloadRecord r) => Downloads.Cts.Cancel(r.Id);
     private async Task UlResume(DownloadRecord r) { if (!Downloads.Cts.HasActive(r.Id)) await Downloads.QueueAsync(r.Id); }
     private async Task UlRetry(DownloadRecord r) => await Downloads.RequeueAsync(r.Id, r.CacheSubPath, r.TotalSize);
+    private async Task UlRemove(DownloadRecord r) { Downloads.Cts.Cancel(r.Id); await Downloads.RemoveAsync(r.Id); }
 
     private static string UlIcon(string status) => status switch
     {
