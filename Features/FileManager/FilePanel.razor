@@ -1,0 +1,448 @@
+@inject CacheManager Cache
+@inject DownloadStore Downloads
+@inject MessageService Msg
+@inject IJSRuntime Js
+
+<div class="fp @(IsActive ? "fp-active" : "")" @onclick="Activate">
+    @* Panel label *@
+    <div class="fp-header">
+        <C2Icon Name="@(Mode == PanelMode.Local ? "hard-drive" : "wifi")" Size="Size.Xs"
+                CssClass="@(Mode == PanelMode.Local ? "fp-icon-local" : "fp-icon-remote")" />
+        <span class="fp-mode-label">@(Mode == PanelMode.Local ? "LOCAL" : "REMOTE")</span>
+    </div>
+
+    @* File listing *@
+    <div class="fp-entries" @onkeydown="OnKeyDown" @onkeydown:preventDefault="true" tabindex="0" @ref="entriesRef">
+        @if (Entries is not null)
+        {
+            <div class="fp-table-head">
+                <span class="fp-th-check" @onclick="ToggleSelectAll" @onclick:stopPropagation>
+                    <input type="checkbox" checked="@IsAllSelected" />
+                </span>
+                <span class="fp-th-icon"></span>
+                <span class="fp-th-name @SortClass("name")" @onclick='() => ToggleSort("name")'>Name @SortArrow("name")</span>
+                <span class="fp-th-size @SortClass("size")" @onclick='() => ToggleSort("size")'>Size @SortArrow("size")</span>
+                <span class="fp-th-modified fp-hide-narrow @SortClass("modified")" @onclick='() => ToggleSort("modified")'>Modified @SortArrow("modified")</span>
+            </div>
+            <div class="fp-vlist" @ref="vlistRef">
+                <Virtualize Items="SortedEntries" Context="e" ItemSize="26" OverscanCount="5">
+                    @{
+                        var isDir = e.IsDirectory || e.IsDrive;
+                        var isSelected = selectedEntries.Contains(e);
+                        var isDim = e.IsHidden || e.IsSystem || (Mode == PanelMode.Local && !isDir && e.Size > 0 && !HasDownloadRecord(e.Name));
+                        var dlInfo = !isDir ? GetDlInfo(e.Name) : null;
+                        var dlCls = dlInfo?.Status switch { DownloadStatus.Downloading => "fp-row-downloading", DownloadStatus.Queued => "fp-row-queued", DownloadStatus.Completed => "fp-row-synced", DownloadStatus.Paused => "fp-row-paused", _ => "" };
+                    }
+                    <div @key="e.Name"
+                         class="fp-row @(isDir ? "fp-row-dir" : "fp-row-file") @(isSelected ? "fp-row-active" : "") @(isDim ? "fp-row-dim" : "") @dlCls"
+                         @onclick="(ev) => OnRowClick(ev, e)"
+                         @oncontextmenu="(ev) => ShowContextMenu(ev, e)"
+                         @oncontextmenu:preventDefault
+                         @ondblclick="() => OnDblClick(e)"
+                         style="@(dlInfo?.Status == DownloadStatus.Downloading ? $"background:linear-gradient(90deg, var(--c2-blue-10) {dlInfo.Value.Pct}%, transparent {dlInfo.Value.Pct}%)" : "")">
+                        <span class="fp-cell-check" @onclick="() => ToggleEntry(e)" @onclick:stopPropagation>
+                            <input type="checkbox" checked="@isSelected" />
+                        </span>
+                        <span class="fp-cell-icon"><C2Icon Name="@GetIcon(e)" Size="Size.Xs" CssClass="@IconClass(e)" /></span>
+                        <span class="fp-cell-name">@e.Name@if (dlInfo is not null)
+                            {
+                                switch (dlInfo.Value.Status)
+                                {
+                                    case DownloadStatus.Downloading: <span class="fp-dl-badge fp-dl-active">@(dlInfo.Value.Pct)% @Formatters.FormatSpeed(dlInfo.Value.Speed)</span> break;
+                                    case DownloadStatus.Queued: <span class="fp-dl-badge fp-dl-queued">QUEUED</span> break;
+                                    case DownloadStatus.Completed: <span class="fp-dl-badge fp-dl-done">&#10003;</span> break;
+                                    case DownloadStatus.Paused: <span class="fp-dl-badge fp-dl-paused">PAUSED</span> break;
+                                }
+                            }</span>
+                        <span class="fp-cell-size">@(isDir ? "" : Formatters.FormatSize(e.Size))</span>
+                        <span class="fp-cell-modified fp-hide-narrow">@Formatters.FormatFileTime(e.LastModifiedTime)</span>
+                    </div>
+                </Virtualize>
+            </div>
+
+            @if (Entries.Count == 0)
+            {
+                <div class="fp-empty">Empty directory.</div>
+            }
+        }
+        else if (Loading)
+        {
+            <div class="fp-loading"><C2Spinner Size="Size.Xs" /> Loading...</div>
+        }
+        else
+        {
+            <div class="fp-empty">Connect to agent to browse.</div>
+        }
+    </div>
+
+</div>
+
+@* Context menu *@
+<C2Dropdown Visible="@ctxVisible" X="@ctxX" Y="@ctxY" OnClose="HideContextMenu">
+    @if (selectedEntries.Count > 1)
+    {
+        var selFiles = selectedEntries.Where(e => !e.IsDirectory && !e.IsDrive).ToList();
+        var syncedFiles = selFiles.Where(e => IsFileSynced(e.Name)).ToList();
+        var unsyncedFiles = selFiles.Where(e => !IsFileSynced(e.Name)).ToList();
+
+        @if (unsyncedFiles.Count > 0 && Mode == PanelMode.Remote)
+        {
+            <C2DropdownItem OnClick="CtxDownloadSelected" Disabled="@(!Cache.HasDirectory)">
+                <C2Icon Name="arrow-left" Size="Size.Xs" /> Download @unsyncedFiles.Count file(s)
+            </C2DropdownItem>
+        }
+        @if (syncedFiles.Count > 0)
+        {
+            <C2DropdownItem OnClick="CtxSaveSelectedToBrowser">
+                <C2Icon Name="save" Size="Size.Xs" /> Save @syncedFiles.Count file(s) to Browser
+            </C2DropdownItem>
+        }
+        <div class="fp-ctx-sep"></div>
+        <C2DropdownItem OnClick="CtxCopySelectedPaths">
+            <C2Icon Name="copy" Size="Size.Xs" /> Copy @selectedEntries.Count Paths
+        </C2DropdownItem>
+    }
+    else if (ctxEntry is not null)
+    {
+        var isDir = ctxEntry.IsDirectory || ctxEntry.IsDrive;
+        @if (isDir)
+        {
+            <C2DropdownItem OnClick="CtxOpen"><C2Icon Name="external" Size="Size.Xs" /> Open</C2DropdownItem>
+            @if (Mode == PanelMode.Remote)
+            {
+                <C2DropdownItem OnClick="CtxSearch"><C2Icon Name="search" Size="Size.Xs" /> Search</C2DropdownItem>
+            }
+            <div class="fp-ctx-sep"></div>
+            <C2DropdownItem OnClick="CtxCopyPath"><C2Icon Name="copy" Size="Size.Xs" /> Copy Path</C2DropdownItem>
+        }
+        else
+        {
+            @if (IsFileSynced(ctxEntry.Name))
+            {
+                <C2DropdownItem OnClick="() => CtxAction(ctxEntry, PanelAction.View)"><C2Icon Name="file-text" Size="Size.Xs" /> View</C2DropdownItem>
+                <C2DropdownItem OnClick="() => CtxAction(ctxEntry, PanelAction.SaveToBrowser)"><C2Icon Name="save" Size="Size.Xs" /> Save to Browser</C2DropdownItem>
+                <div class="fp-ctx-sep"></div>
+            }
+            else if (Mode == PanelMode.Remote)
+            {
+                <C2DropdownItem OnClick="() => CtxAction(ctxEntry, PanelAction.Download)" Disabled="@(!Cache.HasDirectory)"><C2Icon Name="arrow-left" Size="Size.Xs" /> Download to Local</C2DropdownItem>
+                <div class="fp-ctx-sep"></div>
+            }
+            @if (Mode == PanelMode.Remote)
+            {
+                <C2DropdownItem OnClick="() => CtxAction(ctxEntry, PanelAction.Hash)"><C2Icon Name="hash" Size="Size.Xs" /> SHA-256 Hash</C2DropdownItem>
+            }
+            <C2DropdownItem OnClick="CtxCopyPath"><C2Icon Name="copy" Size="Size.Xs" /> Copy Path</C2DropdownItem>
+            @if (Mode == PanelMode.Remote)
+            {
+                <C2DropdownItem OnClick="CtxSearchDir"><C2Icon Name="search" Size="Size.Xs" /> Search in Directory</C2DropdownItem>
+            }
+        }
+    }
+</C2Dropdown>
+
+@code {
+    public enum PanelMode { Local, Remote }
+    public enum PanelAction { View, Download, Hash, SaveToBrowser, Open, Search }
+
+    [Parameter] public PanelMode Mode { get; set; }
+    [Parameter] public string? AgentUuid { get; set; }
+    [Parameter] public string CurrentPath { get; set; } = "";
+    [Parameter] public List<DirEntry>? Entries { get; set; }
+    [Parameter] public bool Loading { get; set; }
+    [Parameter] public bool IsActive { get; set; }
+    [Parameter] public EventCallback OnActivate { get; set; }
+    [Parameter] public EventCallback<(DirEntry entry, PanelAction action)> OnAction { get; set; }
+    [Parameter] public string SortColumn { get; set; } = "name";
+    [Parameter] public bool SortAscending { get; set; } = true;
+    [Parameter] public EventCallback<(string column, bool ascending)> OnSortChanged { get; set; }
+
+    // Selection state
+    private HashSet<DirEntry> selectedEntries = new();
+    private DirEntry? lastClickedEntry;
+    private int focusIndex = -1;
+
+    // Context menu
+    private bool ctxVisible;
+    private double ctxX, ctxY;
+    private DirEntry? ctxEntry;
+
+    private ElementReference entriesRef;
+    private ElementReference vlistRef;
+    public ElementReference VlistElement => vlistRef;
+
+    // Sort cache
+    private List<DirEntry>? _sortedCache;
+    private List<DirEntry>? _prevEntries;
+
+    // Download lookup cache (rebuilt on entries change)
+    private record struct DlInfo(string Status, int Pct, double Speed);
+    private Dictionary<string, DlInfo> _downloadMap = new(StringComparer.OrdinalIgnoreCase);
+
+    public HashSet<DirEntry> SelectedEntries => selectedEntries;
+
+    public void NotifyStateChanged() => InvokeAsync(StateHasChanged);
+
+    private List<DirEntry> SortedEntries
+    {
+        get
+        {
+            if (_sortedCache is not null && _sortedSrc == Entries && _sortedCol == SortColumn && _sortedAsc == SortAscending)
+                return _sortedCache;
+            _sortedSrc = Entries;
+            _sortedCol = SortColumn;
+            _sortedAsc = SortAscending;
+            _sortedCache = ApplySort(Entries ?? new());
+            return _sortedCache;
+        }
+    }
+    private List<DirEntry>? _sortedSrc;
+    private string? _sortedCol;
+    private bool _sortedAsc;
+
+    protected override void OnParametersSet()
+    {
+        if (Entries != _prevEntries)
+        {
+            _prevEntries = Entries;
+            selectedEntries.Clear();
+            focusIndex = -1;
+            _sortedCache = null;
+            RebuildDownloadLookup();
+        }
+    }
+
+    /// <summary>Rebuild on every entries change. Stores status + percent for each direct-child file.</summary>
+    public void RebuildDownloadLookup()
+    {
+        _downloadMap.Clear();
+        // Invalidate sort cache so Virtualize gets a new list reference and re-renders rows
+        _sortedCache = null;
+        if (string.IsNullOrEmpty(AgentUuid) || string.IsNullOrEmpty(CurrentPath)) return;
+        var records = Downloads.GetByAgent(AgentUuid);
+        foreach (var rec in records)
+        {
+            if (rec.RemotePath.StartsWith(CurrentPath, StringComparison.OrdinalIgnoreCase) && rec.RemotePath.Length > CurrentPath.Length)
+            {
+                var fileName = rec.RemotePath[CurrentPath.Length..];
+                if (!fileName.Contains('/') && !fileName.Contains('\\'))
+                {
+                    var pct = rec.TotalSize > 0 ? (int)(rec.DownloadedSize * 100 / rec.TotalSize) : 0;
+                    _downloadMap[fileName] = new DlInfo(rec.Status, pct, rec.SpeedBytesPerSec);
+                }
+            }
+        }
+    }
+
+
+    private async Task Activate() => await OnActivate.InvokeAsync();
+
+    // --- Sorting ---
+
+    private async Task ToggleSort(string column)
+    {
+        var newAsc = SortColumn == column ? !SortAscending : true;
+        _sortedCache = null;
+        await OnSortChanged.InvokeAsync((column, newAsc));
+    }
+
+    private List<DirEntry> ApplySort(List<DirEntry> source)
+    {
+        var dirs = source.Where(e => e.IsDirectory || e.IsDrive);
+        var files = source.Where(e => !e.IsDirectory && !e.IsDrive);
+        return SortGroup(dirs).Concat(SortGroup(files)).ToList();
+    }
+
+    private IEnumerable<DirEntry> SortGroup(IEnumerable<DirEntry> group) => SortColumn switch
+    {
+        "name" => SortAscending ? group.OrderBy(e => e.Name, StringComparer.OrdinalIgnoreCase) : group.OrderByDescending(e => e.Name, StringComparer.OrdinalIgnoreCase),
+        "size" => SortAscending ? group.OrderBy(e => e.Size) : group.OrderByDescending(e => e.Size),
+        "modified" => SortAscending ? group.OrderBy(e => e.LastModifiedTime) : group.OrderByDescending(e => e.LastModifiedTime),
+        _ => group.OrderBy(e => e.Name, StringComparer.OrdinalIgnoreCase)
+    };
+
+    private string SortClass(string column) => SortColumn == column ? "fp-col-sortable fp-sort-active" : "fp-col-sortable";
+
+    private MarkupString SortArrow(string column)
+    {
+        if (SortColumn != column) return new MarkupString("");
+        var iconName = SortAscending ? "chevron-up" : "chevron-down";
+        var svg = $"<svg class=\"c2-icon c2-icon-xs\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{C2Icon.GetPath(iconName)}</svg>";
+        return new MarkupString($"<span class=\"fp-sort-arrow\">{svg}</span>");
+    }
+
+    // --- Selection ---
+
+    private void OnRowClick(MouseEventArgs e, DirEntry entry)
+    {
+        if (selectedEntries.Count > 0)
+        {
+            // Multi-select mode: toggle like a checkbox
+            if (!selectedEntries.Remove(entry)) selectedEntries.Add(entry);
+        }
+        else
+        {
+            selectedEntries.Add(entry);
+        }
+        lastClickedEntry = entry;
+        focusIndex = SortedEntries.IndexOf(entry);
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        var sorted = SortedEntries;
+        if (sorted.Count == 0) return;
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                focusIndex = Math.Min(focusIndex + 1, sorted.Count - 1);
+                SelectSingle(sorted[focusIndex]);
+                break;
+            case "ArrowUp":
+                focusIndex = Math.Max(focusIndex - 1, 0);
+                SelectSingle(sorted[focusIndex]);
+                break;
+            case "Enter":
+                if (focusIndex >= 0 && focusIndex < sorted.Count) await OnDblClick(sorted[focusIndex]);
+                break;
+            case "Backspace":
+                await OnAction.InvokeAsync((default!, PanelAction.Open)); // signal parent to go up
+                break;
+            case "Escape":
+                if (ctxVisible) HideContextMenu(); else ClearSelection();
+                break;
+        }
+    }
+
+    private void SelectSingle(DirEntry entry) { selectedEntries.Clear(); selectedEntries.Add(entry); lastClickedEntry = entry; }
+    public void ClearSelection() { selectedEntries.Clear(); focusIndex = -1; }
+
+    // --- Checkbox multi-select ---
+
+    private bool IsAllSelected => Entries is not null && Entries.Count > 0 && selectedEntries.Count == Entries.Count;
+
+    private void ToggleSelectAll()
+    {
+        if (IsAllSelected)
+            selectedEntries.Clear();
+        else
+            selectedEntries = new HashSet<DirEntry>(SortedEntries);
+    }
+
+    private void ToggleEntry(DirEntry entry)
+    {
+        if (!selectedEntries.Remove(entry)) selectedEntries.Add(entry);
+        lastClickedEntry = entry;
+    }
+
+    // --- Double click ---
+
+    private async Task OnDblClick(DirEntry entry)
+    {
+        if (entry.IsDirectory || entry.IsDrive)
+            await OnAction.InvokeAsync((entry, PanelAction.Open));
+        else
+            await OnAction.InvokeAsync((entry, PanelAction.View));
+    }
+
+    // --- Context menu ---
+
+    private void ShowContextMenu(MouseEventArgs e, DirEntry entry)
+    {
+        if (!selectedEntries.Contains(entry)) { selectedEntries.Clear(); selectedEntries.Add(entry); lastClickedEntry = entry; }
+        ctxX = e.ClientX; ctxY = e.ClientY; ctxEntry = entry; ctxVisible = true;
+    }
+
+    private void HideContextMenu() { ctxVisible = false; ctxEntry = null; }
+
+    private async Task CtxOpen()
+    {
+        var e = ctxEntry; HideContextMenu();
+        if (e is not null) await OnAction.InvokeAsync((e, PanelAction.Open));
+    }
+
+    private async Task CtxSearch()
+    {
+        var e = ctxEntry; HideContextMenu();
+        if (e is not null) await OnAction.InvokeAsync((e, PanelAction.Search));
+    }
+
+    private async Task CtxCopyPath()
+    {
+        var name = ctxEntry?.Name; HideContextMenu();
+        if (name is null) return;
+        var fullPath = CurrentPath + name;
+        try { await Js.InvokeVoidAsync("navigator.clipboard.writeText", fullPath); } catch { }
+        Msg.Show($"Copied: {fullPath}", MessageType.Info, source: "File Manager");
+    }
+
+    private async Task CtxAction(DirEntry? entry, PanelAction action)
+    {
+        HideContextMenu();
+        if (entry is not null) await OnAction.InvokeAsync((entry, action));
+    }
+
+    private void CtxSearchDir()
+    {
+        HideContextMenu();
+        OnAction.InvokeAsync((default!, PanelAction.Search));
+    }
+
+    // --- Multi-select context menu actions ---
+
+    private async Task CtxDownloadSelected()
+    {
+        var files = selectedEntries.Where(e => !e.IsDirectory && !e.IsDrive && !IsFileSynced(e.Name)).ToList();
+        HideContextMenu();
+        foreach (var f in files) await OnAction.InvokeAsync((f, PanelAction.Download));
+    }
+
+    private async Task CtxSaveSelectedToBrowser()
+    {
+        var files = selectedEntries.Where(e => !e.IsDirectory && !e.IsDrive && IsFileSynced(e.Name)).ToList();
+        HideContextMenu();
+        foreach (var f in files) await OnAction.InvokeAsync((f, PanelAction.SaveToBrowser));
+    }
+
+    private async Task CtxCopySelectedPaths()
+    {
+        var paths = selectedEntries.Select(e => CurrentPath + e.Name).ToList();
+        HideContextMenu();
+        var text = string.Join(Environment.NewLine, paths);
+        try { await Js.InvokeVoidAsync("navigator.clipboard.writeText", text); } catch { }
+        Msg.Show($"Copied {paths.Count} paths", MessageType.Info, source: "File Manager");
+    }
+
+    // --- Download status helpers ---
+
+    private bool IsFileSynced(string fileName) => _downloadMap.TryGetValue(fileName, out var info) && info.Status == DownloadStatus.Completed;
+    private bool HasDownloadRecord(string fileName) => _downloadMap.ContainsKey(fileName);
+    private DlInfo? GetDlInfo(string fileName) => _downloadMap.TryGetValue(fileName, out var info) ? info : null;
+
+    // --- Icons ---
+
+    private static string GetIcon(DirEntry e)
+    {
+        if (e.IsDrive) return "hard-drive";
+        if (e.IsDirectory) return "folder";
+        var ext = System.IO.Path.GetExtension(e.Name).ToLowerInvariant();
+        return ext switch
+        {
+            ".exe" or ".dll" or ".sys" => "file-code",
+            ".txt" or ".log" or ".cfg" or ".ini" or ".conf" or ".yaml" or ".yml" or ".json" or ".xml" or ".csv" => "file-text",
+            ".zip" or ".rar" or ".7z" or ".tar" or ".gz" or ".bz2" => "package",
+            ".jpg" or ".jpeg" or ".png" or ".bmp" or ".gif" or ".ico" or ".svg" or ".webp" => "image",
+            ".pdf" => "bookmark",
+            ".mp3" or ".wav" or ".flac" or ".ogg" or ".aac" => "music",
+            ".mp4" or ".mkv" or ".avi" or ".mov" or ".wmv" => "film",
+            _ => "file"
+        };
+    }
+
+    private static string IconClass(DirEntry e)
+    {
+        if (e.IsDrive) return "fp-icon-drive";
+        if (e.IsDirectory) return "fp-icon-dir";
+        return "fp-icon-file";
+    }
+}

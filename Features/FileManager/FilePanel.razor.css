@@ -1,0 +1,332 @@
+/* ===== FilePanel — Virtualized display panel ===== */
+
+.fp {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    border: 1px solid var(--c2-border);
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--c2-bg-surface);
+}
+
+.fp-active {
+    border-color: var(--c2-border);
+}
+
+/* Header */
+.fp-header {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem 0.5rem;
+    background: var(--c2-bg-deep);
+    border-bottom: 1px solid var(--c2-border);
+    flex-shrink: 0;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.fp-mode-label {
+    color: var(--c2-text-muted);
+}
+
+.fp-icon-local {
+    color: var(--c2-accent-green);
+}
+
+.fp-icon-remote {
+    color: var(--c2-accent-blue);
+}
+
+/* Entries area */
+.fp-entries {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    outline: none;
+}
+
+/* ===== Column header (fixed) ===== */
+
+.fp-table-head {
+    display: flex;
+    align-items: center;
+    padding: 0.25rem 0;
+    background: var(--c2-bg-deep);
+    border-bottom: 1px solid var(--c2-border);
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--c2-text-muted);
+    flex-shrink: 0;
+}
+
+.fp-th-check {
+    width: 1.6rem;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-left: 4px;
+}
+
+.fp-th-check input {
+    cursor: pointer;
+    accent-color: var(--c2-accent-blue);
+    margin: 0;
+    width: 12px;
+    height: 12px;
+}
+
+.fp-th-icon {
+    width: 1.8rem;
+    flex-shrink: 0;
+}
+
+.fp-th-name {
+    flex: 1;
+    min-width: 0;
+    padding: 0 0.3rem;
+}
+
+.fp-th-size {
+    width: 5.5rem;
+    text-align: right;
+    padding: 0 0.4rem;
+    flex-shrink: 0;
+}
+
+.fp-th-modified {
+    width: 9rem;
+    padding: 0 0.4rem;
+    flex-shrink: 0;
+}
+
+.fp-col-sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.fp-col-sortable:hover {
+    color: var(--c2-text);
+}
+
+.fp-sort-active {
+    color: var(--c2-accent-blue) !important;
+}
+
+.fp-sort-arrow {
+    font-size: 0.55rem;
+    margin-left: 0.15rem;
+    vertical-align: middle;
+}
+
+/* ===== Virtualized list ===== */
+
+.fp-vlist {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+/* ===== Row ===== */
+
+.fp-row {
+    display: flex;
+    align-items: center;
+    height: 26px;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.73rem;
+}
+
+/* Cells */
+.fp-cell-check {
+    width: 1.6rem;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-left: 4px;
+}
+
+.fp-cell-check input {
+    cursor: pointer;
+    accent-color: var(--c2-accent-blue);
+    margin: 0;
+    width: 12px;
+    height: 12px;
+}
+
+.fp-cell-icon {
+    width: 1.8rem;
+    flex-shrink: 0;
+    text-align: center;
+}
+
+.fp-cell-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0 0.3rem;
+}
+
+.fp-cell-size {
+    width: 5.5rem;
+    text-align: right;
+    color: var(--c2-text-dim);
+    font-size: 0.7rem;
+    white-space: nowrap;
+    padding: 0 0.4rem;
+    flex-shrink: 0;
+}
+
+.fp-cell-modified {
+    width: 9rem;
+    color: var(--c2-text-dim);
+    font-size: 0.7rem;
+    white-space: nowrap;
+    padding: 0 0.4rem;
+    flex-shrink: 0;
+}
+
+/* --- Directory hover --- */
+.fp-row-dir:hover {
+    background: var(--c2-yellow-10, rgba(255, 193, 7, 0.06));
+}
+
+.fp-row-dir.fp-row-active {
+    background: var(--c2-yellow-10, rgba(255, 193, 7, 0.1));
+}
+
+/* --- File hover --- */
+.fp-row-file:hover {
+    background: var(--c2-bg-overlay);
+}
+
+/* --- Selected --- */
+.fp-row-active {
+    background: var(--c2-blue-10);
+}
+
+/* --- Dimmed --- */
+.fp-row-dim {
+    opacity: 0.4;
+}
+
+.fp-row-dim:hover {
+    opacity: 0.6;
+}
+
+/* ===== Download status accents ===== */
+
+.fp-row-synced {
+    box-shadow: inset -3px 0 0 var(--c2-accent-green);
+}
+
+.fp-row-queued {
+    box-shadow: inset -3px 0 0 var(--c2-text-dim);
+}
+
+.fp-row-paused {
+    box-shadow: inset -3px 0 0 var(--c2-accent-yellow);
+}
+
+.fp-row-downloading {
+    box-shadow: inset -3px 0 0 var(--c2-accent-blue);
+    animation: fp-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes fp-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.85; }
+}
+
+/* ===== Download badge ===== */
+
+.fp-dl-badge {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 0 0.3rem;
+    border-radius: 3px;
+    font-size: 0.58rem;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    vertical-align: middle;
+    line-height: 1.4;
+}
+
+.fp-dl-active {
+    background: var(--c2-blue-10);
+    color: var(--c2-accent-blue);
+    animation: fp-badge-pulse 1s ease-in-out infinite;
+}
+
+@keyframes fp-badge-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+.fp-dl-queued {
+    background: var(--c2-bg-overlay);
+    color: var(--c2-text-dim);
+}
+
+.fp-dl-done {
+    color: var(--c2-accent-green);
+}
+
+.fp-dl-paused {
+    background: var(--c2-yellow-10, rgba(255, 193, 7, 0.1));
+    color: var(--c2-accent-yellow);
+}
+
+/* ===== Icon colors ===== */
+
+::deep .fp-icon-dir {
+    color: var(--c2-accent-yellow);
+}
+
+::deep .fp-icon-file {
+    color: var(--c2-text-dim);
+}
+
+::deep .fp-icon-drive {
+    color: var(--c2-accent-blue);
+}
+
+/* ===== Empty / loading ===== */
+
+.fp-empty {
+    padding: 1.5rem 1rem;
+    text-align: center;
+    color: var(--c2-text-dim);
+    font-size: 0.75rem;
+    font-style: italic;
+}
+
+.fp-loading {
+    padding: 1.5rem 1rem;
+    text-align: center;
+    color: var(--c2-text-muted);
+    font-size: 0.75rem;
+}
+
+/* Context menu separator */
+::deep .fp-ctx-sep {
+    height: 1px;
+    background: var(--c2-border);
+    margin: 0.2rem 0;
+}
+
+/* ===== Narrow ===== */
+@media (max-width: 1200px) {
+    .fp-hide-narrow {
+        display: none;
+    }
+}
