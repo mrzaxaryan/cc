@@ -173,15 +173,14 @@
     [Parameter] public bool IsActive { get; set; }
     [Parameter] public EventCallback OnActivate { get; set; }
     [Parameter] public EventCallback<(DirEntry entry, PanelAction action)> OnAction { get; set; }
+    [Parameter] public string SortColumn { get; set; } = "name";
+    [Parameter] public bool SortAscending { get; set; } = true;
+    [Parameter] public EventCallback<(string column, bool ascending)> OnSortChanged { get; set; }
 
     // Selection state
     private HashSet<DirEntry> selectedEntries = new();
     private DirEntry? lastClickedEntry;
     private int focusIndex = -1;
-
-    // Sort state
-    private string sortColumn = "name";
-    private bool sortAscending = true;
 
     // Context menu
     private bool ctxVisible;
@@ -207,7 +206,7 @@
     {
         get
         {
-            var key = $"{sortColumn}:{sortAscending}:{Entries?.Count}";
+            var key = $"{SortColumn}:{SortAscending}:{Entries?.Count}";
             if (_sortedCache is not null && _sortedCacheKey == key) return _sortedCache;
             _sortedCache = ApplySort(Entries ?? new());
             _sortedCacheKey = key;
@@ -256,11 +255,11 @@
 
     // --- Sorting ---
 
-    private void ToggleSort(string column)
+    private async Task ToggleSort(string column)
     {
-        if (sortColumn == column) sortAscending = !sortAscending;
-        else { sortColumn = column; sortAscending = true; }
+        var newAsc = SortColumn == column ? !SortAscending : true;
         InvalidateSortCache();
+        await OnSortChanged.InvokeAsync((column, newAsc));
     }
 
     private void InvalidateSortCache() { _sortedCache = null; _sortedCacheKey = null; }
@@ -272,20 +271,20 @@
         return SortGroup(dirs).Concat(SortGroup(files)).ToList();
     }
 
-    private IEnumerable<DirEntry> SortGroup(IEnumerable<DirEntry> group) => sortColumn switch
+    private IEnumerable<DirEntry> SortGroup(IEnumerable<DirEntry> group) => SortColumn switch
     {
-        "name" => sortAscending ? group.OrderBy(e => e.Name, StringComparer.OrdinalIgnoreCase) : group.OrderByDescending(e => e.Name, StringComparer.OrdinalIgnoreCase),
-        "size" => sortAscending ? group.OrderBy(e => e.Size) : group.OrderByDescending(e => e.Size),
-        "modified" => sortAscending ? group.OrderBy(e => e.LastModifiedTime) : group.OrderByDescending(e => e.LastModifiedTime),
+        "name" => SortAscending ? group.OrderBy(e => e.Name, StringComparer.OrdinalIgnoreCase) : group.OrderByDescending(e => e.Name, StringComparer.OrdinalIgnoreCase),
+        "size" => SortAscending ? group.OrderBy(e => e.Size) : group.OrderByDescending(e => e.Size),
+        "modified" => SortAscending ? group.OrderBy(e => e.LastModifiedTime) : group.OrderByDescending(e => e.LastModifiedTime),
         _ => group.OrderBy(e => e.Name, StringComparer.OrdinalIgnoreCase)
     };
 
-    private string SortClass(string column) => sortColumn == column ? "fp-col-sortable fp-sort-active" : "fp-col-sortable";
+    private string SortClass(string column) => SortColumn == column ? "fp-col-sortable fp-sort-active" : "fp-col-sortable";
 
     private MarkupString SortArrow(string column)
     {
-        if (sortColumn != column) return new MarkupString("");
-        var iconName = sortAscending ? "chevron-up" : "chevron-down";
+        if (SortColumn != column) return new MarkupString("");
+        var iconName = SortAscending ? "chevron-up" : "chevron-down";
         var svg = $"<svg class=\"c2-icon c2-icon-xs\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{C2Icon.GetPath(iconName)}</svg>";
         return new MarkupString($"<span class=\"fp-sort-arrow\">{svg}</span>");
     }
