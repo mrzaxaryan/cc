@@ -35,21 +35,9 @@ public class DownloadService : IDisposable
     public async Task StartAsync()
     {
         await _store.LoadAsync();
-        await ResetStaleDownloads();
 
         _subscriptions.Add(_bus.Subscribe<DownloadItemQueuedEvent>(e => OnItemQueued(e.AgentUuid)));
         _subscriptions.Add(_bus.Subscribe<AgentOnlineEvent>(e => AutoResumeAsync(e.Uuid, e.AgentId, e.RelayUrl)));
-    }
-
-    private async Task ResetStaleDownloads()
-    {
-        // Only reset stale Queued records — stale Downloading records stay as-is
-        // so they appear "in sync" and resume automatically when the agent reconnects.
-        var stale = _store.Downloads
-            .Where(r => r.Status == DownloadStatus.Queued && !_store.Cts.HasActive(r.Id))
-            .ToList();
-        foreach (var dl in stale)
-            await _store.PauseAsync(dl.Id);
     }
 
     private async Task AutoResumeAsync(string uuid, string agentId, string relayUrl)
