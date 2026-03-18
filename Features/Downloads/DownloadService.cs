@@ -1,5 +1,6 @@
 using C2.Features.Relay;
 using C2.Features.Storage;
+using static C2.Features.Storage.CacheManager;
 using C2.Features.Workspace;
 using C2.Infrastructure;
 
@@ -42,8 +43,10 @@ public class DownloadService : IDisposable
 
     private async Task ResetStaleDownloads()
     {
+        // Only reset stale Queued records — stale Downloading records stay as-is
+        // so they appear "in sync" and resume automatically when the agent reconnects.
         var stale = _store.Downloads
-            .Where(r => (r.Status == DownloadStatus.Downloading || r.Status == DownloadStatus.Queued) && !_store.Cts.HasActive(r.Id))
+            .Where(r => r.Status == DownloadStatus.Queued && !_store.Cts.HasActive(r.Id))
             .ToList();
         foreach (var dl in stale)
             await _store.PauseAsync(dl.Id);
@@ -54,8 +57,13 @@ public class DownloadService : IDisposable
         if (!_cache.HasDirectory) return;
         await _store.LoadAsync();
 
-        foreach (var dl in _store.GetByAgent(uuid).Where(r => r.Status == DownloadStatus.Paused))
-            await _store.QueueAsync(dl.Id);
+        foreach (var dl in _store.GetByAgent(uuid))
+        {
+            if (dl.Status == DownloadStatus.Paused)
+                await _store.QueueAsync(dl.Id);
+            else if (dl.Status == DownloadStatus.Downloading && !_store.Cts.HasActive(dl.Id))
+                await _store.QueueAsync(dl.Id); // stale — relay dropped while syncing
+        }
 
         await TryProcessQueue(uuid, agentId, relayUrl);
     }
@@ -106,16 +114,21 @@ public class DownloadService : IDisposable
                     else
                         await _store.FailAsync(next.Id, "Sync returned failure");
                 }
+                catch (AgentErrorException ex)
+                {
+                    await _store.FailAsync(next.Id, ex.Message); // agent refused — no point retrying
+                }
                 catch (OperationCanceledException)
                 {
-                    await _store.PauseAsync(next.Id);
+                    if (cts.IsCancellationRequested)
+                        await _store.PauseAsync(next.Id); // user pressed pause
+                    // relay dropped — leave as Downloading, AutoResume will re-queue
                 }
                 catch (Exception ex)
                 {
                     if (cts.IsCancellationRequested)
                         await _store.PauseAsync(next.Id);
-                    else
-                        await _store.FailAsync(next.Id, ex.Message);
+                    // network/unexpected error — leave as Downloading, AutoResume will retry
                 }
                 finally
                 {

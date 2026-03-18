@@ -107,7 +107,10 @@ public class CacheManager
         // Get file size first by reading 0 bytes
         var probe = RelaySocket.BuildFileCommand(AgentCommands.ReadFile, remotePath, 0, 0);
         var probeResp = await relay.SendAndReceive(probe);
-        if (probeResp is null || probeResp.Length < 12) return false;
+        if (probeResp is null || probeResp.Length < 4) return false; // network issue
+        var probeStatus = RelaySocket.ReadStatus(probeResp);
+        if (probeStatus != 0) throw new AgentErrorException(probeStatus); // agent refused
+        if (probeResp.Length < 12) return false;
 
         // Open a streaming writable to .fs/{fileId}
         if (resumeOffset > 0)
@@ -127,10 +130,10 @@ public class CacheManager
 
                 var payload = RelaySocket.BuildFileCommand(AgentCommands.ReadFile, remotePath, chunkSize, offset);
                 var response = await relay.SendAndReceive(payload);
-                if (response is null || response.Length < 4) return false;
+                if (response is null || response.Length < 4) return false; // network issue
 
                 var status = RelaySocket.ReadStatus(response);
-                if (status != 0) return false;
+                if (status != 0) throw new AgentErrorException(status); // agent error mid-stream
                 if (response.Length < 12) return false;
 
                 var (bytesRead, data) = RelaySocket.ReadFileContent(response);
@@ -164,6 +167,9 @@ public class CacheManager
             }
         }
     }
+
+    /// <summary>Thrown when the agent explicitly returns a non-zero status for a file operation.</summary>
+    public class AgentErrorException(uint status) : Exception($"Agent error: status {status}") { }
 
     /// <summary>Reset: clear persisted handle.</summary>
     public async Task ResetAsync()
