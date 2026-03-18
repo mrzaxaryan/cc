@@ -16,7 +16,7 @@
     <div class="fp-entries" @onkeydown="OnKeyDown" @onkeydown:preventDefault="true" tabindex="0" @ref="entriesRef">
         @if (Entries is not null)
         {
-            <C2Table Hover Compact Fixed CssClass="fp-table">
+            <table class="fp-table">
                 <thead>
                     <tr>
                         <th class="fp-col-icon"></th>
@@ -40,28 +40,24 @@
                         var isDir = e.IsDirectory || e.IsDrive;
                         var isSelected = selectedEntries.Contains(e);
                         var isFocused = idx == focusIndex;
-                        <C2Tr Active="@isSelected"
-                              Dim="@(e.IsHidden || e.IsSystem || (Mode == PanelMode.Local && (isDir || e.Size == 0 || !HasDownloadRecord(e.Name))))"
-                              CssClass="@($"fp-row{(isFocused ? " fp-row-focused" : "")}")"
-                              OnClick="(ev) => OnRowClick(ev, e)"
-                              OnContextMenu="(ev) => ShowContextMenu(ev, e)"
-                              PreventDefault>
-                            <td class="fp-col-icon" @ondblclick="() => OnDblClick(e)" @ondblclick:stopPropagation="true">
+                        var isDim = e.IsHidden || e.IsSystem || (Mode == PanelMode.Local && (isDir || e.Size == 0 || !HasDownloadRecord(e.Name)));
+                        <tr @key="e.Name" class="fp-row @(isSelected ? "fp-row-active" : "") @(isDim ? "fp-row-dim" : "") @(isFocused ? "fp-row-focused" : "")"
+                            @onclick="(ev) => OnRowClick(ev, e)"
+                            @oncontextmenu="(ev) => ShowContextMenu(ev, e)"
+                            @oncontextmenu:preventDefault
+                            @ondblclick="() => OnDblClick(e)">
+                            <td class="fp-col-icon">
                                 <C2Icon Name="@GetIcon(e)" Size="Size.Xs" CssClass="@IconClass(e)" />
                             </td>
-                            <td class="fp-col-name" @ondblclick="() => OnDblClick(e)" @ondblclick:stopPropagation="true">
+                            <td class="fp-col-name">
                                 <span class="fp-name-text">@e.Name</span>
-                                @if (!isDir && Cache.HasDirectory)
-                                {
-                                    <FileActions Entry="e" CurrentPath="@CurrentPath" AgentUuid="@AgentUuid" />
-                                }
                             </td>
                             <td class="fp-col-size">@(isDir ? "" : Formatters.FormatSize(e.Size))</td>
                             <td class="fp-col-modified fp-hide-narrow">@Formatters.FormatFileTime(e.LastModifiedTime)</td>
-                        </C2Tr>
+                        </tr>
                     }
                 </tbody>
-            </C2Table>
+            </table>
 
             @if (Entries.Count == 0)
             {
@@ -171,6 +167,9 @@
     private string? _sortedCacheKey;
     private List<DirEntry>? _prevEntries;
 
+    // Download lookup cache (rebuilt on entries change)
+    private HashSet<string> _downloadedFiles = new(StringComparer.OrdinalIgnoreCase);
+
     public HashSet<DirEntry> SelectedEntries => selectedEntries;
 
     private List<DirEntry> SortedEntries
@@ -194,13 +193,29 @@
             selectedEntries.Clear();
             focusIndex = -1;
             InvalidateSortCache();
+            RebuildDownloadLookup();
         }
     }
 
-    protected override void OnInitialized()
+    private void RebuildDownloadLookup()
     {
-        On<DownloadStoreChangedEvent>();
+        _downloadedFiles.Clear();
+        if (Mode != PanelMode.Local || string.IsNullOrEmpty(AgentUuid)) return;
+        var records = Downloads.GetByAgent(AgentUuid);
+        foreach (var rec in records)
+        {
+            if (rec.Status is DownloadStatus.Queued or DownloadStatus.Downloading
+                or DownloadStatus.Paused or DownloadStatus.Completed
+                && rec.RemotePath.StartsWith(CurrentPath, StringComparison.OrdinalIgnoreCase))
+            {
+                var fileName = rec.RemotePath[CurrentPath.Length..];
+                if (!fileName.Contains('/') && !fileName.Contains('\\'))
+                    _downloadedFiles.Add(fileName);
+            }
+        }
     }
+
+    protected override void OnInitialized() { }
 
     public override void Dispose() => base.Dispose();
 
@@ -361,13 +376,7 @@
     private bool IsFileSynced(string fileName)
         => !string.IsNullOrEmpty(AgentUuid) && Downloads.Find(AgentUuid, CurrentPath + fileName)?.Status == DownloadStatus.Completed;
 
-    private bool HasDownloadRecord(string fileName)
-    {
-        if (string.IsNullOrEmpty(AgentUuid)) return false;
-        var rec = Downloads.Find(AgentUuid, CurrentPath + fileName);
-        return rec is not null && rec.Status is DownloadStatus.Queued or DownloadStatus.Downloading
-                                  or DownloadStatus.Paused or DownloadStatus.Completed;
-    }
+    private bool HasDownloadRecord(string fileName) => _downloadedFiles.Contains(fileName);
 
     // --- Icons ---
 

@@ -182,10 +182,7 @@
         if (IsConnected) await NavigateTo(currentPath);
     }
 
-    protected override void OnInitialized()
-    {
-        On<DownloadStoreChangedEvent>();
-    }
+    protected override void OnInitialized() { }
 
     public override void Dispose() => base.Dispose();
 

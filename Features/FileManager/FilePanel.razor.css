@@ -51,29 +51,47 @@
 }
 
 /* Table */
-::deep .fp-table {
-    border: none;
+.fp-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
 }
 
-::deep .fp-table .c2-table-wrap {
+.fp-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--c2-bg-deep);
+}
+
+.fp-table th {
+    padding: 0.25rem 0.4rem;
+    text-align: left;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--c2-text-muted);
+    border-bottom: 1px solid var(--c2-border);
+}
+
+.fp-table td {
+    padding: 0.15rem 0.4rem;
     border: none;
-    border-radius: 0;
+    vertical-align: middle;
 }
 
 /* Column widths */
-::deep .fp-col-icon {
+.fp-col-icon {
     width: 1.8rem;
     text-align: center;
     padding-left: 0.2rem !important;
     padding-right: 0.2rem !important;
-    font-size: 0.85rem;
 }
 
-::deep .fp-col-name {
+.fp-col-name {
     overflow: hidden;
 }
 
-::deep .fp-col-size {
+.fp-col-size {
     width: 12%;
     text-align: right;
     color: var(--c2-text-dim);
@@ -81,7 +99,7 @@
     white-space: nowrap;
 }
 
-::deep .fp-col-modified {
+.fp-col-modified {
     width: 20%;
     color: var(--c2-text-dim);
     font-size: 0.7rem;
@@ -89,48 +107,60 @@
 }
 
 /* Sortable headers */
-::deep .fp-col-sortable {
+.fp-col-sortable {
     cursor: pointer;
     user-select: none;
-    transition: color var(--c2-transition-fast);
 }
 
-::deep .fp-col-sortable:hover {
+.fp-col-sortable:hover {
     color: var(--c2-text);
 }
 
-::deep .fp-sort-active {
+.fp-sort-active {
     color: var(--c2-accent-blue) !important;
 }
 
-::deep .fp-sort-arrow {
+.fp-sort-arrow {
     font-size: 0.55rem;
     margin-left: 0.15rem;
     vertical-align: middle;
 }
 
 /* Row styles */
-::deep .fp-row {
+.fp-row {
     cursor: pointer;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.73rem;
+    transition: background 0.1s;
 }
 
-::deep .fp-row td {
-    vertical-align: middle;
+.fp-row:hover {
+    background: var(--c2-bg-overlay);
 }
 
-::deep .fp-row-focused td {
+.fp-row-active {
+    background: var(--c2-blue-10);
+}
+
+.fp-row-active:hover {
+    background: var(--c2-blue-10);
+}
+
+.fp-row-dim {
+    opacity: 0.45;
+}
+
+.fp-row-focused td {
     box-shadow: inset 0 0 0 1px var(--c2-blue-30);
 }
 
 /* File name */
-::deep .fp-name-text {
+.fp-name-text {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     display: inline-block;
-    max-width: calc(100% - 3rem);
+    max-width: 100%;
     vertical-align: middle;
 }
 
@@ -199,7 +229,7 @@
 
 /* ===== Narrow panels ===== */
 @media (max-width: 1200px) {
-    ::deep .fp-hide-narrow {
+    .fp-hide-narrow {
         display: none;
     }
 }
