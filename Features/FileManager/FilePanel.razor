@@ -16,6 +16,9 @@
         @if (Entries is not null)
         {
             <div class="fp-table-head">
+                <span class="fp-th-check">
+                    <input type="checkbox" checked="@IsAllSelected" @onclick="ToggleSelectAll" @onclick:stopPropagation />
+                </span>
                 <span class="fp-th-icon"></span>
                 <span class="fp-th-name @SortClass("name")" @onclick='() => ToggleSort("name")'>Name @SortArrow("name")</span>
                 <span class="fp-th-size @SortClass("size")" @onclick='() => ToggleSort("size")'>Size @SortArrow("size")</span>
@@ -37,6 +40,9 @@
                          @oncontextmenu:preventDefault
                          @ondblclick="() => OnDblClick(e)"
                          style="@(dlInfo?.Status == DownloadStatus.Downloading ? $"background:linear-gradient(90deg, var(--c2-blue-10) {dlInfo.Value.Pct}%, transparent {dlInfo.Value.Pct}%)" : "")">
+                        <span class="fp-cell-check">
+                            <input type="checkbox" checked="@isSelected" @onclick="() => ToggleEntry(e)" @onclick:stopPropagation />
+                        </span>
                         <span class="fp-cell-icon"><C2Icon Name="@GetIcon(e)" Size="Size.Xs" CssClass="@IconClass(e)" /></span>
                         <span class="fp-cell-name">@e.Name@if (dlInfo is not null)
                             {
@@ -300,6 +306,24 @@
     private void SelectSingle(DirEntry entry) { selectedEntries.Clear(); selectedEntries.Add(entry); lastClickedEntry = entry; }
     private void AddToSelection(DirEntry entry) { selectedEntries.Add(entry); lastClickedEntry = entry; }
     public void ClearSelection() { selectedEntries.Clear(); focusIndex = -1; }
+
+    // --- Checkbox multi-select ---
+
+    private bool IsAllSelected => Entries is not null && Entries.Count > 0 && selectedEntries.Count == Entries.Count;
+
+    private void ToggleSelectAll()
+    {
+        if (IsAllSelected)
+            selectedEntries.Clear();
+        else
+            selectedEntries = new HashSet<DirEntry>(SortedEntries);
+    }
+
+    private void ToggleEntry(DirEntry entry)
+    {
+        if (!selectedEntries.Remove(entry)) selectedEntries.Add(entry);
+        lastClickedEntry = entry;
+    }
 
     // --- Double click ---
 

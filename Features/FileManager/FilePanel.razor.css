@@ -64,6 +64,22 @@
     flex-shrink: 0;
 }
 
+.fp-th-check {
+    width: 1.4rem;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.fp-th-check input[type="checkbox"] {
+    cursor: pointer;
+    accent-color: var(--c2-accent-blue);
+    margin: 0;
+    width: 13px;
+    height: 13px;
+}
+
 .fp-th-icon {
     width: 1.8rem;
     flex-shrink: 0;
@@ -127,6 +143,22 @@
 }
 
 /* Cells */
+.fp-cell-check {
+    width: 1.4rem;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.fp-cell-check input[type="checkbox"] {
+    cursor: pointer;
+    accent-color: var(--c2-accent-blue);
+    margin: 0;
+    width: 13px;
+    height: 13px;
+}
+
 .fp-cell-icon {
     width: 1.8rem;
     flex-shrink: 0;
