@@ -3,7 +3,7 @@ using C2.Features.Storage;
 using C2.Infrastructure;
 using Microsoft.JSInterop;
 
-namespace C2.Features.FileManager;
+namespace C2.Features.FileSystem;
 
 public class VfsDirectory
 {

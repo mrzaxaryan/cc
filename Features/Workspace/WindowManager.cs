@@ -56,7 +56,7 @@ public class WindowManager
             Title = DisplayTitle(panel),
             X = 100 + offset,
             Y = 80 + offset,
-            Width = panel switch { "FileManager" => 800, "Settings" => 650, "Relay" => 900, "Agents" => 950, "Transfers" => 600, "ExtensionGroups" => 500, "PeParser" => 900, "Base64" => 600, "LnkTool" => 750, _ => 700 },
+            Width = panel switch { "FileSystem" => 800, "Settings" => 650, "Relay" => 900, "Agents" => 950, "Transfers" => 600, "ExtensionGroups" => 500, "PeParser" => 900, "Base64" => 600, "LnkTool" => 750, _ => 700 },
             Height = 500,
             ZIndex = _topZ
         };
@@ -89,7 +89,7 @@ public class WindowManager
             SearchPath = searchPath,
             X = 100 + offset,
             Y = 80 + offset,
-            Width = panel switch { "FileManager" => 800, "AgentInfo" => 480, "Shell" => 700, "Vnc" => 900, _ => 700 },
+            Width = panel switch { "FileSystem" => 800, "AgentInfo" => 480, "Shell" => 700, "Vnc" => 900, _ => 700 },
             Height = panel switch { "Vnc" => 600, _ => 500 },
             ZIndex = _topZ
         };
@@ -151,7 +151,7 @@ public class WindowManager
     {
         "Transfers" => "Transfer Manager",
         "ExtensionGroups" => "Extension Groups",
-        "FileManager" => "File Manager",
+        "FileSystem" => "File System",
         "AgentInfo" => "Agent Info",
         "Shell" => "Shell",
         "Vnc" => "Screen",

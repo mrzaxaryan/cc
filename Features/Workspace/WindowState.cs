@@ -6,7 +6,7 @@ namespace C2.Features.Workspace;
 public class WindowState
 {
     public int Id { get; set; }
-    /// <summary>Component type name rendered inside this window (e.g. "FileManager", "Shell").</summary>
+    /// <summary>Component type name rendered inside this window (e.g. "FileSystem", "Shell").</summary>
     public string Panel { get; set; } = "";
     public string Title { get; set; } = "";
     public double X { get; set; }

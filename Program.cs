@@ -19,7 +19,7 @@ builder.Services.AddScoped<C2.Features.Agents.AgentStore>();
 builder.Services.AddScoped<C2.Features.Transfers.TransferService>();
 builder.Services.AddScoped<C2.Features.Transfers.TransferStore>();
 builder.Services.AddScoped<C2.Features.Extensions.ExtensionGroupStore>();
-builder.Services.AddScoped<C2.Features.FileManager.VfsStore>();
+builder.Services.AddScoped<C2.Features.FileSystem.VfsStore>();
 builder.Services.AddScoped<C2.Features.Notifications.NotificationStore>();
 builder.Services.AddScoped<C2.Features.Relay.RelayConnectionService>();
 builder.Services.AddScoped<C2.Features.Relay.RelayStore>();

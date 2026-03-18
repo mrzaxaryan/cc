@@ -738,8 +738,8 @@ private HashSet<DirEntry> ActiveSelection =>
     {
         if (loading || !IsConnected) return;
 
-        currentPath = FileManagerPath.Normalize(path, IsUnixAgent);
-        pathSegments = FileManagerPath.GetSegments(currentPath);
+        currentPath = FileSystemPath.Normalize(path, IsUnixAgent);
+        pathSegments = FileSystemPath.GetSegments(currentPath);
         filterText = null;
         _inlineView = false; if (_inlineViewUrl is not null) { _ = Js.InvokeVoidAsync("c2RevokeObjectUrl", _inlineViewUrl).AsTask(); _inlineViewUrl = null; _inlineViewName = null; }
         loading = true; entries = null; _scrollSyncSetup = false; StateHasChanged();
@@ -763,8 +763,8 @@ private HashSet<DirEntry> ActiveSelection =>
     {
         if (loading || string.IsNullOrEmpty(AgentUuid)) return;
 
-        currentPath = FileManagerPath.Normalize(path, IsUnixAgent);
-        pathSegments = FileManagerPath.GetSegments(currentPath);
+        currentPath = FileSystemPath.Normalize(path, IsUnixAgent);
+        pathSegments = FileSystemPath.GetSegments(currentPath);
         filterText = null;
         _inlineView = false; if (_inlineViewUrl is not null) { _ = Js.InvokeVoidAsync("c2RevokeObjectUrl", _inlineViewUrl).AsTask(); _inlineViewUrl = null; _inlineViewName = null; }
         loading = true; entries = null; _scrollSyncSetup = false; StateHasChanged();
@@ -809,7 +809,7 @@ private HashSet<DirEntry> ActiveSelection =>
 
     private async Task NavigateUp()
     {
-        var parent = FileManagerPath.GetParent(pathSegments, PathSep, IsUnixAgent, RootPath);
+        var parent = FileSystemPath.GetParent(pathSegments, PathSep, IsUnixAgent, RootPath);
         await Navigate(parent);
     }
 
@@ -817,7 +817,7 @@ private HashSet<DirEntry> ActiveSelection =>
 
     private async Task NavigateToBreadcrumb(int index)
     {
-        var path = FileManagerPath.BuildBreadcrumbPath(pathSegments, index, PathSep, IsUnixAgent);
+        var path = FileSystemPath.BuildBreadcrumbPath(pathSegments, index, PathSep, IsUnixAgent);
         await Navigate(path);
     }
 
@@ -851,7 +851,7 @@ private HashSet<DirEntry> ActiveSelection =>
                 if (entry is not null && (entry.IsDirectory || entry.IsDrive))
                     await OpenSearchWindow(currentPath + entry.Name);
                 else
-                    await OpenSearchWindow(FileManagerPath.TrimTrailing(currentPath));
+                    await OpenSearchWindow(FileSystemPath.TrimTrailing(currentPath));
                 break;
         }
     }

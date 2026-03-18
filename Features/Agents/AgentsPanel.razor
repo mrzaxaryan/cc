@@ -484,14 +484,14 @@
         HideContextMenu();
         if (ctxAgentId is not null && ctxRelayUrl is not null && ctxIsOnline)
         {
-            await OpenAgentWindow("FileManager", ctxAgentId, ctxRelayUrl);
+            await OpenAgentWindow("FileSystem", ctxAgentId, ctxRelayUrl);
         }
         else if (ctxHasCache && ctxRow is not null)
         {
             // Open file manager in offline/cache-only mode (no relay connection)
             var name = IsCopyable(ctxRow.Name) ? ctxRow.Name : null;
             var agentId = !string.IsNullOrEmpty(ctxRow.AgentId) ? ctxRow.AgentId : ctxRow.Uuid ?? "";
-            Wm.OpenAgentWindow("FileManager", agentId, agentName: name, agentUuid: ctxRow.Uuid);
+            Wm.OpenAgentWindow("FileSystem", agentId, agentName: name, agentUuid: ctxRow.Uuid);
         }
     }
 

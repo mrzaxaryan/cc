@@ -44,7 +44,7 @@
         <div class="app-window-body">
             @switch (win.Panel)
             {
-                case "FileManager":       <FileManager Relay="win.Relay" AgentId="@win.AgentId" AgentName="@win.AgentName" AgentUuid="@win.AgentUuid" /> break;
+                case "FileSystem":       <FileSystem Relay="win.Relay" AgentId="@win.AgentId" AgentName="@win.AgentName" AgentUuid="@win.AgentUuid" /> break;
                 case "Settings":          <SettingsPanel /> break;
                 case "Relay":             <RelayPanel /> break;
                 case "Agents":            <AgentsPanel /> break;
@@ -262,7 +262,7 @@
         "Agents" => "agents",
         "Relay" => "server",
         "Settings" => "settings",
-        "FileManager" => "folder",
+        "FileSystem" => "folder",
         "Transfers" => "transfer",
         "ExtensionGroups" => "layers",
         "Shell" => "terminal",

@@ -1,7 +1,7 @@
-namespace C2.Features.FileManager;
+namespace C2.Features.FileSystem;
 
-/// <summary>Static path helper for FileManager navigation.</summary>
-public static class FileManagerPath
+/// <summary>Static path helper for FileSystem navigation.</summary>
+public static class FileSystemPath
 {
     /// <summary>Normalize a path for sending to the agent: trim trailing separators and append the correct one.</summary>
     public static string Normalize(string path, bool isUnix)

@@ -79,16 +79,16 @@
             var payload = RelaySocket.BuildFileCommand(AgentCommands.ReadFile, FilePath, PageSize, fileViewOffset);
             var response = await SendCommand(payload);
             if (response is null) return;
-            if (response.Length < 4) { Msg.Error("File Read Error", "Invalid response from agent (too short)", "File Manager"); return; }
+            if (response.Length < 4) { Msg.Error("File Read Error", "Invalid response from agent (too short)", "File System"); return; }
             var status = RelaySocket.ReadStatus(response);
-            if (status != 0) { Msg.Error("File Read Error", $"Agent returned error status {status} for {FilePath}", "File Manager"); return; }
-            if (response.Length < 12) { Msg.Error("File Read Error", "Invalid response from agent (missing content)", "File Manager"); return; }
+            if (status != 0) { Msg.Error("File Read Error", $"Agent returned error status {status} for {FilePath}", "File System"); return; }
+            if (response.Length < 12) { Msg.Error("File Read Error", "Invalid response from agent (missing content)", "File System"); return; }
             var (bytesRead, data) = RelaySocket.ReadFileContent(response);
             fileBytesRead = (long)bytesRead;
             try { fileContent = Encoding.UTF8.GetString(data); }
             catch { fileContent = Formatters.FormatHexDump(data.ToArray()); }
         }
-        catch (Exception ex) { Msg.Error("File Read Failed", $"Could not read {FilePath}: {ex.Message}", "File Manager"); }
+        catch (Exception ex) { Msg.Error("File Read Failed", $"Could not read {FilePath}: {ex.Message}", "File System"); }
         finally { fileLoading = false; StateHasChanged(); }
     }
 
@@ -106,18 +106,18 @@
             if (response is null) return;
             if (response.Length < 4) return;
             var status = RelaySocket.ReadStatus(response);
-            if (status != 0) { Msg.Error("Hash Error", $"Agent returned error status {status} for {FilePath}", "File Manager"); return; }
+            if (status != 0) { Msg.Error("Hash Error", $"Agent returned error status {status} for {FilePath}", "File System"); return; }
             if (response.Length < 36) return;
             fileHash = RelaySocket.ReadHash(response);
         }
-        catch (Exception ex) { Msg.Error("Hash Failed", $"Could not hash {FilePath}: {ex.Message}", "File Manager"); }
+        catch (Exception ex) { Msg.Error("Hash Failed", $"Could not hash {FilePath}: {ex.Message}", "File System"); }
         finally { fileLoading = false; StateHasChanged(); }
     }
 
     private async Task<byte[]?> SendCommand(byte[] payload)
     {
-        if (Relay is null || !Relay.IsConnected) { Msg.Error("Not Connected", "No active connection to agent", "File Manager"); return null; }
+        if (Relay is null || !Relay.IsConnected) { Msg.Error("Not Connected", "No active connection to agent", "File System"); return null; }
         try { return await Relay.SendAndReceive(payload); }
-        catch (Exception ex) { Msg.Error("Command Failed", $"Agent command error: {ex.Message}", "File Manager"); return null; }
+        catch (Exception ex) { Msg.Error("Command Failed", $"Agent command error: {ex.Message}", "File System"); return null; }
     }
 }

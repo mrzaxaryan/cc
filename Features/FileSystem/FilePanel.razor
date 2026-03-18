@@ -393,7 +393,7 @@
         if (name is null) return;
         var fullPath = CurrentPath + name;
         try { await Js.InvokeVoidAsync("navigator.clipboard.writeText", fullPath); } catch { }
-        Msg.Show($"Copied: {fullPath}", MessageType.Info, source: "File Manager");
+        Msg.Show($"Copied: {fullPath}", MessageType.Info, source: "File System");
     }
 
     private async Task CtxAction(DirEntry? entry, PanelAction action)
@@ -430,7 +430,7 @@
         HideContextMenu();
         var text = string.Join(Environment.NewLine, paths);
         try { await Js.InvokeVoidAsync("navigator.clipboard.writeText", text); } catch { }
-        Msg.Show($"Copied {paths.Count} paths", MessageType.Info, source: "File Manager");
+        Msg.Show($"Copied {paths.Count} paths", MessageType.Info, source: "File System");
     }
 
     // --- Download status helpers ---
