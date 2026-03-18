@@ -218,6 +218,33 @@ window.c2FileSystem = {
         }
     },
 
+    // Create a typed object URL for a cached blob (caller must revoke)
+    async createObjectUrl(fileName, fileId) {
+        if (!_rootHandle) throw new Error('No directory selected');
+        const fsDir = await _rootHandle.getDirectoryHandle('.fs', { create: false });
+        const fileHandle = await fsDir.getFileHandle(fileId);
+        const file = await fileHandle.getFile();
+        const ext = fileName.split('.').pop().toLowerCase();
+        const mimeTypes = {
+            'pdf': 'application/pdf',
+            'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
+            'gif': 'image/gif', 'webp': 'image/webp', 'svg': 'image/svg+xml',
+            'bmp': 'image/bmp', 'ico': 'image/x-icon',
+            'mp3': 'audio/mpeg', 'wav': 'audio/wav', 'ogg': 'audio/ogg',
+            'flac': 'audio/flac', 'aac': 'audio/aac', 'm4a': 'audio/mp4',
+            'mp4': 'video/mp4', 'webm': 'video/webm', 'mov': 'video/quicktime',
+            'txt': 'text/plain', 'log': 'text/plain', 'md': 'text/plain',
+            'json': 'application/json', 'xml': 'text/xml',
+            'html': 'text/html', 'htm': 'text/html',
+            'css': 'text/css', 'js': 'text/javascript',
+        };
+        const mime = mimeTypes[ext] ?? 'application/octet-stream';
+        // Wrap with correct MIME type — does NOT copy data into memory.
+        // The File object is a disk reference; createObjectURL streams it on demand.
+        const typed = new File([file], fileName, { type: mime });
+        return URL.createObjectURL(typed);
+    },
+
     // Save a blob to the user's downloads by streaming directly from .fs/
     async saveBlobToDownload(fileName, fileId) {
         if (!_rootHandle) throw new Error('No directory selected');

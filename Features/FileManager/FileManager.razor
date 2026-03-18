@@ -90,6 +90,16 @@
                        SortColumn="@sortColumn"
                        SortAscending="@sortAscending"
                        OnSortChanged="OnSortChanged" />
+            @if (_inlineView && _inlineViewUrl is not null)
+            {
+                <div class="fm-inline-viewer">
+                    <div class="fm-inline-viewer-bar">
+                        <span class="fm-inline-viewer-name">@_inlineViewName</span>
+                        <C2Btn Size="Size.Xs" OnClick="CloseInlineView" Title="Close"><C2Icon Name="x" Size="Size.Xs" /></C2Btn>
+                    </div>
+                    <iframe src="@_inlineViewUrl" class="fm-inline-viewer-frame" sandbox="allow-same-origin"></iframe>
+                </div>
+            }
         </div>
     </div>
 
@@ -168,6 +178,11 @@ private HashSet<DirEntry> ActiveSelection =>
     private bool viewingFile;
     private string viewingFileName = "";
     private string viewingFilePath = "";
+
+    // Inline viewer (shown in remote pane)
+    private bool _inlineView;
+    private string? _inlineViewUrl;
+    private string? _inlineViewName;
 
     private RelaySocket? _prevRelay;
 
@@ -275,6 +290,7 @@ private HashSet<DirEntry> ActiveSelection =>
 
         currentPath = FileManagerPath.Normalize(path, IsUnixAgent);
         pathSegments = FileManagerPath.GetSegments(currentPath);
+        _inlineView = false; if (_inlineViewUrl is not null) { _ = Js.InvokeVoidAsync("c2RevokeObjectUrl", _inlineViewUrl).AsTask(); _inlineViewUrl = null; _inlineViewName = null; }
         loading = true; entries = null; _scrollSyncSetup = false; StateHasChanged();
 
         try
@@ -349,7 +365,7 @@ private HashSet<DirEntry> ActiveSelection =>
                 else if (entry.IsDirectory || entry.IsDrive) await NavigateTo(currentPath + entry.Name);
                 break;
             case FilePanel.PanelAction.View:
-                ViewFile(entry);
+                await ShowInRemotePanel(entry);
                 break;
             case FilePanel.PanelAction.SaveToBrowser:
                 await SaveToBrowser(entry);
@@ -398,6 +414,34 @@ private HashSet<DirEntry> ActiveSelection =>
         if (status != 0) { Msg.Error("Hash Error", $"Agent returned status {status}", "File Manager"); return; }
         var hash = RelaySocket.ReadHash(response);
         Msg.Show($"SHA-256: {hash}", MessageType.Success, source: "File Manager");
+    }
+
+    private async Task ShowInRemotePanel(DirEntry entry)
+    {
+        if (string.IsNullOrEmpty(AgentUuid)) return;
+        var dl = Downloads.Find(AgentUuid, currentPath + entry.Name);
+        if (dl is null || dl.Status != DownloadStatus.Completed) return;
+        try
+        {
+            if (!await Cache.BlobExistsAsync(dl.CacheSubPath)) { Msg.Error("Open Failed", "File not found in local cache", "File Manager"); return; }
+            if (_inlineViewUrl is not null) await Js.InvokeVoidAsync("c2RevokeObjectUrl", _inlineViewUrl);
+            _inlineViewUrl = await Js.InvokeAsync<string>("c2GetObjectUrl", dl.FileName, dl.CacheSubPath);
+            _inlineViewName = dl.FileName;
+            _inlineView = true;
+            StateHasChanged();
+        }
+        catch (Exception ex) { Msg.Error("Open Failed", $"Could not open {dl.FileName}: {ex.Message}", "File Manager"); }
+    }
+
+    private async Task CloseInlineView()
+    {
+        _inlineView = false;
+        _inlineViewName = null;
+        if (_inlineViewUrl is not null)
+        {
+            await Js.InvokeVoidAsync("c2RevokeObjectUrl", _inlineViewUrl);
+            _inlineViewUrl = null;
+        }
     }
 
     private async Task SaveToBrowser(DirEntry entry)

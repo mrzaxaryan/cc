@@ -38,8 +38,7 @@
                          @onclick="(ev) => OnRowClick(ev, e)"
                          @oncontextmenu="(ev) => ShowContextMenu(ev, e)"
                          @oncontextmenu:preventDefault
-                         @ondblclick="() => OnDblClick(e)"
-                         style="@(dlInfo?.Status == DownloadStatus.Downloading ? $"background:linear-gradient(90deg, var(--c2-blue-10) {dlInfo.Value.Pct}%, transparent {dlInfo.Value.Pct}%)" : "")">
+                         @ondblclick="() => OnDblClick(e)">
                         <span class="fp-cell-check" @onclick="() => ToggleEntry(e)" @onclick:stopPropagation>
                             <input type="checkbox" checked="@isSelected" />
                         </span>
@@ -48,14 +47,17 @@
                             {
                                 switch (dlInfo.Value.Status)
                                 {
-                                    case DownloadStatus.Downloading: <span class="fp-dl-badge fp-dl-active">@(dlInfo.Value.Pct)% @Formatters.FormatSpeed(dlInfo.Value.Speed)</span> break;
                                     case DownloadStatus.Queued: <span class="fp-dl-badge fp-dl-queued">QUEUED</span> break;
                                     case DownloadStatus.Completed: <span class="fp-dl-badge fp-dl-done">&#10003;</span> break;
                                     case DownloadStatus.Paused: <span class="fp-dl-badge fp-dl-paused">PAUSED</span> break;
                                 }
                             }</span>
-                        <span class="fp-cell-size">@(isDir ? "" : Formatters.FormatSize(e.Size))</span>
+                        <span class="fp-cell-size">@(dlInfo?.Status == DownloadStatus.Downloading ? $"{dlInfo.Value.Pct}% {Formatters.FormatSpeed(dlInfo.Value.Speed)}" : isDir ? "" : Formatters.FormatSize(e.Size))</span>
                         <span class="fp-cell-modified fp-hide-narrow">@Formatters.FormatFileTime(e.LastModifiedTime)</span>
+                        @if (dlInfo?.Status == DownloadStatus.Downloading)
+                        {
+                            <div class="fp-progress-bar" style="width:@(dlInfo.Value.Pct)%"></div>
+                        }
                     </div>
                 </Virtualize>
             </div>

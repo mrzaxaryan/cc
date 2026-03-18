@@ -16,6 +16,14 @@ window.c2SaveFile = function (fileName, fileId) {
     return c2FileSystem.saveBlobToDownload(fileName, fileId);
 };
 
+window.c2GetObjectUrl = function (fileName, fileId) {
+    return c2FileSystem.createObjectUrl(fileName, fileId);
+};
+
+window.c2RevokeObjectUrl = function (url) {
+    if (url) URL.revokeObjectURL(url);
+};
+
 // Sync scroll between two elements — used by dual-pane file manager
 window.c2SyncScroll = function (sourceEl, targetEl) {
     if (!sourceEl || !targetEl || !sourceEl.addEventListener) return false;

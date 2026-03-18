@@ -141,6 +141,17 @@
     cursor: pointer;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.73rem;
+    position: relative;
+}
+
+.fp-progress-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 2px;
+    background: var(--c2-accent-blue);
+    pointer-events: none;
+    transition: width 0.4s linear;
 }
 
 /* Cells */
@@ -259,17 +270,6 @@
     font-family: 'JetBrains Mono', monospace;
     vertical-align: middle;
     line-height: 1.4;
-}
-
-.fp-dl-active {
-    background: var(--c2-blue-10);
-    color: var(--c2-accent-blue);
-    animation: fp-badge-pulse 1s ease-in-out infinite;
-}
-
-@keyframes fp-badge-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
 }
 
 .fp-dl-queued {
