@@ -107,13 +107,6 @@
         </div>
     }
 
-    @* Function key bar *@
-    <div class="fm-fnkeys">
-        <button class="fm-fnkey" @onclick="ViewSelected" disabled="@(!HasAnySelection)"><span class="fm-fnkey-num">F3</span> View</button>
-        <button class="fm-fnkey" @onclick="DownloadSelected" disabled="@(!IsConnected || !Cache.HasDirectory || !HasRemoteFileSelection)"><span class="fm-fnkey-num">F5</span> Copy</button>
-        <button class="fm-fnkey" @onclick="OpenDownloadsWindow"><span class="fm-fnkey-num">F6</span> Queue</button>
-        <button class="fm-fnkey" @onclick="OpenFullSearchWindow" disabled="@(!IsConnected)"><span class="fm-fnkey-num">F7</span> Search</button>
-    </div>
 </div>
 
 @code {
@@ -332,13 +325,7 @@
         if (files.Count > 0) Msg.Show($"{files.Count} file(s) queued", MessageType.Info, source: "File Manager");
     }
 
-    private async Task ViewSelected()
-    {
-        var panel = activePanel == ActivePanel.Local ? localPanel : remotePanel;
-        if (panel is null) return;
-        var file = panel.SelectedEntries.FirstOrDefault(e => !e.IsDirectory && !e.IsDrive);
-        if (file is not null) ViewFile(file);
-    }
+
 
     private async Task EnqueueFileSync(DirEntry entry)
     {
