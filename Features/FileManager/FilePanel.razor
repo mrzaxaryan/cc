@@ -79,7 +79,30 @@
 
 @* Context menu *@
 <C2Dropdown Visible="@ctxVisible" X="@ctxX" Y="@ctxY" OnClose="HideContextMenu">
-    @if (ctxEntry is not null)
+    @if (selectedEntries.Count > 1)
+    {
+        var selFiles = selectedEntries.Where(e => !e.IsDirectory && !e.IsDrive).ToList();
+        var syncedFiles = selFiles.Where(e => IsFileSynced(e.Name)).ToList();
+        var unsyncedFiles = selFiles.Where(e => !IsFileSynced(e.Name)).ToList();
+
+        @if (unsyncedFiles.Count > 0 && Mode == PanelMode.Remote)
+        {
+            <C2DropdownItem OnClick="CtxDownloadSelected" Disabled="@(!Cache.HasDirectory)">
+                <C2Icon Name="arrow-left" Size="Size.Xs" /> Download @unsyncedFiles.Count file(s)
+            </C2DropdownItem>
+        }
+        @if (syncedFiles.Count > 0)
+        {
+            <C2DropdownItem OnClick="CtxSaveSelectedToBrowser">
+                <C2Icon Name="save" Size="Size.Xs" /> Save @syncedFiles.Count file(s) to Browser
+            </C2DropdownItem>
+        }
+        <div class="fp-ctx-sep"></div>
+        <C2DropdownItem OnClick="CtxCopySelectedPaths">
+            <C2Icon Name="copy" Size="Size.Xs" /> Copy @selectedEntries.Count Paths
+        </C2DropdownItem>
+    }
+    else if (ctxEntry is not null)
     {
         var isDir = ctxEntry.IsDirectory || ctxEntry.IsDrive;
         @if (isDir)
@@ -354,6 +377,31 @@
     {
         HideContextMenu();
         OnAction.InvokeAsync((default!, PanelAction.Search));
+    }
+
+    // --- Multi-select context menu actions ---
+
+    private async Task CtxDownloadSelected()
+    {
+        var files = selectedEntries.Where(e => !e.IsDirectory && !e.IsDrive && !IsFileSynced(e.Name)).ToList();
+        HideContextMenu();
+        foreach (var f in files) await OnAction.InvokeAsync((f, PanelAction.Download));
+    }
+
+    private async Task CtxSaveSelectedToBrowser()
+    {
+        var files = selectedEntries.Where(e => !e.IsDirectory && !e.IsDrive && IsFileSynced(e.Name)).ToList();
+        HideContextMenu();
+        foreach (var f in files) await OnAction.InvokeAsync((f, PanelAction.SaveToBrowser));
+    }
+
+    private async Task CtxCopySelectedPaths()
+    {
+        var paths = selectedEntries.Select(e => CurrentPath + e.Name).ToList();
+        HideContextMenu();
+        var text = string.Join(Environment.NewLine, paths);
+        try { await Js.InvokeVoidAsync("navigator.clipboard.writeText", text); } catch { }
+        Msg.Show($"Copied {paths.Count} paths", MessageType.Info, source: "File Manager");
     }
 
     // --- Download status helpers ---
