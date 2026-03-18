@@ -410,12 +410,7 @@
         try
         {
             await Cache.ClearAllDataAsync();
-            dbTables = new();
-            agentStats = new();
-            stats = default;
-            blobSize = 0;
-            Msg.Success("Application Reset", "All settings, caches, and files have been deleted", "Settings");
-            await NavigateToRoot();
+            await Js.InvokeVoidAsync("eval", "location.reload()");
         }
         catch (Exception ex) { Msg.Error("Reset Failed", $"Could not fully reset application: {ex.Message}", "Settings"); }
         finally { resetting = false; StateHasChanged(); }
