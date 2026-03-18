@@ -56,14 +56,21 @@
 
     @* Action bar *@
     <div class="fm-actions">
-        <C2Btn Size="Size.Xs" OnClick="ToggleScan" Disabled="@(!IsConnected || _agentOffline)" Title="Scan agent filesystem"
-               CssClass="@(_scanOpen ? "fm-filter-btn-active" : "")">
-            <C2Icon Name="scan" Size="Size.Xs" /> Scan
-        </C2Btn>
-        <C2Btn Size="Size.Xs" OnClick="ToggleUploads" Title="File transfer queue"
-               CssClass="@(_uploadsOpen ? "fm-filter-btn-active" : "")">
-            <C2Icon Name="arrow-up-down" Size="Size.Xs" /> Transfer
-        </C2Btn>
+        <div class="fm-view-tabs">
+            <button class="fm-view-tab @(_activeView == ActiveView.Files ? "fm-view-tab-active" : "")"
+                    @onclick='() => SetView(ActiveView.Files)'>
+                <C2Icon Name="folder" Size="Size.Xs" /> Files
+            </button>
+            <button class="fm-view-tab @(_activeView == ActiveView.Transfer ? "fm-view-tab-active" : "")"
+                    @onclick='() => SetView(ActiveView.Transfer)'>
+                <C2Icon Name="transfer" Size="Size.Xs" /> Transfer
+            </button>
+            <button class="fm-view-tab @(_activeView == ActiveView.Scan ? "fm-view-tab-active" : "")"
+                    @onclick='() => SetView(ActiveView.Scan)'
+                    disabled="@(!IsConnected || _agentOffline)">
+                <C2Icon Name="scan" Size="Size.Xs" /> Scan
+            </button>
+        </div>
         <div class="fm-actions-spacer"></div>
         <C2Btn Size="Size.Xs" OnClick="ToggleFilter" Title="Filter by name"
                CssClass="@(filterActive ? "fm-filter-btn-active" : "")">
@@ -88,7 +95,7 @@
     }
 
     @* Uploads panel *@
-    @if (_uploadsOpen)
+    @if (_activeView == ActiveView.Transfer)
     {
         <div class="fm-uploads">
             @* Filter bar *@
@@ -184,7 +191,7 @@
     }
 
     @* Scan panel *@
-    @if (_scanOpen)
+    @if (_activeView == ActiveView.Scan)
     {
         <div class="fm-scan">
             @* New scan form *@
@@ -315,7 +322,7 @@
     }
 
     @* Dual pane area *@
-    @if (!_uploadsOpen && !_scanOpen)
+    @if (_activeView == ActiveView.Files)
     {
         <div class="fm-panels @(viewingFile ? "fm-panels-with-viewer" : "")">
         <div class="fm-pane fm-pane-left">
@@ -417,8 +424,11 @@ private HashSet<DirEntry> ActiveSelection =>
     private bool filterActive;
     private string? filterText;
 
-    // Uploads panel
-    private bool _uploadsOpen;
+    // View tabs
+    private enum ActiveView { Files, Transfer, Scan }
+    private ActiveView _activeView = ActiveView.Files;
+
+    // Uploads panel (Transfer view)
     private List<TransferRecord> _uploads = [];
     private List<TransferRecord> _ulFiltered = [];
     private enum UlFilter { All, Current, Pending, Error, Done }
@@ -426,7 +436,6 @@ private HashSet<DirEntry> ActiveSelection =>
     private string _ulDateFilter = "All";
 
     // Scan panel
-    private bool _scanOpen;
     private List<ScanRecord> _scanRecords = [];
     private List<ScanRecord> _scanFiltered = [];
     private enum ScanFilter { All, Active, Done }
@@ -522,7 +531,7 @@ private HashSet<DirEntry> ActiveSelection =>
     protected override void OnInitialized()
     {
         _dlSub = Bus.Subscribe<TransferStoreChangedEvent>(_ => RefreshDownloadBadges());
-        _scanSub = Bus.Subscribe<ScanStoreChangedEvent>(_ => { if (_scanOpen) InvokeAsync(RefreshScans); });
+        _scanSub = Bus.Subscribe<ScanStoreChangedEvent>(_ => { if (_activeView == ActiveView.Scan) InvokeAsync(RefreshScans); });
         _disconnectSub = Bus.Subscribe<AgentDisconnectedEvent>(e =>
         {
             if (e.Uuid != AgentUuid && e.AgentId != AgentId) return;
@@ -598,16 +607,24 @@ private HashSet<DirEntry> ActiveSelection =>
         remotePanel?.RebuildDownloadLookup();
         localPanel?.NotifyStateChanged();
         remotePanel?.NotifyStateChanged();
-        if (_uploadsOpen) RefreshUploads();
+        if (_activeView == ActiveView.Transfer) RefreshUploads();
     }
 
-    // --- Uploads panel ---
+    // --- View switcher ---
 
-    private void ToggleUploads()
+    private async Task SetView(ActiveView view)
     {
-        _uploadsOpen = !_uploadsOpen;
-        if (_uploadsOpen) RefreshUploads();
+        _activeView = view;
+        if (view == ActiveView.Transfer) RefreshUploads();
+        else if (view == ActiveView.Scan)
+        {
+            if (!Scans.Searches.Any()) await Scans.LoadAsync();
+            await ExtGroups.LoadAsync();
+            RefreshScans();
+        }
     }
+
+    // --- Transfer panel ---
 
     private void SetUlFilter(UlFilter f) { _ulFilter = f; ApplyUlFilter(); }
 
@@ -664,7 +681,7 @@ private HashSet<DirEntry> ActiveSelection =>
         var path = rec.RemotePath;
         var lastSep = Math.Max(path.LastIndexOf('\\'), path.LastIndexOf('/'));
         var dir = lastSep > 0 ? path[..(lastSep + 1)] : path;
-        _uploadsOpen = false;
+        _activeView = ActiveView.Files;
         await Navigate(dir);
         filterActive = true;
         filterText = rec.FileName;
@@ -700,13 +717,13 @@ private HashSet<DirEntry> ActiveSelection =>
         if (!filterActive) filterText = null;
     }
 
-    private void ClearFilter() { filterText = null; if (_uploadsOpen) ApplyUlFilter(); }
+    private void ClearFilter() { filterText = null; if (_activeView == ActiveView.Transfer) ApplyUlFilter(); }
 
-    private void OnFilterTextChanged() { if (_uploadsOpen) ApplyUlFilter(); }
+    private void OnFilterTextChanged() { if (_activeView == ActiveView.Transfer) ApplyUlFilter(); }
 
     private void OnFilterKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Escape") { filterActive = false; filterText = null; if (_uploadsOpen) ApplyUlFilter(); }
+        if (e.Key == "Escape") { filterActive = false; filterText = null; if (_activeView == ActiveView.Transfer) ApplyUlFilter(); }
     }
 
     private void SetActive(ActivePanel panel) => activePanel = panel;
@@ -957,34 +974,10 @@ private HashSet<DirEntry> ActiveSelection =>
         _scanPath = path;
         _scanFullMode = false;
         _scanShowForm = true;
-        _scanOpen = true;
-        _uploadsOpen = false;
-        if (!Scans.Searches.Any()) await Scans.LoadAsync();
-        RefreshScans();
+        await SetView(ActiveView.Scan);
     }
 
-    private async Task OpenFullSearchWindow()
-    {
-        _scanPath = "";
-        _scanFullMode = false;
-        _scanShowForm = false;
-        _scanOpen = true;
-        _uploadsOpen = false;
-        if (!Scans.Searches.Any()) await Scans.LoadAsync();
-        RefreshScans();
-    }
-
-    private async Task ToggleScan()
-    {
-        _scanOpen = !_scanOpen;
-        if (_scanOpen)
-        {
-            _uploadsOpen = false;
-            if (!Scans.Searches.Any()) await Scans.LoadAsync();
-            await ExtGroups.LoadAsync();
-            RefreshScans();
-        }
-    }
+    private async Task OpenFullSearchWindow() => await SetView(ActiveView.Scan);
 
     private void SetScanFilter(ScanFilter f) { _scanFilter = f; ApplyScanFilter(); }
 

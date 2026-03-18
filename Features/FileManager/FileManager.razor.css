@@ -96,6 +96,40 @@
     flex: 1;
 }
 
+/* View tabs (Files / Transfer / Scan) */
+.fm-view-tabs {
+    display: flex;
+    gap: 1px;
+    background: var(--c2-border);
+    border: 1px solid var(--c2-border);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.fm-view-tab {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.65rem;
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--c2-bg-deep);
+    border: none;
+    color: var(--c2-text-dim);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.1s, color 0.1s;
+}
+
+.fm-view-tab:hover { background: var(--c2-bg-overlay); color: var(--c2-text); }
+
+.fm-view-tab-active {
+    background: var(--c2-accent-blue) !important;
+    color: #fff !important;
+}
+
+.fm-view-tab:disabled { opacity: 0.4; cursor: not-allowed; }
+
 /* Filter bar */
 .fm-filter-bar {
     display: flex;
