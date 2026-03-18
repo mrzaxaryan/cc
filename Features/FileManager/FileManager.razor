@@ -1,35 +1,69 @@
 @using System.Net.WebSockets
 @inherits EventSubscriber
 @inject CacheManager Cache
+@inject RelayConnectionService RelaySvc
+@inject AgentStore AgentDb
 @inject DownloadStore Downloads
 @inject MessageService Msg
 @inject WindowManager Wm
 @inject IJSRuntime Js
 
 <div class="fm">
-    @* Top toolbar *@
+    @* Navigation toolbar *@
     <div class="fm-toolbar">
-        <div class="fm-toolbar-left">
-            <C2Btn Variant="BtnVariant.Primary" Size="Size.Xs"
-                   OnClick="DownloadSelected"
-                   Disabled="@(!IsConnected || !Cache.HasDirectory || !HasRemoteFileSelection)"
-                   Title="Download selected files from remote to local cache (F5)">
-                <C2Icon Name="arrow-left" Size="Size.Xs" /> F5 Copy
-            </C2Btn>
-            <C2Btn Size="Size.Xs" OnClick="OpenFullSearchWindow" Disabled="@(!IsConnected)" Title="Search agent filesystem">
-                <C2Icon Name="search" Size="Size.Xs" /> Search
-            </C2Btn>
-            <C2Btn Size="Size.Xs" OnClick="OpenDownloadsWindow" Title="Download queue">
-                <C2Icon Name="arrow-up-down" Size="Size.Xs" /> Transfers
-            </C2Btn>
+        <C2Btn OnClick="NavigateUp" Disabled="@(loading || !IsConnected)" Title="Up" Size="Size.Xs">
+            <C2Icon Name="arrow-up" Size="Size.Xs" />
+        </C2Btn>
+        <C2Btn OnClick="Refresh" Disabled="@(loading || !IsConnected)" Title="Refresh" Size="Size.Xs">
+            <C2Icon Name="refresh" Size="Size.Xs" />
+        </C2Btn>
+        <div class="fm-path-bar">
+            <C2Input @bind-Value="currentPath" OnKeyDown="OnPathKeyDown" Monospace />
         </div>
         @if (!IsConnected)
         {
             <div class="fm-offline-badge">
                 <span class="fm-offline-dot"></span>
-                Agent offline
+                Offline
             </div>
         }
+    </div>
+
+    @* Breadcrumb *@
+    @if (pathSegments.Length > 0)
+    {
+        <div class="fm-breadcrumb">
+            <a href="javascript:void(0)" class="fm-crumb" @onclick="NavigateToRoot" @onclick:preventDefault>Root</a>
+            @for (int i = 0; i < pathSegments.Length; i++)
+            {
+                var idx = i;
+                <span class="fm-crumb-sep">/</span>
+                @if (idx == pathSegments.Length - 1)
+                {
+                    <span class="fm-crumb-active">@pathSegments[idx]</span>
+                }
+                else
+                {
+                    <a href="javascript:void(0)" class="fm-crumb" @onclick="() => NavigateToBreadcrumb(idx)" @onclick:preventDefault>@pathSegments[idx]</a>
+                }
+            }
+        </div>
+    }
+
+    @* Action bar *@
+    <div class="fm-actions">
+        <C2Btn Variant="BtnVariant.Primary" Size="Size.Xs"
+               OnClick="DownloadSelected"
+               Disabled="@(!IsConnected || !Cache.HasDirectory || !HasRemoteFileSelection)"
+               Title="Download selected files from remote to local cache (F5)">
+            <C2Icon Name="arrow-left" Size="Size.Xs" /> F5 Copy
+        </C2Btn>
+        <C2Btn Size="Size.Xs" OnClick="OpenFullSearchWindow" Disabled="@(!IsConnected)" Title="Search agent filesystem">
+            <C2Icon Name="search" Size="Size.Xs" /> Search
+        </C2Btn>
+        <C2Btn Size="Size.Xs" OnClick="OpenDownloadsWindow" Title="Download queue">
+            <C2Icon Name="arrow-up-down" Size="Size.Xs" /> Transfers
+        </C2Btn>
     </div>
 
     @* Dual pane area *@
@@ -37,32 +71,28 @@
         <div class="fm-pane fm-pane-left">
             <FilePanel @ref="localPanel"
                        Mode="FilePanel.PanelMode.Local"
-                       Relay="Relay"
-                       AgentId="@AgentId"
-                       AgentName="@AgentName"
                        AgentUuid="@AgentUuid"
+                       CurrentPath="@currentPath"
+                       Entries="@entries"
+                       Loading="@loading"
                        IsActive="@(activePanel == ActivePanel.Local)"
                        OnActivate="() => SetActive(ActivePanel.Local)"
-                       OnViewFile="OnLocalViewFile"
-                       OnSearchPath="OnSearchPath"
-                       OnNavigated="OnLocalNavigated" />
+                       OnAction="OnLocalAction" />
         </div>
         <div class="fm-pane fm-pane-right">
             <FilePanel @ref="remotePanel"
                        Mode="FilePanel.PanelMode.Remote"
-                       Relay="Relay"
-                       AgentId="@AgentId"
-                       AgentName="@AgentName"
                        AgentUuid="@AgentUuid"
+                       CurrentPath="@currentPath"
+                       Entries="@entries"
+                       Loading="@loading"
                        IsActive="@(activePanel == ActivePanel.Remote)"
                        OnActivate="() => SetActive(ActivePanel.Remote)"
-                       OnViewFile="OnRemoteViewFile"
-                       OnSearchPath="OnSearchPath"
-                       OnNavigated="OnRemoteNavigated" />
+                       OnAction="OnRemoteAction" />
         </div>
     </div>
 
-    @* File viewer (slides in from bottom when active) *@
+    @* File viewer *@
     @if (viewingFile)
     {
         <div class="fm-viewer-container">
@@ -71,7 +101,7 @@
         </div>
     }
 
-    @* Function key bar — classic Total Commander style *@
+    @* Function key bar *@
     <div class="fm-fnkeys">
         <button class="fm-fnkey" @onclick="ViewSelected" disabled="@(!HasAnySelection)"><span class="fm-fnkey-num">F3</span> View</button>
         <button class="fm-fnkey" @onclick="DownloadSelected" disabled="@(!IsConnected || !Cache.HasDirectory || !HasRemoteFileSelection)"><span class="fm-fnkey-num">F5</span> Copy</button>
@@ -103,10 +133,54 @@
     private FilePanel? remotePanel;
     private ActivePanel activePanel = ActivePanel.Remote;
 
+    // Navigation state (shared by both panels)
+    private string currentPath = "";
+    private string[] pathSegments = [];
+    private List<DirEntry>? entries;
+    private bool loading;
+
+    // Agent OS detection
+    private string AgentOs
+    {
+        get
+        {
+            var os = RelaySvc.GetAllAgents()
+                .Where(a => a.Agent.Id == AgentId)
+                .Select(a => a.Agent.Os)
+                .FirstOrDefault();
+            if (string.IsNullOrEmpty(os) && !string.IsNullOrEmpty(AgentUuid))
+                os = AgentDb.GetByUuid(AgentUuid)?.Os;
+            return os ?? "";
+        }
+    }
+    private bool IsWindowsAgent => string.Equals(AgentOs, "Windows", StringComparison.OrdinalIgnoreCase);
+    private bool IsAndroidAgent => string.Equals(AgentOs, "Android", StringComparison.OrdinalIgnoreCase);
+    private bool IsUnixAgent => !IsWindowsAgent;
+    private string PathSep => IsUnixAgent ? "/" : @"\";
+    private string RootPath => IsWindowsAgent ? "" : IsAndroidAgent ? "/storage/emulated/0/" : "/";
+
     // File viewer
     private bool viewingFile;
     private string viewingFileName = "";
     private string viewingFilePath = "";
+
+    private RelaySocket? _prevRelay;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var relayChanged = Relay != _prevRelay && IsConnected;
+        _prevRelay = Relay;
+        if (relayChanged && entries is not null)
+        {
+            await NavigateTo(currentPath ?? RootPath);
+            return;
+        }
+        if (entries is not null) return;
+
+        await Downloads.LoadAsync();
+        if (string.IsNullOrEmpty(currentPath)) currentPath = RootPath;
+        if (IsConnected) await NavigateTo(currentPath);
+    }
 
     protected override void OnInitialized()
     {
@@ -117,40 +191,122 @@
 
     public void Reset()
     {
+        currentPath = RootPath;
+        pathSegments = [];
+        entries = null;
         viewingFile = false;
-        viewingFileName = "";
-        viewingFilePath = "";
     }
 
-    private bool _syncing;
+    private void SetActive(ActivePanel panel) => activePanel = panel;
 
-    private void SetActive(ActivePanel panel)
+    // --- Navigation (single source of truth) ---
+
+    private async Task NavigateTo(string path)
     {
-        activePanel = panel;
+        if (loading || !IsConnected) return;
+
+        currentPath = FileManagerPath.Normalize(path, IsUnixAgent);
+        pathSegments = FileManagerPath.GetSegments(currentPath);
+        loading = true; entries = null; StateHasChanged();
+
+        try
+        {
+            var payload = RelaySocket.BuildPathCommand(AgentCommands.ListDirectory, currentPath);
+            var response = await SendCommand(payload);
+            if (response is null) return;
+            var (parsed, parseError) = DirEntry.ParseDirectoryResponse(response);
+            if (parseError is not null) { Msg.Show(parseError, MessageType.Error, source: "File Manager"); return; }
+            entries = parsed;
+        }
+        catch (Exception ex) { Msg.Error("Browse Failed", $"Could not list directory: {ex.Message}", "File Manager"); }
+        finally { loading = false; StateHasChanged(); }
     }
 
-    private async Task OnLocalNavigated(string path)
+    private async Task NavigateUp()
     {
-        if (_syncing || remotePanel is null) return;
-        _syncing = true;
-        try { await remotePanel.NavigateToPath(path); } finally { _syncing = false; }
+        var parent = FileManagerPath.GetParent(pathSegments, PathSep, IsUnixAgent, RootPath);
+        await NavigateTo(parent);
     }
 
-    private Task OnRemoteNavigated(string path)
+    private async Task NavigateToRoot() => await NavigateTo(RootPath);
+
+    private async Task NavigateToBreadcrumb(int index)
     {
-        if (_syncing || localPanel is null || remotePanel?.Entries is null) return Task.CompletedTask;
-        _syncing = true;
-        try { localPanel.SyncFromRemote(path, remotePanel.Entries); } finally { _syncing = false; }
-        return Task.CompletedTask;
+        var path = FileManagerPath.BuildBreadcrumbPath(pathSegments, index, PathSep, IsUnixAgent);
+        await NavigateTo(path);
+    }
+
+    private async Task OnPathKeyDown(KeyboardEventArgs e) { if (e.Key == "Enter") await NavigateTo(currentPath); }
+    private async Task Refresh() => await NavigateTo(currentPath);
+
+    // --- Panel action handlers ---
+
+    private async Task OnRemoteAction((DirEntry entry, FilePanel.PanelAction action) args)
+    {
+        var (entry, action) = args;
+        switch (action)
+        {
+            case FilePanel.PanelAction.Open:
+                if (entry is null) await NavigateUp();
+                else if (entry.IsDirectory || entry.IsDrive) await NavigateTo(currentPath + entry.Name);
+                break;
+            case FilePanel.PanelAction.View:
+                ViewFile(entry);
+                break;
+            case FilePanel.PanelAction.Download:
+                await EnqueueFileSync(entry);
+                break;
+            case FilePanel.PanelAction.Hash:
+                await HashFile(entry);
+                break;
+            case FilePanel.PanelAction.SaveToBrowser:
+                await SaveToBrowser(entry);
+                break;
+            case FilePanel.PanelAction.Search:
+                if (entry is not null && (entry.IsDirectory || entry.IsDrive))
+                    OpenSearchWindow(currentPath + entry.Name);
+                else
+                    OpenSearchWindow(FileManagerPath.TrimTrailing(currentPath));
+                break;
+        }
+    }
+
+    private async Task OnLocalAction((DirEntry entry, FilePanel.PanelAction action) args)
+    {
+        var (entry, action) = args;
+        switch (action)
+        {
+            case FilePanel.PanelAction.Open:
+                if (entry is null) await NavigateUp();
+                else if (entry.IsDirectory || entry.IsDrive) await NavigateTo(currentPath + entry.Name);
+                break;
+            case FilePanel.PanelAction.View:
+                ViewFile(entry);
+                break;
+            case FilePanel.PanelAction.SaveToBrowser:
+                await SaveToBrowser(entry);
+                break;
+        }
     }
 
     // --- File operations ---
 
+    private void ViewFile(DirEntry entry)
+    {
+        if (entry is null || string.IsNullOrEmpty(AgentUuid)) return;
+        if (Downloads.Find(AgentUuid, currentPath + entry.Name)?.Status != DownloadStatus.Completed) return;
+        viewingFileName = entry.Name;
+        viewingFilePath = currentPath + entry.Name;
+        viewingFile = true;
+        StateHasChanged();
+    }
+
     private async Task DownloadSelected()
     {
         if (remotePanel is null) return;
-        await remotePanel.EnqueueSelectedFiles();
-        Msg.Show("Files queued for download", MessageType.Info, source: "File Manager");
+        var files = remotePanel.SelectedEntries.Where(e => !e.IsDirectory && !e.IsDrive).ToList();
+        foreach (var entry in files) await EnqueueFileSync(entry);
+        if (files.Count > 0) Msg.Show($"{files.Count} file(s) queued", MessageType.Info, source: "File Manager");
     }
 
     private async Task ViewSelected()
@@ -158,39 +314,51 @@
         var panel = activePanel == ActivePanel.Local ? localPanel : remotePanel;
         if (panel is null) return;
         var file = panel.SelectedEntries.FirstOrDefault(e => !e.IsDirectory && !e.IsDrive);
-        if (file is null) return;
-        if (activePanel == ActivePanel.Local)
-            await OnLocalViewFile(file);
-        else
-            await OnRemoteViewFile(file);
+        if (file is not null) ViewFile(file);
     }
 
-    // --- View file ---
-
-    private Task OnRemoteViewFile(DirEntry entry)
+    private async Task EnqueueFileSync(DirEntry entry)
     {
-        if (remotePanel is null) return Task.CompletedTask;
-        if (!string.IsNullOrEmpty(AgentUuid) && Downloads.Find(AgentUuid, remotePanel.CurrentPath + entry.Name)?.Status == DownloadStatus.Completed)
+        if (!Cache.HasDirectory || string.IsNullOrEmpty(AgentUuid)) return;
+        if (entry.IsDirectory || entry.IsDrive || entry.Size == 0) return;
+        var remotePath = currentPath + entry.Name;
+        var totalSize = (long)entry.Size;
+        var record = Downloads.Find(AgentUuid, remotePath);
+        if (record is null)
         {
-            viewingFileName = entry.Name;
-            viewingFilePath = remotePanel.CurrentPath + entry.Name;
-            viewingFile = true;
-            StateHasChanged();
+            var fileId = Guid.NewGuid().ToString("N");
+            await Downloads.AddAsync(AgentUuid, AgentName ?? "", remotePath, entry.Name, fileId, totalSize);
         }
-        return Task.CompletedTask;
+        else if (record.Status is DownloadStatus.Completed or DownloadStatus.Failed)
+            await Downloads.RequeueAsync(record.Id, record.CacheSubPath, totalSize);
+        else if (record.Status == DownloadStatus.Paused)
+            await Downloads.QueueAsync(record.Id);
     }
 
-    private Task OnLocalViewFile(DirEntry entry)
+    private async Task HashFile(DirEntry entry)
     {
-        if (localPanel is null) return Task.CompletedTask;
-        if (!string.IsNullOrEmpty(AgentUuid) && Downloads.Find(AgentUuid, localPanel.CurrentPath + entry.Name)?.Status == DownloadStatus.Completed)
+        if (!IsConnected) return;
+        var path = currentPath + entry.Name;
+        var payload = RelaySocket.BuildFileCommand(AgentCommands.HashFile, path, 0, 0);
+        var response = await SendCommand(payload);
+        if (response is null || response.Length < 36) return;
+        var status = RelaySocket.ReadStatus(response);
+        if (status != 0) { Msg.Error("Hash Error", $"Agent returned status {status}", "File Manager"); return; }
+        var hash = RelaySocket.ReadHash(response);
+        Msg.Show($"SHA-256: {hash}", MessageType.Success, source: "File Manager");
+    }
+
+    private async Task SaveToBrowser(DirEntry entry)
+    {
+        if (string.IsNullOrEmpty(AgentUuid)) return;
+        var dl = Downloads.Find(AgentUuid, currentPath + entry.Name);
+        if (dl is null || dl.Status != DownloadStatus.Completed) return;
+        try
         {
-            viewingFileName = entry.Name;
-            viewingFilePath = localPanel.CurrentPath + entry.Name;
-            viewingFile = true;
-            StateHasChanged();
+            if (!await Cache.BlobExistsAsync(dl.CacheSubPath)) { Msg.Error("Save Failed", "File not found in local cache", "File Manager"); return; }
+            await Js.InvokeVoidAsync("c2SaveFile", dl.FileName, dl.CacheSubPath);
         }
-        return Task.CompletedTask;
+        catch (Exception ex) { Msg.Error("Save Failed", $"Could not save {dl.FileName}: {ex.Message}", "File Manager"); }
     }
 
     private void CloseFileViewer()
@@ -200,9 +368,9 @@
         viewingFilePath = "";
     }
 
-    // --- Search / Downloads windows ---
+    // --- Windows ---
 
-    private void OnSearchPath(string path)
+    private void OpenSearchWindow(string path)
     {
         if (string.IsNullOrEmpty(AgentId)) return;
         Wm.OpenAgentWindow("FileSearch", AgentId, agentName: AgentName, agentUuid: AgentUuid, searchPath: path);
@@ -218,5 +386,14 @@
     {
         if (!string.IsNullOrEmpty(AgentId)) Wm.OpenAgentWindow("Downloads", AgentId, agentName: AgentName, agentUuid: AgentUuid);
         else Wm.OpenWindow("Downloads");
+    }
+
+    // --- Agent communication ---
+
+    private async Task<byte[]?> SendCommand(byte[] payload)
+    {
+        if (Relay is null || !Relay.IsConnected) { Msg.Error("Not Connected", "No active connection to agent", "File Manager"); return null; }
+        try { return await Relay.SendAndReceive(payload); }
+        catch (Exception ex) { Msg.Error("Command Failed", $"Agent command error: {ex.Message}", "File Manager"); return null; }
     }
 }

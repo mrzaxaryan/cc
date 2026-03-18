@@ -7,22 +7,20 @@
     gap: 0;
 }
 
-/* Top toolbar */
+/* Navigation toolbar */
 .fm-toolbar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.4rem;
+    gap: 2px;
     padding: 0.3rem 0.4rem;
     background: var(--c2-bg-deep);
     border-bottom: 1px solid var(--c2-border);
     flex-shrink: 0;
 }
 
-.fm-toolbar-left {
-    display: flex;
-    align-items: center;
-    gap: 2px;
+.fm-path-bar {
+    flex: 1;
+    min-width: 0;
 }
 
 .fm-offline-badge {
@@ -32,6 +30,7 @@
     font-size: 0.65rem;
     color: var(--c2-accent-yellow);
     font-weight: 600;
+    flex-shrink: 0;
 }
 
 .fm-offline-dot {
@@ -39,6 +38,57 @@
     height: 6px;
     border-radius: 50%;
     background: var(--c2-accent-red);
+    flex-shrink: 0;
+}
+
+/* Breadcrumb */
+.fm-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.1rem;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.65rem;
+    overflow-x: auto;
+    white-space: nowrap;
+    background: var(--c2-bg-deep);
+    border-bottom: 1px solid var(--c2-border);
+    flex-shrink: 0;
+    scrollbar-width: none;
+}
+
+.fm-breadcrumb::-webkit-scrollbar {
+    display: none;
+}
+
+.fm-crumb {
+    color: var(--c2-accent-blue);
+    text-decoration: none;
+    padding: 0.05rem 0.15rem;
+    border-radius: 3px;
+}
+
+.fm-crumb:hover {
+    background: var(--c2-bg-overlay);
+}
+
+.fm-crumb-sep {
+    color: var(--c2-text-dim);
+    font-size: 0.6rem;
+}
+
+.fm-crumb-active {
+    color: var(--c2-text);
+    font-weight: 600;
+}
+
+/* Action bar */
+.fm-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0.25rem 0.4rem;
+    background: var(--c2-bg-deep);
+    border-bottom: 1px solid var(--c2-border);
     flex-shrink: 0;
 }
 
@@ -68,7 +118,7 @@
     padding: 0 2px 2px;
 }
 
-/* Function key bar — classic Total Commander bottom bar */
+/* Function key bar */
 .fm-fnkeys {
     display: flex;
     gap: 1px;
@@ -143,7 +193,7 @@
         padding: 0.2rem;
     }
 
-    .fm-toolbar-left {
+    .fm-actions {
         flex-wrap: wrap;
     }
 }
