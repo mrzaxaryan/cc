@@ -71,7 +71,8 @@
     {
         <div class="fm-filter-bar">
             <C2Icon Name="search" Size="Size.Xs" CssClass="fm-filter-icon" />
-            <C2Input @bind-Value="filterText" BindOnInput Placeholder="Filter by name..." Size="Size.Xs" Monospace
+            <C2Input @bind-Value="filterText" @bind-Value:after="OnFilterTextChanged" BindOnInput
+                     Placeholder="Filter by name..." Size="Size.Xs" Monospace
                      CssClass="fm-filter-input" OnKeyDown="OnFilterKeyDown" />
             @if (!string.IsNullOrEmpty(filterText))
             {
@@ -129,7 +130,7 @@
                 {
                     <Virtualize Items="_ulFiltered" Context="rec" ItemSize="30" OverscanCount="5">
                         @{ var r = rec; var pct = rec.TotalSize > 0 ? (int)(rec.DownloadedSize * 100 / rec.TotalSize) : 0; }
-                        <div class="fm-ul-row fm-ul-@rec.Status">
+                        <div class="fm-ul-row fm-ul-@rec.Status" @onclick="() => UlNavigate(r)" title="Go to file location">
                             <span class="fm-ul-icon"><C2Icon Name="@UlIcon(rec.Status)" Size="Size.Xs" /></span>
                             <span class="fm-ul-name" title="@rec.RemotePath">@rec.FileName</span>
                             <span class="fm-ul-size">
@@ -159,12 +160,11 @@
                                 }
                             </span>
                             <span class="fm-ul-date">@Formatters.FormatTimestamp(rec.CreatedAt)</span>
-                            <span class="fm-ul-acts">
+                            <span class="fm-ul-acts" @onclick:stopPropagation>
                                 @if (rec.Status == DownloadStatus.Downloading)
                                 { <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => UlPause(r)" Title="Pause"><C2Icon Name="pause" Size="Size.Xs" /></C2Btn> }
                                 @if (rec.Status == DownloadStatus.Paused)
                                 { <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => UlResume(r)" Title="Resume"><C2Icon Name="play" Size="Size.Xs" /></C2Btn> }
-                                <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => UlRemove(r)" Title="Remove"><C2Icon Name="x" Size="Size.Xs" /></C2Btn>
                             </span>
                             @if (rec.Status is DownloadStatus.Downloading or DownloadStatus.Paused)
                             {
@@ -476,14 +476,18 @@ private HashSet<DirEntry> ActiveSelection =>
 
     private void ApplyUlFilter()
     {
-        _ulFiltered = _ulFilter switch
+        var src = _ulFilter switch
         {
-            UlFilter.Current => _uploads.Where(r => r.Status == DownloadStatus.Downloading).ToList(),
-            UlFilter.Pending => _uploads.Where(r => r.Status is DownloadStatus.Queued or DownloadStatus.Paused).ToList(),
-            UlFilter.Error   => _uploads.Where(r => r.Status == DownloadStatus.Failed).ToList(),
-            UlFilter.Done    => _uploads.Where(r => r.Status == DownloadStatus.Completed).ToList(),
-            _                => _uploads
+            UlFilter.Current => _uploads.Where(r => r.Status == DownloadStatus.Downloading),
+            UlFilter.Pending => _uploads.Where(r => r.Status is DownloadStatus.Queued or DownloadStatus.Paused),
+            UlFilter.Error   => _uploads.Where(r => r.Status == DownloadStatus.Failed),
+            UlFilter.Done    => _uploads.Where(r => r.Status == DownloadStatus.Completed),
+            _                => _uploads.AsEnumerable()
         };
+        if (!string.IsNullOrWhiteSpace(filterText))
+            src = src.Where(r => r.FileName.Contains(filterText.Trim(), StringComparison.OrdinalIgnoreCase)
+                               || r.RemotePath.Contains(filterText.Trim(), StringComparison.OrdinalIgnoreCase));
+        _ulFiltered = src.ToList();
         StateHasChanged();
     }
 
@@ -496,9 +500,19 @@ private HashSet<DirEntry> ActiveSelection =>
         _                => _uploads.Count
     };
 
+    private async Task UlNavigate(DownloadRecord rec)
+    {
+        var path = rec.RemotePath;
+        var lastSep = Math.Max(path.LastIndexOf('\\'), path.LastIndexOf('/'));
+        var dir = lastSep > 0 ? path[..(lastSep + 1)] : path;
+        _uploadsOpen = false;
+        await Navigate(dir);
+        filterActive = true;
+        filterText = rec.FileName;
+    }
+
     private void UlPause(DownloadRecord r) => Downloads.Cts.Cancel(r.Id);
     private async Task UlResume(DownloadRecord r) { if (!Downloads.Cts.HasActive(r.Id)) await Downloads.QueueAsync(r.Id); }
-    private async Task UlRemove(DownloadRecord r) { Downloads.Cts.Cancel(r.Id); await Downloads.RemoveAsync(r.Id); }
 
     private static string UlIcon(string status) => status switch
     {
@@ -525,11 +539,13 @@ private HashSet<DirEntry> ActiveSelection =>
         if (!filterActive) filterText = null;
     }
 
-    private void ClearFilter() => filterText = null;
+    private void ClearFilter() { filterText = null; if (_uploadsOpen) ApplyUlFilter(); }
+
+    private void OnFilterTextChanged() { if (_uploadsOpen) ApplyUlFilter(); }
 
     private void OnFilterKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Escape") { filterActive = false; filterText = null; }
+        if (e.Key == "Escape") { filterActive = false; filterText = null; if (_uploadsOpen) ApplyUlFilter(); }
     }
 
     private void SetActive(ActivePanel panel) => activePanel = panel;

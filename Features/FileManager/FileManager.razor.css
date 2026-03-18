@@ -244,7 +244,7 @@
     font-family: 'JetBrains Mono', monospace;
     border-bottom: 1px solid var(--c2-border-subtle);
     overflow: hidden;
-    cursor: default;
+    cursor: pointer;
 }
 
 .fm-ul-row:hover { background: var(--c2-bg-overlay); }
