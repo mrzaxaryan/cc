@@ -1,7 +1,6 @@
 @using System.Net.WebSockets
 @inherits EventSubscriber
 @inject CacheManager Cache
-@inject VfsStore Vfs
 @inject RelayConnectionService RelaySvc
 @inject AgentStore AgentDb
 @inject DownloadStore Downloads
@@ -90,7 +89,7 @@
                         var isSelected = selectedEntries.Contains(e);
                         var isFocused = idx == focusIndex;
                         <C2Tr Active="@isSelected"
-                              Dim="@(e.IsHidden || e.IsSystem)"
+                              Dim="@(e.IsHidden || e.IsSystem || (Mode == PanelMode.Local && !isDir && !HasDownloadRecord(e.Name)))"
                               CssClass="@($"fp-row{(isFocused ? " fp-row-focused" : "")}")"
                               OnClick="(ev) => OnRowClick(ev, e)"
                               OnContextMenu="(ev) => ShowContextMenu(ev, e)"
@@ -100,7 +99,7 @@
                             </td>
                             <td class="fp-col-name" @ondblclick="() => OnEntryDoubleClick(e)" @ondblclick:stopPropagation="true">
                                 <span class="fp-name-text">@e.Name</span>
-                                @if (!isDir && Mode == PanelMode.Remote && Cache.HasDirectory)
+                                @if (!isDir && Cache.HasDirectory)
                                 {
                                     <FileActions Entry="e" CurrentPath="@currentPath" AgentUuid="@AgentUuid" />
                                 }
@@ -229,8 +228,7 @@
     [Parameter] public EventCallback<string> OnNavigated { get; set; }
 
     private bool IsConnected => Relay is not null && Relay.IsConnected;
-    private bool HasCache => Cache.HasDirectory && !string.IsNullOrEmpty(AgentUuid);
-    private bool CanNavigate => Mode == PanelMode.Remote ? (IsConnected || HasCache) : HasCache;
+    private bool CanNavigate => Mode == PanelMode.Local || IsConnected;
 
     private string AgentOs
     {
@@ -257,7 +255,7 @@
     private string[] pathSegments = [];
     private List<DirEntry>? entries;
     private bool loading;
-    private bool _syncing;
+
 
     // Selection state
     private HashSet<DirEntry> selectedEntries = new();
@@ -278,7 +276,6 @@
     // Cached sorted list
     private List<DirEntry>? _sortedCache;
     private string? _sortedCacheKey;
-    private CancellationTokenSource? _refreshCts;
 
     private List<DirEntry> SortedEntries
     {
@@ -302,58 +299,44 @@
 
     public async Task NavigateToPath(string path) => await NavigateTo(path);
 
+    /// <summary>Push remote entries into local panel — mirrors the remote directory listing.</summary>
+    public void SyncFromRemote(string path, List<DirEntry> remoteEntries)
+    {
+        currentPath = FileManagerPath.Normalize(path, IsUnixAgent);
+        pathSegments = FileManagerPath.GetSegments(currentPath);
+        entries = remoteEntries;
+        ClearSelection();
+        InvalidateSortCache();
+        StateHasChanged();
+    }
+
     // --- Lifecycle ---
 
     protected override async Task OnParametersSetAsync()
     {
-        if (Mode == PanelMode.Remote)
+        if (Mode == PanelMode.Local) return; // local panel is driven by SyncFromRemote
+
+        var relayChanged = Relay != _prevRelay && IsConnected;
+        _prevRelay = Relay;
+        if (relayChanged && entries is not null)
         {
-            var relayChanged = Relay != _prevRelay && IsConnected;
-            _prevRelay = Relay;
-            if (relayChanged && entries is not null)
-            {
-                await NavigateTo(currentPath ?? RootPath);
-                return;
-            }
+            await NavigateTo(currentPath ?? RootPath);
+            return;
         }
 
         if (entries is not null) return;
 
-        if (Mode == PanelMode.Remote)
-        {
-            await Downloads.LoadAsync();
-            if (string.IsNullOrEmpty(currentPath)) currentPath = RootPath;
-            if (IsConnected) await NavigateTo(currentPath);
-            else if (HasCache) await NavigateFromCache(currentPath);
-        }
-        else
-        {
-            if (string.IsNullOrEmpty(currentPath)) currentPath = RootPath;
-            if (HasCache) await NavigateFromCache(currentPath);
-        }
+        await Downloads.LoadAsync();
+        if (string.IsNullOrEmpty(currentPath)) currentPath = RootPath;
+        if (IsConnected) await NavigateTo(currentPath);
     }
 
     protected override void OnInitialized()
     {
-        On<CacheChangedEvent>(e =>
-        {
-            if (!_syncing && Cache.HasDirectory && entries is not null && Mode == PanelMode.Remote)
-                _ = SyncCacheAsync();
-        });
         On<DownloadStoreChangedEvent>();
-        On<VfsChangedEvent>(e =>
-        {
-            if (Mode == PanelMode.Local && entries is not null)
-                ScheduleLocalRefresh();
-        });
     }
 
-    public override void Dispose()
-    {
-        _refreshCts?.Cancel();
-        _refreshCts?.Dispose();
-        base.Dispose();
-    }
+    public override void Dispose() => base.Dispose();
 
     // --- Activation ---
 
@@ -540,14 +523,7 @@
     private async Task NavigateTo(string path)
     {
         if (loading) return;
-
-        if (Mode == PanelMode.Local)
-        {
-            await NavigateFromCache(path);
-            return;
-        }
-
-        if (!IsConnected) { if (HasCache) await NavigateFromCache(path); return; }
+        if (!IsConnected) return;
 
         currentPath = FileManagerPath.Normalize(path, IsUnixAgent);
         pathSegments = FileManagerPath.GetSegments(currentPath);
@@ -562,81 +538,13 @@
             if (parseError is not null) { Msg.Show(parseError, MessageType.Error, source: "File Manager"); return; }
             entries = parsed;
             InvalidateSortCache();
-            _ = SyncCacheAsync();
             await OnNavigated.InvokeAsync(currentPath);
         }
         catch (Exception ex) { Msg.Error("Browse Failed", $"Could not list directory: {ex.Message}", "File Manager"); }
         finally { loading = false; StateHasChanged(); }
     }
 
-    private async Task NavigateFromCache(string path)
-    {
-        if (loading || !HasCache) return;
 
-        currentPath = FileManagerPath.Normalize(path, IsUnixAgent);
-        pathSegments = FileManagerPath.GetSegments(currentPath);
-        loading = true; entries = null; ClearSelection(); InvalidateSortCache(); StateHasChanged();
-
-        try
-        {
-            var remotePath = FileManagerPath.TrimTrailing(currentPath);
-            var parentId = string.IsNullOrEmpty(remotePath) ? VfsStore.RootParentId : await Vfs.ResolveOrCreatePathAsync(AgentUuid!, remotePath);
-            var dirs = await Vfs.GetChildDirectoriesAsync(AgentUuid!, parentId);
-            var files = await Vfs.GetFilesInDirectoryAsync(AgentUuid!, parentId);
-
-            entries = new List<DirEntry>();
-            foreach (var d in dirs)
-                entries.Add(new DirEntry(Name: d.Name, CreationTime: 0, LastModifiedTime: 0, Size: 0, Type: 0, IsDirectory: true, IsDrive: d.IsDrive, IsHidden: false, IsSystem: false, IsReadOnly: false));
-            foreach (var f in files)
-                entries.Add(new DirEntry(Name: f.Name, CreationTime: 0, LastModifiedTime: 0, Size: (ulong)f.Size, Type: 0, IsDirectory: false, IsDrive: false, IsHidden: false, IsSystem: false, IsReadOnly: false));
-            InvalidateSortCache();
-            await OnNavigated.InvokeAsync(currentPath);
-        }
-        catch (Exception ex) { Msg.Error("Cache Read Failed", $"Could not load cached entries: {ex.Message}", "File Manager"); }
-        finally { loading = false; StateHasChanged(); }
-    }
-
-    private void ScheduleLocalRefresh()
-    {
-        _refreshCts?.Cancel();
-        _refreshCts = new CancellationTokenSource();
-        var token = _refreshCts.Token;
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await Task.Delay(300, token);
-                if (!token.IsCancellationRequested) await RefreshLocal();
-            }
-            catch (TaskCanceledException) { }
-        });
-    }
-
-    private async Task RefreshLocal()
-    {
-        if (Mode != PanelMode.Local || !HasCache || loading) return;
-        await InvokeAsync(async () =>
-        {
-            try
-            {
-                var remotePath = FileManagerPath.TrimTrailing(currentPath);
-                var parentId = string.IsNullOrEmpty(remotePath) ? VfsStore.RootParentId : await Vfs.ResolveOrCreatePathAsync(AgentUuid!, remotePath);
-                var dirs = await Vfs.GetChildDirectoriesAsync(AgentUuid!, parentId);
-                var files = await Vfs.GetFilesInDirectoryAsync(AgentUuid!, parentId);
-
-                var newEntries = new List<DirEntry>();
-                foreach (var d in dirs)
-                    newEntries.Add(new DirEntry(Name: d.Name, CreationTime: 0, LastModifiedTime: 0, Size: 0, Type: 0, IsDirectory: true, IsDrive: d.IsDrive, IsHidden: false, IsSystem: false, IsReadOnly: false));
-                foreach (var f in files)
-                    newEntries.Add(new DirEntry(Name: f.Name, CreationTime: 0, LastModifiedTime: 0, Size: (ulong)f.Size, Type: 0, IsDirectory: false, IsDrive: false, IsHidden: false, IsSystem: false, IsReadOnly: false));
-
-                entries = newEntries;
-                InvalidateSortCache();
-                StateHasChanged();
-            }
-            catch { }
-        });
-    }
 
     private async Task NavigateUp()
     {
@@ -667,15 +575,15 @@
     {
         if (!Cache.HasDirectory || string.IsNullOrEmpty(AgentUuid)) return;
         var remotePath = currentPath + entry.Name;
-        var parentRemotePath = FileManagerPath.TrimTrailing(currentPath);
         var totalSize = (long)entry.Size;
-        var parentId = await Vfs.ResolveOrCreatePathAsync(AgentUuid, parentRemotePath);
-        var vfsFile = await Vfs.PutFileAsync(AgentUuid, parentId, entry.Name, remotePath.Replace('\\', '/'), totalSize);
         var record = Downloads.Find(AgentUuid, remotePath);
         if (record is null)
-            await Downloads.AddAsync(AgentUuid, AgentName ?? "", remotePath, entry.Name, vfsFile.Id, totalSize);
+        {
+            var fileId = Guid.NewGuid().ToString("N");
+            await Downloads.AddAsync(AgentUuid, AgentName ?? "", remotePath, entry.Name, fileId, totalSize);
+        }
         else if (record.Status is DownloadStatus.Completed or DownloadStatus.Failed)
-            await Downloads.RequeueAsync(record.Id, vfsFile.Id, totalSize);
+            await Downloads.RequeueAsync(record.Id, record.CacheSubPath, totalSize);
         else if (record.Status == DownloadStatus.Paused)
             await Downloads.QueueAsync(record.Id);
     }
@@ -689,32 +597,16 @@
     private bool IsFileSynced(string fileName)
         => !string.IsNullOrEmpty(AgentUuid) && Downloads.Find(AgentUuid, currentPath + fileName)?.Status == DownloadStatus.Completed;
 
+    private bool HasDownloadRecord(string fileName)
+    {
+        if (string.IsNullOrEmpty(AgentUuid)) return false;
+        var rec = Downloads.Find(AgentUuid, currentPath + fileName);
+        return rec is not null && rec.Status is DownloadStatus.Queued or DownloadStatus.Downloading
+                                  or DownloadStatus.Paused or DownloadStatus.Completed;
+    }
+
     // --- Cache sync ---
 
-    private async Task SyncCacheAsync()
-    {
-        if (_syncing || !Cache.HasDirectory || entries is null || string.IsNullOrEmpty(AgentUuid)) return;
-        var snapshot = entries.ToList();
-        var remotePath = FileManagerPath.TrimTrailing(currentPath);
-        _syncing = true;
-        try
-        {
-            var parentId = await Vfs.ResolveOrCreatePathAsync(AgentUuid, remotePath);
-            foreach (var entry in snapshot)
-            {
-                try
-                {
-                    var entryRemotePath = string.IsNullOrEmpty(remotePath) ? entry.Name : $"{remotePath}/{entry.Name}";
-                    if (entry.IsDirectory || entry.IsDrive) await Vfs.PutDirectoryAsync(AgentUuid, parentId, entry.Name, entryRemotePath, entry.IsDrive);
-                    else await Vfs.PutFileAsync(AgentUuid, parentId, entry.Name, entryRemotePath, (long)entry.Size);
-                }
-                catch { }
-            }
-            await InvokeAsync(StateHasChanged);
-        }
-        catch { }
-        finally { _syncing = false; }
-    }
 
     // --- Icons ---
 

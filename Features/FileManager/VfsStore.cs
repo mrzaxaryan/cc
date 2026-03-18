@@ -85,6 +85,33 @@ public class VfsStore
         return dirs?.FirstOrDefault(d => string.Equals(d.Name.TrimEnd('\\', '/'), name.TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase));
     }
 
+    /// <summary>Read-only lookup: returns the directory ID for a remote path, or null if not cached.</summary>
+    public async Task<string?> FindDirectoryIdAsync(string agentUuid, string remotePath)
+    {
+        if (string.IsNullOrEmpty(remotePath)) return RootParentId;
+
+        var normalized = remotePath.Replace('\\', '/');
+        var isUnixRoot = normalized.StartsWith('/');
+        var segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var currentParent = RootParentId;
+
+        if (isUnixRoot)
+        {
+            var rootDir = await FindDirectoryAsync(agentUuid, RootParentId, "/");
+            if (rootDir is null) return null;
+            currentParent = rootDir.Id;
+        }
+
+        for (int i = 0; i < segments.Length; i++)
+        {
+            var dir = await FindDirectoryAsync(agentUuid, currentParent, segments[i]);
+            if (dir is null) return null;
+            currentParent = dir.Id;
+        }
+
+        return currentParent;
+    }
+
     public async Task<string> ResolveOrCreatePathAsync(string agentUuid, string remotePath)
     {
         if (string.IsNullOrEmpty(remotePath)) return RootParentId;

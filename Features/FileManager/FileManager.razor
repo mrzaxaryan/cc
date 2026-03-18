@@ -136,11 +136,12 @@
         try { await remotePanel.NavigateToPath(path); } finally { _syncing = false; }
     }
 
-    private async Task OnRemoteNavigated(string path)
+    private Task OnRemoteNavigated(string path)
     {
-        if (_syncing || localPanel is null) return;
+        if (_syncing || localPanel is null || remotePanel?.Entries is null) return Task.CompletedTask;
         _syncing = true;
-        try { await localPanel.NavigateToPath(path); } finally { _syncing = false; }
+        try { localPanel.SyncFromRemote(path, remotePanel.Entries); } finally { _syncing = false; }
+        return Task.CompletedTask;
     }
 
     // --- File operations ---
