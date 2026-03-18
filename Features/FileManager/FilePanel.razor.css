@@ -65,19 +65,20 @@
 }
 
 .fp-th-check {
-    width: 1.4rem;
+    width: 1.6rem;
     flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
+    padding-left: 4px;
 }
 
-.fp-th-check input[type="checkbox"] {
+.fp-th-check input {
     cursor: pointer;
     accent-color: var(--c2-accent-blue);
     margin: 0;
-    width: 13px;
-    height: 13px;
+    width: 12px;
+    height: 12px;
 }
 
 .fp-th-icon {
@@ -144,19 +145,20 @@
 
 /* Cells */
 .fp-cell-check {
-    width: 1.4rem;
+    width: 1.6rem;
     flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
+    padding-left: 4px;
 }
 
-.fp-cell-check input[type="checkbox"] {
+.fp-cell-check input {
     cursor: pointer;
     accent-color: var(--c2-accent-blue);
     margin: 0;
-    width: 13px;
-    height: 13px;
+    width: 12px;
+    height: 12px;
 }
 
 .fp-cell-icon {
@@ -224,19 +226,19 @@
 /* ===== Download status accents ===== */
 
 .fp-row-synced {
-    box-shadow: inset 3px 0 0 var(--c2-accent-green);
+    box-shadow: inset -3px 0 0 var(--c2-accent-green);
 }
 
 .fp-row-queued {
-    box-shadow: inset 3px 0 0 var(--c2-text-dim);
+    box-shadow: inset -3px 0 0 var(--c2-text-dim);
 }
 
 .fp-row-paused {
-    box-shadow: inset 3px 0 0 var(--c2-accent-yellow);
+    box-shadow: inset -3px 0 0 var(--c2-accent-yellow);
 }
 
 .fp-row-downloading {
-    box-shadow: inset 3px 0 0 var(--c2-accent-blue);
+    box-shadow: inset -3px 0 0 var(--c2-accent-blue);
     animation: fp-pulse 1.5s ease-in-out infinite;
 }
 
