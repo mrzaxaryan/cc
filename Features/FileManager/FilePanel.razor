@@ -41,16 +41,44 @@
                         var isSelected = selectedEntries.Contains(e);
                         var isFocused = idx == focusIndex;
                         var isDim = e.IsHidden || e.IsSystem || (Mode == PanelMode.Local && (isDir || e.Size == 0 || !HasDownloadRecord(e.Name)));
-                        <tr @key="e.Name" class="fp-row @(isSelected ? "fp-row-active" : "") @(isDim ? "fp-row-dim" : "") @(isFocused ? "fp-row-focused" : "")"
+                        var dlInfo = !isDir ? GetDlInfo(e.Name) : null;
+                        var dlClass = dlInfo?.Status switch
+                        {
+                            DownloadStatus.Downloading => "fp-row-downloading",
+                            DownloadStatus.Queued => "fp-row-queued",
+                            DownloadStatus.Completed => "fp-row-synced",
+                            DownloadStatus.Paused => "fp-row-paused",
+                            _ => ""
+                        };
+                        <tr @key="e.Name" class="fp-row @(isDir ? "fp-row-dir" : "fp-row-file") @(isSelected ? "fp-row-active" : "") @(isDim ? "fp-row-dim" : "") @(isFocused ? "fp-row-focused" : "") @dlClass"
                             @onclick="(ev) => OnRowClick(ev, e)"
                             @oncontextmenu="(ev) => ShowContextMenu(ev, e)"
                             @oncontextmenu:preventDefault
-                            @ondblclick="() => OnDblClick(e)">
+                            @ondblclick="() => OnDblClick(e)"
+                            style="@(dlInfo?.Status == DownloadStatus.Downloading ? $"background:linear-gradient(90deg, var(--c2-blue-10) {dlInfo.Value.Pct}%, transparent {dlInfo.Value.Pct}%)" : "")">
                             <td class="fp-col-icon">
                                 <C2Icon Name="@GetIcon(e)" Size="Size.Xs" CssClass="@IconClass(e)" />
                             </td>
                             <td class="fp-col-name">
                                 <span class="fp-name-text">@e.Name</span>
+                                @if (dlInfo is not null)
+                                {
+                                    switch (dlInfo.Value.Status)
+                                    {
+                                        case DownloadStatus.Downloading:
+                                            <span class="fp-dl-badge fp-dl-active">@(dlInfo.Value.Pct)% @Formatters.FormatSpeed(dlInfo.Value.Speed)</span>
+                                            break;
+                                        case DownloadStatus.Queued:
+                                            <span class="fp-dl-badge fp-dl-queued">QUEUED</span>
+                                            break;
+                                        case DownloadStatus.Completed:
+                                            <span class="fp-dl-badge fp-dl-done">&#10003;</span>
+                                            break;
+                                        case DownloadStatus.Paused:
+                                            <span class="fp-dl-badge fp-dl-paused">PAUSED</span>
+                                            break;
+                                    }
+                                }
                             </td>
                             <td class="fp-col-size">@(isDir ? "" : Formatters.FormatSize(e.Size))</td>
                             <td class="fp-col-modified fp-hide-narrow">@Formatters.FormatFileTime(e.LastModifiedTime)</td>
@@ -168,9 +196,12 @@
     private List<DirEntry>? _prevEntries;
 
     // Download lookup cache (rebuilt on entries change)
-    private HashSet<string> _downloadedFiles = new(StringComparer.OrdinalIgnoreCase);
+    private record struct DlInfo(string Status, int Pct, double Speed);
+    private Dictionary<string, DlInfo> _downloadMap = new(StringComparer.OrdinalIgnoreCase);
 
     public HashSet<DirEntry> SelectedEntries => selectedEntries;
+
+    public void NotifyStateChanged() => InvokeAsync(StateHasChanged);
 
     private List<DirEntry> SortedEntries
     {
@@ -197,20 +228,22 @@
         }
     }
 
-    private void RebuildDownloadLookup()
+    /// <summary>Rebuild on every entries change. Stores status + percent for each direct-child file.</summary>
+    public void RebuildDownloadLookup()
     {
-        _downloadedFiles.Clear();
-        if (Mode != PanelMode.Local || string.IsNullOrEmpty(AgentUuid)) return;
+        _downloadMap.Clear();
+        if (string.IsNullOrEmpty(AgentUuid) || string.IsNullOrEmpty(CurrentPath)) return;
         var records = Downloads.GetByAgent(AgentUuid);
         foreach (var rec in records)
         {
-            if (rec.Status is DownloadStatus.Queued or DownloadStatus.Downloading
-                or DownloadStatus.Paused or DownloadStatus.Completed
-                && rec.RemotePath.StartsWith(CurrentPath, StringComparison.OrdinalIgnoreCase))
+            if (rec.RemotePath.StartsWith(CurrentPath, StringComparison.OrdinalIgnoreCase) && rec.RemotePath.Length > CurrentPath.Length)
             {
                 var fileName = rec.RemotePath[CurrentPath.Length..];
                 if (!fileName.Contains('/') && !fileName.Contains('\\'))
-                    _downloadedFiles.Add(fileName);
+                {
+                    var pct = rec.TotalSize > 0 ? (int)(rec.DownloadedSize * 100 / rec.TotalSize) : 0;
+                    _downloadMap[fileName] = new DlInfo(rec.Status, pct, rec.SpeedBytesPerSec);
+                }
             }
         }
     }
@@ -373,10 +406,9 @@
 
     // --- Download status helpers ---
 
-    private bool IsFileSynced(string fileName)
-        => !string.IsNullOrEmpty(AgentUuid) && Downloads.Find(AgentUuid, CurrentPath + fileName)?.Status == DownloadStatus.Completed;
-
-    private bool HasDownloadRecord(string fileName) => _downloadedFiles.Contains(fileName);
+    private bool IsFileSynced(string fileName) => _downloadMap.TryGetValue(fileName, out var info) && info.Status == DownloadStatus.Completed;
+    private bool HasDownloadRecord(string fileName) => _downloadMap.ContainsKey(fileName);
+    private DlInfo? GetDlInfo(string fileName) => _downloadMap.TryGetValue(fileName, out var info) ? info : null;
 
     // --- Icons ---
 

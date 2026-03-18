@@ -182,9 +182,21 @@
         if (IsConnected) await NavigateTo(currentPath);
     }
 
-    protected override void OnInitialized() { }
+    protected override void OnInitialized()
+    {
+        On<DownloadStoreChangedEvent>(e => RefreshDownloadBadges());
+    }
 
     public override void Dispose() => base.Dispose();
+
+    private void RefreshDownloadBadges()
+    {
+        localPanel?.RebuildDownloadLookup();
+        remotePanel?.RebuildDownloadLookup();
+        // No StateHasChanged on FileManager — panels will re-render themselves via InvokeAsync
+        localPanel?.NotifyStateChanged();
+        remotePanel?.NotifyStateChanged();
+    }
 
     public void Reset()
     {
