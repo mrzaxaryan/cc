@@ -38,6 +38,9 @@ else
                     <button class="brand-popup-item" @onclick='() => BrandAction("Settings")'>
                         <C2Icon Name="settings" Size="Size.Xs" /> Settings
                     </button>
+                    <button class="brand-popup-item" @onclick='() => BrandAction("ExtensionGroups")'>
+                        <C2Icon Name="layers" Size="Size.Xs" /> Extensions
+                    </button>
                     <button class="brand-popup-item" @onclick="BrandToggleTheme">
                         <C2Icon Name="@(Theme.Current == C2.Infrastructure.Theme.Dark ? "sun" : "moon")" Size="Size.Xs" />
                         @(Theme.Current == C2.Infrastructure.Theme.Dark ? "Light Theme" : "Dark Theme")
@@ -187,7 +190,6 @@ else
     [
         new("Agents", "agents", "Agents"),
         new("Relay", "server", "Relay"),
-        new("ExtensionGroups", "layers", "Extensions"),
     ];
 
     private static readonly MenuItem[] ToolItems =
