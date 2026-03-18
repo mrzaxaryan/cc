@@ -1,4 +1,3 @@
-@inherits EventSubscriber
 @inject CacheManager Cache
 @inject DownloadStore Downloads
 @inject MessageService Msg
@@ -231,9 +230,6 @@
         }
     }
 
-    protected override void OnInitialized() { }
-
-    public override void Dispose() => base.Dispose();
 
     private async Task Activate() => await OnActivate.InvokeAsync();
 

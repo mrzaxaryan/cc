@@ -1,5 +1,5 @@
 @using System.Net.WebSockets
-@inherits EventSubscriber
+@implements IDisposable
 @inject CacheManager Cache
 @inject RelayConnectionService RelaySvc
 @inject AgentStore AgentDb
@@ -7,6 +7,7 @@
 @inject MessageService Msg
 @inject WindowManager Wm
 @inject IJSRuntime Js
+@inject IEventBus Bus
 
 <div class="fm">
     @* Navigation toolbar *@
@@ -193,12 +194,14 @@
         if (IsConnected) await NavigateTo(currentPath);
     }
 
+    private IDisposable? _dlSub;
+
     protected override void OnInitialized()
     {
-        On<DownloadStoreChangedEvent>(e => RefreshDownloadBadges());
+        _dlSub = Bus.Subscribe<DownloadStoreChangedEvent>(_ => RefreshDownloadBadges());
     }
 
-    public override void Dispose() => base.Dispose();
+    public void Dispose() => _dlSub?.Dispose();
 
     private void OnSortChanged((string column, bool ascending) sort)
     {
@@ -206,11 +209,17 @@
         sortAscending = sort.ascending;
     }
 
+    private DateTime _lastBadgeRefresh;
+
     private void RefreshDownloadBadges()
     {
+        // Throttle to max once per second — download progress fires very frequently
+        var now = DateTime.UtcNow;
+        if ((now - _lastBadgeRefresh).TotalMilliseconds < 1000) return;
+        _lastBadgeRefresh = now;
+
         localPanel?.RebuildDownloadLookup();
         remotePanel?.RebuildDownloadLookup();
-        // No StateHasChanged on FileManager — panels will re-render themselves via InvokeAsync
         localPanel?.NotifyStateChanged();
         remotePanel?.NotifyStateChanged();
     }
