@@ -240,6 +240,7 @@ public class RelayConnectionService : IAsyncDisposable
                     await _agentDb.UpsertAsync(uuid, agent, relayEntry?.Id ?? "");
                     _bus.Publish(new RelayAgentsChangedEvent(relayUrl));
                     _bus.Publish(new AgentOnlineEvent(uuid, agent.Id, relayUrl));
+                    _ = ReconnectWindowsForAgent(agent.Id, relayUrl, uuid);
                     return;
                 }
             }
@@ -490,7 +491,8 @@ public class RelayConnectionService : IAsyncDisposable
                             _ = FetchUuid(existing, relayUrl);
 
                         // Reconnect any open windows for this agent that have no active relay
-                        _ = ReconnectWindowsForAgent(eventAgentId, relayUrl);
+                        var unpairUuid = _agentDb.GetUuidByAgentId(eventAgentId);
+                        _ = ReconnectWindowsForAgent(eventAgentId, relayUrl, unpairUuid);
                     }
 
                     _bus.Publish(new AgentPairingChangedEvent(eventAgentId, paired, relayUrl));
@@ -504,13 +506,15 @@ public class RelayConnectionService : IAsyncDisposable
     }
 
     /// <summary>
-    /// When an agent becomes unpaired, reconnect any open windows that have
-    /// a disconnected or null relay for that agent.
+    /// Reconnect any open windows for an agent that have a disconnected or null relay.
+    /// Matches by AgentUuid (persistent) because the ephemeral AgentId changes each session.
     /// </summary>
-    private async Task ReconnectWindowsForAgent(string agentId, string relayUrl)
+    private async Task ReconnectWindowsForAgent(string agentId, string relayUrl, string? agentUuid = null)
     {
         var windowsToReconnect = _wm.Windows
-            .Where(w => w.AgentId == agentId && w.Relay is not { IsConnected: true })
+            .Where(w => w.Relay is not { IsConnected: true }
+                     && (w.AgentId == agentId
+                         || (agentUuid != null && w.AgentUuid == agentUuid)))
             .ToList();
 
         if (windowsToReconnect.Count == 0) return;
@@ -521,6 +525,7 @@ public class RelayConnectionService : IAsyncDisposable
         foreach (var win in windowsToReconnect)
         {
             win.Relay = relay;
+            win.AgentId = agentId; // update to the current session's ephemeral ID
         }
 
         _bus.Publish(new WindowChangedEvent());

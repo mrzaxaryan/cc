@@ -22,7 +22,7 @@
         <div class="fm-path-bar">
             <C2Input @bind-Value="currentPath" OnKeyDown="OnPathKeyDown" Monospace />
         </div>
-        @if (!IsConnected)
+        @if (!IsConnected || _agentOffline)
         {
             <div class="fm-offline-badge">
                 <span class="fm-offline-dot"></span>
@@ -104,7 +104,7 @@
                        Mode="FilePanel.PanelMode.Remote"
                        AgentUuid="@AgentUuid"
                        CurrentPath="@currentPath"
-                       Entries="@(IsConnected ? FilteredEntries : null)"
+                       Entries="@(IsConnected && !_agentOffline ? FilteredEntries : null)"
                        Loading="@loading"
                        IsActive="@(activePanel == ActivePanel.Remote)"
                        OnActivate="() => SetActive(ActivePanel.Remote)"
@@ -233,16 +233,22 @@ private HashSet<DirEntry> ActiveSelection =>
     private string? _inlineViewName;
 
     private RelaySocket? _prevRelay;
+    private bool _prevIsConnected;
 
     protected override async Task OnParametersSetAsync()
     {
-        var relayChanged = Relay != _prevRelay && IsConnected;
+        var wasConnected = _prevIsConnected;
+        _prevIsConnected = IsConnected;
+        var relayChanged = Relay != _prevRelay;
         _prevRelay = Relay;
-        if (relayChanged && entries is not null)
+
+        // Agent just came online — refresh both panels regardless of relay object identity
+        if (IsConnected && (!wasConnected || relayChanged))
         {
-            await NavigateTo(currentPath ?? RootPath);
+            await NavigateTo(currentPath.Length > 0 ? currentPath : RootPath);
             return;
         }
+
         if (entries is not null) return;
 
         await Downloads.LoadAsync();
@@ -252,11 +258,19 @@ private HashSet<DirEntry> ActiveSelection =>
     }
 
     private IDisposable? _dlSub;
+    private IDisposable? _disconnectSub;
+    private bool _agentOffline;
     private bool _scrollSyncSetup;
 
     protected override void OnInitialized()
     {
         _dlSub = Bus.Subscribe<DownloadStoreChangedEvent>(_ => RefreshDownloadBadges());
+        _disconnectSub = Bus.Subscribe<AgentDisconnectedEvent>(e =>
+        {
+            if (e.Uuid != AgentUuid && e.AgentId != AgentId) return;
+            _agentOffline = true;
+            _ = InvokeAsync(StateHasChanged);
+        });
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -274,7 +288,7 @@ private HashSet<DirEntry> ActiveSelection =>
         }
     }
 
-    public void Dispose() { _dlSub?.Dispose(); _pendingRefresh?.Cancel(); }
+    public void Dispose() { _dlSub?.Dispose(); _disconnectSub?.Dispose(); _pendingRefresh?.Cancel(); }
 
     private void OnSortChanged((string column, bool ascending) sort)
     {
@@ -370,6 +384,7 @@ private HashSet<DirEntry> ActiveSelection =>
             if (parseError is not null) { Msg.Show(parseError, MessageType.Error, source: "File Manager"); return; }
             entries = parsed;
             _usingCachedData = false;
+            _agentOffline = false;
         }
         catch (Exception ex) { Msg.Error("Browse Failed", $"Could not list directory: {ex.Message}", "File Manager"); }
         finally { loading = false; StateHasChanged(); }
