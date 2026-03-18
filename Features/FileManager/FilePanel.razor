@@ -216,6 +216,8 @@
     public void RebuildDownloadLookup()
     {
         _downloadMap.Clear();
+        // Invalidate sort cache so Virtualize gets a new list reference and re-renders rows
+        _sortedCache = null;
         if (string.IsNullOrEmpty(AgentUuid) || string.IsNullOrEmpty(CurrentPath)) return;
         var records = Downloads.GetByAgent(AgentUuid);
         foreach (var rec in records)
