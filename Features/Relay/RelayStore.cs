@@ -109,11 +109,10 @@ public class RelayStore
     public async Task UpdateRelayName(string url, string name)
     {
         var entry = _relays?.FirstOrDefault(r => r.Url == url);
-        if (entry is not null)
-        {
-            entry.Name = name;
-            await _js.InvokeVoidAsync("c2RelayDb.put", entry);
-        }
+        if (entry is null) return;
+        entry.Name = name;
+        await _js.InvokeVoidAsync("c2RelayDb.put", entry);
+        _bus.Publish(new RelayStoreChangedEvent());
     }
 
     public async Task UpdateRelay(string oldUrl, string newName, string newUrl, string token = "")

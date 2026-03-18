@@ -36,6 +36,7 @@ public class RelayConnectionService : IAsyncDisposable
     {
         public string Url { get; set; } = "";
         public string Name { get; set; } = "";
+        public string Token { get; set; } = "";
         public bool Connected { get; set; }
         public GroupInfo<AgentConnection>? Agents { get; set; }
         public ClientWebSocket? Ws { get; set; }
@@ -77,12 +78,20 @@ public class RelayConnectionService : IAsyncDisposable
         {
             if (!_relayStates.ContainsKey(relay.Url))
             {
-                _relayStates[relay.Url] = new RelayState { Url = relay.Url, Name = relay.Name };
+                _relayStates[relay.Url] = new RelayState { Url = relay.Url, Name = relay.Name, Token = relay.Token };
                 _ = ConnectToEvents(relay.Url);
             }
             else
             {
-                _relayStates[relay.Url].Name = relay.Name;
+                var rs = _relayStates[relay.Url];
+                rs.Name = relay.Name;
+                // Token changed — reconnect so the new token is used
+                if (rs.Token != relay.Token)
+                {
+                    rs.Token = relay.Token;
+                    rs.Cts?.Cancel();
+                    _ = ConnectToEvents(relay.Url);
+                }
             }
         }
 
