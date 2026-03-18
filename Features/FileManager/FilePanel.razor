@@ -161,6 +161,7 @@
     [Parameter] public string SortColumn { get; set; } = "name";
     [Parameter] public bool SortAscending { get; set; } = true;
     [Parameter] public EventCallback<(string column, bool ascending)> OnSortChanged { get; set; }
+    [Parameter] public EventCallback<HashSet<DirEntry>> OnSelectionChanged { get; set; }
 
     // Selection state
     private HashSet<DirEntry> selectedEntries = new();
@@ -187,6 +188,15 @@
     public HashSet<DirEntry> SelectedEntries => selectedEntries;
 
     public void NotifyStateChanged() => InvokeAsync(StateHasChanged);
+
+    /// <summary>Called by the parent to mirror the other panel's selection.</summary>
+    public void SyncSelection(HashSet<DirEntry> selection)
+    {
+        selectedEntries = new HashSet<DirEntry>(selection);
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void NotifySelectionChanged() => _ = OnSelectionChanged.InvokeAsync(selectedEntries);
 
     private List<DirEntry> SortedEntries
     {
@@ -291,6 +301,7 @@
         }
         lastClickedEntry = entry;
         focusIndex = SortedEntries.IndexOf(entry);
+        NotifySelectionChanged();
     }
 
     private async Task OnKeyDown(KeyboardEventArgs e)
@@ -319,8 +330,8 @@
         }
     }
 
-    private void SelectSingle(DirEntry entry) { selectedEntries.Clear(); selectedEntries.Add(entry); lastClickedEntry = entry; }
-    public void ClearSelection() { selectedEntries.Clear(); focusIndex = -1; }
+    private void SelectSingle(DirEntry entry) { selectedEntries.Clear(); selectedEntries.Add(entry); lastClickedEntry = entry; NotifySelectionChanged(); }
+    public void ClearSelection() { selectedEntries.Clear(); focusIndex = -1; NotifySelectionChanged(); }
 
     // --- Checkbox multi-select ---
 
@@ -332,12 +343,14 @@
             selectedEntries.Clear();
         else
             selectedEntries = new HashSet<DirEntry>(SortedEntries);
+        NotifySelectionChanged();
     }
 
     private void ToggleEntry(DirEntry entry)
     {
         if (!selectedEntries.Remove(entry)) selectedEntries.Add(entry);
         lastClickedEntry = entry;
+        NotifySelectionChanged();
     }
 
     // --- Double click ---
@@ -356,7 +369,7 @@
 
     private void ShowContextMenu(MouseEventArgs e, DirEntry entry)
     {
-        if (!selectedEntries.Contains(entry)) { selectedEntries.Clear(); selectedEntries.Add(entry); lastClickedEntry = entry; }
+        if (!selectedEntries.Contains(entry)) { selectedEntries.Clear(); selectedEntries.Add(entry); lastClickedEntry = entry; NotifySelectionChanged(); }
         ctxX = e.ClientX; ctxY = e.ClientY; ctxEntry = entry; ctxVisible = true;
     }
 

@@ -75,7 +75,8 @@
                        OnAction="OnLocalAction"
                        SortColumn="@sortColumn"
                        SortAscending="@sortAscending"
-                       OnSortChanged="OnSortChanged" />
+                       OnSortChanged="OnSortChanged"
+                       OnSelectionChanged="sel => remotePanel?.SyncSelection(sel)" />
         </div>
         <div class="fm-pane fm-pane-right">
             <FilePanel @ref="remotePanel"
@@ -89,7 +90,8 @@
                        OnAction="OnRemoteAction"
                        SortColumn="@sortColumn"
                        SortAscending="@sortAscending"
-                       OnSortChanged="OnSortChanged" />
+                       OnSortChanged="OnSortChanged"
+                       OnSelectionChanged="sel => localPanel?.SyncSelection(sel)" />
             @if (_inlineView && _inlineViewUrl is not null)
             {
                 <div class="fm-inline-viewer">
