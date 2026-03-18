@@ -195,10 +195,26 @@
     }
 
     private IDisposable? _dlSub;
+    private bool _scrollSyncSetup;
 
     protected override void OnInitialized()
     {
         _dlSub = Bus.Subscribe<DownloadStoreChangedEvent>(_ => RefreshDownloadBadges());
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Set up scroll sync once both panels have their vlist elements rendered (entries loaded)
+        if (!_scrollSyncSetup && entries is not null && localPanel is not null && remotePanel is not null)
+        {
+            _scrollSyncSetup = true;
+            try
+            {
+                await Js.InvokeVoidAsync("c2SyncScroll", localPanel.VlistElement, remotePanel.VlistElement);
+                await Js.InvokeVoidAsync("c2SyncScroll", remotePanel.VlistElement, localPanel.VlistElement);
+            }
+            catch { _scrollSyncSetup = false; }
+        }
     }
 
     public void Dispose() => _dlSub?.Dispose();
@@ -242,7 +258,7 @@
 
         currentPath = FileManagerPath.Normalize(path, IsUnixAgent);
         pathSegments = FileManagerPath.GetSegments(currentPath);
-        loading = true; entries = null; StateHasChanged();
+        loading = true; entries = null; _scrollSyncSetup = false; StateHasChanged();
 
         try
         {

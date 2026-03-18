@@ -21,7 +21,7 @@
                 <span class="fp-th-size @SortClass("size")" @onclick='() => ToggleSort("size")'>Size @SortArrow("size")</span>
                 <span class="fp-th-modified fp-hide-narrow @SortClass("modified")" @onclick='() => ToggleSort("modified")'>Modified @SortArrow("modified")</span>
             </div>
-            <div class="fp-vlist">
+            <div class="fp-vlist" @ref="vlistRef">
                 <Virtualize Items="SortedEntries" Context="e" ItemSize="26" OverscanCount="5">
                     @{
                         var isDir = e.IsDirectory || e.IsDrive;
@@ -139,6 +139,8 @@
     private DirEntry? ctxEntry;
 
     private ElementReference entriesRef;
+    private ElementReference vlistRef;
+    public ElementReference VlistElement => vlistRef;
 
     // Sort cache
     private List<DirEntry>? _sortedCache;
