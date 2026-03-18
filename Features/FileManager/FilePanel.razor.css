@@ -4,15 +4,14 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    border: 2px solid var(--c2-border);
+    border: 1px solid var(--c2-border);
     border-radius: 6px;
     overflow: hidden;
     background: var(--c2-bg-surface);
-    transition: border-color 0.15s;
 }
 
 .fp-active {
-    border-color: var(--c2-accent-blue);
+    border-color: var(--c2-border);
 }
 
 /* Header */
@@ -133,38 +132,32 @@
     cursor: pointer;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.73rem;
-    transition: background 0.12s;
 }
 
-/* --- Directory rows --- */
+/* --- Hover --- */
 .fp-row-dir:hover {
     background: var(--c2-yellow-10, rgba(255, 193, 7, 0.06));
+}
+
+.fp-row-file:hover {
+    background: var(--c2-bg-overlay);
+}
+
+/* --- Selected --- */
+.fp-row-active {
+    background: var(--c2-blue-10);
 }
 
 .fp-row-dir.fp-row-active {
     background: var(--c2-yellow-10, rgba(255, 193, 7, 0.1));
 }
 
-/* --- File rows --- */
-.fp-row-file:hover {
-    background: var(--c2-bg-overlay);
-}
-
-.fp-row-file.fp-row-active {
-    background: var(--c2-blue-10);
-}
-
-/* --- Selected (both) --- */
-.fp-row-active {
-    background: var(--c2-blue-10);
-}
-
 /* --- Focused --- */
-.fp-row-focused td {
-    box-shadow: inset 0 0 0 1px var(--c2-blue-30);
+.fp-row-focused > td:first-child {
+    box-shadow: inset 2px 0 0 var(--c2-accent-blue);
 }
 
-/* --- Dimmed (not cached on local panel) --- */
+/* --- Dimmed --- */
 .fp-row-dim {
     opacity: 0.4;
 }
@@ -173,23 +166,25 @@
     opacity: 0.6;
 }
 
-/* ===== Download status row tinting ===== */
+/* ===== Download status — left accent via box-shadow (no layout shift) ===== */
 
-.fp-row-synced {
-    border-left: 2px solid var(--c2-accent-green);
+.fp-row-synced > td:first-child {
+    box-shadow: inset 3px 0 0 var(--c2-accent-green);
 }
 
-.fp-row-queued {
-    border-left: 2px solid var(--c2-text-dim);
+.fp-row-queued > td:first-child {
+    box-shadow: inset 3px 0 0 var(--c2-text-dim);
 }
 
-.fp-row-paused {
-    border-left: 2px solid var(--c2-accent-yellow);
+.fp-row-paused > td:first-child {
+    box-shadow: inset 3px 0 0 var(--c2-accent-yellow);
 }
 
-/* Downloading row — animated progress via inline style gradient + pulse */
+.fp-row-downloading > td:first-child {
+    box-shadow: inset 3px 0 0 var(--c2-accent-blue);
+}
+
 .fp-row-downloading {
-    border-left: 2px solid var(--c2-accent-blue);
     animation: fp-pulse 1.5s ease-in-out infinite;
 }
 
