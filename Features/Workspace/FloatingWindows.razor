@@ -49,8 +49,6 @@
                 case "Relay":             <RelayPanel /> break;
                 case "Agents":            <AgentsPanel /> break;
                 case "Transfers":         <DownloadsPanel AgentUuid="@win.AgentUuid" AgentName="@win.AgentName" /> break;
-                case "FileScan":          <FileSearchPanel AgentUuid="@win.AgentUuid" AgentName="@win.AgentName" InitialPath="@win.SearchPath" /> break;
-                case "ScanJobs":          <SearchJobsPanel /> break;
                 case "ExtensionGroups":   <ExtensionGroupsPanel /> break;
                 case "AgentInfo":         <AgentInfoPanel AgentId="@win.AgentId" AgentUuid="@win.AgentUuid" /> break;
                 case "Shell":            <ShellPanel Relay="win.Relay" AgentId="@win.AgentId" AgentName="@win.AgentName" AgentUuid="@win.AgentUuid" /> break;
@@ -266,8 +264,6 @@
         "Settings" => "settings",
         "FileManager" => "folder",
         "Transfers" => "transfer",
-        "FileScan" => "scan",
-        "ScanJobs" => "scan",
         "ExtensionGroups" => "layers",
         "Shell" => "terminal",
         "Vnc" => "monitor",
