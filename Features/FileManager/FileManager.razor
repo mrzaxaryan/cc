@@ -107,6 +107,22 @@
         </div>
     }
 
+    @* Status bar *@
+    @{ var sel = ActiveSelection; var selSize = sel.Where(e => !e.IsDirectory && !e.IsDrive).Sum(e => (long)e.Size); }
+    <div class="fm-status">
+        @if (entries is not null)
+        {
+            <span class="fm-status-count">@entries.Count items</span>
+        }
+        @if (sel.Count > 0)
+        {
+            <span class="fm-status-sel">@sel.Count sel</span>
+            @if (selSize > 0)
+            {
+                <span class="fm-status-size">@Formatters.FormatSize((ulong)selSize)</span>
+            }
+        }
+    </div>
 </div>
 
 @code {
@@ -119,14 +135,8 @@
 
     private bool IsConnected => Relay is not null && Relay.IsConnected;
     private bool HasRemoteFileSelection => remotePanel?.SelectedEntries.Any(e => !e.IsDirectory && !e.IsDrive) == true;
-    private bool HasAnySelection
-    {
-        get
-        {
-            var panel = activePanel == ActivePanel.Local ? localPanel : remotePanel;
-            return panel?.SelectedEntries.Count > 0;
-        }
-    }
+    private HashSet<DirEntry> ActiveSelection =>
+        (activePanel == ActivePanel.Local ? localPanel : remotePanel)?.SelectedEntries ?? new();
 
     private FilePanel? localPanel;
     private FilePanel? remotePanel;

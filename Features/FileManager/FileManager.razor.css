@@ -119,6 +119,32 @@
 }
 
 
+/* Status bar */
+.fm-status {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.2rem 0.5rem;
+    background: var(--c2-bg-deep);
+    border-top: 1px solid var(--c2-border);
+    font-size: 0.65rem;
+    font-family: 'JetBrains Mono', monospace;
+    flex-shrink: 0;
+}
+
+.fm-status-count {
+    color: var(--c2-text-dim);
+}
+
+.fm-status-sel {
+    color: var(--c2-accent-blue);
+    font-weight: 600;
+}
+
+.fm-status-size {
+    color: var(--c2-text-muted);
+}
+
 /* ===== Tablet (<=1024px) ===== */
 @media (max-width: 1024px) {
     .fm-panels {

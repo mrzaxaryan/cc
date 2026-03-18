@@ -102,22 +102,6 @@
         }
     </div>
 
-    @* Status bar *@
-    <div class="fp-status">
-        @if (Entries is not null)
-        {
-            <span class="fp-status-count">@Entries.Count items</span>
-        }
-        @if (selectedEntries.Count > 0)
-        {
-            <span class="fp-status-sel">@selectedEntries.Count sel</span>
-            @if (selectedEntries.Any(e => !e.IsDirectory && !e.IsDrive))
-            {
-                var totalSize = selectedEntries.Where(e => !e.IsDirectory && !e.IsDrive).Sum(e => (long)e.Size);
-                <span class="fp-status-size">@Formatters.FormatSize((ulong)totalSize)</span>
-            }
-        }
-    </div>
 </div>
 
 @* Context menu *@

@@ -257,33 +257,7 @@
     color: var(--c2-accent-blue);
 }
 
-/* ===== Status bar ===== */
 
-.fp-status {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    padding: 0.2rem 0.5rem;
-    background: var(--c2-bg-deep);
-    border-top: 1px solid var(--c2-border);
-    font-size: 0.65rem;
-    font-family: 'JetBrains Mono', monospace;
-    flex-shrink: 0;
-    min-height: 1.4rem;
-}
-
-.fp-status-count {
-    color: var(--c2-text-dim);
-}
-
-.fp-status-sel {
-    color: var(--c2-accent-blue);
-    font-weight: 600;
-}
-
-.fp-status-size {
-    color: var(--c2-text-muted);
-}
 
 /* Empty / loading */
 .fp-empty {
