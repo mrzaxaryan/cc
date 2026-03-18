@@ -250,27 +250,9 @@
 
     private void OnRowClick(MouseEventArgs e, DirEntry entry)
     {
-        if (e.CtrlKey || e.MetaKey)
-        {
-            if (!selectedEntries.Remove(entry)) selectedEntries.Add(entry);
-            lastClickedEntry = entry;
-        }
-        else if (e.ShiftKey && lastClickedEntry is not null)
-        {
-            var sorted = SortedEntries;
-            var startIdx = sorted.IndexOf(lastClickedEntry);
-            var endIdx = sorted.IndexOf(entry);
-            if (startIdx < 0) startIdx = 0;
-            if (startIdx > endIdx) (startIdx, endIdx) = (endIdx, startIdx);
-            selectedEntries.Clear();
-            for (int i = startIdx; i <= endIdx; i++) selectedEntries.Add(sorted[i]);
-        }
-        else
-        {
-            selectedEntries.Clear();
-            selectedEntries.Add(entry);
-            lastClickedEntry = entry;
-        }
+        selectedEntries.Clear();
+        selectedEntries.Add(entry);
+        lastClickedEntry = entry;
         focusIndex = SortedEntries.IndexOf(entry);
     }
 
@@ -282,11 +264,11 @@
         {
             case "ArrowDown":
                 focusIndex = Math.Min(focusIndex + 1, sorted.Count - 1);
-                if (!e.ShiftKey) SelectSingle(sorted[focusIndex]); else AddToSelection(sorted[focusIndex]);
+                SelectSingle(sorted[focusIndex]);
                 break;
             case "ArrowUp":
                 focusIndex = Math.Max(focusIndex - 1, 0);
-                if (!e.ShiftKey) SelectSingle(sorted[focusIndex]); else AddToSelection(sorted[focusIndex]);
+                SelectSingle(sorted[focusIndex]);
                 break;
             case "Enter":
                 if (focusIndex >= 0 && focusIndex < sorted.Count) await OnDblClick(sorted[focusIndex]);
@@ -297,14 +279,10 @@
             case "Escape":
                 if (ctxVisible) HideContextMenu(); else ClearSelection();
                 break;
-            case "a" when e.CtrlKey:
-                selectedEntries = new HashSet<DirEntry>(sorted);
-                break;
         }
     }
 
     private void SelectSingle(DirEntry entry) { selectedEntries.Clear(); selectedEntries.Add(entry); lastClickedEntry = entry; }
-    private void AddToSelection(DirEntry entry) { selectedEntries.Add(entry); lastClickedEntry = entry; }
     public void ClearSelection() { selectedEntries.Clear(); focusIndex = -1; }
 
     // --- Checkbox multi-select ---
