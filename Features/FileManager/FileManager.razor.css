@@ -92,6 +92,44 @@
     flex-shrink: 0;
 }
 
+.fm-actions-spacer {
+    flex: 1;
+}
+
+/* Filter bar */
+.fm-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.4rem;
+    background: var(--c2-bg-deep);
+    border-bottom: 1px solid var(--c2-border);
+    flex-shrink: 0;
+}
+
+::deep .fm-filter-icon {
+    color: var(--c2-text-dim);
+    flex-shrink: 0;
+}
+
+::deep .fm-filter-input {
+    flex: 1;
+    min-width: 0;
+}
+
+.fm-filter-count {
+    font-size: 0.6rem;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--c2-text-dim);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+::deep .fm-filter-btn-active {
+    color: var(--c2-accent-blue) !important;
+    background: var(--c2-blue-10) !important;
+}
+
 /* Dual pane area */
 .fm-panels {
     flex: 1;

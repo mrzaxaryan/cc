@@ -53,13 +53,33 @@
 
     @* Action bar *@
     <div class="fm-actions">
-<C2Btn Size="Size.Xs" OnClick="OpenFullSearchWindow" Disabled="@(!IsConnected)" Title="Search agent filesystem">
+        <C2Btn Size="Size.Xs" OnClick="OpenFullSearchWindow" Disabled="@(!IsConnected)" Title="Search agent filesystem">
             <C2Icon Name="search" Size="Size.Xs" /> Search
         </C2Btn>
         <C2Btn Size="Size.Xs" OnClick="OpenDownloadsWindow" Title="Download queue">
             <C2Icon Name="arrow-up-down" Size="Size.Xs" /> Transfers
         </C2Btn>
+        <div class="fm-actions-spacer"></div>
+        <C2Btn Size="Size.Xs" OnClick="ToggleFilter" Title="Filter by name"
+               CssClass="@(filterActive ? "fm-filter-btn-active" : "")">
+            <C2Icon Name="filter" Size="Size.Xs" />
+        </C2Btn>
     </div>
+    @if (filterActive)
+    {
+        <div class="fm-filter-bar">
+            <C2Icon Name="search" Size="Size.Xs" CssClass="fm-filter-icon" />
+            <C2Input @bind-Value="filterText" BindOnInput Placeholder="Filter by name..." Size="Size.Xs" Monospace
+                     CssClass="fm-filter-input" OnKeyDown="OnFilterKeyDown" />
+            @if (!string.IsNullOrEmpty(filterText))
+            {
+                <span class="fm-filter-count">@(FilteredEntries?.Count ?? 0) / @(entries?.Count ?? 0)</span>
+                <C2Btn Size="Size.Xs" OnClick="ClearFilter" Title="Clear filter">
+                    <C2Icon Name="x" Size="Size.Xs" />
+                </C2Btn>
+            }
+        </div>
+    }
 
     @* Dual pane area *@
     <div class="fm-panels @(viewingFile ? "fm-panels-with-viewer" : "")">
@@ -68,7 +88,7 @@
                        Mode="FilePanel.PanelMode.Local"
                        AgentUuid="@AgentUuid"
                        CurrentPath="@currentPath"
-                       Entries="@entries"
+                       Entries="@FilteredEntries"
                        Loading="@loading"
                        IsActive="@(activePanel == ActivePanel.Local)"
                        OnActivate="() => SetActive(ActivePanel.Local)"
@@ -83,7 +103,7 @@
                        Mode="FilePanel.PanelMode.Remote"
                        AgentUuid="@AgentUuid"
                        CurrentPath="@currentPath"
-                       Entries="@entries"
+                       Entries="@FilteredEntries"
                        Loading="@loading"
                        IsActive="@(activePanel == ActivePanel.Remote)"
                        OnActivate="() => SetActive(ActivePanel.Remote)"
@@ -99,7 +119,7 @@
                         <span class="fm-inline-viewer-name">@_inlineViewName</span>
                         <C2Btn Size="Size.Xs" OnClick="CloseInlineView" Title="Close"><C2Icon Name="x" Size="Size.Xs" /></C2Btn>
                     </div>
-                    <iframe src="@_inlineViewUrl" class="fm-inline-viewer-frame" sandbox="allow-same-origin"></iframe>
+                    <iframe src="@_inlineViewUrl" class="fm-inline-viewer-frame" sandbox="allow-same-origin allow-scripts"></iframe>
                 </div>
             }
         </div>
@@ -115,11 +135,11 @@
     }
 
     @* Status bar *@
-    @{ var sel = ActiveSelection; var selSize = sel.Where(e => !e.IsDirectory && !e.IsDrive).Sum(e => (long)e.Size); }
+    @{ var sel = ActiveSelection; var selSize = sel.Where(e => !e.IsDirectory && !e.IsDrive).Sum(e => (long)e.Size); var filtered = FilteredEntries; }
     <div class="fm-status">
-        @if (entries is not null)
+        @if (filtered is not null)
         {
-            <span class="fm-status-count">@entries.Count items</span>
+            <span class="fm-status-count">@(string.IsNullOrWhiteSpace(filterText) ? $"{filtered.Count} items" : $"{filtered.Count} / {entries?.Count ?? 0} items")</span>
         }
         @if (sel.Count > 0)
         {
@@ -155,6 +175,30 @@ private HashSet<DirEntry> ActiveSelection =>
     private bool loading;
     private string sortColumn = "name";
     private bool sortAscending = true;
+
+    // Filter state
+    private bool filterActive;
+    private string? filterText;
+
+    // Cached filtered entries — avoids creating a new list on every render
+    private List<DirEntry>? _filteredCache;
+    private List<DirEntry>? _filteredSrc;
+    private string? _filteredText;
+
+    private List<DirEntry>? FilteredEntries
+    {
+        get
+        {
+            if (_filteredSrc == entries && _filteredText == filterText && _filteredCache is not null)
+                return _filteredCache;
+            _filteredSrc = entries;
+            _filteredText = filterText;
+            _filteredCache = entries is null ? null
+                : string.IsNullOrWhiteSpace(filterText) ? entries
+                : entries.Where(e => e.Name.Contains(filterText.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+            return _filteredCache;
+        }
+    }
 
     // Agent OS detection
     private string AgentOs
@@ -282,6 +326,19 @@ private HashSet<DirEntry> ActiveSelection =>
         viewingFile = false;
     }
 
+    private void ToggleFilter()
+    {
+        filterActive = !filterActive;
+        if (!filterActive) filterText = null;
+    }
+
+    private void ClearFilter() => filterText = null;
+
+    private void OnFilterKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") { filterActive = false; filterText = null; }
+    }
+
     private void SetActive(ActivePanel panel) => activePanel = panel;
 
     // --- Navigation (single source of truth) ---
@@ -292,6 +349,7 @@ private HashSet<DirEntry> ActiveSelection =>
 
         currentPath = FileManagerPath.Normalize(path, IsUnixAgent);
         pathSegments = FileManagerPath.GetSegments(currentPath);
+        filterText = null;
         _inlineView = false; if (_inlineViewUrl is not null) { _ = Js.InvokeVoidAsync("c2RevokeObjectUrl", _inlineViewUrl).AsTask(); _inlineViewUrl = null; _inlineViewName = null; }
         loading = true; entries = null; _scrollSyncSetup = false; StateHasChanged();
 
