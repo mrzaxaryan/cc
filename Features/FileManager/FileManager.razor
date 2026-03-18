@@ -87,51 +87,93 @@
     @if (_uploadsOpen)
     {
         <div class="fm-uploads">
-            @if (_uploads.Count == 0)
-            {
-                <div class="fm-uploads-empty">No transfers.</div>
-            }
-            else
-            {
-                @foreach (var rec in _uploads)
+            @* Filter bar *@
+            <div class="fm-ul-filters">
+                <div class="fm-ul-tabs">
+                    @foreach (var f in Enum.GetValues<UlFilter>())
+                    {
+                        var fv = f;
+                        <button class="fm-ul-tab @(_ulFilter == fv ? "fm-ul-tab-active" : "")" @onclick="() => SetUlFilter(fv)">
+                            @fv <span class="fm-ul-tab-count">@UlCount(fv)</span>
+                        </button>
+                    }
+                </div>
+                <div class="fm-ul-date-filter">
+                    <C2Icon Name="calendar" Size="Size.Xs" CssClass="fm-ul-cal-icon" />
+                    <select class="fm-ul-date-select" value="@_ulDateFilter" @onchange="OnUlDateChanged">
+                        <option value="All">All time</option>
+                        <option value="Today">Today</option>
+                        <option value="Week">Last 7 days</option>
+                        <option value="Month">Last 30 days</option>
+                    </select>
+                </div>
+            </div>
+
+            @* Column headers *@
+            <div class="fm-ul-head">
+                <span class="fm-ul-th-icon"></span>
+                <span class="fm-ul-th-name">Name</span>
+                <span class="fm-ul-th-size">Size</span>
+                <span class="fm-ul-th-status">Status</span>
+                <span class="fm-ul-th-date">Date</span>
+                <span class="fm-ul-th-acts"></span>
+            </div>
+
+            @* File rows *@
+            <div class="fm-ul-list">
+                @if (_ulFiltered.Count == 0)
                 {
-                    var r = rec;
-                    var pct = rec.TotalSize > 0 ? (int)(rec.DownloadedSize * 100 / rec.TotalSize) : 0;
-                    <div class="fm-ul-row fm-ul-@rec.Status">
-                        <span class="fm-ul-icon"><C2Icon Name="@UlIcon(rec.Status)" Size="Size.Xs" /></span>
-                        <span class="fm-ul-name" title="@rec.RemotePath">@rec.FileName</span>
-                        <span class="fm-ul-size">@Formatters.FormatSize((ulong)rec.DownloadedSize) / @Formatters.FormatSize((ulong)rec.TotalSize)</span>
-                        <span class="fm-ul-status">
-                            @switch (rec.Status)
-                            {
-                                case DownloadStatus.Downloading:
-                                    <span class="fm-ul-pct">@pct%</span>
-                                    @if (rec.SpeedBytesPerSec > 0) { <span class="fm-ul-speed">@Formatters.FormatSpeed(rec.SpeedBytesPerSec)</span> }
-                                    <C2Btn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => UlPause(r)" Title="Pause"><C2Icon Name="pause" Size="Size.Xs" /></C2Btn>
-                                    break;
-                                case DownloadStatus.Queued:
-                                    <C2Badge Variant="BadgeVariant.Muted" Size="Size.Xs">QUEUED</C2Badge>
-                                    break;
-                                case DownloadStatus.Paused:
-                                    <C2Badge Variant="BadgeVariant.Warning" Size="Size.Xs">PAUSED @pct%</C2Badge>
-                                    <C2Btn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => UlResume(r)" Title="Resume"><C2Icon Name="play" Size="Size.Xs" /></C2Btn>
-                                    break;
-                                case DownloadStatus.Completed:
-                                    <C2Badge Variant="BadgeVariant.Success" Size="Size.Xs">DONE</C2Badge>
-                                    break;
-                                case DownloadStatus.Failed:
-                                    <C2Badge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@rec.Error">FAILED</C2Badge>
-                                    break;
-                            }
-                        </span>
-                        <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => UlRemove(r)" Title="Remove"><C2Icon Name="x" Size="Size.Xs" /></C2Btn>
-                        @if (rec.Status is DownloadStatus.Downloading or DownloadStatus.Queued or DownloadStatus.Paused)
-                        {
-                            <div class="fm-ul-bar" style="width:@pct%"></div>
-                        }
-                    </div>
+                    <div class="fm-ul-empty">No transfers.</div>
                 }
-            }
+                else
+                {
+                    <Virtualize Items="_ulFiltered" Context="rec" ItemSize="30" OverscanCount="5">
+                        @{ var r = rec; var pct = rec.TotalSize > 0 ? (int)(rec.DownloadedSize * 100 / rec.TotalSize) : 0; }
+                        <div class="fm-ul-row fm-ul-@rec.Status">
+                            <span class="fm-ul-icon"><C2Icon Name="@UlIcon(rec.Status)" Size="Size.Xs" /></span>
+                            <span class="fm-ul-name" title="@rec.RemotePath">@rec.FileName</span>
+                            <span class="fm-ul-size">
+                                @if (rec.Status == DownloadStatus.Downloading)
+                                { @Formatters.FormatSize((ulong)rec.DownloadedSize)<text> / </text> }
+                                @Formatters.FormatSize((ulong)rec.TotalSize)
+                            </span>
+                            <span class="fm-ul-status">
+                                @switch (rec.Status)
+                                {
+                                    case DownloadStatus.Downloading:
+                                        <span class="fm-ul-pct">@pct%</span>
+                                        @if (rec.SpeedBytesPerSec > 0) { <span class="fm-ul-speed">@Formatters.FormatSpeed(rec.SpeedBytesPerSec)</span> }
+                                        break;
+                                    case DownloadStatus.Queued:
+                                        <span class="fm-ul-badge fm-ul-badge-queued">QUEUED</span>
+                                        break;
+                                    case DownloadStatus.Paused:
+                                        <span class="fm-ul-badge fm-ul-badge-paused">PAUSED @pct%</span>
+                                        break;
+                                    case DownloadStatus.Completed:
+                                        <span class="fm-ul-badge fm-ul-badge-done">DONE</span>
+                                        break;
+                                    case DownloadStatus.Failed:
+                                        <span class="fm-ul-badge fm-ul-badge-error" title="@rec.Error">FAILED</span>
+                                        break;
+                                }
+                            </span>
+                            <span class="fm-ul-date">@Formatters.FormatTimestamp(rec.CreatedAt)</span>
+                            <span class="fm-ul-acts">
+                                @if (rec.Status == DownloadStatus.Downloading)
+                                { <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => UlPause(r)" Title="Pause"><C2Icon Name="pause" Size="Size.Xs" /></C2Btn> }
+                                @if (rec.Status == DownloadStatus.Paused)
+                                { <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => UlResume(r)" Title="Resume"><C2Icon Name="play" Size="Size.Xs" /></C2Btn> }
+                                <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => UlRemove(r)" Title="Remove"><C2Icon Name="x" Size="Size.Xs" /></C2Btn>
+                            </span>
+                            @if (rec.Status is DownloadStatus.Downloading or DownloadStatus.Paused)
+                            {
+                                <div class="fm-ul-bar" style="width:@pct%"></div>
+                            }
+                        </div>
+                    </Virtualize>
+                }
+            </div>
         </div>
     }
 
@@ -241,6 +283,10 @@ private HashSet<DirEntry> ActiveSelection =>
     // Uploads panel
     private bool _uploadsOpen;
     private List<DownloadRecord> _uploads = [];
+    private List<DownloadRecord> _ulFiltered = [];
+    private enum UlFilter { All, Current, Pending, Error, Done }
+    private UlFilter _ulFilter = UlFilter.All;
+    private string _ulDateFilter = "All";
 
     // Cached filtered entries — avoids creating a new list on every render
     private List<DirEntry>? _filteredCache;
@@ -404,19 +450,51 @@ private HashSet<DirEntry> ActiveSelection =>
         if (_uploadsOpen) RefreshUploads();
     }
 
+    private void SetUlFilter(UlFilter f) { _ulFilter = f; ApplyUlFilter(); }
+
+    private void OnUlDateChanged(ChangeEventArgs e) { _ulDateFilter = e.Value?.ToString() ?? "All"; ApplyUlFilter(); }
+
     private void RefreshUploads()
     {
-        _uploads = string.IsNullOrEmpty(AgentUuid)
-            ? Downloads.Downloads
-                .Where(r => r.Status is not DownloadStatus.Pending)
-                .OrderBy(r => r.Status == DownloadStatus.Downloading ? 0 : r.Status == DownloadStatus.Queued ? 1 : r.Status == DownloadStatus.Paused ? 2 : r.Status == DownloadStatus.Failed ? 3 : 4)
-                .ThenBy(r => r.Priority).ThenBy(r => r.CreatedAt).ToList()
-            : Downloads.GetByAgent(AgentUuid)
-                .Where(r => r.Status is not DownloadStatus.Pending)
-                .OrderBy(r => r.Status == DownloadStatus.Downloading ? 0 : r.Status == DownloadStatus.Queued ? 1 : r.Status == DownloadStatus.Paused ? 2 : r.Status == DownloadStatus.Failed ? 3 : 4)
-                .ThenBy(r => r.Priority).ThenBy(r => r.CreatedAt).ToList();
+        var cutoff = _ulDateFilter switch
+        {
+            "Today" => DateTimeOffset.UtcNow.Date,
+            "Week"  => DateTimeOffset.UtcNow.AddDays(-7),
+            "Month" => DateTimeOffset.UtcNow.AddDays(-30),
+            _       => (DateTimeOffset?)null
+        };
+
+        _uploads = (string.IsNullOrEmpty(AgentUuid) ? Downloads.Downloads : Downloads.GetByAgent(AgentUuid))
+            .Where(r => r.Status is not DownloadStatus.Pending)
+            .Where(r => cutoff is null || DateTimeOffset.FromUnixTimeMilliseconds((long)r.CreatedAt) >= cutoff)
+            .OrderBy(r => r.Status == DownloadStatus.Downloading ? 0 : r.Status == DownloadStatus.Queued ? 1 : r.Status == DownloadStatus.Paused ? 2 : r.Status == DownloadStatus.Failed ? 3 : 4)
+            .ThenBy(r => r.Priority).ThenBy(r => r.CreatedAt)
+            .ToList();
+
+        ApplyUlFilter();
+    }
+
+    private void ApplyUlFilter()
+    {
+        _ulFiltered = _ulFilter switch
+        {
+            UlFilter.Current => _uploads.Where(r => r.Status == DownloadStatus.Downloading).ToList(),
+            UlFilter.Pending => _uploads.Where(r => r.Status is DownloadStatus.Queued or DownloadStatus.Paused).ToList(),
+            UlFilter.Error   => _uploads.Where(r => r.Status == DownloadStatus.Failed).ToList(),
+            UlFilter.Done    => _uploads.Where(r => r.Status == DownloadStatus.Completed).ToList(),
+            _                => _uploads
+        };
         StateHasChanged();
     }
+
+    private int UlCount(UlFilter f) => f switch
+    {
+        UlFilter.Current => _uploads.Count(r => r.Status == DownloadStatus.Downloading),
+        UlFilter.Pending => _uploads.Count(r => r.Status is DownloadStatus.Queued or DownloadStatus.Paused),
+        UlFilter.Error   => _uploads.Count(r => r.Status == DownloadStatus.Failed),
+        UlFilter.Done    => _uploads.Count(r => r.Status == DownloadStatus.Completed),
+        _                => _uploads.Count
+    };
 
     private void UlPause(DownloadRecord r) => Downloads.Cts.Cancel(r.Id);
     private async Task UlResume(DownloadRecord r) { if (!Downloads.Cts.HasActive(r.Id)) await Downloads.QueueAsync(r.Id); }
