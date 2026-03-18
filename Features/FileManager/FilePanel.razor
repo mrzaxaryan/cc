@@ -40,7 +40,7 @@
                         var isDir = e.IsDirectory || e.IsDrive;
                         var isSelected = selectedEntries.Contains(e);
                         var isFocused = idx == focusIndex;
-                        var isDim = e.IsHidden || e.IsSystem || (Mode == PanelMode.Local && (isDir || e.Size == 0 || !HasDownloadRecord(e.Name)));
+                        var isDim = e.IsHidden || e.IsSystem || (Mode == PanelMode.Local && !isDir && e.Size > 0 && !HasDownloadRecord(e.Name));
                         var dlInfo = !isDir ? GetDlInfo(e.Name) : null;
                         var dlClass = dlInfo?.Status switch
                         {
