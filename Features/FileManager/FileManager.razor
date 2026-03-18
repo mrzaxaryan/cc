@@ -53,13 +53,7 @@
 
     @* Action bar *@
     <div class="fm-actions">
-        <C2Btn Variant="BtnVariant.Primary" Size="Size.Xs"
-               OnClick="DownloadSelected"
-               Disabled="@(!IsConnected || !Cache.HasDirectory || !HasRemoteFileSelection)"
-               Title="Download selected files from remote to local cache (F5)">
-            <C2Icon Name="arrow-left" Size="Size.Xs" /> F5 Copy
-        </C2Btn>
-        <C2Btn Size="Size.Xs" OnClick="OpenFullSearchWindow" Disabled="@(!IsConnected)" Title="Search agent filesystem">
+<C2Btn Size="Size.Xs" OnClick="OpenFullSearchWindow" Disabled="@(!IsConnected)" Title="Search agent filesystem">
             <C2Icon Name="search" Size="Size.Xs" /> Search
         </C2Btn>
         <C2Btn Size="Size.Xs" OnClick="OpenDownloadsWindow" Title="Download queue">
@@ -135,8 +129,7 @@
     private enum ActivePanel { Local, Remote }
 
     private bool IsConnected => Relay is not null && Relay.IsConnected;
-    private bool HasRemoteFileSelection => remotePanel?.SelectedEntries.Any(e => !e.IsDirectory && !e.IsDrive) == true;
-    private HashSet<DirEntry> ActiveSelection =>
+private HashSet<DirEntry> ActiveSelection =>
         (activePanel == ActivePanel.Local ? localPanel : remotePanel)?.SelectedEntries ?? new();
 
     private FilePanel? localPanel;
@@ -351,16 +344,6 @@
         viewingFile = true;
         StateHasChanged();
     }
-
-    private async Task DownloadSelected()
-    {
-        if (remotePanel is null) return;
-        var files = remotePanel.SelectedEntries.Where(e => !e.IsDirectory && !e.IsDrive).ToList();
-        foreach (var entry in files) await EnqueueFileSync(entry);
-        if (files.Count > 0) Msg.Show($"{files.Count} file(s) queued", MessageType.Info, source: "File Manager");
-    }
-
-
 
     private async Task EnqueueFileSync(DirEntry entry)
     {
