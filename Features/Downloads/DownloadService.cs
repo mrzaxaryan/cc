@@ -10,7 +10,6 @@ public class DownloadService : IDisposable
     private readonly DownloadStore _store;
     private readonly CacheManager _cache;
     private readonly RelayConnectionService _relaySvc;
-    private readonly ServiceStateStore _serviceState;
     private readonly WindowManager _wm;
     private readonly IEventBus _bus;
 
@@ -22,13 +21,12 @@ public class DownloadService : IDisposable
 
     public DownloadService(
         DownloadStore store, CacheManager cache,
-        RelayConnectionService relaySvc, ServiceStateStore serviceState,
+        RelayConnectionService relaySvc,
         WindowManager wm, IEventBus bus)
     {
         _store = store;
         _cache = cache;
         _relaySvc = relaySvc;
-        _serviceState = serviceState;
         _wm = wm;
         _bus = bus;
     }
@@ -39,7 +37,6 @@ public class DownloadService : IDisposable
         await ResetStaleDownloads();
 
         _subscriptions.Add(_bus.Subscribe<DownloadItemQueuedEvent>(e => OnItemQueued(e.AgentUuid)));
-        _subscriptions.Add(_bus.Subscribe<ServiceStateChangedEvent>(_ => OnServiceStateChanged()));
         _subscriptions.Add(_bus.Subscribe<AgentOnlineEvent>(e => AutoResumeAsync(e.Uuid, e.AgentId, e.RelayUrl)));
     }
 
@@ -52,19 +49,9 @@ public class DownloadService : IDisposable
             await _store.PauseAsync(dl.Id);
     }
 
-    private void OnServiceStateChanged()
-    {
-        foreach (var uuid in _processingAgents.ToList())
-        {
-            if (_serviceState.IsEffectivelyPaused(ServiceName.Upload, uuid))
-                _store.Cts.CancelAll();
-        }
-    }
-
     private async Task AutoResumeAsync(string uuid, string agentId, string relayUrl)
     {
         if (!_cache.HasDirectory) return;
-        if (_serviceState.IsEffectivelyPaused(ServiceName.Upload, uuid)) return;
         await _store.LoadAsync();
 
         var paused = _store.GetByAgent(uuid)
@@ -79,7 +66,6 @@ public class DownloadService : IDisposable
     private void OnItemQueued(string agentUuid)
     {
         if (!_cache.HasDirectory) return;
-        if (_serviceState.IsEffectivelyPaused(ServiceName.Upload, agentUuid)) return;
         if (_relaySvc.IsDisposing) return;
 
         var resolved = _relaySvc.FindOnlineAgent(agentUuid);

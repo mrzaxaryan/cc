@@ -1,7 +1,6 @@
 @inherits EventSubscriber
 @inject DownloadStore Downloads
 @inject AgentStore AgentDb
-@inject ServiceStateStore SvcState
 @inject MessageService Msg
 
 <PanelLayout Title="Upload Manager">
@@ -10,21 +9,9 @@
         {
             <span class="panel-agent-label">@AgentName</span>
         }
-        @if (IsAgentServicePaused)
-        {
-            <C2Badge Variant="BadgeVariant.Danger" Size="Size.Xs">Service Paused</C2Badge>
-        }
     </HeaderLeft>
     <HeaderRight>
-        @if (IsAgentServicePaused)
-        {
-            <C2Btn Variant="BtnVariant.Success" Size="Size.Xs" OnClick="ResumeAgentService" Title="Resume upload service for this agent">RESUME SERVICE</C2Btn>
-        }
-        else
-        {
-            <C2Btn Variant="BtnVariant.Danger" Size="Size.Xs" OnClick="PauseAgentService" Title="Pause upload service for this agent">PAUSE SERVICE</C2Btn>
-        }
-        @if (HasActiveSyncs && !IsAgentServicePaused)
+        @if (HasActiveSyncs)
         {
             <C2Btn Variant="BtnVariant.Warning" Size="Size.Xs" OnClick="StopAllSyncs" Title="Pause all">STOP ALL</C2Btn>
         }
@@ -148,15 +135,11 @@
     private Filter filter = Filter.All;
     private bool confirmClear;
 
-    private bool IsAgentServicePaused => !string.IsNullOrEmpty(AgentUuid) && SvcState.IsEffectivelyPaused(ServiceName.Upload, AgentUuid);
-
     protected override async Task OnInitializedAsync()
     {
         On<DownloadStoreChangedEvent>(e => Refresh());
-        On<ServiceStateChangedEvent>(e => Refresh());
         await AgentDb.LoadAsync();
         await Downloads.LoadAsync();
-        await SvcState.LoadAsync();
         Refresh();
     }
 
@@ -218,24 +201,6 @@
         DownloadStatus.Paused => C2.Shared.ProgressVariant.Warning,
         _ => C2.Shared.ProgressVariant.Muted
     };
-
-    private async Task PauseAgentService()
-    {
-        if (string.IsNullOrEmpty(AgentUuid)) return;
-        await SvcState.PauseAsync(ServiceName.Upload, AgentUuid);
-        var active = activeRecords.Where(r => r.Status == DownloadStatus.Downloading).ToList();
-        foreach (var dl in active)
-            Downloads.Cts.Cancel(dl.Id);
-        var queued = activeRecords.Where(r => r.Status == DownloadStatus.Queued).ToList();
-        foreach (var dl in queued)
-            await Downloads.PauseAsync(dl.Id);
-    }
-
-    private async Task ResumeAgentService()
-    {
-        if (string.IsNullOrEmpty(AgentUuid)) return;
-        await SvcState.ResumeAsync(ServiceName.Upload, AgentUuid);
-    }
 
     private async Task StopAllSyncs()
     {
