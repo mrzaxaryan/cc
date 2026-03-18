@@ -142,7 +142,6 @@
 
     // Sort cache
     private List<DirEntry>? _sortedCache;
-    private string? _sortedCacheKey;
     private List<DirEntry>? _prevEntries;
 
     // Download lookup cache (rebuilt on entries change)
@@ -157,23 +156,27 @@
     {
         get
         {
-            var key = $"{SortColumn}:{SortAscending}:{Entries?.Count}";
-            if (_sortedCache is not null && _sortedCacheKey == key) return _sortedCache;
+            if (_sortedCache is not null && _sortedSrc == Entries && _sortedCol == SortColumn && _sortedAsc == SortAscending)
+                return _sortedCache;
+            _sortedSrc = Entries;
+            _sortedCol = SortColumn;
+            _sortedAsc = SortAscending;
             _sortedCache = ApplySort(Entries ?? new());
-            _sortedCacheKey = key;
             return _sortedCache;
         }
     }
+    private List<DirEntry>? _sortedSrc;
+    private string? _sortedCol;
+    private bool _sortedAsc;
 
     protected override void OnParametersSet()
     {
-        // Clear selection when entries change (new directory)
         if (Entries != _prevEntries)
         {
             _prevEntries = Entries;
             selectedEntries.Clear();
             focusIndex = -1;
-            InvalidateSortCache();
+            _sortedCache = null;
             RebuildDownloadLookup();
         }
     }
@@ -206,11 +209,9 @@
     private async Task ToggleSort(string column)
     {
         var newAsc = SortColumn == column ? !SortAscending : true;
-        InvalidateSortCache();
+        _sortedCache = null;
         await OnSortChanged.InvokeAsync((column, newAsc));
     }
-
-    private void InvalidateSortCache() { _sortedCache = null; _sortedCacheKey = null; }
 
     private List<DirEntry> ApplySort(List<DirEntry> source)
     {
