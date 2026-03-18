@@ -92,7 +92,7 @@ public class DownloadService : IDisposable
             if (relay is null) return;
             relay.AddRef();
 
-            while (!_disposing && !_relaySvc.IsDisposing)
+            while (!_disposing && !_relaySvc.IsDisposing && relay.IsConnected)
             {
                 if (_store.HasActiveDownload(uuid)) break;
                 var next = _store.GetNextQueued(uuid);
@@ -122,13 +122,13 @@ public class DownloadService : IDisposable
                 {
                     if (cts.IsCancellationRequested)
                         await _store.PauseAsync(next.Id); // user pressed pause
-                    // relay dropped — leave as Downloading, AutoResume will re-queue
+                    break; // relay dropped — stop processing, AutoResume will re-queue
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     if (cts.IsCancellationRequested)
                         await _store.PauseAsync(next.Id);
-                    // network/unexpected error — leave as Downloading, AutoResume will retry
+                    break; // network/unexpected error — stop, AutoResume will retry
                 }
                 finally
                 {
