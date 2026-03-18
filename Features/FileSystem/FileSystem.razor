@@ -80,7 +80,6 @@
     @if (filterActive)
     {
         <div class="fm-filter-bar">
-            <C2Icon Name="search" Size="Size.Xs" CssClass="fm-filter-icon" />
             <C2Input @bind-Value="filterText" @bind-Value:after="OnFilterTextChanged" BindOnInput
                      Placeholder="Filter by name..." Size="Size.Xs" Monospace
                      CssClass="fm-filter-input" OnKeyDown="OnFilterKeyDown" />

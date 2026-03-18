@@ -210,7 +210,7 @@
     {
         <div class="ap-ctx-submenu-wrap">
             <button class="ap-ctx-sub-trigger" type="button">
-                <C2Icon Name="copy" Size="Size.Xs" /> Copy <span class="ap-ctx-arrow"><C2Icon Name="chevron-right" Size="Size.Xs" /></span>
+                <span class="ap-ctx-arrow"><C2Icon Name="chevron-left" Size="Size.Xs" /></span> <C2Icon Name="copy" Size="Size.Xs" /> Copy
             </button>
             <div class="ap-ctx-submenu">
                 @foreach (var item in GetCopyItems(ctxRow))
@@ -222,7 +222,7 @@
         </div>
     }
     <C2DropdownItem OnClick="CtxStartRename" Disabled="@(ctxRow?.Uuid is null)"><C2Icon Name="edit" Size="Size.Xs" /> Rename</C2DropdownItem>
-    <C2DropdownItem OnClick="CtxOpenFiles" Disabled="@(!ctxIsOnline && !ctxHasCache)"><C2Icon Name="folder" Size="Size.Xs" /> File Manager</C2DropdownItem>
+    <C2DropdownItem OnClick="CtxOpenFiles" Disabled="@(!ctxIsOnline && !ctxHasCache)"><C2Icon Name="folder" Size="Size.Xs" /> File System</C2DropdownItem>
     <C2DropdownItem OnClick="CtxOpenShell" Disabled="@(!ctxIsOnline || ctxPairedOther)"><C2Icon Name="terminal" Size="Size.Xs" /> Shell</C2DropdownItem>
     <C2DropdownItem OnClick="CtxOpenScreen" Disabled="@(!ctxIsOnline || ctxPairedOther)"><C2Icon Name="monitor" Size="Size.Xs" /> Screen</C2DropdownItem>
 </C2Dropdown>

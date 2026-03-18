@@ -208,7 +208,7 @@
 .ap-ctx-submenu {
     display: none;
     position: absolute;
-    left: 100%;
+    right: 100%;
     top: 0;
     min-width: 130px;
     background: var(--c2-bg-base);
