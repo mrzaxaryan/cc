@@ -91,10 +91,10 @@
                 <C2Icon Name="arrow-left" Size="Size.Xs" /> Download @unsyncedFiles.Count file(s)
             </C2DropdownItem>
         }
-        @if (syncedFiles.Count > 0)
+        @if (syncedFiles.Count > 0 && Mode == PanelMode.Local)
         {
             <C2DropdownItem OnClick="CtxSaveSelectedToBrowser">
-                <C2Icon Name="save" Size="Size.Xs" /> Save @syncedFiles.Count file(s) to Browser
+                <C2Icon Name="save" Size="Size.Xs" /> Download @syncedFiles.Count file(s) to Browser
             </C2DropdownItem>
         }
         <div class="fp-ctx-sep"></div>
@@ -117,19 +117,22 @@
         }
         else
         {
-            @if (IsFileSynced(ctxEntry.Name))
+            @if (Mode == PanelMode.Local)
             {
-                <C2DropdownItem OnClick="() => CtxAction(ctxEntry, PanelAction.View)"><C2Icon Name="file-text" Size="Size.Xs" /> View</C2DropdownItem>
-                <C2DropdownItem OnClick="() => CtxAction(ctxEntry, PanelAction.SaveToBrowser)"><C2Icon Name="save" Size="Size.Xs" /> Save to Browser</C2DropdownItem>
-                <div class="fp-ctx-sep"></div>
+                @if (IsFileSynced(ctxEntry.Name))
+                {
+                    <C2DropdownItem OnClick="() => CtxAction(ctxEntry, PanelAction.View)"><C2Icon Name="file-text" Size="Size.Xs" /> Open</C2DropdownItem>
+                    <C2DropdownItem OnClick="() => CtxAction(ctxEntry, PanelAction.SaveToBrowser)"><C2Icon Name="save" Size="Size.Xs" /> Download to Browser</C2DropdownItem>
+                    <div class="fp-ctx-sep"></div>
+                }
             }
-            else if (Mode == PanelMode.Remote)
+            else
             {
-                <C2DropdownItem OnClick="() => CtxAction(ctxEntry, PanelAction.Download)" Disabled="@(!Cache.HasDirectory)"><C2Icon Name="arrow-left" Size="Size.Xs" /> Download to Local</C2DropdownItem>
-                <div class="fp-ctx-sep"></div>
-            }
-            @if (Mode == PanelMode.Remote)
-            {
+                @if (!IsFileSynced(ctxEntry.Name))
+                {
+                    <C2DropdownItem OnClick="() => CtxAction(ctxEntry, PanelAction.Download)" Disabled="@(!Cache.HasDirectory)"><C2Icon Name="arrow-left" Size="Size.Xs" /> Download to Local</C2DropdownItem>
+                    <div class="fp-ctx-sep"></div>
+                }
                 <C2DropdownItem OnClick="() => CtxAction(ctxEntry, PanelAction.Hash)"><C2Icon Name="hash" Size="Size.Xs" /> SHA-256 Hash</C2DropdownItem>
             }
             <C2DropdownItem OnClick="CtxCopyPath"><C2Icon Name="copy" Size="Size.Xs" /> Copy Path</C2DropdownItem>
@@ -341,6 +344,8 @@
     {
         if (entry.IsDirectory || entry.IsDrive)
             await OnAction.InvokeAsync((entry, PanelAction.Open));
+        else if (Mode == PanelMode.Remote)
+            await OnAction.InvokeAsync((entry, PanelAction.Download));
         else
             await OnAction.InvokeAsync((entry, PanelAction.View));
     }
