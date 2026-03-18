@@ -153,7 +153,6 @@ public class WindowManager
 
     private static string DisplayTitle(string panel) => panel switch
     {
-        "Uploads" => "File Uploads",
         "Downloads" => "Download Manager",
         "FileSearch" => "File Search",
         "SearchJobs" => "Search Jobs",
