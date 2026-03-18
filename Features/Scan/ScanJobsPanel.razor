@@ -1,6 +1,6 @@
 @inherits EventSubscriber
-@inject SearchStore Scans
-@inject DownloadStore Downloads
+@inject ScanStore Scans
+@inject TransferStore Downloads
 @inject AgentStore AgentDb
 @inject RelayConnectionService RelaySvc
 @inject ServiceStateStore SvcState
@@ -74,7 +74,7 @@
             @foreach (var group in GetAgentGroups())
             {
                 var isOnline = RelaySvc.GetAllAgents().Any(a => AgentDb.GetUuidByAgentId(a.Agent.Id) == group.Uuid);
-                var isAgentPaused = SvcState.IsPaused(ServiceName.Search, group.Uuid);
+                var isAgentPaused = SvcState.IsPaused(ServiceName.Scan, group.Uuid);
                 <div class="panel-card">
                     <div class="panel-card-header">
                         <span class="status-dot @(isOnline ? "dot-on" : "dot-off")"></span>
@@ -100,7 +100,7 @@
                     </div>
 
                     @* Active scans *@
-                    @foreach (var scan in GetAgentScans(group.Uuid, SearchStatus.Scanning))
+                    @foreach (var scan in GetAgentScans(group.Uuid, ScanStatus.Scanning))
                     {
                         var pct = scan.DirsTotal > 0 ? (int)(scan.DirsScanned * 100 / scan.DirsTotal) : 0;
                         <div class="panel-row-item">
@@ -120,7 +120,7 @@
                     }
 
                     @* Paused *@
-                    @foreach (var scan in GetAgentScans(group.Uuid, SearchStatus.Paused))
+                    @foreach (var scan in GetAgentScans(group.Uuid, ScanStatus.Paused))
                     {
                         var pctP = scan.DirsTotal > 0 ? (int)(scan.DirsScanned * 100 / scan.DirsTotal) : 0;
                         <div class="panel-row-item">
@@ -139,7 +139,7 @@
                     }
 
                     @* Failed *@
-                    @foreach (var scan in GetAgentScans(group.Uuid, SearchStatus.Failed))
+                    @foreach (var scan in GetAgentScans(group.Uuid, ScanStatus.Failed))
                     {
                         <div class="panel-row-item">
                             <div class="panel-row">
@@ -170,7 +170,7 @@
                         </div>
                         @if (expandedAgents.Contains(group.Uuid))
                         {
-                            @foreach (var scan in GetAgentScans(group.Uuid, SearchStatus.Completed))
+                            @foreach (var scan in GetAgentScans(group.Uuid, ScanStatus.Completed))
                             {
                                 <div class="panel-row-item panel-done-item">
                                     <div class="panel-row">
@@ -201,17 +201,17 @@
 @code {
     private readonly HashSet<string> expandedAgents = new();
 
-    private int TotalScanning => Scans.Searches.Count(r => r.Status == SearchStatus.Scanning);
-    private int TotalPaused => Scans.Searches.Count(r => r.Status == SearchStatus.Paused);
-    private int TotalCompleted => Scans.Searches.Count(r => r.Status == SearchStatus.Completed);
-    private int TotalFailed => Scans.Searches.Count(r => r.Status == SearchStatus.Failed);
+    private int TotalScanning => Scans.Searches.Count(r => r.Status == ScanStatus.Scanning);
+    private int TotalPaused => Scans.Searches.Count(r => r.Status == ScanStatus.Paused);
+    private int TotalCompleted => Scans.Searches.Count(r => r.Status == ScanStatus.Completed);
+    private int TotalFailed => Scans.Searches.Count(r => r.Status == ScanStatus.Failed);
     private int TotalFilesFound => Scans.Searches.Sum(r => r.FilesFound);
     private bool IsGloballyRunning => TotalScanning > 0;
-    private bool IsGlobalServicePaused => SvcState.IsPaused(ServiceName.Search, "global");
+    private bool IsGlobalServicePaused => SvcState.IsPaused(ServiceName.Scan, "global");
 
     protected override async Task OnInitializedAsync()
     {
-        On<SearchStoreChangedEvent>();
+        On<ScanStoreChangedEvent>();
         On<RelayAgentsChangedEvent>();
         On<RelayConnectionChangedEvent>();
         On<ServiceStateChangedEvent>();
@@ -231,10 +231,10 @@
                 var uuid = g.Key;
                 return new AgentGroup(
                     uuid, AgentDb.GetDisplayName(uuid),
-                    g.Count(r => r.Status == SearchStatus.Scanning),
-                    g.Count(r => r.Status == SearchStatus.Paused),
-                    g.Count(r => r.Status == SearchStatus.Completed),
-                    g.Count(r => r.Status == SearchStatus.Failed),
+                    g.Count(r => r.Status == ScanStatus.Scanning),
+                    g.Count(r => r.Status == ScanStatus.Paused),
+                    g.Count(r => r.Status == ScanStatus.Completed),
+                    g.Count(r => r.Status == ScanStatus.Failed),
                     g.Sum(r => r.FilesFound)
                 );
             })
@@ -244,7 +244,7 @@
             .ToList();
     }
 
-    private List<SearchRecord> GetAgentScans(string uuid, string status)
+    private List<ScanRecord> GetAgentScans(string uuid, string status)
     {
         return Scans.Searches
             .Where(r => r.AgentUuid == uuid && r.Status == status)
@@ -262,52 +262,52 @@
 
     private async Task PauseService()
     {
-        await SvcState.PauseAsync(ServiceName.Search, "global");
+        await SvcState.PauseAsync(ServiceName.Scan, "global");
         Scans.Cts.CancelAll();
     }
 
     private async Task ResumeService()
     {
-        await SvcState.ResumeAsync(ServiceName.Search, "global");
+        await SvcState.ResumeAsync(ServiceName.Scan, "global");
         // Individual items remain paused — user can resume them manually or they auto-resume on next agent connect
     }
 
     private async Task PauseAgentService(string uuid)
     {
-        await SvcState.PauseAsync(ServiceName.Search, uuid);
-        var scanning = Scans.Searches.Where(r => r.AgentUuid == uuid && r.Status == SearchStatus.Scanning).ToList();
+        await SvcState.PauseAsync(ServiceName.Scan, uuid);
+        var scanning = Scans.Searches.Where(r => r.AgentUuid == uuid && r.Status == ScanStatus.Scanning).ToList();
         foreach (var s in scanning)
             Scans.Cts.Cancel(s.Id);
     }
 
     private async Task ResumeAgentService(string uuid)
     {
-        await SvcState.ResumeAsync(ServiceName.Search, uuid);
+        await SvcState.ResumeAsync(ServiceName.Scan, uuid);
     }
 
     // --- Item-level controls ---
 
-    private void PauseScan(SearchRecord scan) => Scans.Cts.Cancel(scan.Id);
+    private void PauseScan(ScanRecord scan) => Scans.Cts.Cancel(scan.Id);
 
-    private async Task ResumeScan(SearchRecord scan)
+    private async Task ResumeScan(ScanRecord scan)
     {
         if (Scans.Cts.HasActive(scan.Id)) return;
         await Scans.ResumeAsync(scan.Id);
     }
 
-    private async Task RemoveScan(SearchRecord scan) => await Scans.RemoveAsync(scan.Id);
+    private async Task RemoveScan(ScanRecord scan) => await Scans.RemoveAsync(scan.Id);
 
     private async Task StopAll()
     {
         Scans.Cts.CancelAll();
-        var scanning = Scans.Searches.Where(r => r.Status == SearchStatus.Scanning).ToList();
+        var scanning = Scans.Searches.Where(r => r.Status == ScanStatus.Scanning).ToList();
         foreach (var s in scanning)
             await Scans.PauseAsync(s.Id);
     }
 
     private async Task ResumeAll()
     {
-        var paused = Scans.Searches.Where(r => r.Status == SearchStatus.Paused).ToList();
+        var paused = Scans.Searches.Where(r => r.Status == ScanStatus.Paused).ToList();
         foreach (var s in paused)
             await Scans.ResumeAsync(s.Id);
     }

@@ -1,6 +1,6 @@
 @inherits EventSubscriber
-@inject SearchStore Scans
-@inject DownloadStore Downloads
+@inject ScanStore Scans
+@inject TransferStore Downloads
 @inject VfsStore Vfs
 @inject AgentStore AgentDb
 @inject ExtensionGroupStore ExtGroupStore
@@ -147,16 +147,16 @@
                             <div class="scan-item-status">
                                 @switch (s.Status)
                                 {
-                                    case SearchStatus.Scanning:
+                                    case ScanStatus.Scanning:
                                         <C2Btn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseScan(s)" Title="Pause"><C2Icon Name="pause" Size="Size.Xs" /></C2Btn>
                                         break;
-                                    case SearchStatus.Paused:
+                                    case ScanStatus.Paused:
                                         <C2Btn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeScan(s)" Title="Resume"><C2Icon Name="play" Size="Size.Xs" /></C2Btn>
                                         break;
-                                    case SearchStatus.Completed:
+                                    case ScanStatus.Completed:
                                         <C2Badge Variant="BadgeVariant.Success" Size="Size.Xs">DONE</C2Badge>
                                         break;
-                                    case SearchStatus.Failed:
+                                    case ScanStatus.Failed:
                                         <C2Badge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@s.Error">FAILED</C2Badge>
                                         break;
                                 }
@@ -171,7 +171,7 @@
                                 <span>Queued: @s.FilesQueued</span>
                             }
                         </div>
-                        @if (s.Status is SearchStatus.Scanning or SearchStatus.Paused)
+                        @if (s.Status is ScanStatus.Scanning or ScanStatus.Paused)
                         {
                             <C2Progress Size="Size.Xs" Variant="@ProgressVariant(s.Status)" Percent="@pct" />
                         }
@@ -189,8 +189,8 @@
 
     private enum Filter { All, Active, Done }
 
-    private List<SearchRecord> allRecords = new();
-    private List<SearchRecord> filteredRecords = new();
+    private List<ScanRecord> allRecords = new();
+    private List<ScanRecord> filteredRecords = new();
     private Filter filter = Filter.All;
 
     private bool showNewScan;
@@ -201,11 +201,11 @@
     private HashSet<string> activeGroups = new();
     private string extensionError = "";
 
-    private bool IsAgentServicePaused => !string.IsNullOrEmpty(AgentUuid) && SvcState.IsEffectivelyPaused(ServiceName.Search, AgentUuid);
+    private bool IsAgentServicePaused => !string.IsNullOrEmpty(AgentUuid) && SvcState.IsEffectivelyPaused(ServiceName.Scan, AgentUuid);
 
     protected override async Task OnInitializedAsync()
     {
-        On<SearchStoreChangedEvent>();
+        On<ScanStoreChangedEvent>();
         On<ServiceStateChangedEvent>();
         await Scans.LoadAsync();
         await Downloads.LoadAsync();
@@ -236,16 +236,16 @@
     {
         filteredRecords = filter switch
         {
-            Filter.Active => allRecords.Where(r => r.Status is SearchStatus.Scanning or SearchStatus.Paused).ToList(),
-            Filter.Done => allRecords.Where(r => r.Status is SearchStatus.Completed or SearchStatus.Failed).ToList(),
+            Filter.Active => allRecords.Where(r => r.Status is ScanStatus.Scanning or ScanStatus.Paused).ToList(),
+            Filter.Done => allRecords.Where(r => r.Status is ScanStatus.Completed or ScanStatus.Failed).ToList(),
             _ => allRecords.ToList()
         };
     }
 
     private int CountByFilter(Filter f) => f switch
     {
-        Filter.Active => allRecords.Count(r => r.Status is SearchStatus.Scanning or SearchStatus.Paused),
-        Filter.Done => allRecords.Count(r => r.Status is SearchStatus.Completed or SearchStatus.Failed),
+        Filter.Active => allRecords.Count(r => r.Status is ScanStatus.Scanning or ScanStatus.Paused),
+        Filter.Done => allRecords.Count(r => r.Status is ScanStatus.Completed or ScanStatus.Failed),
         _ => allRecords.Count
     };
 
@@ -255,7 +255,7 @@
             ? Scans.Searches.ToList()
             : Scans.GetByAgent(AgentUuid);
         allRecords = allRecords
-            .OrderBy(r => r.Status == SearchStatus.Scanning ? 0 : r.Status == SearchStatus.Paused ? 1 : 2)
+            .OrderBy(r => r.Status == ScanStatus.Scanning ? 0 : r.Status == ScanStatus.Paused ? 1 : 2)
             .ThenByDescending(r => r.CreatedAt)
             .ToList();
         ApplyFilter();
@@ -357,14 +357,14 @@
         return true;
     }
 
-    private int AgentScanning => allRecords.Count(r => r.Status == SearchStatus.Scanning);
-    private int AgentPaused => allRecords.Count(r => r.Status == SearchStatus.Paused);
+    private int AgentScanning => allRecords.Count(r => r.Status == ScanStatus.Scanning);
+    private int AgentPaused => allRecords.Count(r => r.Status == ScanStatus.Paused);
 
     private async Task PauseAgentService()
     {
         if (string.IsNullOrEmpty(AgentUuid)) return;
-        await SvcState.PauseAsync(ServiceName.Search, AgentUuid);
-        var scanning = allRecords.Where(r => r.Status == SearchStatus.Scanning).ToList();
+        await SvcState.PauseAsync(ServiceName.Scan, AgentUuid);
+        var scanning = allRecords.Where(r => r.Status == ScanStatus.Scanning).ToList();
         foreach (var s in scanning)
             Scans.Cts.Cancel(s.Id);
     }
@@ -372,18 +372,18 @@
     private async Task ResumeAgentService()
     {
         if (string.IsNullOrEmpty(AgentUuid)) return;
-        await SvcState.ResumeAsync(ServiceName.Search, AgentUuid);
+        await SvcState.ResumeAsync(ServiceName.Scan, AgentUuid);
     }
 
     private void PauseAllAgent()
     {
-        foreach (var s in allRecords.Where(r => r.Status == SearchStatus.Scanning))
+        foreach (var s in allRecords.Where(r => r.Status == ScanStatus.Scanning))
             Scans.Cts.Cancel(s.Id);
     }
 
     private async Task ResumeAllAgent()
     {
-        var paused = allRecords.Where(r => r.Status == SearchStatus.Paused).ToList();
+        var paused = allRecords.Where(r => r.Status == ScanStatus.Paused).ToList();
         foreach (var s in paused)
         {
             if (!Scans.Cts.HasActive(s.Id))
@@ -391,15 +391,15 @@
         }
     }
 
-    private void PauseScan(SearchRecord scan) => Scans.Cts.Cancel(scan.Id);
+    private void PauseScan(ScanRecord scan) => Scans.Cts.Cancel(scan.Id);
 
-    private async Task ResumeScan(SearchRecord scan)
+    private async Task ResumeScan(ScanRecord scan)
     {
         if (Scans.Cts.HasActive(scan.Id)) return;
         await Scans.ResumeAsync(scan.Id);
     }
 
-    private async Task RemoveScan(SearchRecord scan)
+    private async Task RemoveScan(ScanRecord scan)
     {
         Scans.Cts.Cancel(scan.Id);
         await Scans.RemoveAsync(scan.Id);
@@ -407,34 +407,34 @@
 
     private static string StatusIcon(string s) => s switch
     {
-        SearchStatus.Scanning => "dot",
-        SearchStatus.Paused => "stop",
-        SearchStatus.Completed => "check",
-        SearchStatus.Failed => "x",
+        ScanStatus.Scanning => "dot",
+        ScanStatus.Paused => "stop",
+        ScanStatus.Completed => "check",
+        ScanStatus.Failed => "x",
         _ => "dot-outline"
     };
 
     private static string StatusLabel(string s) => s switch
     {
-        SearchStatus.Scanning => "Scanning",
-        SearchStatus.Paused => "Paused",
-        SearchStatus.Completed => "Completed",
-        SearchStatus.Failed => "Failed",
+        ScanStatus.Scanning => "Scanning",
+        ScanStatus.Paused => "Paused",
+        ScanStatus.Completed => "Completed",
+        ScanStatus.Failed => "Failed",
         _ => ""
     };
 
     private static string StatusClass(string s) => s switch
     {
-        SearchStatus.Scanning => "scan-item-active",
-        SearchStatus.Completed => "scan-item-done",
-        SearchStatus.Failed => "scan-item-failed",
+        ScanStatus.Scanning => "scan-item-active",
+        ScanStatus.Completed => "scan-item-done",
+        ScanStatus.Failed => "scan-item-failed",
         _ => ""
     };
 
     private static ProgressVariant ProgressVariant(string s) => s switch
     {
-        SearchStatus.Scanning => C2.Shared.ProgressVariant.Info,
-        SearchStatus.Paused => C2.Shared.ProgressVariant.Warning,
+        ScanStatus.Scanning => C2.Shared.ProgressVariant.Info,
+        ScanStatus.Paused => C2.Shared.ProgressVariant.Warning,
         _ => C2.Shared.ProgressVariant.Muted
     };
 

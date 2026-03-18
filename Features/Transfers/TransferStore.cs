@@ -2,9 +2,9 @@ using C2.Infrastructure;
 using System.Text.Json.Serialization;
 using Microsoft.JSInterop;
 
-namespace C2.Features.Downloads;
+namespace C2.Features.Transfers;
 
-public class DownloadRecord
+public class TransferRecord
 {
     [JsonPropertyName("id")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
@@ -16,7 +16,7 @@ public class DownloadRecord
     [JsonPropertyName("cacheSubPath")] public string CacheSubPath { get; set; } = "";
     [JsonPropertyName("totalSize")] public long TotalSize { get; set; }
     [JsonPropertyName("downloadedSize")] public long DownloadedSize { get; set; }
-    [JsonPropertyName("status")] public string Status { get; set; } = DownloadStatus.Pending;
+    [JsonPropertyName("status")] public string Status { get; set; } = TransferStatus.Pending;
     [JsonPropertyName("error")] public string? Error { get; set; }
     [JsonPropertyName("createdAt")] public double CreatedAt { get; set; }
     [JsonPropertyName("completedAt")] public double? CompletedAt { get; set; }
@@ -29,10 +29,10 @@ public class DownloadRecord
 }
 
 /// <summary>
-/// Download lifecycle states: Pending → Queued → Downloading → Completed/Failed.
-/// A download can be Paused from Downloading and resumed back to Queued.
+/// Transfer lifecycle states: Pending → Queued → Downloading → Completed/Failed.
+/// A transfer can be Paused from Downloading and resumed back to Queued.
 /// </summary>
-public static class DownloadStatus
+public static class TransferStatus
 {
     /// <summary>Newly created, not yet queued for processing.</summary>
     public const string Pending = "pending";
@@ -48,23 +48,23 @@ public static class DownloadStatus
     public const string Failed = "failed";
 }
 
-public class DownloadStore
+public class TransferStore
 {
     private readonly IJSRuntime _js;
     private readonly IEventBus _bus;
-    private List<DownloadRecord> _cache = new();
+    private List<TransferRecord> _cache = new();
     private bool _loaded;
 
-    /// <summary>CTS (CancellationTokenSource) manager for cancelling in-flight download operations.</summary>
+    /// <summary>CTS (CancellationTokenSource) manager for cancelling in-flight transfer operations.</summary>
     public readonly CtsManager Cts = new();
 
-    public DownloadStore(IJSRuntime js, IEventBus bus)
+    public TransferStore(IJSRuntime js, IEventBus bus)
     {
         _js = js;
         _bus = bus;
     }
 
-    public IReadOnlyList<DownloadRecord> Downloads => _cache;
+    public IReadOnlyList<TransferRecord> Downloads => _cache;
 
     public async Task LoadAsync()
     {
@@ -73,7 +73,7 @@ public class DownloadStore
 
         try
         {
-            var records = await _js.InvokeAsync<DownloadRecord[]>("c2DownloadDb.getAll");
+            var records = await _js.InvokeAsync<TransferRecord[]>("c2DownloadDb.getAll");
             _cache = records.ToList();
         }
         catch
@@ -82,9 +82,9 @@ public class DownloadStore
         }
     }
 
-    public async Task<DownloadRecord> AddAsync(string agentUuid, string agentName, string remotePath, string fileName, string cacheSubPath, long totalSize, int priority = 0)
+    public async Task<TransferRecord> AddAsync(string agentUuid, string agentName, string remotePath, string fileName, string cacheSubPath, long totalSize, int priority = 0)
     {
-        var record = new DownloadRecord
+        var record = new TransferRecord
         {
             AgentUuid = agentUuid,
             AgentName = agentName,
@@ -92,7 +92,7 @@ public class DownloadStore
             FileName = fileName,
             CacheSubPath = cacheSubPath,
             TotalSize = totalSize,
-            Status = DownloadStatus.Queued,
+            Status = TransferStatus.Queued,
             Priority = priority,
             CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
         };
@@ -100,8 +100,8 @@ public class DownloadStore
         var id = await _js.InvokeAsync<int>("c2DownloadDb.put", record);
         record.Id = id;
         _cache.Add(record);
-        _bus.Publish(new DownloadStoreChangedEvent());
-        _bus.Publish(new DownloadItemQueuedEvent(record.AgentUuid));
+        _bus.Publish(new TransferStoreChangedEvent());
+        _bus.Publish(new TransferItemQueuedEvent(record.AgentUuid));
         return record;
     }
 
@@ -110,10 +110,10 @@ public class DownloadStore
         var record = _cache.FirstOrDefault(r => r.Id == id);
         if (record is null) return;
 
-        record.Status = DownloadStatus.Queued;
+        record.Status = TransferStatus.Queued;
         await _js.InvokeVoidAsync("c2DownloadDb.put", record);
-        _bus.Publish(new DownloadStoreChangedEvent());
-        _bus.Publish(new DownloadItemQueuedEvent(record.AgentUuid));
+        _bus.Publish(new TransferStoreChangedEvent());
+        _bus.Publish(new TransferItemQueuedEvent(record.AgentUuid));
     }
 
     /// <summary>Reset a completed or failed record and re-queue it for upload.</summary>
@@ -125,13 +125,13 @@ public class DownloadStore
         record.CacheSubPath = cacheSubPath;
         record.TotalSize = totalSize;
         record.DownloadedSize = 0;
-        record.Status = DownloadStatus.Queued;
+        record.Status = TransferStatus.Queued;
         record.Error = null;
         record.CompletedAt = null;
         record.SpeedBytesPerSec = 0;
         await _js.InvokeVoidAsync("c2DownloadDb.put", record);
-        _bus.Publish(new DownloadStoreChangedEvent());
-        _bus.Publish(new DownloadItemQueuedEvent(record.AgentUuid));
+        _bus.Publish(new TransferStoreChangedEvent());
+        _bus.Publish(new TransferItemQueuedEvent(record.AgentUuid));
     }
 
     public async Task UpdateProgressAsync(int id, long downloadedSize)
@@ -140,7 +140,7 @@ public class DownloadStore
         if (record is null) return;
 
         record.DownloadedSize = downloadedSize;
-        record.Status = DownloadStatus.Downloading;
+        record.Status = TransferStatus.Downloading;
 
         // Calculate speed
         var now = DateTime.UtcNow;
@@ -162,7 +162,7 @@ public class DownloadStore
         }
 
         await _js.InvokeVoidAsync("c2DownloadDb.put", record);
-        _bus.Publish(new DownloadStoreChangedEvent());
+        _bus.Publish(new TransferStoreChangedEvent());
     }
 
     public async Task CompleteAsync(int id)
@@ -170,11 +170,11 @@ public class DownloadStore
         var record = _cache.FirstOrDefault(r => r.Id == id);
         if (record is null) return;
 
-        record.Status = DownloadStatus.Completed;
+        record.Status = TransferStatus.Completed;
         record.DownloadedSize = record.TotalSize;
         record.CompletedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         await _js.InvokeVoidAsync("c2DownloadDb.put", record);
-        _bus.Publish(new DownloadStoreChangedEvent());
+        _bus.Publish(new TransferStoreChangedEvent());
     }
 
     public async Task PauseAsync(int id)
@@ -182,9 +182,9 @@ public class DownloadStore
         var record = _cache.FirstOrDefault(r => r.Id == id);
         if (record is null) return;
 
-        record.Status = DownloadStatus.Paused;
+        record.Status = TransferStatus.Paused;
         await _js.InvokeVoidAsync("c2DownloadDb.put", record);
-        _bus.Publish(new DownloadStoreChangedEvent());
+        _bus.Publish(new TransferStoreChangedEvent());
     }
 
     public async Task FailAsync(int id, string error)
@@ -192,24 +192,24 @@ public class DownloadStore
         var record = _cache.FirstOrDefault(r => r.Id == id);
         if (record is null) return;
 
-        record.Status = DownloadStatus.Failed;
+        record.Status = TransferStatus.Failed;
         record.Error = error;
         await _js.InvokeVoidAsync("c2DownloadDb.put", record);
-        _bus.Publish(new DownloadStoreChangedEvent());
+        _bus.Publish(new TransferStoreChangedEvent());
     }
 
     public async Task RemoveAsync(int id)
     {
         _cache.RemoveAll(r => r.Id == id);
         await _js.InvokeVoidAsync("c2DownloadDb.remove", id);
-        _bus.Publish(new DownloadStoreChangedEvent());
+        _bus.Publish(new TransferStoreChangedEvent());
     }
 
     public async Task ClearAsync()
     {
         _cache.Clear();
         await _js.InvokeVoidAsync("c2DownloadDb.clear");
-        _bus.Publish(new DownloadStoreChangedEvent());
+        _bus.Publish(new TransferStoreChangedEvent());
     }
 
     public async Task SetPriorityAsync(int id, int priority)
@@ -219,32 +219,32 @@ public class DownloadStore
 
         record.Priority = priority;
         await _js.InvokeVoidAsync("c2DownloadDb.put", record);
-        _bus.Publish(new DownloadStoreChangedEvent());
+        _bus.Publish(new TransferStoreChangedEvent());
     }
 
     public bool IsCompleted(string agentUuid, string remotePath) =>
-        _cache.Any(r => r.AgentUuid == agentUuid && r.RemotePath == remotePath && r.Status == DownloadStatus.Completed);
+        _cache.Any(r => r.AgentUuid == agentUuid && r.RemotePath == remotePath && r.Status == TransferStatus.Completed);
 
     public bool IsDownloading(string agentUuid, string remotePath) =>
-        _cache.Any(r => r.AgentUuid == agentUuid && r.RemotePath == remotePath && r.Status == DownloadStatus.Downloading);
+        _cache.Any(r => r.AgentUuid == agentUuid && r.RemotePath == remotePath && r.Status == TransferStatus.Downloading);
 
-    public DownloadRecord? Find(string agentUuid, string remotePath) =>
+    public TransferRecord? Find(string agentUuid, string remotePath) =>
         _cache.FirstOrDefault(r => r.AgentUuid == agentUuid && r.RemotePath == remotePath);
 
-    public List<DownloadRecord> GetByAgent(string agentUuid) =>
+    public List<TransferRecord> GetByAgent(string agentUuid) =>
         _cache.Where(r => r.AgentUuid == agentUuid).ToList();
 
-    public List<DownloadRecord> GetActive() =>
-        _cache.Where(r => r.Status is DownloadStatus.Downloading or DownloadStatus.Paused or DownloadStatus.Queued)
+    public List<TransferRecord> GetActive() =>
+        _cache.Where(r => r.Status is TransferStatus.Downloading or TransferStatus.Paused or TransferStatus.Queued)
               .ToList();
 
     /// <summary>True if agent has a file currently downloading.</summary>
     public bool HasActiveDownload(string agentUuid) =>
-        _cache.Any(r => r.AgentUuid == agentUuid && r.Status == DownloadStatus.Downloading);
+        _cache.Any(r => r.AgentUuid == agentUuid && r.Status == TransferStatus.Downloading);
 
     /// <summary>Get the next queued record for an agent, ordered by priority (lower first) then createdAt.</summary>
-    public DownloadRecord? GetNextQueued(string agentUuid) =>
-        _cache.Where(r => r.AgentUuid == agentUuid && r.Status == DownloadStatus.Queued)
+    public TransferRecord? GetNextQueued(string agentUuid) =>
+        _cache.Where(r => r.AgentUuid == agentUuid && r.Status == TransferStatus.Queued)
               .OrderBy(r => r.Priority)
               .ThenBy(r => r.CreatedAt)
               .FirstOrDefault();

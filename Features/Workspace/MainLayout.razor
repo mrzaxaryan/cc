@@ -2,15 +2,15 @@
 @inject CacheManager Cache
 @inject RelayStore Relay
 @inject RelayConnectionService RelaySvc
-@inject DownloadService DownloadSvc
-@inject SearchService SearchSvc
+@inject TransferService TransferSvc
+@inject ScanService ScanSvc
 @inject WindowManager Wm
 @inject ThemeService Theme
 @inject MessageService Msg
 @inject NotificationStore Notif
 @inject ExtensionGroupStore ExtGroups
-@inject DownloadStore DownloadStore
-@inject SearchStore SearchStore
+@inject TransferStore TransferStore
+@inject ScanStore ScanStore
 @inject IJSRuntime JS
 
 @if (!initialized)
@@ -187,7 +187,7 @@ else
     [
         new("Agents", "agents", "Agents"),
         new("Relay", "server", "Relay"),
-        new("SearchJobs", "search", "Search"),
+        new("ScanJobs", "scan", "Search"),
         new("ExtensionGroups", "layers", "Extensions"),
     ];
 
@@ -228,8 +228,8 @@ else
             await Notif.LoadAsync();
             await ExtGroups.LoadAsync();
             await RelaySvc.StartAsync();
-            await DownloadSvc.StartAsync();
-            await SearchSvc.StartAsync();
+            await TransferSvc.StartAsync();
+            await ScanSvc.StartAsync();
             showSetup = Cache.SetupRequired || Cache.NeedsPermission || Relay.SetupRequired || ExtGroups.SetupRequired;
             initialized = true;
             StateHasChanged();
@@ -345,13 +345,13 @@ else
         brandMenuOpen = false;
 
         // Cancel all in-flight downloads, uploads, and searches
-        DownloadStore.Cts.CancelAll();
-        SearchStore.Cts.CancelAll();
+        TransferStore.Cts.CancelAll();
+        ScanStore.Cts.CancelAll();
 
         // Dispose services (closes WebSockets, stops background loops)
         await RelaySvc.DisposeAsync();
-        DownloadSvc.Dispose();
-        SearchSvc.Dispose();
+        TransferSvc.Dispose();
+        ScanSvc.Dispose();
         _updateTimer?.Dispose();
 
         isShutdown = true;

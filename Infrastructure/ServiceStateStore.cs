@@ -20,7 +20,7 @@ public static class ServiceStatus
 
 public static class ServiceName
 {
-    public const string Search = "search";
+    public const string Scan = "scan";
     public const string Upload = "upload";
 }
 

@@ -16,15 +16,15 @@ builder.Services.AddScoped<C2.Infrastructure.ThemeService>();
 
 // Features
 builder.Services.AddScoped<C2.Features.Agents.AgentStore>();
-builder.Services.AddScoped<C2.Features.Downloads.DownloadService>();
-builder.Services.AddScoped<C2.Features.Downloads.DownloadStore>();
+builder.Services.AddScoped<C2.Features.Transfers.TransferService>();
+builder.Services.AddScoped<C2.Features.Transfers.TransferStore>();
 builder.Services.AddScoped<C2.Features.Extensions.ExtensionGroupStore>();
 builder.Services.AddScoped<C2.Features.FileManager.VfsStore>();
 builder.Services.AddScoped<C2.Features.Notifications.NotificationStore>();
 builder.Services.AddScoped<C2.Features.Relay.RelayConnectionService>();
 builder.Services.AddScoped<C2.Features.Relay.RelayStore>();
-builder.Services.AddScoped<C2.Features.Search.SearchService>();
-builder.Services.AddScoped<C2.Features.Search.SearchStore>();
+builder.Services.AddScoped<C2.Features.Scan.ScanService>();
+builder.Services.AddScoped<C2.Features.Scan.ScanStore>();
 builder.Services.AddScoped<C2.Features.Storage.CacheManager>();
 builder.Services.AddSingleton<C2.Features.Workspace.WindowManager>();
 

@@ -35,13 +35,13 @@ public record WindowChangedEvent : IEvent;
 
 // ── Store change events ───────────────────────────────────────────────
 
-public record DownloadStoreChangedEvent : IEvent;
+public record TransferStoreChangedEvent : IEvent;
 
-public record DownloadItemQueuedEvent(string AgentUuid) : IEvent;
+public record TransferItemQueuedEvent(string AgentUuid) : IEvent;
 
-public record SearchStoreChangedEvent : IEvent;
+public record ScanStoreChangedEvent : IEvent;
 
-public record SearchItemQueuedEvent(string AgentUuid) : IEvent;
+public record ScanItemQueuedEvent(string AgentUuid) : IEvent;
 
 public record NotificationStoreChangedEvent : IEvent;
 

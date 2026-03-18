@@ -1,14 +1,14 @@
 @inherits EventSubscriber
-@inject DownloadStore Downloads
+@inject TransferStore Downloads
 
 @{
-    var dl = GetDownloadRecord();
-    if (dl is null || dl.Status == DownloadStatus.Pending)
+    var dl = GetTransferRecord();
+    if (dl is null || dl.Status == TransferStatus.Pending)
         return;
 
     switch (dl.Status)
     {
-        case DownloadStatus.Downloading:
+        case TransferStatus.Downloading:
             var pct = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
             <span class="fm-dl-badge">
                 <C2Spinner Size="Size.Xs" />
@@ -16,20 +16,20 @@
             </span>
             break;
 
-        case DownloadStatus.Queued:
+        case TransferStatus.Queued:
             <C2Badge Variant="BadgeVariant.Muted" Size="Size.Xs">QUEUED</C2Badge>
             break;
 
-        case DownloadStatus.Completed:
+        case TransferStatus.Completed:
             <C2Badge Variant="BadgeVariant.Success" Size="Size.Xs"><C2Icon Name="check" Size="Size.Xs" /></C2Badge>
             break;
 
-        case DownloadStatus.Paused:
+        case TransferStatus.Paused:
             var pctP = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
             <C2Badge Variant="BadgeVariant.Warning" Size="Size.Xs"><C2Icon Name="pause" Size="Size.Xs" /> @pctP%</C2Badge>
             break;
 
-        case DownloadStatus.Failed:
+        case TransferStatus.Failed:
             <C2Badge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@dl.Error"><C2Icon Name="x" Size="Size.Xs" /></C2Badge>
             break;
     }
@@ -42,10 +42,10 @@
 
     protected override void OnInitialized()
     {
-        On<DownloadStoreChangedEvent>();
+        On<TransferStoreChangedEvent>();
     }
 
-    private DownloadRecord? GetDownloadRecord()
+    private TransferRecord? GetTransferRecord()
         => string.IsNullOrEmpty(AgentUuid) ? null : Downloads.Find(AgentUuid, CurrentPath + Entry.Name);
 
     public override void Dispose() => base.Dispose();

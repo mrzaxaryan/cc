@@ -1,16 +1,16 @@
-using C2.Features.Downloads;
+using C2.Features.Transfers;
 using C2.Features.FileManager;
 using C2.Features.Relay;
 using C2.Features.Storage;
 using C2.Features.Workspace;
 using C2.Infrastructure;
 
-namespace C2.Features.Search;
+namespace C2.Features.Scan;
 
-public class SearchService : IDisposable
+public class ScanService : IDisposable
 {
-    private readonly SearchStore _store;
-    private readonly DownloadStore _downloads;
+    private readonly ScanStore _store;
+    private readonly TransferStore _downloads;
     private readonly VfsStore _vfs;
     private readonly CacheManager _cache;
     private readonly RelayConnectionService _relaySvc;
@@ -23,8 +23,8 @@ public class SearchService : IDisposable
     private readonly List<IDisposable> _subscriptions = new();
     private bool _disposing;
 
-    public SearchService(
-        SearchStore store, DownloadStore downloads, VfsStore vfs,
+    public ScanService(
+        ScanStore store, TransferStore downloads, VfsStore vfs,
         CacheManager cache, RelayConnectionService relaySvc,
         ServiceStateStore serviceState, MessageService msg,
         WindowManager wm, IEventBus bus)
@@ -45,7 +45,7 @@ public class SearchService : IDisposable
         await _store.LoadAsync();
         await ResetStaleSearches();
 
-        _subscriptions.Add(_bus.Subscribe<SearchItemQueuedEvent>(e => OnSearchItemQueued(e.AgentUuid)));
+        _subscriptions.Add(_bus.Subscribe<ScanItemQueuedEvent>(e => OnSearchItemQueued(e.AgentUuid)));
         _subscriptions.Add(_bus.Subscribe<ServiceStateChangedEvent>(_ => OnServiceStateChanged()));
         _subscriptions.Add(_bus.Subscribe<AgentOnlineEvent>(e => AutoResumeAsync(e.Uuid, e.AgentId, e.RelayUrl)));
     }
@@ -53,7 +53,7 @@ public class SearchService : IDisposable
     private async Task ResetStaleSearches()
     {
         var stale = _store.Searches
-            .Where(r => r.Status == SearchStatus.Scanning && !_store.Cts.HasActive(r.Id))
+            .Where(r => r.Status == ScanStatus.Scanning && !_store.Cts.HasActive(r.Id))
             .ToList();
         foreach (var s in stale)
             await _store.PauseAsync(s.Id);
@@ -63,18 +63,18 @@ public class SearchService : IDisposable
     {
         foreach (var uuid in _searchingAgents.ToList())
         {
-            if (_serviceState.IsEffectivelyPaused(ServiceName.Search, uuid))
+            if (_serviceState.IsEffectivelyPaused(ServiceName.Scan, uuid))
                 _store.Cts.CancelAll();
         }
     }
 
     private async Task AutoResumeAsync(string uuid, string agentId, string relayUrl)
     {
-        if (_serviceState.IsEffectivelyPaused(ServiceName.Search, uuid)) return;
+        if (_serviceState.IsEffectivelyPaused(ServiceName.Scan, uuid)) return;
         await _store.LoadAsync();
 
         var paused = _store.GetByAgent(uuid)
-            .Where(r => r.Status == SearchStatus.Paused)
+            .Where(r => r.Status == ScanStatus.Paused)
             .ToList();
         foreach (var s in paused)
             await _store.ResumeAsync(s.Id);
@@ -84,7 +84,7 @@ public class SearchService : IDisposable
 
     private void OnSearchItemQueued(string agentUuid)
     {
-        if (_serviceState.IsEffectivelyPaused(ServiceName.Search, agentUuid)) return;
+        if (_serviceState.IsEffectivelyPaused(ServiceName.Scan, agentUuid)) return;
         if (_relaySvc.IsDisposing) return;
 
         var resolved = _relaySvc.FindOnlineAgent(agentUuid);
@@ -154,7 +154,7 @@ public class SearchService : IDisposable
         }
     }
 
-    private async Task ProcessSearch(RelaySocket relay, SearchRecord scan, CancellationToken ct)
+    private async Task ProcessSearch(RelaySocket relay, ScanRecord scan, CancellationToken ct)
     {
         var extensionSet = scan.Extensions
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
@@ -217,7 +217,7 @@ public class SearchService : IDisposable
                                 await _downloads.AddAsync(scan.AgentUuid, scan.AgentName, entryRemotePath, entry.Name, vfsFile.Id, (long)entry.Size);
                                 scan.FilesQueued++;
                             }
-                            else if (existing.Status == DownloadStatus.Failed)
+                            else if (existing.Status == TransferStatus.Failed)
                             {
                                 await _downloads.RequeueAsync(existing.Id, vfsFile.Id, (long)entry.Size);
                                 scan.FilesQueued++;

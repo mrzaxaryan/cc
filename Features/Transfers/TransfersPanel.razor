@@ -1,5 +1,5 @@
 @inherits EventSubscriber
-@inject DownloadStore Downloads
+@inject TransferStore Transfers
 @inject AgentStore AgentDb
 @inject MessageService Msg
 
@@ -82,7 +82,7 @@
                             <div class="sm-item-status">
                                 @switch (dl.Status)
                                 {
-                                    case DownloadStatus.Downloading:
+                                    case TransferStatus.Downloading:
                                         <span class="sm-pct">@pct%</span>
                                         @if (dl.SpeedBytesPerSec > 0)
                                         {
@@ -91,29 +91,29 @@
                                         <C2Btn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseDownload(rec)" Title="Pause"><C2Icon Name="pause" Size="Size.Xs" /></C2Btn>
                                         break;
 
-                                    case DownloadStatus.Queued:
+                                    case TransferStatus.Queued:
                                         <C2Badge Variant="BadgeVariant.Muted" Size="Size.Xs">QUEUED</C2Badge>
                                         <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => BumpPriority(rec, -1)" Title="Higher priority"><C2Icon Name="chevron-up" Size="Size.Xs" /></C2Btn>
                                         <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => BumpPriority(rec, 1)" Title="Lower priority"><C2Icon Name="chevron-down" Size="Size.Xs" /></C2Btn>
                                         break;
 
-                                    case DownloadStatus.Paused:
+                                    case TransferStatus.Paused:
                                         <C2Badge Variant="BadgeVariant.Warning" Size="Size.Xs">PAUSED @pct%</C2Badge>
-                                        <C2Btn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeDownload(rec)" Disabled="@(Downloads.Cts.HasActive(rec.Id))" Title="Resume"><C2Icon Name="play" Size="Size.Xs" /></C2Btn>
+                                        <C2Btn Size="Size.Xs" Variant="BtnVariant.Success" OnClick="() => ResumeDownload(rec)" Disabled="@(Transfers.Cts.HasActive(rec.Id))" Title="Resume"><C2Icon Name="play" Size="Size.Xs" /></C2Btn>
                                         break;
 
-                                    case DownloadStatus.Completed:
+                                    case TransferStatus.Completed:
                                         <C2Badge Variant="BadgeVariant.Success" Size="Size.Xs">DONE</C2Badge>
                                         break;
 
-                                    case DownloadStatus.Failed:
+                                    case TransferStatus.Failed:
                                         <C2Badge Variant="BadgeVariant.Danger" Size="Size.Xs" Title="@dl.Error">FAILED</C2Badge>
                                         break;
                                 }
                                 <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => RemoveDownload(rec)" Title="Remove" CssClass="panel-remove-btn"><C2Icon Name="x" Size="Size.Xs" /></C2Btn>
                             </div>
                         </div>
-                        @if (dl.Status is DownloadStatus.Downloading or DownloadStatus.Queued or DownloadStatus.Paused)
+                        @if (dl.Status is TransferStatus.Downloading or TransferStatus.Queued or TransferStatus.Paused)
                         {
                             <C2Progress Size="Size.Xs" Variant="@ProgressVariant(dl.Status)" Percent="@pct" />
                         }
@@ -130,21 +130,21 @@
 
     private enum Filter { All, Active, Paused, Done }
 
-    private List<DownloadRecord> activeRecords = new();
-    private List<DownloadRecord> filteredRecords = new();
+    private List<TransferRecord> activeRecords = new();
+    private List<TransferRecord> filteredRecords = new();
     private Filter filter = Filter.All;
     private bool confirmClear;
 
     protected override async Task OnInitializedAsync()
     {
-        On<DownloadStoreChangedEvent>(e => Refresh());
+        On<TransferStoreChangedEvent>(e => Refresh());
         await AgentDb.LoadAsync();
-        await Downloads.LoadAsync();
+        await Transfers.LoadAsync();
         Refresh();
     }
 
     private bool HasActiveSyncs =>
-        activeRecords.Any(r => r.Status is DownloadStatus.Downloading or DownloadStatus.Queued);
+        activeRecords.Any(r => r.Status is TransferStatus.Downloading or TransferStatus.Queued);
 
     private void SetFilter(Filter f) { filter = f; ApplyFilter(); }
 
@@ -152,92 +152,92 @@
     {
         filteredRecords = filter switch
         {
-            Filter.Active => activeRecords.Where(r => r.Status is DownloadStatus.Downloading or DownloadStatus.Queued).ToList(),
-            Filter.Paused => activeRecords.Where(r => r.Status is DownloadStatus.Paused or DownloadStatus.Failed).ToList(),
-            Filter.Done => activeRecords.Where(r => r.Status == DownloadStatus.Completed).ToList(),
+            Filter.Active => activeRecords.Where(r => r.Status is TransferStatus.Downloading or TransferStatus.Queued).ToList(),
+            Filter.Paused => activeRecords.Where(r => r.Status is TransferStatus.Paused or TransferStatus.Failed).ToList(),
+            Filter.Done => activeRecords.Where(r => r.Status == TransferStatus.Completed).ToList(),
             _ => activeRecords.ToList()
         };
     }
 
     private int CountByFilter(Filter f) => f switch
     {
-        Filter.Active => activeRecords.Count(r => r.Status is DownloadStatus.Downloading or DownloadStatus.Queued),
-        Filter.Paused => activeRecords.Count(r => r.Status is DownloadStatus.Paused or DownloadStatus.Failed),
-        Filter.Done => activeRecords.Count(r => r.Status == DownloadStatus.Completed),
+        Filter.Active => activeRecords.Count(r => r.Status is TransferStatus.Downloading or TransferStatus.Queued),
+        Filter.Paused => activeRecords.Count(r => r.Status is TransferStatus.Paused or TransferStatus.Failed),
+        Filter.Done => activeRecords.Count(r => r.Status == TransferStatus.Completed),
         _ => activeRecords.Count
     };
 
     private static string StatusIcon(string s) => s switch
     {
-        DownloadStatus.Downloading => "dot",
-        DownloadStatus.Queued => "dot-outline",
-        DownloadStatus.Paused => "stop",
-        DownloadStatus.Completed => "check",
-        DownloadStatus.Failed => "x",
+        TransferStatus.Downloading => "dot",
+        TransferStatus.Queued => "dot-outline",
+        TransferStatus.Paused => "stop",
+        TransferStatus.Completed => "check",
+        TransferStatus.Failed => "x",
         _ => "dot-outline"
     };
 
     private static string StatusLabel(string s) => s switch
     {
-        DownloadStatus.Downloading => "Downloading",
-        DownloadStatus.Queued => "Queued",
-        DownloadStatus.Paused => "Paused",
-        DownloadStatus.Completed => "Completed",
-        DownloadStatus.Failed => "Failed",
+        TransferStatus.Downloading => "Downloading",
+        TransferStatus.Queued => "Queued",
+        TransferStatus.Paused => "Paused",
+        TransferStatus.Completed => "Completed",
+        TransferStatus.Failed => "Failed",
         _ => ""
     };
 
     private static string StatusClass(string s) => s switch
     {
-        DownloadStatus.Downloading => "sm-item-active",
-        DownloadStatus.Completed => "sm-item-done",
-        DownloadStatus.Failed => "sm-item-failed",
+        TransferStatus.Downloading => "sm-item-active",
+        TransferStatus.Completed => "sm-item-done",
+        TransferStatus.Failed => "sm-item-failed",
         _ => ""
     };
 
     private static ProgressVariant ProgressVariant(string s) => s switch
     {
-        DownloadStatus.Downloading => C2.Shared.ProgressVariant.Info,
-        DownloadStatus.Paused => C2.Shared.ProgressVariant.Warning,
+        TransferStatus.Downloading => C2.Shared.ProgressVariant.Info,
+        TransferStatus.Paused => C2.Shared.ProgressVariant.Warning,
         _ => C2.Shared.ProgressVariant.Muted
     };
 
     private async Task StopAllSyncs()
     {
-        var active = activeRecords.FirstOrDefault(r => r.Status == DownloadStatus.Downloading);
-        if (active is not null) Downloads.Cts.Cancel(active.Id);
-        var queued = activeRecords.Where(r => r.Status == DownloadStatus.Queued).ToList();
-        foreach (var dl in queued) await Downloads.PauseAsync(dl.Id);
+        var active = activeRecords.FirstOrDefault(r => r.Status == TransferStatus.Downloading);
+        if (active is not null) Transfers.Cts.Cancel(active.Id);
+        var queued = activeRecords.Where(r => r.Status == TransferStatus.Queued).ToList();
+        foreach (var dl in queued) await Transfers.PauseAsync(dl.Id);
     }
 
     private void Refresh()
     {
-        var all = Downloads.GetActive();
+        var all = Transfers.GetActive();
         activeRecords = string.IsNullOrEmpty(AgentUuid) ? all : all.Where(r => r.AgentUuid == AgentUuid).ToList();
         activeRecords = activeRecords
-            .OrderBy(r => r.Status == DownloadStatus.Downloading ? 0 : r.Status == DownloadStatus.Queued ? 1 : r.Status == DownloadStatus.Paused ? 2 : r.Status == DownloadStatus.Failed ? 3 : 4)
+            .OrderBy(r => r.Status == TransferStatus.Downloading ? 0 : r.Status == TransferStatus.Queued ? 1 : r.Status == TransferStatus.Paused ? 2 : r.Status == TransferStatus.Failed ? 3 : 4)
             .ThenBy(r => r.Priority)
             .ThenBy(r => r.CreatedAt)
             .ToList();
         ApplyFilter();
     }
 
-    private async Task BumpPriority(DownloadRecord dl, int delta) => await Downloads.SetPriorityAsync(dl.Id, dl.Priority + delta);
-    private void PauseDownload(DownloadRecord dl) => Downloads.Cts.Cancel(dl.Id);
+    private async Task BumpPriority(TransferRecord dl, int delta) => await Transfers.SetPriorityAsync(dl.Id, dl.Priority + delta);
+    private void PauseDownload(TransferRecord dl) => Transfers.Cts.Cancel(dl.Id);
 
-    private async Task ResumeDownload(DownloadRecord dl)
+    private async Task ResumeDownload(TransferRecord dl)
     {
-        if (Downloads.Cts.HasActive(dl.Id)) return;
-        await Downloads.QueueAsync(dl.Id);
+        if (Transfers.Cts.HasActive(dl.Id)) return;
+        await Transfers.QueueAsync(dl.Id);
     }
 
-    private async Task RemoveDownload(DownloadRecord dl) { Downloads.Cts.Cancel(dl.Id); await Downloads.RemoveAsync(dl.Id); }
+    private async Task RemoveDownload(TransferRecord dl) { Transfers.Cts.Cancel(dl.Id); await Transfers.RemoveAsync(dl.Id); }
 
     private async Task ClearPaused()
     {
         confirmClear = false;
-        var toRemove = activeRecords.Where(r => r.Status is DownloadStatus.Paused or DownloadStatus.Failed).ToList();
-        foreach (var dl in toRemove) await Downloads.RemoveAsync(dl.Id);
+        var toRemove = activeRecords.Where(r => r.Status is TransferStatus.Paused or TransferStatus.Failed).ToList();
+        foreach (var dl in toRemove) await Transfers.RemoveAsync(dl.Id);
     }
 
     public override void Dispose() => base.Dispose();

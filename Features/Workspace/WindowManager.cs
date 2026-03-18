@@ -56,7 +56,7 @@ public class WindowManager
             Title = DisplayTitle(panel),
             X = 100 + offset,
             Y = 80 + offset,
-            Width = panel switch { "FileManager" => 800, "Settings" => 650, "Relay" => 900, "Agents" => 950, "Downloads" => 600, "SearchJobs" => 700, "ExtensionGroups" => 500, "PeParser" => 900, "Base64" => 600, "LnkTool" => 750, _ => 700 },
+            Width = panel switch { "FileManager" => 800, "Settings" => 650, "Relay" => 900, "Agents" => 950, "Transfers" => 600, "ScanJobs" => 700, "ExtensionGroups" => 500, "PeParser" => 900, "Base64" => 600, "LnkTool" => 750, _ => 700 },
             Height = 500,
             ZIndex = _topZ
         };
@@ -67,8 +67,8 @@ public class WindowManager
 
     public void OpenAgentWindow(string panel, string agentId, RelaySocket? relay = null, string? agentName = null, string? agentUuid = null, string? searchPath = null)
     {
-        // For FileSearch, don't reuse — each search path gets its own window
-        if (panel != "FileSearch")
+        // For FileScan, don't reuse — each search path gets its own window
+        if (panel != "FileScan")
         {
             var existing = Windows.FirstOrDefault(w => w.Panel == panel && w.AgentId == agentId);
             if (existing is not null)
@@ -93,7 +93,7 @@ public class WindowManager
             SearchPath = searchPath,
             X = 100 + offset,
             Y = 80 + offset,
-            Width = panel switch { "FileManager" => 800, "FileSearch" => 600, "AgentInfo" => 480, "Shell" => 700, "Vnc" => 900, _ => 700 },
+            Width = panel switch { "FileManager" => 800, "FileScan" => 600, "AgentInfo" => 480, "Shell" => 700, "Vnc" => 900, _ => 700 },
             Height = panel switch { "Vnc" => 600, _ => 500 },
             ZIndex = _topZ
         };
@@ -153,9 +153,9 @@ public class WindowManager
 
     private static string DisplayTitle(string panel) => panel switch
     {
-        "Downloads" => "Download Manager",
-        "FileSearch" => "File Search",
-        "SearchJobs" => "Search Jobs",
+        "Transfers" => "Transfer Manager",
+        "FileScan" => "File Scan",
+        "ScanJobs" => "Scan Jobs",
         "ExtensionGroups" => "Extension Groups",
         "FileManager" => "File Manager",
         "AgentInfo" => "Agent Info",

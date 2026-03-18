@@ -3,7 +3,7 @@
 @inject CacheManager Cache
 @inject RelayConnectionService RelaySvc
 @inject AgentStore AgentDb
-@inject DownloadStore Downloads
+@inject TransferStore Downloads
 @inject MessageService Msg
 @inject WindowManager Wm
 @inject IJSRuntime Js
@@ -54,12 +54,12 @@
 
     @* Action bar *@
     <div class="fm-actions">
-        <C2Btn Size="Size.Xs" OnClick="OpenFullSearchWindow" Disabled="@(!IsConnected)" Title="Search agent filesystem">
-            <C2Icon Name="search" Size="Size.Xs" /> Search
+        <C2Btn Size="Size.Xs" OnClick="OpenFullSearchWindow" Disabled="@(!IsConnected || _agentOffline)" Title="Scan agent filesystem">
+            <C2Icon Name="search" Size="Size.Xs" /> Scan
         </C2Btn>
-        <C2Btn Size="Size.Xs" OnClick="ToggleUploads" Title="File transfers"
+        <C2Btn Size="Size.Xs" OnClick="ToggleUploads" Title="File transfer queue"
                CssClass="@(_uploadsOpen ? "fm-filter-btn-active" : "")">
-            <C2Icon Name="arrow-up-down" Size="Size.Xs" /> Uploads
+            <C2Icon Name="arrow-up-down" Size="Size.Xs" /> Transfer
         </C2Btn>
         <div class="fm-actions-spacer"></div>
         <C2Btn Size="Size.Xs" OnClick="ToggleFilter" Title="Filter by name"
@@ -134,42 +134,42 @@
                             <span class="fm-ul-icon"><C2Icon Name="@UlIcon(rec.Status)" Size="Size.Xs" /></span>
                             <span class="fm-ul-name" title="@rec.RemotePath">@rec.FileName</span>
                             <span class="fm-ul-size">
-                                @if (rec.Status == DownloadStatus.Downloading)
+                                @if (rec.Status == TransferStatus.Downloading)
                                 { @Formatters.FormatSize((ulong)rec.DownloadedSize)<text> / </text> }
                                 @Formatters.FormatSize((ulong)rec.TotalSize)
                             </span>
                             <span class="fm-ul-status">
                                 @switch (rec.Status)
                                 {
-                                    case DownloadStatus.Downloading:
+                                    case TransferStatus.Downloading:
                                         <span class="fm-ul-pct">@pct%</span>
                                         @if (rec.SpeedBytesPerSec > 0) { <span class="fm-ul-speed">@Formatters.FormatSpeed(rec.SpeedBytesPerSec)</span> }
                                         break;
-                                    case DownloadStatus.Queued:
+                                    case TransferStatus.Queued:
                                         <span class="fm-ul-badge fm-ul-badge-queued">QUEUED</span>
                                         break;
-                                    case DownloadStatus.Paused:
+                                    case TransferStatus.Paused:
                                         <span class="fm-ul-badge fm-ul-badge-paused">PAUSED @pct%</span>
                                         break;
-                                    case DownloadStatus.Completed:
+                                    case TransferStatus.Completed:
                                         <span class="fm-ul-badge fm-ul-badge-done">DONE</span>
                                         break;
-                                    case DownloadStatus.Failed:
+                                    case TransferStatus.Failed:
                                         <span class="fm-ul-badge fm-ul-badge-error" title="@rec.Error">FAILED</span>
                                         break;
                                 }
                             </span>
                             <span class="fm-ul-date">@Formatters.FormatTimestamp(rec.CreatedAt)</span>
                             <span class="fm-ul-acts" @onclick:stopPropagation>
-                                @if (rec.Status == DownloadStatus.Downloading)
+                                @if (rec.Status == TransferStatus.Downloading)
                                 { <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => UlPause(r)" Title="Pause"><C2Icon Name="pause" Size="Size.Xs" /></C2Btn> }
-                                @if (rec.Status == DownloadStatus.Paused)
+                                @if (rec.Status == TransferStatus.Paused)
                                 { <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => UlResume(r)" Title="Resume"><C2Icon Name="play" Size="Size.Xs" /></C2Btn> }
-                                @if (rec.Status == DownloadStatus.Failed)
+                                @if (rec.Status == TransferStatus.Failed)
                                 { <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => UlRetry(r)" Title="Retry"><C2Icon Name="refresh" Size="Size.Xs" /></C2Btn> }
                                 <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => UlRemove(r)" Title="Remove"><C2Icon Name="x" Size="Size.Xs" /></C2Btn>
                             </span>
-                            @if (rec.Status is DownloadStatus.Downloading or DownloadStatus.Paused)
+                            @if (rec.Status is TransferStatus.Downloading or TransferStatus.Paused)
                             {
                                 <div class="fm-ul-bar" style="width:@pct%"></div>
                             }
@@ -285,8 +285,8 @@ private HashSet<DirEntry> ActiveSelection =>
 
     // Uploads panel
     private bool _uploadsOpen;
-    private List<DownloadRecord> _uploads = [];
-    private List<DownloadRecord> _ulFiltered = [];
+    private List<TransferRecord> _uploads = [];
+    private List<TransferRecord> _ulFiltered = [];
     private enum UlFilter { All, Current, Pending, Error, Done }
     private UlFilter _ulFilter = UlFilter.All;
     private string _ulDateFilter = "All";
@@ -372,7 +372,7 @@ private HashSet<DirEntry> ActiveSelection =>
 
     protected override void OnInitialized()
     {
-        _dlSub = Bus.Subscribe<DownloadStoreChangedEvent>(_ => RefreshDownloadBadges());
+        _dlSub = Bus.Subscribe<TransferStoreChangedEvent>(_ => RefreshDownloadBadges());
         _disconnectSub = Bus.Subscribe<AgentDisconnectedEvent>(e =>
         {
             if (e.Uuid != AgentUuid && e.AgentId != AgentId) return;
@@ -474,9 +474,9 @@ private HashSet<DirEntry> ActiveSelection =>
         };
 
         _uploads = (string.IsNullOrEmpty(AgentUuid) ? Downloads.Downloads : Downloads.GetByAgent(AgentUuid))
-            .Where(r => r.Status is not DownloadStatus.Pending)
+            .Where(r => r.Status is not TransferStatus.Pending)
             .Where(r => cutoff is null || DateTimeOffset.FromUnixTimeMilliseconds((long)r.CreatedAt) >= cutoff)
-            .OrderBy(r => r.Status == DownloadStatus.Downloading ? 0 : r.Status == DownloadStatus.Queued ? 1 : r.Status == DownloadStatus.Paused ? 2 : r.Status == DownloadStatus.Failed ? 3 : 4)
+            .OrderBy(r => r.Status == TransferStatus.Downloading ? 0 : r.Status == TransferStatus.Queued ? 1 : r.Status == TransferStatus.Paused ? 2 : r.Status == TransferStatus.Failed ? 3 : 4)
             .ThenBy(r => r.Priority).ThenBy(r => r.CreatedAt)
             .ToList();
 
@@ -487,10 +487,10 @@ private HashSet<DirEntry> ActiveSelection =>
     {
         var src = _ulFilter switch
         {
-            UlFilter.Current => _uploads.Where(r => r.Status == DownloadStatus.Downloading),
-            UlFilter.Pending => _uploads.Where(r => r.Status is DownloadStatus.Queued or DownloadStatus.Paused),
-            UlFilter.Error   => _uploads.Where(r => r.Status == DownloadStatus.Failed),
-            UlFilter.Done    => _uploads.Where(r => r.Status == DownloadStatus.Completed),
+            UlFilter.Current => _uploads.Where(r => r.Status == TransferStatus.Downloading),
+            UlFilter.Pending => _uploads.Where(r => r.Status is TransferStatus.Queued or TransferStatus.Paused),
+            UlFilter.Error   => _uploads.Where(r => r.Status == TransferStatus.Failed),
+            UlFilter.Done    => _uploads.Where(r => r.Status == TransferStatus.Completed),
             _                => _uploads.AsEnumerable()
         };
         if (!string.IsNullOrWhiteSpace(filterText))
@@ -502,14 +502,14 @@ private HashSet<DirEntry> ActiveSelection =>
 
     private int UlCount(UlFilter f) => f switch
     {
-        UlFilter.Current => _uploads.Count(r => r.Status == DownloadStatus.Downloading),
-        UlFilter.Pending => _uploads.Count(r => r.Status is DownloadStatus.Queued or DownloadStatus.Paused),
-        UlFilter.Error   => _uploads.Count(r => r.Status == DownloadStatus.Failed),
-        UlFilter.Done    => _uploads.Count(r => r.Status == DownloadStatus.Completed),
+        UlFilter.Current => _uploads.Count(r => r.Status == TransferStatus.Downloading),
+        UlFilter.Pending => _uploads.Count(r => r.Status is TransferStatus.Queued or TransferStatus.Paused),
+        UlFilter.Error   => _uploads.Count(r => r.Status == TransferStatus.Failed),
+        UlFilter.Done    => _uploads.Count(r => r.Status == TransferStatus.Completed),
         _                => _uploads.Count
     };
 
-    private async Task UlNavigate(DownloadRecord rec)
+    private async Task UlNavigate(TransferRecord rec)
     {
         var path = rec.RemotePath;
         var lastSep = Math.Max(path.LastIndexOf('\\'), path.LastIndexOf('/'));
@@ -520,18 +520,18 @@ private HashSet<DirEntry> ActiveSelection =>
         filterText = rec.FileName;
     }
 
-    private void UlPause(DownloadRecord r) => Downloads.Cts.Cancel(r.Id);
-    private async Task UlResume(DownloadRecord r) { if (!Downloads.Cts.HasActive(r.Id)) await Downloads.QueueAsync(r.Id); }
-    private async Task UlRetry(DownloadRecord r) => await Downloads.RequeueAsync(r.Id, r.CacheSubPath, r.TotalSize);
-    private async Task UlRemove(DownloadRecord r) { Downloads.Cts.Cancel(r.Id); await Downloads.RemoveAsync(r.Id); }
+    private void UlPause(TransferRecord r) => Downloads.Cts.Cancel(r.Id);
+    private async Task UlResume(TransferRecord r) { if (!Downloads.Cts.HasActive(r.Id)) await Downloads.QueueAsync(r.Id); }
+    private async Task UlRetry(TransferRecord r) => await Downloads.RequeueAsync(r.Id, r.CacheSubPath, r.TotalSize);
+    private async Task UlRemove(TransferRecord r) { Downloads.Cts.Cancel(r.Id); await Downloads.RemoveAsync(r.Id); }
 
     private static string UlIcon(string status) => status switch
     {
-        DownloadStatus.Downloading => "dot",
-        DownloadStatus.Queued     => "dot-outline",
-        DownloadStatus.Paused     => "stop",
-        DownloadStatus.Completed  => "check",
-        DownloadStatus.Failed     => "x",
+        TransferStatus.Downloading => "dot",
+        TransferStatus.Queued     => "dot-outline",
+        TransferStatus.Paused     => "stop",
+        TransferStatus.Completed  => "check",
+        TransferStatus.Failed     => "x",
         _                         => "dot-outline"
     };
 
@@ -610,7 +610,7 @@ private HashSet<DirEntry> ActiveSelection =>
             var dirs = await Vfs.GetChildDirectoriesAsync(AgentUuid, dirId);
 
             var downloads = Downloads.GetByAgent(AgentUuid)
-                .Where(r => r.Status is DownloadStatus.Queued or DownloadStatus.Downloading or DownloadStatus.Paused or DownloadStatus.Completed
+                .Where(r => r.Status is TransferStatus.Queued or TransferStatus.Downloading or TransferStatus.Paused or TransferStatus.Completed
                          && r.RemotePath.StartsWith(currentPath, StringComparison.OrdinalIgnoreCase)
                          && r.RemotePath.Length > currentPath.Length)
                 .Where(r => { var tail = r.RemotePath[currentPath.Length..]; return !tail.Contains('\\') && !tail.Contains('/'); })
@@ -712,7 +712,7 @@ private HashSet<DirEntry> ActiveSelection =>
     private void ViewFile(DirEntry entry)
     {
         if (entry is null || string.IsNullOrEmpty(AgentUuid)) return;
-        if (Downloads.Find(AgentUuid, currentPath + entry.Name)?.Status != DownloadStatus.Completed) return;
+        if (Downloads.Find(AgentUuid, currentPath + entry.Name)?.Status != TransferStatus.Completed) return;
         viewingFileName = entry.Name;
         viewingFilePath = currentPath + entry.Name;
         viewingFile = true;
@@ -733,9 +733,9 @@ private HashSet<DirEntry> ActiveSelection =>
             if (entries is not null)
                 _ = SaveToVfsCacheAsync(AgentUuid, currentPath, entries);
         }
-        else if (record.Status is DownloadStatus.Completed or DownloadStatus.Failed)
+        else if (record.Status is TransferStatus.Completed or TransferStatus.Failed)
             await Downloads.RequeueAsync(record.Id, record.CacheSubPath, totalSize);
-        else if (record.Status == DownloadStatus.Paused)
+        else if (record.Status == TransferStatus.Paused)
             await Downloads.QueueAsync(record.Id);
     }
 
@@ -756,7 +756,7 @@ private HashSet<DirEntry> ActiveSelection =>
     {
         if (string.IsNullOrEmpty(AgentUuid)) return;
         var dl = Downloads.Find(AgentUuid, currentPath + entry.Name);
-        if (dl is null || dl.Status != DownloadStatus.Completed) return;
+        if (dl is null || dl.Status != TransferStatus.Completed) return;
         try
         {
             if (!await Cache.BlobExistsAsync(dl.CacheSubPath)) { Msg.Error("Open Failed", "File not found in local cache", "File Manager"); return; }
@@ -784,7 +784,7 @@ private HashSet<DirEntry> ActiveSelection =>
     {
         if (string.IsNullOrEmpty(AgentUuid)) return;
         var dl = Downloads.Find(AgentUuid, currentPath + entry.Name);
-        if (dl is null || dl.Status != DownloadStatus.Completed) return;
+        if (dl is null || dl.Status != TransferStatus.Completed) return;
         try
         {
             if (!await Cache.BlobExistsAsync(dl.CacheSubPath)) { Msg.Error("Save Failed", "File not found in local cache", "File Manager"); return; }
@@ -805,13 +805,13 @@ private HashSet<DirEntry> ActiveSelection =>
     private void OpenSearchWindow(string path)
     {
         if (string.IsNullOrEmpty(AgentId)) return;
-        Wm.OpenAgentWindow("FileSearch", AgentId, agentName: AgentName, agentUuid: AgentUuid, searchPath: path);
+        Wm.OpenAgentWindow("FileScan", AgentId, agentName: AgentName, agentUuid: AgentUuid, searchPath: path);
     }
 
     private void OpenFullSearchWindow()
     {
         if (string.IsNullOrEmpty(AgentId)) return;
-        Wm.OpenAgentWindow("FileSearch", AgentId, agentName: AgentName, agentUuid: AgentUuid);
+        Wm.OpenAgentWindow("FileScan", AgentId, agentName: AgentName, agentUuid: AgentUuid);
     }
 
     // --- Agent communication ---

@@ -4,11 +4,11 @@ using static C2.Features.Storage.CacheManager;
 using C2.Features.Workspace;
 using C2.Infrastructure;
 
-namespace C2.Features.Downloads;
+namespace C2.Features.Transfers;
 
-public class DownloadService : IDisposable
+public class TransferService : IDisposable
 {
-    private readonly DownloadStore _store;
+    private readonly TransferStore _store;
     private readonly CacheManager _cache;
     private readonly RelayConnectionService _relaySvc;
     private readonly WindowManager _wm;
@@ -20,8 +20,8 @@ public class DownloadService : IDisposable
 
     public IReadOnlyCollection<string> ProcessingAgents => _processingAgents;
 
-    public DownloadService(
-        DownloadStore store, CacheManager cache,
+    public TransferService(
+        TransferStore store, CacheManager cache,
         RelayConnectionService relaySvc,
         WindowManager wm, IEventBus bus)
     {
@@ -36,7 +36,7 @@ public class DownloadService : IDisposable
     {
         await _store.LoadAsync();
 
-        _subscriptions.Add(_bus.Subscribe<DownloadItemQueuedEvent>(e => OnItemQueued(e.AgentUuid)));
+        _subscriptions.Add(_bus.Subscribe<TransferItemQueuedEvent>(e => OnItemQueued(e.AgentUuid)));
         _subscriptions.Add(_bus.Subscribe<AgentOnlineEvent>(e => AutoResumeAsync(e.Uuid, e.AgentId, e.RelayUrl)));
     }
 
@@ -47,9 +47,9 @@ public class DownloadService : IDisposable
 
         foreach (var dl in _store.GetByAgent(uuid))
         {
-            if (dl.Status == DownloadStatus.Paused)
+            if (dl.Status == TransferStatus.Paused)
                 await _store.QueueAsync(dl.Id);
-            else if (dl.Status == DownloadStatus.Downloading && !_store.Cts.HasActive(dl.Id))
+            else if (dl.Status == TransferStatus.Downloading && !_store.Cts.HasActive(dl.Id))
                 await _store.QueueAsync(dl.Id); // stale — relay dropped while syncing
         }
 

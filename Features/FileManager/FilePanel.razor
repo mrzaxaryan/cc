@@ -1,5 +1,5 @@
 @inject CacheManager Cache
-@inject DownloadStore Downloads
+@inject TransferStore Downloads
 @inject MessageService Msg
 @inject IJSRuntime Js
 
@@ -31,7 +31,7 @@
                         var isSelected = selectedEntries.Contains(e);
                         var isDim = e.IsHidden || e.IsSystem || (Mode == PanelMode.Local && !isDir && e.Size > 0 && !HasDownloadRecord(e.Name));
                         var dlInfo = !isDir ? GetDlInfo(e.Name) : null;
-                        var dlCls = dlInfo?.Status switch { DownloadStatus.Downloading => "fp-row-downloading", DownloadStatus.Queued => "fp-row-queued", DownloadStatus.Completed => "fp-row-synced", DownloadStatus.Paused => "fp-row-paused", _ => "" };
+                        var dlCls = dlInfo?.Status switch { TransferStatus.Downloading => "fp-row-downloading", TransferStatus.Queued => "fp-row-queued", TransferStatus.Completed => "fp-row-synced", TransferStatus.Paused => "fp-row-paused", _ => "" };
                     }
                     <div @key="e.Name"
                          class="fp-row @(isDir ? "fp-row-dir" : "fp-row-file") @(isSelected ? "fp-row-active" : "") @(isDim ? "fp-row-dim" : "") @dlCls"
@@ -47,14 +47,14 @@
                             {
                                 switch (dlInfo.Value.Status)
                                 {
-                                    case DownloadStatus.Queued: <span class="fp-dl-badge fp-dl-queued">QUEUED</span> break;
-                                    case DownloadStatus.Completed: <span class="fp-dl-badge fp-dl-done">&#10003;</span> break;
-                                    case DownloadStatus.Paused: <span class="fp-dl-badge fp-dl-paused">PAUSED</span> break;
+                                    case TransferStatus.Queued: <span class="fp-dl-badge fp-dl-queued">QUEUED</span> break;
+                                    case TransferStatus.Completed: <span class="fp-dl-badge fp-dl-done">&#10003;</span> break;
+                                    case TransferStatus.Paused: <span class="fp-dl-badge fp-dl-paused">PAUSED</span> break;
                                 }
                             }</span>
-                        <span class="fp-cell-size">@(dlInfo?.Status == DownloadStatus.Downloading ? $"{dlInfo.Value.Pct}% {Formatters.FormatSpeed(dlInfo.Value.Speed)}" : isDir ? "" : Formatters.FormatSize(e.Size))</span>
+                        <span class="fp-cell-size">@(dlInfo?.Status == TransferStatus.Downloading ? $"{dlInfo.Value.Pct}% {Formatters.FormatSpeed(dlInfo.Value.Speed)}" : isDir ? "" : Formatters.FormatSize(e.Size))</span>
                         <span class="fp-cell-modified fp-hide-narrow">@Formatters.FormatFileTime(e.LastModifiedTime)</span>
-                        @if (dlInfo?.Status == DownloadStatus.Downloading)
+                        @if (dlInfo?.Status == TransferStatus.Downloading)
                         {
                             <div class="fp-progress-bar" style="width:@(dlInfo.Value.Pct)%"></div>
                         }
@@ -90,13 +90,13 @@
         @if (unsyncedFiles.Count > 0 && Mode == PanelMode.Remote)
         {
             <C2DropdownItem OnClick="CtxDownloadSelected" Disabled="@(!Cache.HasDirectory)">
-                <C2Icon Name="arrow-left" Size="Size.Xs" /> Download @unsyncedFiles.Count file(s)
+                <C2Icon Name="transfer" Size="Size.Xs" /> Transfer @unsyncedFiles.Count file(s)
             </C2DropdownItem>
         }
         @if (syncedFiles.Count > 0 && Mode == PanelMode.Local)
         {
             <C2DropdownItem OnClick="CtxSaveSelectedToBrowser">
-                <C2Icon Name="save" Size="Size.Xs" /> Download @syncedFiles.Count file(s) to Browser
+                <C2Icon Name="save" Size="Size.Xs" /> Save @syncedFiles.Count file(s) to Browser
             </C2DropdownItem>
         }
         <div class="fp-ctx-sep"></div>
@@ -112,7 +112,7 @@
             <C2DropdownItem OnClick="CtxOpen"><C2Icon Name="external" Size="Size.Xs" /> Open</C2DropdownItem>
             @if (Mode == PanelMode.Remote)
             {
-                <C2DropdownItem OnClick="CtxSearch"><C2Icon Name="search" Size="Size.Xs" /> Search</C2DropdownItem>
+                <C2DropdownItem OnClick="CtxSearch"><C2Icon Name="scan" Size="Size.Xs" /> Scan</C2DropdownItem>
             }
             <div class="fp-ctx-sep"></div>
             <C2DropdownItem OnClick="CtxCopyPath"><C2Icon Name="copy" Size="Size.Xs" /> Copy Path</C2DropdownItem>
@@ -124,7 +124,7 @@
                 @if (IsFileSynced(ctxEntry.Name))
                 {
                     <C2DropdownItem OnClick="() => CtxAction(ctxEntry, PanelAction.View)"><C2Icon Name="file-text" Size="Size.Xs" /> Open</C2DropdownItem>
-                    <C2DropdownItem OnClick="() => CtxAction(ctxEntry, PanelAction.SaveToBrowser)"><C2Icon Name="save" Size="Size.Xs" /> Download to Browser</C2DropdownItem>
+                    <C2DropdownItem OnClick="() => CtxAction(ctxEntry, PanelAction.SaveToBrowser)"><C2Icon Name="save" Size="Size.Xs" /> Save</C2DropdownItem>
                     <div class="fp-ctx-sep"></div>
                 }
             }
@@ -132,7 +132,7 @@
             {
                 @if (!IsFileSynced(ctxEntry.Name))
                 {
-                    <C2DropdownItem OnClick="() => CtxAction(ctxEntry, PanelAction.Download)" Disabled="@(!Cache.HasDirectory)"><C2Icon Name="arrow-left" Size="Size.Xs" /> Download to Local</C2DropdownItem>
+                    <C2DropdownItem OnClick="() => CtxAction(ctxEntry, PanelAction.Download)" Disabled="@(!Cache.HasDirectory)"><C2Icon Name="transfer" Size="Size.Xs" /> Transfer</C2DropdownItem>
                     <div class="fp-ctx-sep"></div>
                 }
                 <C2DropdownItem OnClick="() => CtxAction(ctxEntry, PanelAction.Hash)"><C2Icon Name="hash" Size="Size.Xs" /> SHA-256 Hash</C2DropdownItem>
@@ -140,7 +140,7 @@
             <C2DropdownItem OnClick="CtxCopyPath"><C2Icon Name="copy" Size="Size.Xs" /> Copy Path</C2DropdownItem>
             @if (Mode == PanelMode.Remote)
             {
-                <C2DropdownItem OnClick="CtxSearchDir"><C2Icon Name="search" Size="Size.Xs" /> Search in Directory</C2DropdownItem>
+                <C2DropdownItem OnClick="CtxSearchDir"><C2Icon Name="scan" Size="Size.Xs" /> Scan Directory</C2DropdownItem>
             }
         }
     }
@@ -435,7 +435,7 @@
 
     // --- Download status helpers ---
 
-    private bool IsFileSynced(string fileName) => _downloadMap.TryGetValue(fileName, out var info) && info.Status == DownloadStatus.Completed;
+    private bool IsFileSynced(string fileName) => _downloadMap.TryGetValue(fileName, out var info) && info.Status == TransferStatus.Completed;
     private bool HasDownloadRecord(string fileName) => _downloadMap.ContainsKey(fileName);
     private DlInfo? GetDlInfo(string fileName) => _downloadMap.TryGetValue(fileName, out var info) ? info : null;
 
