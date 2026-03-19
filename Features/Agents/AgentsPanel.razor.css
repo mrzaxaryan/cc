@@ -201,6 +201,12 @@
     background: var(--c2-bg-highlight);
 }
 
+.ap-ctx-sub-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
 .ap-ctx-arrow {
     font-size: 0.62rem;
 }
@@ -208,7 +214,7 @@
 .ap-ctx-submenu {
     display: none;
     position: absolute;
-    right: 100%;
+    left: 100%;
     top: 0;
     min-width: 130px;
     background: var(--c2-bg-base);
