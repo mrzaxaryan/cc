@@ -115,7 +115,7 @@
     font-family: 'JetBrains Mono', monospace;
     background: var(--c2-bg-deep);
     border: none;
-    color: var(--c2-text-dim);
+    color: var(--c2-text-muted);
     cursor: pointer;
     white-space: nowrap;
     transition: background 0.1s, color 0.1s;
@@ -125,7 +125,7 @@
 
 .fm-view-tab-active {
     background: var(--c2-accent-blue) !important;
-    color: #fff !important;
+    color: var(--c2-on-accent) !important;
 }
 
 .fm-view-tab:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -486,7 +486,7 @@
 .scan-ext-group.active {
     background: var(--c2-accent-blue);
     border-color: var(--c2-accent-blue);
-    color: #fff;
+    color: var(--c2-on-accent);
 }
 
 .scan-ext-group.disabled,

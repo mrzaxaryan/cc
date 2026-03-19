@@ -128,10 +128,10 @@
     </Body>
 </PanelLayout>
 
-@if (ctxVisible && ctxRec is not null)
-{
-    <C2Dropdown Visible="@ctxVisible" X="@ctxX" Y="@ctxY" OnClose="HideContextMenu">
-        <C2DropdownItem OnClick="CtxOpenFileSystem"><C2Icon Name="folder" Size="Size.Xs" /> Open in File System</C2DropdownItem>
+<C2Dropdown Visible="@ctxVisible" X="@ctxX" Y="@ctxY" OnClose="HideContextMenu">
+    <C2DropdownItem OnClick="CtxOpenFileSystem"><C2Icon Name="folder" Size="Size.Xs" /> Open in File System</C2DropdownItem>
+    @if (ctxRec is not null)
+    {
         <div class="ap-ctx-submenu-wrap">
             <button class="ap-ctx-sub-trigger" type="button">
                 <span class="ap-ctx-sub-label"><C2Icon Name="copy" Size="Size.Xs" /> Copy</span>
@@ -146,8 +146,8 @@
                 }
             </div>
         </div>
-    </C2Dropdown>
-}
+    }
+</C2Dropdown>
 
 @code {
     [Parameter] public string? AgentUuid { get; set; }

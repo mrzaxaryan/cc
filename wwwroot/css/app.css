@@ -88,6 +88,9 @@
     --c2-focus-ring: rgba(137, 180, 250, 0.5);
     --c2-hover-white: rgba(255, 255, 255, 0.1);
     --c2-hover-subtle: rgba(255, 255, 255, 0.02);
+    --c2-blue-10: rgba(137, 180, 250, 0.10);
+    --c2-red-10: rgba(243, 139, 168, 0.10);
+    --c2-on-accent: #1e1e2e;
     --c2-blue-glow: rgba(137, 180, 250, 0.3);
     --c2-blue-glow-strong: rgba(137, 180, 250, 0.4);
 
@@ -184,6 +187,9 @@
     --c2-focus-ring: rgba(30, 102, 245, 0.5);
     --c2-hover-white: rgba(0, 0, 0, 0.06);
     --c2-hover-subtle: rgba(0, 0, 0, 0.02);
+    --c2-blue-10: rgba(30, 102, 245, 0.10);
+    --c2-red-10: rgba(210, 15, 57, 0.10);
+    --c2-on-accent: #fff;
     --c2-blue-glow: rgba(30, 102, 245, 0.3);
     --c2-blue-glow-strong: rgba(30, 102, 245, 0.4);
 
