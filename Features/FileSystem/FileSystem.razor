@@ -140,7 +140,9 @@
                 {
                     <Virtualize Items="_ulFiltered" Context="rec" ItemSize="30" OverscanCount="5">
                         @{ var r = rec; var pct = rec.TotalSize > 0 ? (int)(rec.DownloadedSize * 100 / rec.TotalSize) : 0; }
-                        <div class="fm-ul-row fm-ul-@rec.Status" @onclick="() => UlNavigate(r)" title="Go to file location">
+                        <div class="fm-ul-row fm-ul-@rec.Status"
+                             @oncontextmenu="(ev) => UlShowCtx(ev, r)"
+                             @oncontextmenu:preventDefault>
                             <span class="fm-ul-icon"><C2Icon Name="@UlIcon(rec.Status)" Size="Size.Xs" /></span>
                             <span class="fm-ul-name" title="@rec.RemotePath">@rec.FileName</span>
                             <span class="fm-ul-size">
@@ -189,6 +191,27 @@
             </div>
         </div>
     }
+
+    <C2Dropdown Visible="@_ulCtxVisible" X="@_ulCtxX" Y="@_ulCtxY" OnClose="UlHideCtx">
+        <C2DropdownItem OnClick="UlCtxShowInFiles"><C2Icon Name="folder" Size="Size.Xs" /> Show in File Manager</C2DropdownItem>
+        @if (_ulCtxRec is not null)
+        {
+            <div class="ul-ctx-submenu-wrap">
+                <button class="ul-ctx-sub-trigger" type="button">
+                    <span class="ul-ctx-sub-label"><C2Icon Name="copy" Size="Size.Xs" /> Copy</span>
+                    <span class="ul-ctx-arrow"><C2Icon Name="chevron-right" Size="Size.Xs" /></span>
+                </button>
+                <div class="ul-ctx-submenu">
+                    <C2DropdownItem OnClick="() => UlCtxCopy(_ulCtxRec.FileName)" CssClass="ul-ctx-copy-item">File Name</C2DropdownItem>
+                    <C2DropdownItem OnClick="() => UlCtxCopy(_ulCtxRec.RemotePath)" CssClass="ul-ctx-copy-item">Remote Path</C2DropdownItem>
+                    @if (!string.IsNullOrEmpty(_ulCtxRec.AgentName))
+                    {
+                        <C2DropdownItem OnClick="() => UlCtxCopy(_ulCtxRec.AgentName)" CssClass="ul-ctx-copy-item">Agent Name</C2DropdownItem>
+                    }
+                </div>
+            </div>
+        }
+    </C2Dropdown>
 
     @* Scan panel *@
     @if (_activeView == ActiveView.Scan)
@@ -434,6 +457,9 @@ private HashSet<DirEntry> ActiveSelection =>
     private enum UlFilter { All, Current, Pending, Error, Done }
     private UlFilter _ulFilter = UlFilter.All;
     private string _ulDateFilter = "All";
+    private bool _ulCtxVisible;
+    private double _ulCtxX, _ulCtxY;
+    private TransferRecord? _ulCtxRec;
 
     // Scan panel
     private List<ScanRecord> _scanRecords = [];
@@ -685,6 +711,26 @@ private HashSet<DirEntry> ActiveSelection =>
         await Navigate(dir);
         filterActive = true;
         filterText = rec.FileName;
+    }
+
+    private void UlShowCtx(MouseEventArgs e, TransferRecord rec)
+    {
+        _ulCtxX = e.ClientX; _ulCtxY = e.ClientY; _ulCtxRec = rec; _ulCtxVisible = true;
+    }
+
+    private void UlHideCtx() { _ulCtxVisible = false; _ulCtxRec = null; }
+
+    private async Task UlCtxShowInFiles()
+    {
+        var rec = _ulCtxRec;
+        UlHideCtx();
+        if (rec is not null) await UlNavigate(rec);
+    }
+
+    private async Task UlCtxCopy(string value)
+    {
+        UlHideCtx();
+        await Js.InvokeVoidAsync("navigator.clipboard.writeText", value);
     }
 
     private void UlPause(TransferRecord r) => Downloads.Cts.Cancel(r.Id);

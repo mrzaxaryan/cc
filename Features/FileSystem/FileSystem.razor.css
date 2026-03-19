@@ -278,7 +278,6 @@
     font-family: 'JetBrains Mono', monospace;
     border-bottom: 1px solid var(--c2-border-subtle);
     overflow: hidden;
-    cursor: pointer;
 }
 
 .fm-ul-row:hover { background: var(--c2-bg-overlay); }
@@ -317,6 +316,64 @@
     background: var(--c2-accent-blue);
     opacity: 0.4;
     transition: width 0.3s linear;
+}
+
+/* Transfer context menu submenu */
+.ul-ctx-submenu-wrap {
+    position: relative;
+}
+
+.ul-ctx-sub-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    background: none;
+    border: none;
+    color: var(--c2-text);
+    font-size: 0.78rem;
+    padding: 0.35rem 0.75rem;
+    text-align: left;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+}
+
+.ul-ctx-sub-trigger:hover {
+    background: var(--c2-bg-highlight);
+}
+
+.ul-ctx-sub-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.ul-ctx-arrow {
+    font-size: 0.62rem;
+}
+
+.ul-ctx-submenu {
+    display: none;
+    position: absolute;
+    left: 100%;
+    top: 0;
+    min-width: 130px;
+    background: var(--c2-bg-base);
+    border: 1px solid var(--c2-border-light);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px var(--c2-shadow);
+    padding: 0.25rem 0;
+    z-index: 1;
+}
+
+.ul-ctx-submenu-wrap:hover > .ul-ctx-submenu {
+    display: block;
+}
+
+::deep .ul-ctx-copy-item {
+    font-size: 0.74rem;
+    color: var(--c2-text-muted);
 }
 
 /* Dual pane area */
