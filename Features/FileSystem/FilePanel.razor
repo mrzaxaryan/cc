@@ -33,7 +33,7 @@
                         var dlInfo = !isDir ? GetDlInfo(e.Name) : null;
                         var dlCls = dlInfo?.Status switch { TransferStatus.Downloading => "fp-row-downloading", TransferStatus.Queued => "fp-row-queued", TransferStatus.Completed => "fp-row-synced", TransferStatus.Paused => "fp-row-paused", _ => "" };
                     }
-                    <div @key="e.Name"
+                    <div @key="@($"{e.Name}:{(e.IsDirectory || e.IsDrive ? "d" : "f")}")"
                          class="fp-row @(isDir ? "fp-row-dir" : "fp-row-file") @(isSelected ? "fp-row-active" : "") @(isDim ? "fp-row-dim" : "") @dlCls"
                          @onclick="(ev) => OnRowClick(ev, e)"
                          @oncontextmenu="(ev) => ShowContextMenu(ev, e)"
