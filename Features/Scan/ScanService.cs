@@ -212,7 +212,7 @@ public class ScanService : IDisposable
                     {
                         scan.FilesFound++;
 
-                        if (scan.AutoDownload && _cache.HasDirectory)
+                        if (_cache.HasDirectory)
                         {
                             var existing = _downloads.Find(scan.AgentUuid, entryRemotePath);
                             if (existing is null)

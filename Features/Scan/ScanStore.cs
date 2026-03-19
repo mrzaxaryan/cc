@@ -19,7 +19,6 @@ public class ScanRecord
     [JsonPropertyName("dirsTotal")] public int DirsTotal { get; set; }
     [JsonPropertyName("filesFound")] public int FilesFound { get; set; }
     [JsonPropertyName("filesQueued")] public int FilesQueued { get; set; }
-    [JsonPropertyName("autoDownload")] public bool AutoDownload { get; set; }
     [JsonPropertyName("recursive")] public bool Recursive { get; set; } = true;
     /// <summary>JSON-serialized array of directory paths still to be scanned (e.g. ["C:/Users","C:/Temp"]).</summary>
     [JsonPropertyName("pendingDirs")] public string PendingDirsJson { get; set; } = "[]";
@@ -86,7 +85,7 @@ public class ScanStore
         }
     }
 
-    public async Task<ScanRecord> AddAsync(string agentUuid, string agentName, string rootPath, string extensions, bool autoDownload, bool recursive = true)
+    public async Task<ScanRecord> AddAsync(string agentUuid, string agentName, string rootPath, string extensions, bool recursive = true)
     {
         var record = new ScanRecord
         {
@@ -94,7 +93,6 @@ public class ScanStore
             AgentName = agentName,
             RootPath = rootPath,
             Extensions = extensions,
-            AutoDownload = autoDownload,
             Recursive = recursive,
             Status = ScanStatus.Scanning,
             PendingDirs = new List<string> { rootPath },
