@@ -229,6 +229,12 @@
                     }
                     <div class="scan-form-row scan-form-check">
                         <label>
+                            <input type="checkbox" @bind="_scanRecursive" />
+                            Recursive (include subdirectories)
+                        </label>
+                    </div>
+                    <div class="scan-form-row scan-form-check">
+                        <label>
                             <input type="checkbox" @bind="_scanAutoDownload" />
                             Auto-transfer matching files
                         </label>
@@ -284,7 +290,7 @@
                                 <span class="scan-item-path" title="@(string.IsNullOrEmpty(s.RootPath) ? "Full filesystem" : s.RootPath)">
                                     @(string.IsNullOrEmpty(s.RootPath) ? "Full filesystem" : s.RootPath)
                                 </span>
-                                <span class="scan-item-meta">@s.Extensions</span>
+                                <span class="scan-item-meta">@s.Extensions · @(s.Recursive ? "recursive" : "top only")</span>
                             </div>
                             <div class="scan-item-status">
                                 @switch (s.Status)
@@ -445,6 +451,7 @@ private HashSet<DirEntry> ActiveSelection =>
     private string _scanPath = "";
     private string _scanExtensions = "";
     private bool _scanAutoDownload = true;
+    private bool _scanRecursive = true;
     private HashSet<string> _scanActiveGroups = new();
     private string _scanExtError = "";
 
@@ -1057,14 +1064,14 @@ private HashSet<DirEntry> ActiveSelection =>
         if (string.IsNullOrEmpty(AgentUuid) || !ScanValidate()) return;
         var path = _scanPath.TrimEnd('\\', '/');
         if (!string.IsNullOrEmpty(path)) path += IsUnixAgent ? "/" : @"\";
-        await Scans.AddAsync(AgentUuid, AgentName ?? "", path, ExtensionGroupStore.NormalizeExtensions(_scanExtensions), _scanAutoDownload);
+        await Scans.AddAsync(AgentUuid, AgentName ?? "", path, ExtensionGroupStore.NormalizeExtensions(_scanExtensions), _scanAutoDownload, _scanRecursive);
         ScanCancelForm(); RefreshScans();
     }
 
     private async Task ScanStartFull()
     {
         if (string.IsNullOrEmpty(AgentUuid) || !ScanValidate()) return;
-        await Scans.AddAsync(AgentUuid, AgentName ?? "", "", ExtensionGroupStore.NormalizeExtensions(_scanExtensions), _scanAutoDownload);
+        await Scans.AddAsync(AgentUuid, AgentName ?? "", "", ExtensionGroupStore.NormalizeExtensions(_scanExtensions), _scanAutoDownload, _scanRecursive);
         ScanCancelForm(); RefreshScans();
     }
 

@@ -194,11 +194,14 @@ public class ScanService : IDisposable
                 {
                     await _vfs.PutDirectoryAsync(scan.AgentUuid, parentId, entry.Name, entryRemotePath.Replace('\\', '/'), entry.IsDrive);
 
-                    var subDir = entryRemotePath + @"\";
-                    pending = scan.PendingDirs;
-                    pending.Add(subDir);
-                    scan.PendingDirs = pending;
-                    scan.DirsTotal++;
+                    if (scan.Recursive)
+                    {
+                        var subDir = entryRemotePath + @"\";
+                        pending = scan.PendingDirs;
+                        pending.Add(subDir);
+                        scan.PendingDirs = pending;
+                        scan.DirsTotal++;
+                    }
                 }
                 else
                 {
