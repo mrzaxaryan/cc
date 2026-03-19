@@ -235,7 +235,7 @@ public class TransferStore
         _cache.Where(r => r.AgentUuid == agentUuid).ToList();
 
     public List<TransferRecord> GetActive() =>
-        _cache.Where(r => r.Status is TransferStatus.Downloading or TransferStatus.Paused or TransferStatus.Queued)
+        _cache.Where(r => r.Status is TransferStatus.Downloading or TransferStatus.Paused or TransferStatus.Queued or TransferStatus.Pending)
               .ToList();
 
     /// <summary>True if agent has a file currently downloading.</summary>

@@ -173,7 +173,7 @@
                             </span>
                             <span class="fm-ul-date">@Formatters.FormatTimestamp(rec.CreatedAt)</span>
                             <span class="fm-ul-acts" @onclick:stopPropagation>
-                                @if (rec.Status == TransferStatus.Downloading)
+                                @if (rec.Status is TransferStatus.Downloading or TransferStatus.Queued or TransferStatus.Pending)
                                 { <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => UlPause(r)" Title="Pause"><C2Icon Name="pause" Size="Size.Xs" /></C2Btn> }
                                 @if (rec.Status == TransferStatus.Paused)
                                 { <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => UlResume(r)" Title="Resume"><C2Icon Name="play" Size="Size.Xs" /></C2Btn> }
@@ -733,7 +733,13 @@ private HashSet<DirEntry> ActiveSelection =>
         await Js.InvokeVoidAsync("navigator.clipboard.writeText", value);
     }
 
-    private void UlPause(TransferRecord r) => Downloads.Cts.Cancel(r.Id);
+    private async Task UlPause(TransferRecord r)
+    {
+        if (r.Status == TransferStatus.Downloading)
+            Downloads.Cts.Cancel(r.Id);
+        else
+            await Downloads.PauseAsync(r.Id);
+    }
     private async Task UlResume(TransferRecord r) { if (!Downloads.Cts.HasActive(r.Id)) await Downloads.QueueAsync(r.Id); }
     private async Task UlRetry(TransferRecord r) => await Downloads.RequeueAsync(r.Id, r.CacheSubPath, r.TotalSize);
     private async Task UlRemove(TransferRecord r) { Downloads.Cts.Cancel(r.Id); await Downloads.RemoveAsync(r.Id); }

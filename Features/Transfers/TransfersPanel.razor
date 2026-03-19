@@ -95,10 +95,16 @@
                                         <C2Btn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseDownload(rec)" Title="Pause"><C2Icon Name="pause" Size="Size.Xs" /></C2Btn>
                                         break;
 
+                                    case TransferStatus.Pending:
+                                        <C2Badge Variant="BadgeVariant.Muted" Size="Size.Xs">PENDING</C2Badge>
+                                        <C2Btn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseQueued(rec)" Title="Pause"><C2Icon Name="pause" Size="Size.Xs" /></C2Btn>
+                                        break;
+
                                     case TransferStatus.Queued:
                                         <C2Badge Variant="BadgeVariant.Muted" Size="Size.Xs">QUEUED</C2Badge>
                                         <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => BumpPriority(rec, -1)" Title="Higher priority"><C2Icon Name="chevron-up" Size="Size.Xs" /></C2Btn>
                                         <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => BumpPriority(rec, 1)" Title="Lower priority"><C2Icon Name="chevron-down" Size="Size.Xs" /></C2Btn>
+                                        <C2Btn Size="Size.Xs" Variant="BtnVariant.Warning" OnClick="() => PauseQueued(rec)" Title="Pause"><C2Icon Name="pause" Size="Size.Xs" /></C2Btn>
                                         break;
 
                                     case TransferStatus.Paused:
@@ -117,7 +123,7 @@
                                 <C2Btn Size="Size.Icon" Variant="BtnVariant.Ghost" OnClick="() => RemoveDownload(rec)" Title="Remove" CssClass="panel-remove-btn"><C2Icon Name="x" Size="Size.Xs" /></C2Btn>
                             </div>
                         </div>
-                        @if (dl.Status is TransferStatus.Downloading or TransferStatus.Queued or TransferStatus.Paused)
+                        @if (dl.Status is TransferStatus.Downloading or TransferStatus.Queued or TransferStatus.Pending or TransferStatus.Paused)
                         {
                             <C2Progress Size="Size.Xs" Variant="@ProgressVariant(dl.Status)" Percent="@pct" />
                         }
@@ -174,7 +180,7 @@
     }
 
     private bool HasActiveSyncs =>
-        activeRecords.Any(r => r.Status is TransferStatus.Downloading or TransferStatus.Queued);
+        activeRecords.Any(r => r.Status is TransferStatus.Downloading or TransferStatus.Queued or TransferStatus.Pending);
 
     private void SetFilter(Filter f) { filter = f; ApplyFilter(); }
 
@@ -182,7 +188,7 @@
     {
         filteredRecords = filter switch
         {
-            Filter.Active => activeRecords.Where(r => r.Status is TransferStatus.Downloading or TransferStatus.Queued).ToList(),
+            Filter.Active => activeRecords.Where(r => r.Status is TransferStatus.Downloading or TransferStatus.Queued or TransferStatus.Pending).ToList(),
             Filter.Paused => activeRecords.Where(r => r.Status is TransferStatus.Paused or TransferStatus.Failed).ToList(),
             Filter.Done => activeRecords.Where(r => r.Status == TransferStatus.Completed).ToList(),
             _ => activeRecords.ToList()
@@ -191,7 +197,7 @@
 
     private int CountByFilter(Filter f) => f switch
     {
-        Filter.Active => activeRecords.Count(r => r.Status is TransferStatus.Downloading or TransferStatus.Queued),
+        Filter.Active => activeRecords.Count(r => r.Status is TransferStatus.Downloading or TransferStatus.Queued or TransferStatus.Pending),
         Filter.Paused => activeRecords.Count(r => r.Status is TransferStatus.Paused or TransferStatus.Failed),
         Filter.Done => activeRecords.Count(r => r.Status == TransferStatus.Completed),
         _ => activeRecords.Count
@@ -200,6 +206,7 @@
     private static string StatusIcon(string s) => s switch
     {
         TransferStatus.Downloading => "dot",
+        TransferStatus.Pending => "dot-outline",
         TransferStatus.Queued => "dot-outline",
         TransferStatus.Paused => "stop",
         TransferStatus.Completed => "check",
@@ -210,6 +217,7 @@
     private static string StatusLabel(string s) => s switch
     {
         TransferStatus.Downloading => "Downloading",
+        TransferStatus.Pending => "Pending",
         TransferStatus.Queued => "Queued",
         TransferStatus.Paused => "Paused",
         TransferStatus.Completed => "Completed",
@@ -236,7 +244,7 @@
     {
         var active = activeRecords.FirstOrDefault(r => r.Status == TransferStatus.Downloading);
         if (active is not null) Transfers.Cts.Cancel(active.Id);
-        var queued = activeRecords.Where(r => r.Status == TransferStatus.Queued).ToList();
+        var queued = activeRecords.Where(r => r.Status is TransferStatus.Queued or TransferStatus.Pending).ToList();
         foreach (var dl in queued) await Transfers.PauseAsync(dl.Id);
     }
 
@@ -245,7 +253,7 @@
         var all = Transfers.GetActive();
         activeRecords = string.IsNullOrEmpty(AgentUuid) ? all : all.Where(r => r.AgentUuid == AgentUuid).ToList();
         activeRecords = activeRecords
-            .OrderBy(r => r.Status == TransferStatus.Downloading ? 0 : r.Status == TransferStatus.Queued ? 1 : r.Status == TransferStatus.Paused ? 2 : r.Status == TransferStatus.Failed ? 3 : 4)
+            .OrderBy(r => r.Status == TransferStatus.Downloading ? 0 : r.Status == TransferStatus.Queued ? 1 : r.Status == TransferStatus.Pending ? 1 : r.Status == TransferStatus.Paused ? 2 : r.Status == TransferStatus.Failed ? 3 : 4)
             .ThenBy(r => r.Priority)
             .ThenBy(r => r.CreatedAt)
             .ToList();
@@ -254,6 +262,7 @@
 
     private async Task BumpPriority(TransferRecord dl, int delta) => await Transfers.SetPriorityAsync(dl.Id, dl.Priority + delta);
     private void PauseDownload(TransferRecord dl) => Transfers.Cts.Cancel(dl.Id);
+    private async Task PauseQueued(TransferRecord dl) => await Transfers.PauseAsync(dl.Id);
 
     private async Task ResumeDownload(TransferRecord dl)
     {

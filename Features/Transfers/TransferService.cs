@@ -47,9 +47,9 @@ public class TransferService : IDisposable
 
         foreach (var dl in _store.GetByAgent(uuid))
         {
-            if (dl.Status == TransferStatus.Paused)
-                await _store.QueueAsync(dl.Id);
-            else if (dl.Status == TransferStatus.Downloading && !_store.Cts.HasActive(dl.Id))
+            // Only re-queue stale downloads (no active CTS). Never auto-resume paused
+            // transfers — only the user may resume those via the UI.
+            if (dl.Status == TransferStatus.Downloading && !_store.Cts.HasActive(dl.Id))
                 await _store.QueueAsync(dl.Id);
         }
 
