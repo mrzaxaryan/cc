@@ -127,6 +127,8 @@
                     <span class="cm-db-version">v4</span>
                     <div class="cm-toolbar-actions">
                         <C2Btn OnClick="LoadDbStats" Disabled="@dbLoading" Title="Refresh"><C2Icon Name="refresh" Size="Size.Xs" /></C2Btn>
+                        <C2Btn Variant="BtnVariant.Primary" OnClick="BackupDatabase" Disabled="@dbBacking" Loading="@dbBacking" Title="Export .bak"><C2Icon Name="download" Size="Size.Xs" /></C2Btn>
+                        <C2Btn Variant="BtnVariant.Warning" OnClick="RestoreDatabase" Disabled="@dbRestoring" Loading="@dbRestoring" Title="Import .bak"><C2Icon Name="upload" Size="Size.Xs" /></C2Btn>
                     </div>
                 </div>
                 @if (dbLoading)
@@ -263,6 +265,8 @@
     private record DbTable(string Name, int Count);
     private List<DbTable> dbTables = new();
     private bool dbLoading;
+    private bool dbBacking;
+    private bool dbRestoring;
 
     // Browser info (About tab)
     private record BrowserInfo(string? UserAgent, string? Language, string? Screen, int Threads, bool Online);
@@ -384,6 +388,35 @@
     }
 
     // IndexedDB
+
+    private async Task RestoreDatabase()
+    {
+        dbRestoring = true;
+        StateHasChanged();
+        try
+        {
+            var applied = await Js.InvokeAsync<bool>("c2DbInfo.importBackup");
+            if (applied)
+            {
+                await LoadDbStats();
+                Msg.Success("Backup Restored", "Database restored — reload to apply changes.", "Settings");
+            }
+        }
+        catch (Exception ex) { Msg.Error("Restore Failed", ex.Message, "Settings"); }
+        finally { dbRestoring = false; StateHasChanged(); }
+    }
+
+    private async Task BackupDatabase()
+    {
+        dbBacking = true;
+        StateHasChanged();
+        try
+        {
+            await Js.InvokeVoidAsync("c2DbInfo.exportBackup");
+        }
+        catch (Exception ex) { Msg.Error("Backup Failed", $"Could not export database: {ex.Message}", "Settings"); }
+        finally { dbBacking = false; StateHasChanged(); }
+    }
 
     private async Task LoadDbStats()
     {

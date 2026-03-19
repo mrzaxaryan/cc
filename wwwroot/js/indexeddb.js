@@ -269,6 +269,88 @@
                 });
                 return Promise.all(promises);
             });
+        },
+
+        importBackup: () => new Promise((resolve, reject) => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.bak,application/json';
+            input.onchange = async () => {
+                const file = input.files[0];
+                if (!file) { resolve(false); return; }
+                try {
+                    const text = await file.text();
+                    const payload = JSON.parse(text);
+                    if (payload.version !== 1 || payload.db !== DB_NAME)
+                        throw new Error(`Incompatible backup: db="${payload.db}" version=${payload.version}`);
+
+                    const db = await openDb();
+                    const names = Object.keys(payload.stores).filter(n => db.objectStoreNames.contains(n));
+                    const tx = db.transaction(names, 'readwrite');
+
+                    for (const name of names) {
+                        const store = tx.objectStore(name);
+                        store.clear();
+                        for (const record of payload.stores[name])
+                            store.put(record);
+                    }
+
+                    await new Promise((res, rej) => {
+                        tx.oncomplete = res;
+                        tx.onerror = () => rej(tx.error);
+                    });
+                    resolve(true);
+                } catch (e) { reject(e); }
+            };
+            input.oncancel = () => resolve(false);
+            input.click();
+        }),
+
+        exportBackup: async () => {
+            const db = await openDb();
+            const names = Array.from(db.objectStoreNames);
+            const t = db.transaction(names, 'readonly');
+            const stores = {};
+            await Promise.all(names.map(name => new Promise((resolve, reject) => {
+                const req = t.objectStore(name).getAll();
+                req.onsuccess = () => { stores[name] = req.result; resolve(); };
+                req.onerror = () => reject(req.error);
+            })));
+
+            const payload = JSON.stringify({
+                version: 1,
+                db: DB_NAME,
+                dbVersion: DB_VERSION,
+                created: new Date().toISOString(),
+                stores
+            }, null, 2);
+
+            const blob = new Blob([payload], { type: 'application/json' });
+            const date = new Date().toISOString().slice(0, 10);
+            const filename = `c2-backup-${date}.bak`;
+
+            if ('showSaveFilePicker' in window) {
+                try {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: filename,
+                        types: [{ description: 'C2 Backup', accept: { 'application/json': ['.bak'] } }]
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                    return;
+                } catch (e) {
+                    if (e.name === 'AbortError') return;
+                    // fall through to anchor download
+                }
+            }
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
         }
     };
 })();
