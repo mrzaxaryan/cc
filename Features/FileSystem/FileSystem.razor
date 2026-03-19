@@ -797,7 +797,7 @@ private HashSet<DirEntry> ActiveSelection =>
             if (response is null) return;
             var (parsed, parseError) = DirEntry.ParseDirectoryResponse(response);
             if (parseError is not null) { Msg.Show(parseError, MessageType.Error, source: "File Manager"); return; }
-            entries = parsed;
+            entries = DeduplicateEntries(parsed);
             _usingCachedData = false;
             _agentOffline = false;
         }
@@ -835,11 +835,23 @@ private HashSet<DirEntry> ActiveSelection =>
             foreach (var f in downloads)
                 result.Add(new DirEntry(f.FileName, 0, 0, (ulong)Math.Max(0, f.TotalSize), 0, false, false, false, false, false));
 
-            entries = result;
+            entries = DeduplicateEntries(result);
             _usingCachedData = true;
         }
         catch { }
         finally { loading = false; StateHasChanged(); }
+    }
+
+    private static List<DirEntry> DeduplicateEntries(List<DirEntry> source)
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var result = new List<DirEntry>(source.Count);
+        foreach (var e in source)
+        {
+            var key = $"{e.Name}:{(e.IsDirectory || e.IsDrive ? "d" : "f")}";
+            if (seen.Add(key)) result.Add(e);
+        }
+        return result;
     }
 
     private async Task SaveToVfsCacheAsync(string agentUuid, string path, List<DirEntry> dirEntries)
