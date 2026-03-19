@@ -81,12 +81,12 @@
                         <span class="cm-stat-label">Directories</span>
                     </div>
                     <div class="cm-stat">
-                        <span class="cm-stat-value">@stats.fileCount</span>
-                        <span class="cm-stat-label">Files</span>
+                        <span class="cm-stat-value">@stats.downloadCount</span>
+                        <span class="cm-stat-label">Downloads</span>
                     </div>
                     <div class="cm-stat">
-                        <span class="cm-stat-value">@Formatters.FormatSize((ulong)stats.totalSize)</span>
-                        <span class="cm-stat-label">Metadata</span>
+                        <span class="cm-stat-value">@Formatters.FormatSize((ulong)stats.downloadedSize)</span>
+                        <span class="cm-stat-label">Downloaded</span>
                     </div>
                     <div class="cm-stat">
                         <span class="cm-stat-value">@Formatters.FormatSize((ulong)blobSize)</span>
@@ -111,7 +111,7 @@
                     {
                         <div class="cm-item">
                             <span class="cm-item-name">@agent.name</span>
-                            <span class="cm-item-meta">@agent.dirs dir / @agent.files files</span>
+                            <span class="cm-item-meta">@agent.dirs dir / @agent.downloads downloads</span>
                             <span class="cm-item-meta">@Formatters.FormatSize((ulong)agent.size) cached</span>
                             <C2ConfirmBtn OnConfirm="() => DeleteAgentCache(agent.uuid)" Title="Delete agent cache"><C2Icon Name="trash" Size="Size.Xs" /></C2ConfirmBtn>
                         </div>
@@ -254,8 +254,8 @@
     private enum Tab { Appearance, Storage, IndexedDB, About }
     private Tab tab = Tab.Appearance;
 
-    private List<(string uuid, string name, int dirs, int files, long size)> agentStats = new();
-    private (int agentCount, int dirCount, int fileCount, long totalSize) stats;
+    private List<(string uuid, string name, int dirs, int downloads, long size)> agentStats = new();
+    private (int agentCount, int dirCount, int downloadCount, long downloadedSize) stats;
     private long blobSize;
     private bool loading;
     private bool confirmReset;
@@ -319,18 +319,22 @@
         try
         {
             blobSize = await Cache.GetCacheSizeAsync();
+            await Downloads.LoadAsync();
+
             var uuids = AgentDb.Agents.Values.Select(a => a.Uuid).ToList();
-            stats = await Vfs.GetGlobalStatsAsync(uuids);
+            var vfsGlobal = await Vfs.GetGlobalStatsAsync(uuids);
+            var allCompleted = Downloads.Downloads.Where(r => r.Status == TransferStatus.Completed).ToList();
+            stats = (vfsGlobal.agentCount, vfsGlobal.dirCount, allCompleted.Count, allCompleted.Sum(r => r.TotalSize));
 
             agentStats = new();
             foreach (var agent in AgentDb.Agents.Values)
             {
-                var (d, f, _) = await Vfs.GetAgentStatsAsync(agent.Uuid);
-                var cachedSize = Downloads.GetByAgent(agent.Uuid)
+                var (d, _, _) = await Vfs.GetAgentStatsAsync(agent.Uuid);
+                var completed = Downloads.GetByAgent(agent.Uuid)
                     .Where(r => r.Status == TransferStatus.Completed)
-                    .Sum(r => r.TotalSize);
-                if (d > 0 || f > 0 || cachedSize > 0)
-                    agentStats.Add((agent.Uuid, agent.Name, d, f, cachedSize));
+                    .ToList();
+                if (d > 0 || completed.Count > 0)
+                    agentStats.Add((agent.Uuid, agent.Name, d, completed.Count, completed.Sum(r => r.TotalSize)));
             }
         }
         catch (Exception ex)
