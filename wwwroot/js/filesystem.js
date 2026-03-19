@@ -60,6 +60,13 @@ window.c2FileSystem = {
         return false;
     },
 
+    // Verify the restored handle actually works (directory may have been deleted/moved)
+    async verifyHandle() {
+        if (!_rootHandle) throw new Error('No directory selected');
+        // Read-only iteration — works without user activation, throws if handle is stale
+        for await (const _ of _rootHandle.values()) { break; }
+    },
+
     // Re-request permission on a persisted handle (must be called from user gesture)
     async reRequestPermission() {
         const handle = await loadHandle(ROOT_KEY);

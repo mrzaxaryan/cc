@@ -37,10 +37,10 @@ public class TransferService : IDisposable
         await _store.LoadAsync();
 
         _subscriptions.Add(_bus.Subscribe<TransferItemQueuedEvent>(e => OnItemQueued(e.AgentUuid)));
-        _subscriptions.Add(_bus.Subscribe<AgentOnlineEvent>(e => AutoResumeAsync(e.Uuid, e.AgentId, e.RelayUrl)));
+        _subscriptions.Add(_bus.Subscribe<AgentOnlineEvent>(e => OnAgentOnline(e.Uuid, e.AgentId, e.RelayUrl)));
     }
 
-    private async Task AutoResumeAsync(string uuid, string agentId, string relayUrl)
+    private async Task OnAgentOnline(string uuid, string agentId, string relayUrl)
     {
         if (!_cache.HasDirectory) return;
         await _store.LoadAsync();
@@ -50,9 +50,10 @@ public class TransferService : IDisposable
             if (dl.Status == TransferStatus.Paused)
                 await _store.QueueAsync(dl.Id);
             else if (dl.Status == TransferStatus.Downloading && !_store.Cts.HasActive(dl.Id))
-                await _store.QueueAsync(dl.Id); // stale — relay dropped while syncing
+                await _store.QueueAsync(dl.Id);
         }
 
+        _processingAgents.Remove(uuid);
         await TryProcessQueue(uuid, agentId, relayUrl);
     }
 
@@ -104,19 +105,21 @@ public class TransferService : IDisposable
                 }
                 catch (AgentErrorException ex)
                 {
-                    await _store.FailAsync(next.Id, ex.Message); // agent refused — no point retrying
+                    await _store.FailAsync(next.Id, ex.Message);
                 }
                 catch (OperationCanceledException)
                 {
                     if (cts.IsCancellationRequested)
-                        await _store.PauseAsync(next.Id); // user pressed pause
-                    break; // relay dropped — stop processing, AutoResume will re-queue
+                        await _store.PauseAsync(next.Id);
+                    break;
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
                     if (cts.IsCancellationRequested)
                         await _store.PauseAsync(next.Id);
-                    break; // network/unexpected error — stop, AutoResume will retry
+                    else
+                        await _store.FailAsync(next.Id, ex.Message);
+                    break;
                 }
                 finally
                 {
