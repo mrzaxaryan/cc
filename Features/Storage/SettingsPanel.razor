@@ -112,7 +112,7 @@
                         <div class="cm-item">
                             <span class="cm-item-name">@agent.name</span>
                             <span class="cm-item-meta">@agent.dirs dir / @agent.files files</span>
-                            <span class="cm-item-meta">@Formatters.FormatSize((ulong)agent.size)</span>
+                            <span class="cm-item-meta">@Formatters.FormatSize((ulong)agent.size) cached</span>
                             <C2ConfirmBtn OnConfirm="() => DeleteAgentCache(agent.uuid)" Title="Delete agent cache"><C2Icon Name="trash" Size="Size.Xs" /></C2ConfirmBtn>
                         </div>
                     }
@@ -325,9 +325,12 @@
             agentStats = new();
             foreach (var agent in AgentDb.Agents.Values)
             {
-                var (d, f, s) = await Vfs.GetAgentStatsAsync(agent.Uuid);
-                if (d > 0 || f > 0)
-                    agentStats.Add((agent.Uuid, agent.Name, d, f, s));
+                var (d, f, _) = await Vfs.GetAgentStatsAsync(agent.Uuid);
+                var cachedSize = Downloads.GetByAgent(agent.Uuid)
+                    .Where(r => r.Status == TransferStatus.Completed)
+                    .Sum(r => r.TotalSize);
+                if (d > 0 || f > 0 || cachedSize > 0)
+                    agentStats.Add((agent.Uuid, agent.Name, d, f, cachedSize));
             }
         }
         catch (Exception ex)
