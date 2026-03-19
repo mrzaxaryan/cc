@@ -2,6 +2,8 @@
 @inject TransferStore Transfers
 @inject AgentStore AgentDb
 @inject MessageService Msg
+@inject WindowManager Wm
+@inject IJSRuntime Js
 
 <PanelLayout Title="Upload Manager">
     <HeaderLeft>
@@ -66,7 +68,9 @@
                 {
                     var rec = dl;
                     var pct = dl.TotalSize > 0 ? (int)(dl.DownloadedSize * 100 / dl.TotalSize) : 0;
-                    <div class="sm-item @StatusClass(dl.Status)">
+                    <div class="sm-item @StatusClass(dl.Status)"
+                         @oncontextmenu="(ev) => ShowContextMenu(ev, rec)"
+                         @oncontextmenu:preventDefault>
                         <div class="sm-item-row">
                             <span class="sm-item-icon" title="@StatusLabel(dl.Status)"><C2Icon Name="@StatusIcon(dl.Status)" Size="Size.Xs" /></span>
                             <div class="sm-item-info">
@@ -124,6 +128,27 @@
     </Body>
 </PanelLayout>
 
+@if (ctxVisible && ctxRec is not null)
+{
+    <C2Dropdown Visible="@ctxVisible" X="@ctxX" Y="@ctxY" OnClose="HideContextMenu">
+        <C2DropdownItem OnClick="CtxOpenFileSystem"><C2Icon Name="folder" Size="Size.Xs" /> Open in File System</C2DropdownItem>
+        <div class="ap-ctx-submenu-wrap">
+            <button class="ap-ctx-sub-trigger" type="button">
+                <span class="ap-ctx-sub-label"><C2Icon Name="copy" Size="Size.Xs" /> Copy</span>
+                <span class="ap-ctx-arrow"><C2Icon Name="chevron-right" Size="Size.Xs" /></span>
+            </button>
+            <div class="ap-ctx-submenu">
+                <C2DropdownItem OnClick="() => CtxCopy(ctxRec.FileName)" CssClass="ap-ctx-copy-item">File Name</C2DropdownItem>
+                <C2DropdownItem OnClick="() => CtxCopy(ctxRec.RemotePath)" CssClass="ap-ctx-copy-item">Remote Path</C2DropdownItem>
+                @if (!string.IsNullOrEmpty(ctxRec.AgentName))
+                {
+                    <C2DropdownItem OnClick="() => CtxCopy(ctxRec.AgentName)" CssClass="ap-ctx-copy-item">Agent Name</C2DropdownItem>
+                }
+            </div>
+        </div>
+    </C2Dropdown>
+}
+
 @code {
     [Parameter] public string? AgentUuid { get; set; }
     [Parameter] public string? AgentName { get; set; }
@@ -134,6 +159,11 @@
     private List<TransferRecord> filteredRecords = new();
     private Filter filter = Filter.All;
     private bool confirmClear;
+
+    private bool ctxVisible;
+    private double ctxX;
+    private double ctxY;
+    private TransferRecord? ctxRec;
 
     protected override async Task OnInitializedAsync()
     {
@@ -238,6 +268,39 @@
         confirmClear = false;
         var toRemove = activeRecords.Where(r => r.Status is TransferStatus.Paused or TransferStatus.Failed).ToList();
         foreach (var dl in toRemove) await Transfers.RemoveAsync(dl.Id);
+    }
+
+    private void ShowContextMenu(MouseEventArgs e, TransferRecord rec)
+    {
+        ctxX = e.ClientX;
+        ctxY = e.ClientY;
+        ctxRec = rec;
+        ctxVisible = true;
+    }
+
+    private void HideContextMenu() => ctxVisible = false;
+
+    private async Task CtxCopy(string value)
+    {
+        HideContextMenu();
+        await Js.InvokeVoidAsync("navigator.clipboard.writeText", value);
+    }
+
+    private void CtxOpenFileSystem()
+    {
+        HideContextMenu();
+        if (ctxRec is null) return;
+        var agentId = ctxRec.AgentUuid;
+        var dir = GetDirectory(ctxRec.RemotePath);
+        Wm.OpenAgentWindow("FileSystem", agentId, agentName: ctxRec.AgentName, agentUuid: ctxRec.AgentUuid, searchPath: dir);
+    }
+
+    private static string? GetDirectory(string? path)
+    {
+        if (string.IsNullOrEmpty(path)) return null;
+        var sep = path.Contains('\\') ? '\\' : '/';
+        var idx = path.LastIndexOf(sep);
+        return idx > 0 ? path[..idx] + sep : null;
     }
 
     public override void Dispose() => base.Dispose();
