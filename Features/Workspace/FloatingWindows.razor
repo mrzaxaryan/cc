@@ -48,7 +48,7 @@
                 case "Settings":          <SettingsPanel /> break;
                 case "Relay":             <RelayPanel /> break;
                 case "Agents":            <AgentsPanel /> break;
-                case "Transfers":         <DownloadsPanel AgentUuid="@win.AgentUuid" AgentName="@win.AgentName" /> break;
+                case "Transfers":         <TransfersPanel AgentUuid="@win.AgentUuid" AgentName="@win.AgentName" /> break;
                 case "ExtensionGroups":   <ExtensionGroupsPanel /> break;
                 case "AgentInfo":         <AgentInfoPanel AgentId="@win.AgentId" AgentUuid="@win.AgentUuid" /> break;
                 case "Shell":            <ShellPanel Relay="win.Relay" AgentId="@win.AgentId" AgentName="@win.AgentName" AgentUuid="@win.AgentUuid" /> break;

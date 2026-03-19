@@ -4,32 +4,63 @@
 @inject AgentStore AgentDb
 @inject TransferStore Downloads
 @inject MessageService Msg
+@inject ThemeService Theme
 @inject IJSRuntime Js
 
 <PanelLayout Title="Settings">
-    <HeaderRight>
-        @if (confirmReset)
-        {
-            <span class="cm-reset-warning">This will delete all settings, cached files, and application data. Are you sure?</span>
-            <C2Btn Variant="BtnVariant.DangerSolid" OnClick="ResetApplication" Disabled="@resetting" Loading="@resetting">YES, RESET</C2Btn>
-            <C2Btn OnClick="() => confirmReset = false">CANCEL</C2Btn>
-        }
-        else
-        {
-            <C2Btn Variant="BtnVariant.Danger" OnClick="() => confirmReset = true">RESET APPLICATION</C2Btn>
-        }
-    </HeaderRight>
     <Toolbar>
         <div class="panel-tabs">
-            <button class="panel-tab @(tab == Tab.Cache ? "active" : "")" @onclick="() => tab = Tab.Cache">Storage</button>
+            <button class="panel-tab @(tab == Tab.Appearance ? "active" : "")" @onclick="() => tab = Tab.Appearance">Appearance</button>
+            <button class="panel-tab @(tab == Tab.Storage ? "active" : "")" @onclick="() => tab = Tab.Storage">Storage</button>
             <button class="panel-tab @(tab == Tab.IndexedDB ? "active" : "")" @onclick="() => { tab = Tab.IndexedDB; _ = LoadDbStats(); }">IndexedDB</button>
             <button class="panel-tab @(tab == Tab.About ? "active" : "")" @onclick="() => tab = Tab.About">About</button>
         </div>
     </Toolbar>
     <Body>
-        @if (tab == Tab.Cache)
+        @if (tab == Tab.Appearance)
         {
-            @* Header *@
+            <div class="sp-section">
+                <div class="sp-section-title">Theme</div>
+                <div class="sp-row">
+                    <span class="sp-row-label">Color Theme</span>
+                    <div class="sp-theme-btns">
+                        <button class="sp-theme-btn @(Theme.Current == C2.Infrastructure.Theme.Dark ? "active" : "")"
+                                @onclick="() => SetTheme(C2.Infrastructure.Theme.Dark)">
+                            <C2Icon Name="moon" Size="Size.Xs" /> Dark
+                        </button>
+                        <button class="sp-theme-btn @(Theme.Current == C2.Infrastructure.Theme.Light ? "active" : "")"
+                                @onclick="() => SetTheme(C2.Infrastructure.Theme.Light)">
+                            <C2Icon Name="sun" Size="Size.Xs" /> Light
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sp-section sp-danger-zone">
+                <div class="sp-section-title">Danger Zone</div>
+                <div class="sp-row">
+                    <div class="sp-row-info">
+                        <span class="sp-row-label">Reset Application</span>
+                        <span class="sp-row-desc">Deletes all settings, cached files, and application data.</span>
+                    </div>
+                    @if (confirmReset)
+                    {
+                        <div class="sp-confirm">
+                            <span class="sp-confirm-text">Are you sure?</span>
+                            <C2Btn Variant="BtnVariant.DangerSolid" OnClick="ResetApplication" Disabled="@resetting" Loading="@resetting">YES, RESET</C2Btn>
+                            <C2Btn OnClick="() => confirmReset = false">CANCEL</C2Btn>
+                        </div>
+                    }
+                    else
+                    {
+                        <C2Btn Variant="BtnVariant.Danger" OnClick="() => confirmReset = true">RESET</C2Btn>
+                    }
+                </div>
+            </div>
+        }
+        else if (tab == Tab.Storage)
+        {
+            @* Toolbar *@
             <div class="cm-toolbar">
                 <C2Badge Variant="BadgeVariant.Info">@(Cache.DirectoryName ?? "No folder")</C2Badge>
                 <div class="cm-toolbar-actions">
@@ -64,87 +95,26 @@
                 </div>
             </C2Card>
 
-            @* Breadcrumb *@
-            @if (breadcrumbs.Count > 0)
-            {
-                <div class="cm-breadcrumb">
-                    <a href="javascript:void(0)" class="cm-crumb" @onclick="NavigateToRoot" @onclick:preventDefault>Root</a>
-                    @{ var lastCrumb = breadcrumbs.LastOrDefault(); }
-                    @foreach (var crumb in breadcrumbs)
-                    {
-                        <span class="cm-crumb-sep">/</span>
-                        @if (crumb == lastCrumb)
-                        {
-                            <span class="cm-crumb-active">@crumb.Name</span>
-                        }
-                        else
-                        {
-                            <a href="javascript:void(0)" class="cm-crumb" @onclick="() => NavigateToDirectory(crumb.Id)" @onclick:preventDefault>@crumb.Name</a>
-                        }
-                    }
-                </div>
-            }
-
-            @* Content *@
+            @* Agent list *@
             <div class="cm-list">
-                @if (currentDirId == VfsStore.RootParentId && currentAgentUuid is null)
+                @if (loading)
                 {
-                    @* Agent list at root *@
-                    @if (loading)
-                    {
-                        <div class="cm-list-loading"><C2Spinner /></div>
-                    }
-                    else if (agentStats.Count == 0)
-                    {
-                        <div class="panel-empty"><em>No cached data</em></div>
-                    }
-                    else
-                    {
-                        @foreach (var agent in agentStats)
-                        {
-                            <div class="cm-item">
-                                <a href="javascript:void(0)" class="cm-item-name" @onclick="() => NavigateToAgent(agent.uuid)" @onclick:preventDefault>@agent.name</a>
-                                <span class="cm-item-meta">@agent.dirs directories / @agent.files files</span>
-                                <span class="cm-item-meta">@Formatters.FormatSize((ulong)agent.size)</span>
-                                <C2ConfirmBtn OnConfirm="() => DeleteAgentCache(agent.uuid)" Title="Delete agent cache"><C2Icon Name="trash" Size="Size.Xs" /></C2ConfirmBtn>
-                            </div>
-                        }
-                    }
+                    <div class="cm-list-loading"><C2Spinner /></div>
+                }
+                else if (agentStats.Count == 0)
+                {
+                    <div class="panel-empty"><em>No cached data</em></div>
                 }
                 else
                 {
-                    @* Directory/file listing *@
-                    @if (loading)
+                    @foreach (var agent in agentStats)
                     {
-                        <div class="cm-list-loading"><C2Spinner /></div>
-                    }
-                    else
-                    {
-                        <button class="cm-item cm-item-nav" @onclick="NavigateUp">
-                            <span class="cm-item-icon"><C2Icon Name="arrow-up" Size="Size.Xs" /></span>
-                            <span class="cm-item-name">..</span>
-                        </button>
-                        @foreach (var dir in childDirs)
-                        {
-                            <div class="cm-item">
-                                <span class="cm-item-icon"><C2Icon Name="folder" Size="Size.Xs" /></span>
-                                <a href="javascript:void(0)" class="cm-item-name" @onclick="() => NavigateToDirectory(dir.Id)" @onclick:preventDefault>@dir.Name</a>
-                                <C2ConfirmBtn OnConfirm="() => DeleteDir(dir)" Title="Delete"><C2Icon Name="trash" Size="Size.Xs" /></C2ConfirmBtn>
-                            </div>
-                        }
-                        @foreach (var file in childFiles)
-                        {
-                            <div class="cm-item">
-                                <span class="cm-item-icon"><C2Icon Name="file" Size="Size.Xs" /></span>
-                                <span class="cm-item-name">@file.Name</span>
-                                <span class="cm-item-meta">@Formatters.FormatSize((ulong)file.Size)</span>
-                                <C2ConfirmBtn OnConfirm="() => DeleteFile(file)" Title="Delete"><C2Icon Name="trash" Size="Size.Xs" /></C2ConfirmBtn>
-                            </div>
-                        }
-                        @if (childDirs.Count == 0 && childFiles.Count == 0)
-                        {
-                            <div class="panel-empty"><em>Empty</em></div>
-                        }
+                        <div class="cm-item">
+                            <span class="cm-item-name">@agent.name</span>
+                            <span class="cm-item-meta">@agent.dirs dir / @agent.files files</span>
+                            <span class="cm-item-meta">@Formatters.FormatSize((ulong)agent.size)</span>
+                            <C2ConfirmBtn OnConfirm="() => DeleteAgentCache(agent.uuid)" Title="Delete agent cache"><C2Icon Name="trash" Size="Size.Xs" /></C2ConfirmBtn>
+                        </div>
                     }
                 }
             </div>
@@ -201,45 +171,88 @@
                     <div class="cm-about-brand">C2</div>
                     <div class="cm-about-tagline">Command &amp; Control</div>
                 </div>
-                <C2Card Compact>
-                    <div class="cm-about-rows">
-                        <div class="cm-about-row">
-                            <span class="cm-about-label">Version</span>
-                            <code class="cm-about-value">@BuildMeta.Version</code>
+
+                <div class="cm-about-cards">
+                    <C2Card Compact>
+                        <div class="cm-about-card-title">Build</div>
+                        <div class="cm-about-rows">
+                            <div class="cm-about-row">
+                                <span class="cm-about-label">Version</span>
+                                <code class="cm-about-value">@BuildMeta.Version</code>
+                            </div>
+                            <div class="cm-about-row">
+                                <span class="cm-about-label">Built</span>
+                                <code class="cm-about-value">@BuildMeta.Date</code>
+                            </div>
+                            <div class="cm-about-row">
+                                <span class="cm-about-label">Commit</span>
+                                <code class="cm-about-value">@BuildMeta.Hash</code>
+                            </div>
                         </div>
-                        <div class="cm-about-row">
-                            <span class="cm-about-label">Built</span>
-                            <code class="cm-about-value">@BuildMeta.Date</code>
+                    </C2Card>
+
+                    <C2Card Compact>
+                        <div class="cm-about-card-title">Runtime</div>
+                        <div class="cm-about-rows">
+                            <div class="cm-about-row">
+                                <span class="cm-about-label">Framework</span>
+                                <code class="cm-about-value">@System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription</code>
+                            </div>
+                            <div class="cm-about-row">
+                                <span class="cm-about-label">OS</span>
+                                <code class="cm-about-value">@System.Runtime.InteropServices.RuntimeInformation.OSDescription</code>
+                            </div>
+                            <div class="cm-about-row">
+                                <span class="cm-about-label">Architecture</span>
+                                <code class="cm-about-value">@System.Runtime.InteropServices.RuntimeInformation.OSArchitecture</code>
+                            </div>
+                            <div class="cm-about-row">
+                                <span class="cm-about-label">Processors</span>
+                                <code class="cm-about-value">@System.Environment.ProcessorCount</code>
+                            </div>
+                            <div class="cm-about-row">
+                                <span class="cm-about-label">Culture</span>
+                                <code class="cm-about-value">@System.Globalization.CultureInfo.CurrentCulture</code>
+                            </div>
                         </div>
-                        <div class="cm-about-row">
-                            <span class="cm-about-label">Hash</span>
-                            <code class="cm-about-value">@BuildMeta.Hash</code>
+                    </C2Card>
+
+                    <C2Card Compact>
+                        <div class="cm-about-card-title">Browser</div>
+                        <div class="cm-about-rows">
+                            <div class="cm-about-row">
+                                <span class="cm-about-label">User Agent</span>
+                                <code class="cm-about-value cm-about-value--ua">@(browserInfo.UserAgent ?? "—")</code>
+                            </div>
+                            <div class="cm-about-row">
+                                <span class="cm-about-label">Language</span>
+                                <code class="cm-about-value">@(browserInfo.Language ?? "—")</code>
+                            </div>
+                            <div class="cm-about-row">
+                                <span class="cm-about-label">Screen</span>
+                                <code class="cm-about-value">@(browserInfo.Screen ?? "—")</code>
+                            </div>
+                            <div class="cm-about-row">
+                                <span class="cm-about-label">Threads</span>
+                                <code class="cm-about-value">@(browserInfo.Threads > 0 ? browserInfo.Threads.ToString() : "—")</code>
+                            </div>
+                            <div class="cm-about-row">
+                                <span class="cm-about-label">Online</span>
+                                <code class="cm-about-value">@(browserInfo.Online ? "Yes" : "No")</code>
+                            </div>
                         </div>
-                        <div class="cm-about-row">
-                            <span class="cm-about-label">Runtime</span>
-                            <code class="cm-about-value">@System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription</code>
-                        </div>
-                        <div class="cm-about-row">
-                            <span class="cm-about-label">Platform</span>
-                            <code class="cm-about-value">@System.Runtime.InteropServices.RuntimeInformation.OSDescription</code>
-                        </div>
-                    </div>
-                </C2Card>
+                    </C2Card>
+                </div>
             </div>
         }
     </Body>
 </PanelLayout>
 
 @code {
-    private enum Tab { Cache, IndexedDB, About }
-    private Tab tab = Tab.Cache;
+    private enum Tab { Appearance, Storage, IndexedDB, About }
+    private Tab tab = Tab.Appearance;
 
-    private string currentDirId = VfsStore.RootParentId;
-    private string? currentAgentUuid;
     private List<(string uuid, string name, int dirs, int files, long size)> agentStats = new();
-    private List<VfsDirectory> childDirs = new();
-    private List<VfsFile> childFiles = new();
-    private List<VfsDirectory> breadcrumbs = new();
     private (int agentCount, int dirCount, int fileCount, long totalSize) stats;
     private long blobSize;
     private bool loading;
@@ -251,6 +264,10 @@
     private List<DbTable> dbTables = new();
     private bool dbLoading;
 
+    // Browser info (About tab)
+    private record BrowserInfo(string? UserAgent, string? Language, string? Screen, int Threads, bool Online);
+    private BrowserInfo browserInfo = new(null, null, null, 0, true);
+
     // Debounce
     private Timer? _debounceTimer;
     private bool _refreshing;
@@ -259,7 +276,23 @@
     {
         On<CacheChangedEvent>(e => OnDataChanged());
         On<VfsChangedEvent>(e => OnDataChanged());
+        On<ThemeChangedEvent>();
         await Refresh();
+        await LoadBrowserInfo();
+    }
+
+    private async Task LoadBrowserInfo()
+    {
+        try
+        {
+            var ua = await Js.InvokeAsync<string?>("eval", "navigator.userAgent");
+            var lang = await Js.InvokeAsync<string?>("eval", "navigator.language");
+            var screen = await Js.InvokeAsync<string?>("eval", "`${screen.width}×${screen.height} (${window.devicePixelRatio}x)`");
+            var threads = await Js.InvokeAsync<int>("eval", "navigator.hardwareConcurrency || 0");
+            var online = await Js.InvokeAsync<bool>("eval", "navigator.onLine");
+            browserInfo = new(ua, lang, screen, threads, online);
+        }
+        catch { }
     }
 
     private void OnDataChanged()
@@ -285,22 +318,12 @@
             var uuids = AgentDb.Agents.Values.Select(a => a.Uuid).ToList();
             stats = await Vfs.GetGlobalStatsAsync(uuids);
 
-            if (currentDirId == VfsStore.RootParentId && currentAgentUuid is null)
+            agentStats = new();
+            foreach (var agent in AgentDb.Agents.Values)
             {
-                agentStats = new();
-                foreach (var agent in AgentDb.Agents.Values)
-                {
-                    var (d, f, s) = await Vfs.GetAgentStatsAsync(agent.Uuid);
-                    if (d > 0 || f > 0)
-                        agentStats.Add((agent.Uuid, agent.Name, d, f, s));
-                }
-                childDirs = new();
-                childFiles = new();
-            }
-            else if (currentAgentUuid is not null)
-            {
-                childDirs = await Vfs.GetChildDirectoriesAsync(currentAgentUuid, currentDirId);
-                childFiles = await Vfs.GetFilesInDirectoryAsync(currentAgentUuid, currentDirId);
+                var (d, f, s) = await Vfs.GetAgentStatsAsync(agent.Uuid);
+                if (d > 0 || f > 0)
+                    agentStats.Add((agent.Uuid, agent.Name, d, f, s));
             }
         }
         catch (Exception ex)
@@ -313,78 +336,6 @@
             _refreshing = false;
             StateHasChanged();
         }
-    }
-
-    private async Task NavigateToRoot()
-    {
-        currentDirId = VfsStore.RootParentId;
-        currentAgentUuid = null;
-        breadcrumbs = new();
-        await Refresh();
-    }
-
-    private async Task NavigateToAgent(string agentUuid)
-    {
-        currentAgentUuid = agentUuid;
-        currentDirId = VfsStore.RootParentId;
-        breadcrumbs = new() { MakeAgentCrumb() };
-        await Refresh();
-    }
-
-    private async Task NavigateToDirectory(string dirId)
-    {
-        currentDirId = dirId;
-        await RebuildBreadcrumbs();
-        await Refresh();
-    }
-
-    private async Task NavigateUp()
-    {
-        if (breadcrumbs.Count <= 1)
-        {
-            await NavigateToRoot();
-            return;
-        }
-        var parent = breadcrumbs[^2];
-        breadcrumbs.RemoveAt(breadcrumbs.Count - 1);
-        currentDirId = parent.Id;
-        await Refresh();
-    }
-
-    private async Task RebuildBreadcrumbs()
-    {
-        var crumbs = new List<VfsDirectory>();
-        var id = currentDirId;
-        while (id != VfsStore.RootParentId)
-        {
-            var dir = await Vfs.GetDirectoryAsync(id);
-            if (dir is null) break;
-            crumbs.Insert(0, dir);
-            id = dir.ParentId;
-        }
-        if (currentAgentUuid is not null)
-            crumbs.Insert(0, MakeAgentCrumb());
-        breadcrumbs = crumbs;
-    }
-
-    private async Task DeleteDir(VfsDirectory dir)
-    {
-        try
-        {
-            await Vfs.RemoveDirectoryAsync(dir.Id);
-            await Refresh();
-        }
-        catch (Exception ex) { Msg.Error("Delete Failed", $"Could not remove directory: {ex.Message}", "Settings"); }
-    }
-
-    private async Task DeleteFile(VfsFile file)
-    {
-        try
-        {
-            await Vfs.RemoveFileAsync(file.Id);
-            await Refresh();
-        }
-        catch (Exception ex) { Msg.Error("Delete Failed", $"Could not remove file: {ex.Message}", "Settings"); }
     }
 
     private async Task DeleteAgentCache(string agentUuid)
@@ -421,15 +372,15 @@
         try
         {
             await Cache.PickDirectoryAsync();
-            await NavigateToRoot();
+            await Refresh();
         }
         catch (Exception ex) { Msg.Error("Folder Change Failed", $"Could not select folder: {ex.Message}", "Settings"); }
     }
 
-    private VfsDirectory MakeAgentCrumb()
+    private async Task SetTheme(C2.Infrastructure.Theme theme)
     {
-        var name = AgentDb.Agents.Values.FirstOrDefault(a => a.Uuid == currentAgentUuid)?.Name ?? currentAgentUuid!;
-        return new VfsDirectory { Id = VfsStore.RootParentId, Name = name };
+        if (Theme.Current == theme) return;
+        await Theme.Toggle();
     }
 
     // IndexedDB
