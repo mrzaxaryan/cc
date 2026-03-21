@@ -430,6 +430,15 @@ select.form-input option {
 }
 
 
+/* === _tool-panel.css === */
+/* Base tool panel — scrollable content area inside floating windows */
+
+.tool-panel {
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+}
+
 /* === _loaders.css === */
 /* Shared Loader Panel Styles */
 

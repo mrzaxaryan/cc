@@ -35,14 +35,8 @@
                     <C2Icon Name="upload" Size="Size.Xs" /> Upload PDF
                     <InputFile OnChange="OnPdfUpload" accept=".pdf" style="display:none" />
                 </label>
-                @if (!string.IsNullOrEmpty(_fileName))
+                @if (_pdfBase64 is not null)
                 {
-                    <span class="loader-text">@_fileName (@_pageCount pages)</span>
-                }
-            </div>
-            @if (_pdfBase64 is not null)
-            {
-                <div class="loader-actions">
                     <button class="loader-link-btn" @onclick="Generate" disabled="@(string.IsNullOrWhiteSpace(_url) || _generating)">
                         @if (_generating)
                         {
@@ -55,8 +49,12 @@
                             <span>Download Injected PDF</span>
                         }
                     </button>
-                </div>
-            }
+                }
+                @if (!string.IsNullOrEmpty(_fileName))
+                {
+                    <span class="loader-text">@_fileName (@_pageCount pages)</span>
+                }
+            </div>
             @if (!string.IsNullOrEmpty(_error))
             {
                 <p class="loader-text" style="color:var(--c2-accent-red)">@_error</p>
@@ -124,6 +122,11 @@
     private async Task Generate()
     {
         if (_pdfBase64 is null || string.IsNullOrWhiteSpace(_url)) return;
+        if (!Uri.TryCreate(_url.Trim(), UriKind.Absolute, out var uri) || (uri.Scheme != "http" && uri.Scheme != "https"))
+        {
+            _error = "Invalid URL — must start with http:// or https://";
+            return;
+        }
         _error = "";
         _generating = true;
         StateHasChanged();
