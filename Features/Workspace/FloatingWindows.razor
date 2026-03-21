@@ -58,6 +58,7 @@
                 case "LnkGenerator":          <LnkGeneratorPanel /> break;
                 case "PythonLoader":     <PythonLoaderPanel /> break;
                 case "RtfGenerator":        <RtfGeneratorPanel /> break;
+                case "PdfGenerator":        <PdfGeneratorPanel /> break;
             }
         </div>
         @if (!win.Maximized)
@@ -274,6 +275,7 @@
         "LnkGenerator" => "link",
         "PythonLoader" => "code",
         "RtfGenerator" => "file-text",
+        "PdfGenerator" => "file-text",
         _ => "monitor"
     };
 

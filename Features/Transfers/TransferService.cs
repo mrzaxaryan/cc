@@ -47,10 +47,15 @@ public class TransferService : IDisposable
 
         foreach (var dl in _store.GetByAgent(uuid))
         {
-            // Re-queue stale downloads (no active CTS) and auto-resumable paused
-            // transfers (paused by disconnect, not by user).
-            if (dl.Status == TransferStatus.Downloading && !_store.Cts.HasActive(dl.Id))
+            if (dl.Status == TransferStatus.Downloading)
+            {
+                // Cancel any in-flight download — the relay from the old session
+                // is dead.  QueueAsync sets status to Queued synchronously before
+                // yielding, so the old task's catch block will see Queued and skip
+                // overwriting the status back to Paused.
+                _store.Cts.Cancel(dl.Id);
                 await _store.QueueAsync(dl.Id);
+            }
             else if (dl.Status == TransferStatus.Paused && dl.AutoResume)
                 await _store.QueueAsync(dl.Id);
         }
@@ -105,27 +110,33 @@ public class TransferService : IDisposable
                     else
                     {
                         // Disconnected mid-transfer — partial data saved, auto-resume
-                        // when the agent reconnects.
-                        await _store.PauseForResumeAsync(next.Id);
+                        // when the agent reconnects.  Skip if already re-queued by
+                        // a concurrent OnAgentOnline (reconnection cancelled us).
+                        if (next.Status != TransferStatus.Queued)
+                            await _store.PauseForResumeAsync(next.Id);
                         break;
                     }
                 }
                 catch (AgentErrorException ex)
                 {
-                    await _store.FailAsync(next.Id, ex.Message);
+                    if (next.Status != TransferStatus.Queued)
+                        await _store.FailAsync(next.Id, ex.Message);
                 }
                 catch (OperationCanceledException)
                 {
-                    if (cts.IsCancellationRequested)
+                    if (cts.IsCancellationRequested && next.Status != TransferStatus.Queued)
                         await _store.PauseAsync(next.Id);
                     break;
                 }
                 catch (Exception ex)
                 {
-                    if (cts.IsCancellationRequested)
-                        await _store.PauseAsync(next.Id);
-                    else
-                        await _store.FailAsync(next.Id, ex.Message);
+                    if (next.Status != TransferStatus.Queued)
+                    {
+                        if (cts.IsCancellationRequested)
+                            await _store.PauseAsync(next.Id);
+                        else
+                            await _store.FailAsync(next.Id, ex.Message);
+                    }
                     break;
                 }
                 finally
