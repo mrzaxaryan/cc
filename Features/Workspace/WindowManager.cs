@@ -56,7 +56,7 @@ public class WindowManager
             Title = DisplayTitle(panel),
             X = 100 + offset,
             Y = 80 + offset,
-            Width = panel switch { "FileSystem" => 800, "Settings" => 650, "Relay" => 900, "Agents" => 950, "Transfers" => 600, "ExtensionGroups" => 500, "PeParser" => 900, "Base64" => 600, "LnkTool" => 750, _ => 700 },
+            Width = panel switch { "FileSystem" => 800, "Settings" => 650, "Relay" => 900, "Agents" => 950, "Transfers" => 600, "ExtensionGroups" => 500, "PeParser" => 900, "Base64" => 600, "LnkTool" => 750, "PythonLoader" => 650, _ => 700 },
             Height = 500,
             ZIndex = _topZ
         };
@@ -156,6 +156,7 @@ public class WindowManager
         "Shell" => "Shell",
         "Screen" => "Screen",
         "Settings" => "Settings",
+        "PythonLoader" => "Python Loader",
         _ => panel
     };
 

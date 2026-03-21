@@ -83,6 +83,24 @@ else
             }
         </div>
 
+        <div class="loaders-menu" @onfocusout="OnLoadersFocusOut" tabindex="-1">
+            <button class="mdi-menu-item" @onclick="ToggleLoadersMenu">
+                <C2Icon Name="download" Size="Size.Xs" /> Loaders <C2Icon Name="chevron-down" Size="Size.Xs" CssClass="brand-chevron" />
+            </button>
+            @if (loadersMenuOpen)
+            {
+                <div class="loaders-popup">
+                    @foreach (var loader in LoaderItems)
+                    {
+                        var panel = loader.Panel;
+                        <button class="brand-popup-item" @onclick="() => OpenLoader(panel)">
+                            <C2Icon Name="@loader.Icon" Size="Size.Xs" /> @loader.Label
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+
         <div class="mdi-spacer"></div>
 
         @* Notifications *@
@@ -199,12 +217,19 @@ else
         new("LnkTool", "link", "LNK Tool"),
     ];
 
+    private record LoaderItem(string Panel, string Icon, string Label);
+    private static readonly LoaderItem[] LoaderItems =
+    [
+        new("PythonLoader", "code", "Python"),
+    ];
+
     private bool showSetup;
     private bool initialized;
     private bool dropdownOpen;
     private bool updateAvailable;
     private bool brandMenuOpen;
     private bool toolsMenuOpen;
+    private bool loadersMenuOpen;
     private bool isShutdown;
     private Timer? _updateTimer;
 
@@ -307,6 +332,24 @@ else
         await InvokeAsync(() =>
         {
             toolsMenuOpen = false;
+            StateHasChanged();
+        });
+    }
+
+    private void ToggleLoadersMenu() => loadersMenuOpen = !loadersMenuOpen;
+
+    private void OpenLoader(string panel)
+    {
+        loadersMenuOpen = false;
+        Wm.OpenWindow(panel);
+    }
+
+    private async void OnLoadersFocusOut()
+    {
+        await Task.Delay(200);
+        await InvokeAsync(() =>
+        {
+            loadersMenuOpen = false;
             StateHasChanged();
         });
     }

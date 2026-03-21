@@ -21,6 +21,8 @@ A fully serverless, file-less, zero-cost command and control platform. The [agen
 - **Download queue** — queue and track file downloads from agents with progress and auto-resume
 - **Upload queue** — upload files to agents with pause/resume support
 - **File search** — recursive search across agents with extension group filtering and auto-download
+- **Screen capture** — live display enumeration and JPEG frame streaming
+- **Remote shell** — interactive command execution on agents
 - **Offline cache** — browser FileSystem API + IndexedDB for local file storage
 - **Extension groups** — user-defined file type categories for filtering
 - **Dark/light theme** — toggle with localStorage persistence
@@ -73,37 +75,49 @@ Starts on `http://localhost:5057` / `https://localhost:7104`.
 ├── App.razor                   # Root router component
 ├── Features/
 │   ├── Agents/                 # Agent monitoring and metadata
-│   │   ├── AgentsPanel.razor   # Agent list UI
-│   │   └── AgentStore.cs       # Agent persistence (IndexedDB)
+│   │   ├── AgentsPanel.razor       # Agent list UI
+│   │   ├── AgentInfoPanel.razor    # Agent detail view
+│   │   └── AgentStore.cs           # Agent persistence (IndexedDB)
 │   ├── Relay/                  # Relay server connectivity
-│   │   ├── RelayPanel.razor    # Relay config UI
-│   │   ├── RelayConnectionService.cs  # Central orchestrator + event publisher
-│   │   ├── RelaySocket.cs      # Binary WebSocket protocol to agents
-│   │   ├── RelayStore.cs       # Relay server persistence
-│   │   └── RelayModels.cs      # Agent/relay data models
-│   ├── FileManager/            # Remote file browsing and cache
-│   │   ├── FileManager.razor   # Remote file browser UI
-│   │   ├── SyncPanel.razor     # Upload queue panel
-│   │   ├── VfsStore.cs         # Virtual filesystem metadata (IndexedDB)
-│   │   ├── CacheManager.cs     # Browser FileSystem API wrapper
-│   │   └── DirEntry.cs         # Binary directory response parser
-│   ├── Downloads/              # File download management
-│   │   ├── DownloadsPanel.razor    # Download progress UI
-│   │   ├── DownloadService.cs      # Queue processor with auto-resume
-│   │   └── DownloadStore.cs        # Download queue + state persistence
-│   ├── Uploads/                # File upload management
-│   │   └── UploadsPanel.razor      # Upload queue UI
-│   ├── Search/                 # File search across agents
-│   │   ├── FileSearchPanel.razor   # Per-agent search UI
-│   │   ├── SearchJobsPanel.razor   # Global search job history
-│   │   ├── SearchService.cs        # Recursive search executor
-│   │   └── SearchStore.cs          # Search queue + results persistence
+│   │   ├── RelayPanel.razor             # Relay config UI
+│   │   ├── RelayConnectionService.cs    # Central orchestrator + event publisher
+│   │   ├── RelaySocket.cs              # Binary WebSocket protocol to agents
+│   │   ├── RelayStore.cs               # Relay server persistence
+│   │   ├── RelayModels.cs              # Agent/relay data models
+│   │   └── AgentCommands.cs            # Binary protocol command codes
+│   ├── FileSystem/             # Remote file browsing and cache
+│   │   ├── FileSystem.razor         # Remote file browser UI
+│   │   ├── FilePanel.razor          # File list panel
+│   │   ├── FileActions.razor        # File context actions
+│   │   ├── FileViewer.razor         # File content viewer
+│   │   ├── VfsStore.cs              # Virtual filesystem metadata (IndexedDB)
+│   │   ├── FileSystemPath.cs        # Path utilities
+│   │   └── DirEntry.cs              # Binary directory response parser
+│   ├── Transfers/              # File transfer management
+│   │   ├── TransfersPanel.razor     # Transfer queue UI
+│   │   ├── TransferService.cs       # Queue processor with auto-resume
+│   │   └── TransferStore.cs         # Transfer queue + state persistence
+│   ├── Scan/                   # File search across agents
+│   │   ├── ScanService.cs          # Recursive search executor
+│   │   └── ScanStore.cs            # Search queue + results persistence
+│   ├── Screen/                 # Remote screen capture
+│   │   ├── ScreenPanel.razor       # Screen capture UI
+│   │   ├── ScreenService.cs        # Display enumeration + frame streaming
+│   │   └── ScreenModels.cs         # Display and screenshot models
+│   ├── Shell/                  # Remote shell
+│   │   └── ShellPanel.razor        # Interactive shell UI
 │   ├── Extensions/             # File type filtering
 │   │   ├── ExtensionGroupsPanel.razor  # Group management UI
 │   │   └── ExtensionGroupStore.cs      # Extension group definitions
 │   ├── Storage/                # Cache and settings
 │   │   ├── SettingsPanel.razor     # Settings and storage config UI
 │   │   └── CacheManager.cs        # Browser FileSystem API wrapper
+│   ├── Tools/                  # Utility tools
+│   │   ├── PeParserPanel.razor     # PE file parser
+│   │   ├── Base64Panel.razor       # Base64 encoder/decoder
+│   │   └── LnkToolPanel.razor     # LNK file tool
+│   ├── Loaders/                # Payload loaders
+│   │   └── PythonLoaderPanel.razor # Python loader generator
 │   ├── Workspace/              # Desktop window system
 │   │   ├── MainLayout.razor        # Menu bar + desktop container
 │   │   ├── FloatingWindows.razor   # Draggable/resizable window renderer
@@ -113,10 +127,12 @@ Starts on `http://localhost:5057` / `https://localhost:7104`.
 │   └── Notifications/          # Toast notification system
 │       └── NotificationStore.cs
 ├── Shared/                     # Reusable UI components
+│   ├── PanelLayout.razor       # Standard panel layout
 │   ├── C2Btn.razor             # Button
 │   ├── C2Card.razor            # Card container
 │   ├── C2Dialog.razor          # Modal dialog
 │   ├── C2Dropdown.razor        # Dropdown menu
+│   ├── C2DropdownItem.razor    # Dropdown menu item
 │   ├── C2Input.razor           # Text input
 │   ├── C2Table.razor           # Table layout
 │   ├── C2Tr.razor              # Table row
@@ -124,8 +140,12 @@ Starts on `http://localhost:5057` / `https://localhost:7104`.
 │   ├── C2Spinner.razor         # Loading spinner
 │   ├── C2Icon.razor            # Icon
 │   ├── C2Badge.razor           # Badge/label
-│   └── C2ConfirmBtn.razor      # Confirmation button
+│   ├── C2ConfirmBtn.razor      # Confirmation button
+│   └── C2Enums.cs              # Shared enums (Size, etc.)
 ├── Infrastructure/             # Cross-cutting services
+│   ├── EventBus.cs             # Publish/subscribe event bus
+│   ├── EventSubscriber.cs      # Base class for event-aware components
+│   ├── Events.cs               # Event definitions
 │   ├── ThemeService.cs         # Dark/light theme toggle
 │   ├── LocalStorageService.cs  # Browser localStorage wrapper
 │   ├── MessageService.cs       # Toast notification dispatcher
@@ -137,6 +157,8 @@ Starts on `http://localhost:5057` / `https://localhost:7104`.
     ├── manifest.webmanifest    # PWA manifest
     ├── css/app.css             # Stylesheet with dark/light theme system
     └── js/
+        ├── windowManager.js    # Window drag/resize/snap engine
+        ├── screen.js           # Screen capture canvas renderer
         ├── interop.js          # C# ↔ JS interop helpers
         ├── filesystem.js       # File System Access API wrapper
         └── indexeddb.js        # IndexedDB wrapper for offline storage

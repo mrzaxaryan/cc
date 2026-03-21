@@ -56,6 +56,7 @@
                 case "PeParser":         <PeParserPanel /> break;
                 case "Base64":           <Base64Panel /> break;
                 case "LnkTool":          <LnkToolPanel /> break;
+                case "PythonLoader":     <PythonLoaderPanel /> break;
             }
         </div>
         @if (!win.Maximized)
@@ -270,6 +271,7 @@
         "PeParser" => "file-code",
         "Base64" => "code",
         "LnkTool" => "link",
+        "PythonLoader" => "code",
         _ => "monitor"
     };
 
