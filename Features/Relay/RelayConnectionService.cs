@@ -207,7 +207,7 @@ public class RelayConnectionService : IAsyncDisposable
         {
             await relay.Connect(agent.Id);
             var response = await relay.SendAndReceive(new byte[] { AgentCommands.SystemInfo });
-            if (response is not null && response.Length >= 4 + RelaySocket.SystemInfoSize)
+            if (response is not null && response.Length >= 4 + RelaySocket.SystemInfoSizeLegacy)
             {
                 var status = RelaySocket.ReadStatus(response);
                 if (status == 0)

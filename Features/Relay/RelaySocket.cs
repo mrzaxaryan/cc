@@ -120,7 +120,8 @@ public class RelaySocket
     // AgentBuildInfo layout: BuildNumber (4) + CommitHash (9) = 13 bytes
     // Response: UINT32 status + SystemInfo + AgentBuildInfo
     public const int SystemInfoOffset = 4;
-    public const int SystemInfoSize = 16 + 256 + 32 + 32 + 128; // 464
+    public const int SystemInfoSizeLegacy = 16 + 256 + 32 + 32; // 336 (old agents without OSVersion)
+    public const int SystemInfoSize = SystemInfoSizeLegacy + 128; // 464
     public const int AgentBuildInfoSize = 4 + 9; // 13
 
     public static (Guid uuid, string hostname, string architecture, string platform, string osVersion, uint buildNumber, string commitHash) ReadSystemInfo(byte[] response)
@@ -129,11 +130,17 @@ public class RelaySocket
         var hostname = ReadNullTerminatedString(response, SystemInfoOffset + 16, 256);
         var architecture = ReadNullTerminatedString(response, SystemInfoOffset + 16 + 256, 32);
         var platform = ReadNullTerminatedString(response, SystemInfoOffset + 16 + 256 + 32, 32);
-        var osVersion = ReadNullTerminatedString(response, SystemInfoOffset + 16 + 256 + 32 + 32, 128);
+
+        // Detect old agents that don't include OSVersion (336 bytes vs 464 bytes)
+        var hasOsVersion = response.Length >= SystemInfoOffset + SystemInfoSize;
+        var osVersion = hasOsVersion
+            ? ReadNullTerminatedString(response, SystemInfoOffset + 16 + 256 + 32 + 32, 128)
+            : "";
 
         uint buildNumber = 0;
         var commitHash = "";
-        var buildInfoOffset = SystemInfoOffset + SystemInfoSize;
+        var infoSize = hasOsVersion ? SystemInfoSize : SystemInfoSizeLegacy;
+        var buildInfoOffset = SystemInfoOffset + infoSize;
         if (response.Length >= buildInfoOffset + AgentBuildInfoSize)
         {
             buildNumber = BitConverter.ToUInt32(response, buildInfoOffset);
