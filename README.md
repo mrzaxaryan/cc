@@ -33,26 +33,23 @@ A fully serverless, file-less, zero-cost command and control platform. The [agen
 
 ```
 +---------------------------+         +---------------------------+
-|  Position-Independent     |         |                           |
-|  Runtime (PIR)            |         |  C2 (this project)        |
-|  C++23 shellcode runtime  |         |  Blazor WebAssembly       |
-|  Zero-dependency, no libc |         |  Static PWA, no backend   |
-|  no CRT, no disk I/O      |         |                           |
-+------------+--------------+         +------------+--------------+
-             |                                     |
-             v                                     v
-+---------------------------+         +---------------------------+
 |  Position-Independent     |  <--->  |  relay                    |
 |  Agent                    |   WS    |  Serverless cloud         |
 |  File-less, in-memory     |         |  WebSocket relay          |
 |  shellcode agent          |         |                           |
-+---------------------------+         +---------------------------+
++---------------------------+         +------------+--------------+
+                                                   |
+                                                   v
+                                      +---------------------------+
+                                      |  C2 (this project)        |
+                                      |  Blazor WebAssembly       |
+                                      |  Static PWA, no backend   |
+                                      +---------------------------+
 ```
 
 | Component | Description | Repo |
 |-----------|-------------|------|
-| **PIR** | C++23 position-independent runtime — cryptography, networking, TLS 1.3, all without libc or CRT | [Position-Independent-Runtime](https://github.com/mrzaxaryan/Position-Independent-Runtime) |
-| **Agent** | File-less, in-memory shellcode agent built on PIR — runs with zero disk footprint across platforms | [Position-Independent-Agent](https://github.com/mrzaxaryan/Position-Independent-Agent) |
+| **Agent** | File-less, in-memory shellcode agent — runs with zero disk footprint across platforms | [Position-Independent-Agent](https://github.com/mrzaxaryan/Position-Independent-Agent) |
 | **Relay** | Serverless cloud WebSocket relay — pairs agents with C2 connections 1:1 | [relay](https://github.com/mrzaxaryan/relay) |
 | **C2** | This project — static Blazor WebAssembly dashboard with no backend, all state in browser storage | [C2](https://github.com/mrzaxaryan/C2) |
 

