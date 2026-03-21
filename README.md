@@ -1,10 +1,17 @@
 # C2
 
-Real-time command and control center for monitoring and managing [Position-Independent-Agent](https://github.com/mrzaxaryan/Position-Independent-Agent) connections via the [relay](https://github.com/mrzaxaryan/relay) service. Built with Blazor WebAssembly (.NET 10).
+A fully serverless, file-less, zero-cost command and control platform. The [agent](https://github.com/mrzaxaryan/Position-Independent-Agent) runs as position-independent shellcode with zero disk footprint, the [relay](https://github.com/mrzaxaryan/relay) runs on cloud with no dedicated server, and this C2 dashboard runs entirely in the browser as a Blazor WebAssembly PWA — no backend required.
 
 ## Overview
 
-**C2** connects to the [relay](https://github.com/mrzaxaryan/relay) service over WebSocket and provides a desktop-like interface for live agent monitoring, remote file management, and search — all running in the browser as a PWA with offline support.
+**C2** connects to the [relay](https://github.com/mrzaxaryan/relay) service over WebSocket and provides a desktop-like interface for live agent monitoring, remote file management, screen capture, and search — all running in the browser with offline support.
+
+### Design Principles
+
+- **File-less agent** — the agent is position-independent shellcode that runs entirely in memory, with no files written to disk, no libraries loaded, and no dependency on libc or CRT
+- **Serverless relay** — the relay runs in the cloud with no infrastructure to provision or maintain — free tier is sufficient
+- **No backend C2** — this dashboard is a static Blazor WebAssembly app served from any CDN or `file://` — all state lives in the browser (IndexedDB + File System API)
+- **Zero cost** — every component runs on free tiers: cloud workers for the relay, static hosting (or local) for the C2, and the agent needs no infrastructure at all
 
 ### Features
 
@@ -27,25 +34,25 @@ Real-time command and control center for monitoring and managing [Position-Indep
 |  Position-Independent     |         |                           |
 |  Runtime (PIR)            |         |  C2 (this project)        |
 |  C++23 shellcode runtime  |         |  Blazor WebAssembly       |
-|  Zero-dependency, cross-  |         |  monitoring dashboard     |
-|  platform                 |         |                           |
+|  Zero-dependency, no libc |         |  Static PWA, no backend   |
+|  no CRT, no disk I/O      |         |                           |
 +------------+--------------+         +------------+--------------+
              |                                     |
              v                                     v
 +---------------------------+         +---------------------------+
 |  Position-Independent     |  <--->  |  relay                    |
-|  Agent                    |   WS    |  Cloudflare Workers +     |
-|  Cross-platform remote    |         |  Durable Objects          |
-|  agent built on PIR       |         |  WebSocket relay server   |
+|  Agent                    |   WS    |  Serverless cloud         |
+|  File-less, in-memory     |         |  WebSocket relay          |
+|  shellcode agent          |         |                           |
 +---------------------------+         +---------------------------+
 ```
 
 | Component | Description | Repo |
 |-----------|-------------|------|
 | **PIR** | C++23 position-independent runtime — cryptography, networking, TLS 1.3, all without libc or CRT | [Position-Independent-Runtime](https://github.com/mrzaxaryan/Position-Independent-Runtime) |
-| **Agent** | Cross-platform remote agent built on PIR — file system, hashing, binary command protocol over WebSocket | [Position-Independent-Agent](https://github.com/mrzaxaryan/Position-Independent-Agent) |
-| **Relay** | WebSocket relay on Cloudflare Workers — pairs agents with relay connections 1:1 via Durable Objects | [relay](https://github.com/mrzaxaryan/relay) |
-| **C2** | This project — Blazor WebAssembly command and control center with real-time WebSocket monitoring and remote file management | [C2](https://github.com/mrzaxaryan/C2) |
+| **Agent** | File-less, in-memory shellcode agent built on PIR — runs with zero disk footprint across platforms | [Position-Independent-Agent](https://github.com/mrzaxaryan/Position-Independent-Agent) |
+| **Relay** | Serverless cloud WebSocket relay — pairs agents with C2 connections 1:1 | [relay](https://github.com/mrzaxaryan/relay) |
+| **C2** | This project — static Blazor WebAssembly dashboard with no backend, all state in browser storage | [C2](https://github.com/mrzaxaryan/C2) |
 
 ## Development
 
