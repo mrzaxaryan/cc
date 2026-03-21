@@ -1,4 +1,4 @@
-// PDF Dropper — pdf-lib interop for injecting link annotations into PDFs
+// PDF Generator — pdf-lib interop for injecting link annotations into PDFs
 // Uses pdf-lib loaded from CDN on first use
 
 let PDFLib = null;

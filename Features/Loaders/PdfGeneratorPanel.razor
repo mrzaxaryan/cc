@@ -2,7 +2,7 @@
 
 <div class="tool-panel">
     <div class="tool-header">
-        <h3 class="tool-title">PDF Dropper</h3>
+        <h3 class="tool-title">PDF Generator</h3>
         <p class="tool-subtitle">Inject invisible link overlays into PDF documents — clicking anywhere opens the target URL.</p>
     </div>
 
@@ -131,7 +131,7 @@
         try
         {
             var resultBase64 = await JS.InvokeAsync<string>("c2PdfDropper.injectLinkAnnotation", _pdfBase64, _url.Trim());
-            var outName = System.IO.Path.GetFileNameWithoutExtension(_fileName) + "_drop.pdf";
+            var outName = System.IO.Path.GetFileNameWithoutExtension(_fileName) + "_gen.pdf";
             await JS.InvokeVoidAsync("eval", $@"
                 (function() {{
                     var a = document.createElement('a');
