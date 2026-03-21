@@ -1,6 +1,7 @@
 @using C2.Features.Relay
 @inject MessageService Msg
 @inject IJSRuntime Js
+@inject IEventBus Bus
 @implements IDisposable
 
 <PanelLayout Title="Shell">
@@ -91,6 +92,30 @@
     private const int MaxLines = 2000;
 
     private bool IsConnected => Relay is { IsConnected: true };
+
+    private IDisposable? _disconnectSub;
+    private IDisposable? _windowSub;
+
+    protected override void OnInitialized()
+    {
+        _disconnectSub = Bus.Subscribe<AgentDisconnectedEvent>(e =>
+        {
+            if (e.Uuid != AgentUuid && e.AgentId != AgentId) return;
+            // Stop auto-read when agent disconnects
+            if (_autoRead)
+            {
+                _autoRead = false;
+                _autoReadTimer?.Dispose();
+                _autoReadTimer = null;
+            }
+            InvokeAsync(StateHasChanged);
+        });
+        _windowSub = Bus.Subscribe<WindowChangedEvent>(e =>
+        {
+            // Relay may have been reconnected — re-render to pick up new connection state
+            InvokeAsync(StateHasChanged);
+        });
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -351,5 +376,7 @@
     public void Dispose()
     {
         _autoReadTimer?.Dispose();
+        _disconnectSub?.Dispose();
+        _windowSub?.Dispose();
     }
 }
