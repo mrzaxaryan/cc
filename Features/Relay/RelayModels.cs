@@ -48,6 +48,8 @@ public class AgentConnection
     public string Hostname { get; set; } = "";
     /// <summary>Operating system of the agent (e.g. "Windows", "Linux").</summary>
     public string Os { get; set; } = "";
+    /// <summary>OS version string (e.g. "10.0.19041").</summary>
+    public string OsVersion { get; set; } = "";
     /// <summary>CPU architecture of the agent (e.g. "x64", "arm64").</summary>
     public string Arch { get; set; } = "";
     /// <summary>Agent build number (auto-incrementing git commit count).</summary>

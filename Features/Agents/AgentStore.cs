@@ -22,6 +22,8 @@ public class AgentRecord
     [JsonPropertyName("hostname")] public string Hostname { get; set; } = "";
     /// <summary>Operating system of the agent (e.g. "Windows", "Linux").</summary>
     [JsonPropertyName("os")] public string Os { get; set; } = "";
+    /// <summary>OS version string (e.g. "10.0.19041").</summary>
+    [JsonPropertyName("osVersion")] public string OsVersion { get; set; } = "";
     /// <summary>CPU architecture of the agent (e.g. "x64", "arm64").</summary>
     [JsonPropertyName("arch")] public string Arch { get; set; } = "";
     /// <summary>Agent build number (auto-incrementing git commit count).</summary>
@@ -78,6 +80,7 @@ public class AgentStore
             Timezone = agent.Timezone,
             Hostname = agent.Hostname,
             Os = agent.Os,
+            OsVersion = agent.OsVersion,
             Arch = agent.Arch,
             BuildNumber = agent.BuildNumber,
             CommitHash = agent.CommitHash,

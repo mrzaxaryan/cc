@@ -212,10 +212,11 @@ public class RelayConnectionService : IAsyncDisposable
                 var status = RelaySocket.ReadStatus(response);
                 if (status == 0)
                 {
-                    var (guid, hostname, architecture, platform, buildNumber, commitHash) = RelaySocket.ReadSystemInfo(response);
+                    var (guid, hostname, architecture, platform, osVersion, buildNumber, commitHash) = RelaySocket.ReadSystemInfo(response);
                     var uuid = guid.ToString();
                     agent.Hostname = hostname;
                     agent.Os = platform;
+                    agent.OsVersion = osVersion;
                     agent.Arch = architecture;
                     agent.BuildNumber = buildNumber;
                     agent.CommitHash = commitHash;
@@ -229,6 +230,7 @@ public class RelayConnectionService : IAsyncDisposable
                         {
                             liveAgent.Hostname = hostname;
                             liveAgent.Os = platform;
+                            liveAgent.OsVersion = osVersion;
                             liveAgent.Arch = architecture;
                             liveAgent.BuildNumber = buildNumber;
                             liveAgent.CommitHash = commitHash;

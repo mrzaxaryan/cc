@@ -97,6 +97,8 @@
         if (HasValue(hostname)) rows.Add(new("Hostname", hostname!));
         var os = Pick(live?.Os, stored?.Os);
         if (HasValue(os)) rows.Add(new("Operating System", os!));
+        var osVersion = Pick(live?.OsVersion, stored?.OsVersion);
+        if (HasValue(osVersion)) rows.Add(new("OS Version", osVersion!));
         var arch = Pick(live?.Arch, stored?.Arch);
         if (HasValue(arch)) rows.Add(new("Architecture", arch!));
 

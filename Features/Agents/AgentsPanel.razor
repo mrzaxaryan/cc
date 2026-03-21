@@ -138,11 +138,17 @@
                                 {
                                     <td class="ap-col-host">@row.Hostname</td>
                                     <td class="ap-col-sys">
-                                        <span class="ap-sys">@row.Os</span>
-                                        @if (row.Arch != "\u2014")
-                                        {
-                                            <span class="ap-arch">@row.Arch</span>
-                                        }
+                                        <div class="ap-name-cell">
+                                            <span class="ap-sys">@(!string.IsNullOrEmpty(row.OsVersion) ? row.OsVersion : row.Os)</span>
+                                            @if (!string.IsNullOrEmpty(row.OsVersion) && row.Os != "\u2014")
+                                            {
+                                                <code class="ap-uuid">@row.Os @(row.Arch != "\u2014" ? row.Arch : "")</code>
+                                            }
+                                            else if (row.Arch != "\u2014")
+                                            {
+                                                <code class="ap-uuid">@row.Arch</code>
+                                            }
+                                        </div>
                                     </td>
                                     <td class="ap-col-build"><code>@row.Build</code></td>
                                 }
@@ -193,7 +199,7 @@
                             {
                                 <span class="ap-card-detail">@row.Hostname</span>
                             }
-                            <span class="ap-card-detail">@row.Os @(row.Arch != "\u2014" ? row.Arch : "")</span>
+                            <span class="ap-card-detail">@(!string.IsNullOrEmpty(row.OsVersion) ? row.OsVersion : row.Os) @(row.Arch != "\u2014" ? row.Arch : "")</span>
                             @if (!string.IsNullOrEmpty(row.Location) && row.Location != "\u2014")
                             {
                                 <span class="ap-card-detail">@row.Location</span>
@@ -284,6 +290,7 @@
         public string Ip { get; set; } = "";
         public string Hostname { get; set; } = "";
         public string Os { get; set; } = "";
+        public string OsVersion { get; set; } = "";
         public string Arch { get; set; } = "";
         public string Location { get; set; } = "";
         public string Network { get; set; } = "";
@@ -351,6 +358,8 @@
                     : !string.IsNullOrEmpty(record?.Hostname) ? record.Hostname : "\u2014",
                 Os = !string.IsNullOrEmpty(agent.Os) ? agent.Os
                     : !string.IsNullOrEmpty(record?.Os) ? record.Os : "\u2014",
+                OsVersion = !string.IsNullOrEmpty(agent.OsVersion) ? agent.OsVersion
+                    : !string.IsNullOrEmpty(record?.OsVersion) ? record.OsVersion : "",
                 Arch = !string.IsNullOrEmpty(agent.Arch) ? agent.Arch
                     : !string.IsNullOrEmpty(record?.Arch) ? record.Arch : "\u2014",
                 Location = Formatters.FormatLocation(agent),
@@ -398,6 +407,7 @@
                 Ip = record.Ip,
                 Hostname = !string.IsNullOrEmpty(record.Hostname) ? record.Hostname : "\u2014",
                 Os = !string.IsNullOrEmpty(record.Os) ? record.Os : "\u2014",
+                OsVersion = !string.IsNullOrEmpty(record.OsVersion) ? record.OsVersion : "",
                 Arch = !string.IsNullOrEmpty(record.Arch) ? record.Arch : "\u2014",
                 Location = Formatters.FormatLocation(record),
                 Network = "\u2014",
@@ -433,7 +443,8 @@
         if (row.Uuid is not null) items.Add(new("UUID", row.Uuid));
         if (IsCopyable(row.Ip)) items.Add(new("IP", row.Ip));
         if (IsCopyable(row.Hostname)) items.Add(new("Hostname", row.Hostname));
-        var sys = row.Arch != "\u2014" ? $"{row.Os} {row.Arch}" : row.Os;
+        var osDisplay = !string.IsNullOrEmpty(row.OsVersion) ? row.OsVersion : row.Os;
+        var sys = row.Arch != "\u2014" ? $"{osDisplay} {row.Arch}" : osDisplay;
         if (IsCopyable(sys)) items.Add(new("System", sys));
         if (IsCopyable(row.Location)) items.Add(new("Location", row.Location));
         if (IsCopyable(row.Network)) items.Add(new("Network", row.Network));
