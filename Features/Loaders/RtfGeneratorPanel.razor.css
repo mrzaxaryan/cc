@@ -202,7 +202,47 @@
     font-size: 0.78rem;
 }
 
-.rtf-shellcode-label {
-    font-size: 0.75rem;
-    margin-top: 0.75rem;
+/* Mode tabs */
+.rtf-mode-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 1rem;
+    border: 1px solid var(--c2-border);
+    border-radius: var(--c2-radius-sm);
+    overflow: hidden;
+    width: fit-content;
+}
+
+.rtf-mode-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0.45rem 1rem;
+    font-size: 0.78rem;
+    font-weight: 500;
+    background: var(--c2-bg-deep);
+    color: var(--c2-text-muted);
+    border: none;
+    cursor: pointer;
+    transition: background var(--c2-transition-normal), color var(--c2-transition-normal);
+}
+
+.rtf-mode-tab + .rtf-mode-tab {
+    border-left: 1px solid var(--c2-border);
+}
+
+.rtf-mode-tab:hover {
+    background: var(--c2-bg-highlight);
+    color: var(--c2-text);
+}
+
+.rtf-mode-tab--active {
+    background: var(--c2-bg-highlight);
+    color: var(--c2-accent-blue);
+}
+
+.rtf-mode-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
 }
