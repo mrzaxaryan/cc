@@ -93,7 +93,8 @@
                             <th class="ap-col-build" title="Agent Build">Build</th>
                             <th class="ap-col-loc">Location</th>
                             <th class="ap-col-net" title="Network / ISP">Network</th>
-                            <th class="ap-col-seen">Last Seen</th>
+                            <th class="ap-col-registered">Registered</th>
+                            <th class="ap-col-seen">Seen</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -151,6 +152,7 @@
                                 }
                                 <td class="ap-col-loc">@row.Location</td>
                                 <td class="ap-col-net ap-net-cell">@row.Network</td>
+                                <td class="ap-col-registered ap-seen-cell">@row.FirstSeen</td>
                                 <td class="ap-col-seen ap-seen-cell">@row.LastSeen</td>
                             </C2Tr>
                         }
@@ -435,7 +437,8 @@
         if (IsCopyable(sys)) items.Add(new("System", sys));
         if (IsCopyable(row.Location)) items.Add(new("Location", row.Location));
         if (IsCopyable(row.Network)) items.Add(new("Network", row.Network));
-        if (IsCopyable(row.LastSeen) && row.LastSeen != "Now") items.Add(new("Last Seen", row.LastSeen));
+        if (IsCopyable(row.FirstSeen)) items.Add(new("Registered", row.FirstSeen));
+        if (IsCopyable(row.LastSeen) && row.LastSeen != "Now") items.Add(new("Seen", row.LastSeen));
         return items;
     }
 
