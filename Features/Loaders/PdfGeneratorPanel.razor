@@ -18,7 +18,7 @@
 
         <div class="loader-section">
             <h4 class="loader-section-title">1 — Target URL</h4>
-            <p class="loader-text rtf-field-hint">
+            <p class="loader-text loader-hint">
                 URL opened when the target clicks anywhere on any page of the PDF.
             </p>
             <C2InputActions Value="@_url" ValueChanged="v => _url = v" Monospace BindOnInput
@@ -27,10 +27,10 @@
 
         <div class="loader-section">
             <h4 class="loader-section-title">2 — Output</h4>
-            <p class="loader-text rtf-field-hint">
+            <p class="loader-text loader-hint">
                 Upload a PDF document. Each page will receive a transparent clickable overlay linking to the target URL.
             </p>
-            <div class="rtf-actions">
+            <div class="loader-actions">
                 <label class="loader-link-btn" style="cursor:pointer">
                     <C2Icon Name="upload" Size="Size.Xs" /> Upload PDF
                     <InputFile OnChange="OnPdfUpload" accept=".pdf" style="display:none" />
@@ -42,7 +42,7 @@
             </div>
             @if (_pdfBase64 is not null)
             {
-                <div class="rtf-actions">
+                <div class="loader-actions">
                     <button class="loader-link-btn" @onclick="Generate" disabled="@(string.IsNullOrWhiteSpace(_url) || _generating)">
                         @if (_generating)
                         {
