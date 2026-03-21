@@ -47,9 +47,11 @@ public class TransferService : IDisposable
 
         foreach (var dl in _store.GetByAgent(uuid))
         {
-            // Only re-queue stale downloads (no active CTS). Never auto-resume paused
-            // transfers — only the user may resume those via the UI.
+            // Re-queue stale downloads (no active CTS) and auto-resumable paused
+            // transfers (paused by disconnect, not by user).
             if (dl.Status == TransferStatus.Downloading && !_store.Cts.HasActive(dl.Id))
+                await _store.QueueAsync(dl.Id);
+            else if (dl.Status == TransferStatus.Paused && dl.AutoResume)
                 await _store.QueueAsync(dl.Id);
         }
 
@@ -101,7 +103,12 @@ public class TransferService : IDisposable
                     if (success)
                         await _store.CompleteAsync(next.Id);
                     else
-                        await _store.FailAsync(next.Id, "Sync returned failure");
+                    {
+                        // Disconnected mid-transfer — partial data saved, auto-resume
+                        // when the agent reconnects.
+                        await _store.PauseForResumeAsync(next.Id);
+                        break;
+                    }
                 }
                 catch (AgentErrorException ex)
                 {

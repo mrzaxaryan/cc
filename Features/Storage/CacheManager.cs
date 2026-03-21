@@ -96,6 +96,9 @@ public class CacheManager
     }
 
     /// <summary>Download a file from an agent via relay and stream directly to .fs/{fileId}.</summary>
+    /// <returns>true = completed, false = disconnected (partial data saved for resume).</returns>
+    /// <exception cref="AgentErrorException">Agent refused the operation.</exception>
+    /// <exception cref="OperationCanceledException">User paused (partial data saved).</exception>
     public async Task<bool> DownloadFromAgentAsync(
         RelaySocket relay, string remotePath, string fileId,
         long resumeOffset = 0,
@@ -120,7 +123,7 @@ public class CacheManager
 
         const long chunkSize = 65536;
         long offset = resumeOffset;
-        bool success = false;
+        bool writerOpen = true;
 
         try
         {
@@ -130,11 +133,24 @@ public class CacheManager
 
                 var payload = RelaySocket.BuildFileCommand(AgentCommands.ReadFile, remotePath, chunkSize, offset);
                 var response = await relay.SendAndReceive(payload);
-                if (response is null || response.Length < 4) return false; // network issue
+
+                // Agent disconnected mid-stream — save partial data for resume
+                if (response is null || response.Length < 4)
+                {
+                    await _js.InvokeVoidAsync("c2FileSystem.endWrite");
+                    writerOpen = false;
+                    return false;
+                }
 
                 var status = RelaySocket.ReadStatus(response);
                 if (status != 0) throw new AgentErrorException(status); // agent error mid-stream
-                if (response.Length < 12) return false;
+
+                if (response.Length < 12)
+                {
+                    await _js.InvokeVoidAsync("c2FileSystem.endWrite");
+                    writerOpen = false;
+                    return false;
+                }
 
                 var (bytesRead, data) = RelaySocket.ReadFileContent(response);
                 if (bytesRead == 0) break;
@@ -149,7 +165,7 @@ public class CacheManager
             }
 
             await _js.InvokeVoidAsync("c2FileSystem.endWrite");
-            success = true;
+            writerOpen = false;
             _bus.Publish(new CacheChangedEvent());
             return true;
         }
@@ -157,11 +173,12 @@ public class CacheManager
         {
             // Paused: save partial data
             await _js.InvokeVoidAsync("c2FileSystem.endWrite");
+            writerOpen = false;
             throw;
         }
         finally
         {
-            if (!success)
+            if (writerOpen)
             {
                 try { await _js.InvokeVoidAsync("c2FileSystem.abortWrite"); } catch { }
             }

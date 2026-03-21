@@ -21,6 +21,8 @@ public class TransferRecord
     [JsonPropertyName("createdAt")] public double CreatedAt { get; set; }
     [JsonPropertyName("completedAt")] public double? CompletedAt { get; set; }
     [JsonPropertyName("priority")] public int Priority { get; set; }
+    /// <summary>True when paused automatically (e.g. agent disconnect); false when paused by user.</summary>
+    [JsonPropertyName("autoResume")] public bool AutoResume { get; set; }
 
     // Transient speed tracking (not persisted)
     [JsonIgnore] public double SpeedBytesPerSec { get; set; }
@@ -111,6 +113,7 @@ public class TransferStore
         if (record is null) return;
 
         record.Status = TransferStatus.Queued;
+        record.AutoResume = false;
         await _js.InvokeVoidAsync("c2DownloadDb.put", record);
         _bus.Publish(new TransferStoreChangedEvent());
         _bus.Publish(new TransferItemQueuedEvent(record.AgentUuid));
@@ -183,6 +186,19 @@ public class TransferStore
         if (record is null) return;
 
         record.Status = TransferStatus.Paused;
+        record.AutoResume = false;
+        await _js.InvokeVoidAsync("c2DownloadDb.put", record);
+        _bus.Publish(new TransferStoreChangedEvent());
+    }
+
+    /// <summary>Pause with auto-resume flag so the transfer resumes when the agent reconnects.</summary>
+    public async Task PauseForResumeAsync(int id)
+    {
+        var record = _cache.FirstOrDefault(r => r.Id == id);
+        if (record is null) return;
+
+        record.Status = TransferStatus.Paused;
+        record.AutoResume = true;
         await _js.InvokeVoidAsync("c2DownloadDb.put", record);
         _bus.Publish(new TransferStoreChangedEvent());
     }

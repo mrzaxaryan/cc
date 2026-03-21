@@ -177,6 +177,7 @@
     display: flex;
     flex-direction: column;
     padding: 4px;
+    overflow: visible;
     animation: brand-drop var(--c2-transition-normal);
 }
 
@@ -194,7 +195,7 @@
     margin-left: auto;
 }
 
-.menu-submenu {
+::deep .menu-submenu {
     display: none;
     position: absolute;
     left: 100%;
@@ -210,7 +211,7 @@
     animation: brand-drop var(--c2-transition-normal);
 }
 
-.menu-submenu-wrap:hover > .menu-submenu {
+::deep .menu-submenu-wrap:hover > .menu-submenu {
     display: flex;
 }
 
