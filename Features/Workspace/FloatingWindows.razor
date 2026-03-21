@@ -55,8 +55,9 @@
                 case "Screen":           <ScreenPanel Relay="win.Relay" AgentId="@win.AgentId" AgentName="@win.AgentName" AgentUuid="@win.AgentUuid" /> break;
                 case "PeParser":         <PeParserPanel /> break;
                 case "Base64":           <Base64Panel /> break;
-                case "LnkTool":          <LnkToolPanel /> break;
+                case "LnkGenerator":          <LnkGeneratorPanel /> break;
                 case "PythonLoader":     <PythonLoaderPanel /> break;
+                case "RtfGenerator":        <RtfGeneratorPanel /> break;
             }
         </div>
         @if (!win.Maximized)
@@ -270,8 +271,9 @@
         "Screen" => "monitor",
         "PeParser" => "file-code",
         "Base64" => "code",
-        "LnkTool" => "link",
+        "LnkGenerator" => "link",
         "PythonLoader" => "code",
+        "RtfGenerator" => "file-text",
         _ => "monitor"
     };
 

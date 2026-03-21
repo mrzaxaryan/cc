@@ -90,13 +90,29 @@ else
             @if (loadersMenuOpen)
             {
                 <div class="loaders-popup">
-                    @foreach (var loader in LoaderItems)
+                    @foreach (var loader in CrossPlatformLoaders)
                     {
                         var panel = loader.Panel;
                         <button class="brand-popup-item" @onclick="() => OpenLoader(panel)">
                             <C2Icon Name="@loader.Icon" Size="Size.Xs" /> @loader.Label
                         </button>
                     }
+                    <div class="brand-popup-divider"></div>
+                    <div class="menu-submenu-wrap">
+                        <button class="brand-popup-item menu-sub-trigger" type="button">
+                            <span><C2Icon Name="monitor" Size="Size.Xs" /> Windows</span>
+                            <C2Icon Name="chevron-right" Size="Size.Xs" CssClass="menu-sub-arrow" />
+                        </button>
+                        <div class="menu-submenu">
+                            @foreach (var loader in WindowsLoaders)
+                            {
+                                var panel = loader.Panel;
+                                <button class="brand-popup-item" @onclick="() => OpenLoader(panel)">
+                                    <C2Icon Name="@loader.Icon" Size="Size.Xs" /> @loader.Label
+                                </button>
+                            }
+                        </div>
+                    </div>
                 </div>
             }
         </div>
@@ -214,13 +230,17 @@ else
     [
         new("PeParser", "file-code", "PE Parser"),
         new("Base64", "code", "Base64"),
-        new("LnkTool", "link", "LNK Tool"),
     ];
 
     private record LoaderItem(string Panel, string Icon, string Label);
-    private static readonly LoaderItem[] LoaderItems =
+    private static readonly LoaderItem[] CrossPlatformLoaders =
     [
         new("PythonLoader", "code", "Python"),
+    ];
+    private static readonly LoaderItem[] WindowsLoaders =
+    [
+        new("RtfGenerator", "file-text", "RTF Generator"),
+        new("LnkGenerator", "link", "LNK Generator"),
     ];
 
     private bool showSetup;

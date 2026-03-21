@@ -180,6 +180,45 @@
     animation: brand-drop var(--c2-transition-normal);
 }
 
+/* Menu submenu (flyout) */
+.menu-submenu-wrap {
+    position: relative;
+}
+
+.menu-sub-trigger {
+    justify-content: space-between;
+}
+
+::deep .menu-sub-arrow {
+    opacity: 0.4;
+    margin-left: auto;
+}
+
+.menu-submenu {
+    display: none;
+    position: absolute;
+    left: 100%;
+    top: -4px;
+    min-width: 160px;
+    background: var(--c2-bg-surface);
+    border: 1px solid var(--c2-border);
+    border-radius: var(--c2-radius-lg);
+    box-shadow: var(--c2-elevation-3);
+    padding: 4px;
+    flex-direction: column;
+    z-index: 11001;
+    animation: brand-drop var(--c2-transition-normal);
+}
+
+.menu-submenu-wrap:hover > .menu-submenu {
+    display: flex;
+}
+
+.menu-submenu-wrap:hover > .menu-sub-trigger {
+    background: var(--c2-bg-highlight);
+    color: var(--c2-text);
+}
+
 .mdi-spacer {
     flex: 1;
 }
