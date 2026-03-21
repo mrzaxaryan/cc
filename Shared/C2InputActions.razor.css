@@ -1,0 +1,17 @@
+.c2-input-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.c2-input-actions-field {
+    flex: 1;
+    min-width: 0;
+}
+
+.c2-input-actions-btns {
+    display: flex;
+    align-items: center;
+    gap: 0.1rem;
+    flex-shrink: 0;
+}

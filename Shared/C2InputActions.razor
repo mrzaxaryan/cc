@@ -1,0 +1,51 @@
+@inject IJSRuntime JS
+
+<div class="c2-input-actions @CssClass">
+    <C2Input Value="@Value"
+             ValueChanged="OnValueChanged"
+             BindOnInput="BindOnInput"
+             Placeholder="@Placeholder"
+             Disabled="@Disabled"
+             Monospace="Monospace"
+             Size="Size"
+             CssClass="c2-input-actions-field" />
+    <div class="c2-input-actions-btns">
+        <C2Btn OnClick="OnPaste" Title="Paste" Size="Size.Icon" Variant="BtnVariant.Ghost">
+            <C2Icon Name="clipboard" Size="Size.Xs" />
+        </C2Btn>
+        <C2Btn OnClick="OnCopy" Title="Copy" Size="Size.Icon" Variant="BtnVariant.Ghost">
+            <C2Icon Name="copy" Size="Size.Xs" />
+        </C2Btn>
+        <C2Btn OnClick="OnClear" Title="Clear" Size="Size.Icon" Variant="BtnVariant.Ghost" Disabled="@string.IsNullOrEmpty(Value)">
+            <C2Icon Name="x" Size="Size.Xs" />
+        </C2Btn>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool Monospace { get; set; }
+    [Parameter] public bool BindOnInput { get; set; }
+    [Parameter] public string? CssClass { get; set; }
+    [Parameter] public Size Size { get; set; } = Size.Sm;
+
+    private async Task OnValueChanged(string value) => await ValueChanged.InvokeAsync(value);
+
+    private async Task OnCopy()
+    {
+        if (!string.IsNullOrEmpty(Value))
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", Value);
+    }
+
+    private async Task OnPaste()
+    {
+        var text = await JS.InvokeAsync<string>("navigator.clipboard.readText");
+        if (text is not null)
+            await ValueChanged.InvokeAsync(text);
+    }
+
+    private async Task OnClear() => await ValueChanged.InvokeAsync(string.Empty);
+}
