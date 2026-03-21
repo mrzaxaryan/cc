@@ -1,5 +1,5 @@
 /* Root — fills the window body, remove parent padding for full-bleed canvas */
-.vnc-root {
+.screen-root {
     position: relative;
     width: calc(100% + 1.5rem);
     height: calc(100% + 1.5rem);
@@ -11,7 +11,7 @@
 }
 
 /* Status overlays */
-.vnc-overlay {
+.screen-overlay {
     position: absolute;
     inset: 0;
     z-index: 10;
@@ -27,7 +27,7 @@
 }
 
 /* Canvas wrapper — sized by flex, canvas positioned inside */
-.vnc-canvas-wrap {
+.screen-canvas-wrap {
     flex: 1 1 0%;
     min-height: 0;
     min-width: 0;
@@ -37,14 +37,14 @@
 }
 
 /* Canvas is absolutely positioned to fill wrapper without affecting layout */
-.vnc-canvas-wrap canvas {
+.screen-canvas-wrap canvas {
     position: absolute;
     top: 0;
     left: 0;
 }
 
 /* ─── Floating toolbar ─── */
-.vnc-toolbar {
+.screen-toolbar {
     position: absolute;
     top: 8px;
     left: 50%;
@@ -64,13 +64,13 @@
     user-select: none;
 }
 
-.vnc-toolbar--hidden {
+.screen-toolbar--hidden {
     opacity: 0;
     pointer-events: none;
 }
 
 /* Drag handle */
-.vnc-drag-handle {
+.screen-drag-handle {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -84,41 +84,41 @@
     margin-right: 0.05rem;
 }
 
-.vnc-drag-handle:active {
+.screen-drag-handle:active {
     cursor: grabbing;
     color: rgba(255, 255, 255, 0.5);
 }
 
-.vnc-toolbar-group {
+.screen-toolbar-group {
     display: flex;
     align-items: center;
     gap: 0.25rem;
 }
 
-.vnc-toolbar-group + .vnc-toolbar-group {
+.screen-toolbar-group + .screen-toolbar-group {
     padding-left: 0.3rem;
     border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* Connection dot */
-.vnc-dot {
+.screen-dot {
     width: 5px;
     height: 5px;
     border-radius: 50%;
     flex-shrink: 0;
 }
 
-.vnc-dot--on {
+.screen-dot--on {
     background: var(--c2-green);
     box-shadow: 0 0 3px var(--c2-green);
 }
 
-.vnc-dot--off {
+.screen-dot--off {
     background: var(--c2-text-dim);
 }
 
 /* Info labels */
-.vnc-info {
+.screen-info {
     font-size: 0.6rem;
     color: rgba(255, 255, 255, 0.5);
     font-variant-numeric: tabular-nums;
@@ -126,12 +126,12 @@
     line-height: 1;
 }
 
-.vnc-info--accent {
+.screen-info--accent {
     color: var(--c2-accent);
 }
 
 /* Select controls */
-.vnc-select {
+.screen-select {
     height: 20px;
     font-size: 0.6rem;
     padding: 0 0.2rem;
@@ -149,27 +149,27 @@
     padding-right: 14px;
 }
 
-.vnc-select:focus {
+.screen-select:focus {
     border-color: var(--c2-accent);
 }
 
-.vnc-select:disabled {
+.screen-select:disabled {
     opacity: 0.4;
     cursor: not-allowed;
 }
 
-.vnc-select option {
+.screen-select option {
     background: #1e1e2e;
     color: #cdd6f4;
 }
 
-.vnc-select--wide {
+.screen-select--wide {
     flex: 1;
     min-width: 0;
 }
 
 /* Icon buttons */
-.vnc-btn {
+.screen-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -184,43 +184,43 @@
     transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
 
-.vnc-btn:hover:not(:disabled) {
+.screen-btn:hover:not(:disabled) {
     background: rgba(255, 255, 255, 0.1);
     border-color: rgba(255, 255, 255, 0.18);
     color: #fff;
 }
 
-.vnc-btn:disabled {
+.screen-btn:disabled {
     opacity: 0.3;
     cursor: not-allowed;
 }
 
-.vnc-btn--active {
+.screen-btn--active {
     background: rgba(255, 255, 255, 0.12);
     border-color: var(--c2-accent);
     color: var(--c2-accent);
 }
 
-.vnc-btn--stream {
+.screen-btn--stream {
     color: var(--c2-green);
     border-color: rgba(var(--c2-green-rgb, 166, 227, 161), 0.25);
 }
 
-.vnc-btn--stream:hover:not(:disabled) {
+.screen-btn--stream:hover:not(:disabled) {
     background: rgba(var(--c2-green-rgb, 166, 227, 161), 0.12);
 }
 
-.vnc-btn--stop {
+.screen-btn--stop {
     color: var(--c2-red, #f38ba8);
     border-color: rgba(243, 139, 168, 0.25);
 }
 
-.vnc-btn--stop:hover:not(:disabled) {
+.screen-btn--stop:hover:not(:disabled) {
     background: rgba(243, 139, 168, 0.12);
 }
 
 
 /* Fullscreen */
-.vnc-root:fullscreen .vnc-toolbar {
+.screen-root:fullscreen .screen-toolbar {
     top: 16px;
 }

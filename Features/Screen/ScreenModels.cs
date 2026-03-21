@@ -1,4 +1,4 @@
-namespace C2.Features.Vnc;
+namespace C2.Features.Screen;
 
 /// <summary>Display device info returned by GetDisplays command.</summary>
 public sealed class DisplayInfo

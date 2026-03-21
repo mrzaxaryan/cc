@@ -52,7 +52,7 @@
                 case "ExtensionGroups":   <ExtensionGroupsPanel /> break;
                 case "AgentInfo":         <AgentInfoPanel AgentId="@win.AgentId" AgentUuid="@win.AgentUuid" /> break;
                 case "Shell":            <ShellPanel Relay="win.Relay" AgentId="@win.AgentId" AgentName="@win.AgentName" AgentUuid="@win.AgentUuid" /> break;
-                case "Vnc":              <VncPanel Relay="win.Relay" AgentId="@win.AgentId" AgentName="@win.AgentName" AgentUuid="@win.AgentUuid" /> break;
+                case "Screen":           <ScreenPanel Relay="win.Relay" AgentId="@win.AgentId" AgentName="@win.AgentName" AgentUuid="@win.AgentUuid" /> break;
                 case "PeParser":         <PeParserPanel /> break;
                 case "Base64":           <Base64Panel /> break;
                 case "LnkTool":          <LnkToolPanel /> break;
@@ -266,7 +266,7 @@
         "Transfers" => "transfer",
         "ExtensionGroups" => "layers",
         "Shell" => "terminal",
-        "Vnc" => "monitor",
+        "Screen" => "monitor",
         "PeParser" => "file-code",
         "Base64" => "code",
         "LnkTool" => "link",

@@ -89,8 +89,8 @@ public class WindowManager
             SearchPath = searchPath,
             X = 100 + offset,
             Y = 80 + offset,
-            Width = panel switch { "FileSystem" => 800, "AgentInfo" => 480, "Shell" => 700, "Vnc" => 900, _ => 700 },
-            Height = panel switch { "Vnc" => 600, _ => 500 },
+            Width = panel switch { "FileSystem" => 800, "AgentInfo" => 480, "Shell" => 700, "Screen" => 900, _ => 700 },
+            Height = panel switch { "Screen" => 600, _ => 500 },
             ZIndex = _topZ
         };
         ClampToViewport(win);
@@ -154,7 +154,7 @@ public class WindowManager
         "FileSystem" => "File System",
         "AgentInfo" => "Agent Info",
         "Shell" => "Shell",
-        "Vnc" => "Screen",
+        "Screen" => "Screen",
         "Settings" => "Settings",
         _ => panel
     };

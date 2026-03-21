@@ -1,6 +1,6 @@
 # C2
 
-Real-time command center for monitoring and managing [Position-Independent-Agent](https://github.com/mrzaxaryan/Position-Independent-Agent) connections. Built with Blazor WebAssembly (.NET 10).
+Real-time command and control center for monitoring and managing [Position-Independent-Agent](https://github.com/mrzaxaryan/Position-Independent-Agent) connections via the [relay](https://github.com/mrzaxaryan/relay) service. Built with Blazor WebAssembly (.NET 10).
 
 ## Overview
 
@@ -45,7 +45,7 @@ Real-time command center for monitoring and managing [Position-Independent-Agent
 | **PIR** | C++23 position-independent runtime — cryptography, networking, TLS 1.3, all without libc or CRT | [Position-Independent-Runtime](https://github.com/mrzaxaryan/Position-Independent-Runtime) |
 | **Agent** | Cross-platform remote agent built on PIR — file system, hashing, binary command protocol over WebSocket | [Position-Independent-Agent](https://github.com/mrzaxaryan/Position-Independent-Agent) |
 | **Relay** | WebSocket relay on Cloudflare Workers — pairs agents with relay connections 1:1 via Durable Objects | [relay](https://github.com/mrzaxaryan/relay) |
-| **C2** | This project — Blazor WebAssembly command center with real-time WebSocket monitoring and remote file management | [C2](https://github.com/mrzaxaryan/C2) |
+| **C2** | This project — Blazor WebAssembly command and control center with real-time WebSocket monitoring and remote file management | [C2](https://github.com/mrzaxaryan/C2) |
 
 ## Development
 

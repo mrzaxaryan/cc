@@ -1,11 +1,11 @@
-// VNC panel — hardware-accelerated canvas rendering via createImageBitmap,
+// Screen capture panel — hardware-accelerated canvas rendering via createImageBitmap,
 // ResizeObserver, mouse/keyboard forwarding, draggable toolbar, fullscreen.
 
-window.c2Vnc = (() => {
-    /** @type {Map<string, VncSession>} */
+window.c2Screen = (() => {
+    /** @type {Map<string, ScreenSession>} */
     const sessions = new Map();
 
-    class VncSession {
+    class ScreenSession {
         constructor(rootEl, canvas, dotnetRef) {
             this.root = rootEl;
             this.canvas = canvas;
@@ -22,7 +22,7 @@ window.c2Vnc = (() => {
             this.offCtx = null;
 
             // Toolbar
-            this._toolbarEl = rootEl.querySelector('.vnc-toolbar');
+            this._toolbarEl = rootEl.querySelector('.screen-toolbar');
             this._idleTimer = null;
             this._streaming = false;
 
@@ -70,7 +70,7 @@ window.c2Vnc = (() => {
             rootEl.addEventListener('pointermove', this._boundRootMove);
 
             // Toolbar drag — only on the drag handle
-            const handle = rootEl.querySelector('.vnc-drag-handle');
+            const handle = rootEl.querySelector('.screen-drag-handle');
             if (handle) {
                 handle.addEventListener('pointerdown', this._boundToolbarDown);
             }
@@ -266,11 +266,11 @@ window.c2Vnc = (() => {
         }
 
         _showToolbar() {
-            if (this._toolbarEl) this._toolbarEl.classList.remove('vnc-toolbar--hidden');
+            if (this._toolbarEl) this._toolbarEl.classList.remove('screen-toolbar--hidden');
         }
 
         _hideToolbar() {
-            if (this._toolbarEl && this._streaming) this._toolbarEl.classList.add('vnc-toolbar--hidden');
+            if (this._toolbarEl && this._streaming) this._toolbarEl.classList.add('screen-toolbar--hidden');
         }
 
         // --- Mouse ---
@@ -349,7 +349,7 @@ window.c2Vnc = (() => {
     return {
         init(id, rootEl, canvas, dotnetRef) {
             if (sessions.has(id)) sessions.get(id).dispose();
-            sessions.set(id, new VncSession(rootEl, canvas, dotnetRef));
+            sessions.set(id, new ScreenSession(rootEl, canvas, dotnetRef));
         },
 
         async renderFrame(id, isFullFrame, sections) {

@@ -1,14 +1,14 @@
 using C2.Features.Relay;
 using C2.Infrastructure;
 
-namespace C2.Features.Vnc;
+namespace C2.Features.Screen;
 
 /// <summary>
-/// Manages VNC display enumeration, frame capture, and streaming for a single agent session.
-/// One instance per VncPanel — not registered in DI (panel owns the lifetime).
+/// Manages screen capture display enumeration, frame capture, and streaming for a single agent session.
+/// One instance per ScreenPanel — not registered in DI (panel owns the lifetime).
 /// Rendering is done via JS canvas — this service only handles protocol and raw bytes.
 /// </summary>
-public sealed class VncService : IDisposable
+public sealed class ScreenService : IDisposable
 {
     private readonly RelaySocket _relay;
     private readonly MessageService _msg;
@@ -19,7 +19,7 @@ public sealed class VncService : IDisposable
     private int _frameCount;
     private DateTime _fpsWindow = DateTime.UtcNow;
 
-    public VncService(RelaySocket relay, MessageService msg)
+    public ScreenService(RelaySocket relay, MessageService msg)
     {
         _relay = relay;
         _msg = msg;
