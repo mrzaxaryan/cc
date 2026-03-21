@@ -1,0 +1,90 @@
+@inherits EventSubscriber
+@inject LoaderStore Loaders
+@inject MessageService Msg
+@inject IJSRuntime JS
+
+<div class="tool-panel">
+    <div class="tool-header">
+        <h3 class="tool-title">Loader Settings</h3>
+        <p class="tool-subtitle">Default loader script URLs used across all generators.</p>
+    </div>
+
+    <div class="loader-content">
+        <div class="loader-section">
+            <h4 class="loader-section-title">Python Loader</h4>
+            <p class="loader-text loader-hint">Cross-platform — Windows, Linux, macOS, Android</p>
+            <C2InputActions Value="@_pythonUrl" ValueChanged="v => _pythonUrl = v" Monospace BindOnInput
+                            Placeholder="@LoaderStore.DefaultPythonUrl" />
+        </div>
+
+        <div class="loader-section">
+            <h4 class="loader-section-title">PowerShell Loader</h4>
+            <p class="loader-text loader-hint">Windows-only — in-process shellcode execution via PowerShell</p>
+            <C2InputActions Value="@_psUrl" ValueChanged="v => _psUrl = v" Monospace BindOnInput
+                            Placeholder="@LoaderStore.DefaultPowerShellUrl" />
+        </div>
+
+        <div class="loader-section">
+            <div class="loader-actions">
+                <button class="loader-link-btn" @onclick="Save" disabled="@_saving">
+                    @if (_saving)
+                    {
+                        <C2Spinner Size="Size.Xs" />
+                        <span>Saving…</span>
+                    }
+                    else
+                    {
+                        <C2Icon Name="save" Size="Size.Xs" />
+                        <span>Save</span>
+                    }
+                </button>
+                <button class="loader-link-btn" @onclick="ResetDefaults">
+                    <C2Icon Name="refresh-cw" Size="Size.Xs" /> Reset Defaults
+                </button>
+            </div>
+            @if (!string.IsNullOrEmpty(_status))
+            {
+                <p class="loader-text" style="color:var(--c2-accent-green);margin-top:0.5rem">@_status</p>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private string _pythonUrl = "";
+    private string _psUrl = "";
+    private bool _saving;
+    private string _status = "";
+
+    protected override void OnInitialized()
+    {
+        _pythonUrl = Loaders.PythonLoaderUrl;
+        _psUrl = Loaders.PowerShellLoaderUrl;
+    }
+
+    private async Task Save()
+    {
+        _saving = true;
+        _status = "";
+        StateHasChanged();
+        try
+        {
+            var pyUrl = string.IsNullOrWhiteSpace(_pythonUrl) ? LoaderStore.DefaultPythonUrl : _pythonUrl.Trim();
+            var psUrl = string.IsNullOrWhiteSpace(_psUrl) ? LoaderStore.DefaultPowerShellUrl : _psUrl.Trim();
+            await Loaders.SetUrlAsync(LoaderStore.PythonKey, pyUrl);
+            await Loaders.SetUrlAsync(LoaderStore.PowerShellKey, psUrl);
+            _pythonUrl = pyUrl;
+            _psUrl = psUrl;
+            _status = "Saved";
+        }
+        catch (Exception ex) { Msg.Error("Save Failed", ex.Message, "Loaders"); }
+        finally { _saving = false; }
+    }
+
+    private async Task ResetDefaults()
+    {
+        _pythonUrl = LoaderStore.DefaultPythonUrl;
+        _psUrl = LoaderStore.DefaultPowerShellUrl;
+        await Save();
+    }
+}

@@ -56,7 +56,7 @@ public class WindowManager
             Title = DisplayTitle(panel),
             X = 100 + offset,
             Y = 80 + offset,
-            Width = panel switch { "FileSystem" => 800, "Settings" => 650, "Relay" => 900, "Agents" => 950, "Transfers" => 600, "ExtensionGroups" => 500, "PeParser" => 900, "Base64" => 600, "LnkGenerator" => 750, "PythonLoader" => 650, "PowerShellLoader" => 650, "RtfGenerator" => 650, _ => 700 },
+            Width = panel switch { "FileSystem" => 800, "Settings" => 650, "Relay" => 900, "Agents" => 950, "Transfers" => 600, "ExtensionGroups" => 500, "PeParser" => 900, "Base64" => 600, "LnkGenerator" => 750, "PythonLoader" => 650, "PowerShellLoader" => 650, "LoaderSettings" => 600, "RtfGenerator" => 650, _ => 700 },
             Height = 500,
             ZIndex = _topZ
         };
@@ -158,6 +158,7 @@ public class WindowManager
         "Settings" => "Settings",
         "PythonLoader" => "Python Loader",
         "PowerShellLoader" => "PowerShell Loader",
+        "LoaderSettings" => "Loader Settings",
         "RtfGenerator" => "RTF Generator",
         "LnkGenerator" => "LNK Generator",
         _ => panel
