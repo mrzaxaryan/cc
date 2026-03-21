@@ -1,7 +1,7 @@
 // IndexedDB CRUD for agents, relays, and virtual filesystem
 (function () {
     const DB_NAME = 'c2-agents';
-    const DB_VERSION = 8;
+    const DB_VERSION = 9;
     const AGENTS_STORE = 'agents';
     const RELAYS_STORE = 'relays';
     const DOWNLOADS_STORE = 'downloads';
@@ -11,6 +11,7 @@
     const SCANS_STORE = 'scans';
     const EXTGROUPS_STORE = 'extgroups';
     const SERVICES_STORE = 'services';
+    const LOADERS_STORE = 'loaders';
 
     function openDb() {
         return new Promise((resolve, reject) => {
@@ -57,6 +58,9 @@
                 if (!db.objectStoreNames.contains(SERVICES_STORE)) {
                     const svcStore = db.createObjectStore(SERVICES_STORE, { keyPath: 'key' });
                     svcStore.createIndex('service', 'service', { unique: false });
+                }
+                if (!db.objectStoreNames.contains(LOADERS_STORE)) {
+                    db.createObjectStore(LOADERS_STORE, { keyPath: 'key' });
                 }
             };
             req.onsuccess = () => resolve(req.result);
@@ -241,6 +245,14 @@
         put: record => run(SERVICES_STORE, 'readwrite', s => s.put(record)),
         remove: key => run(SERVICES_STORE, 'readwrite', s => s.delete(key)),
         clear: () => run(SERVICES_STORE, 'readwrite', s => s.clear())
+    };
+
+    window.c2LoaderDb = {
+        getAll: () => run(LOADERS_STORE, 'readonly', s => s.getAll()),
+        get: key => run(LOADERS_STORE, 'readonly', s => s.get(key)),
+        put: record => run(LOADERS_STORE, 'readwrite', s => s.put(record)),
+        remove: key => run(LOADERS_STORE, 'readwrite', s => s.delete(key)),
+        clear: () => run(LOADERS_STORE, 'readwrite', s => s.clear())
     };
 
     window.c2ClearAll = async function () {

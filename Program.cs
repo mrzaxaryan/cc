@@ -25,6 +25,7 @@ builder.Services.AddScoped<C2.Features.Relay.RelayConnectionService>();
 builder.Services.AddScoped<C2.Features.Relay.RelayStore>();
 builder.Services.AddScoped<C2.Features.Scan.ScanService>();
 builder.Services.AddScoped<C2.Features.Scan.ScanStore>();
+builder.Services.AddScoped<C2.Features.Loaders.LoaderStore>();
 builder.Services.AddScoped<C2.Features.Storage.CacheManager>();
 builder.Services.AddSingleton<C2.Features.Workspace.WindowManager>();
 

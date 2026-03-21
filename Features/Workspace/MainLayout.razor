@@ -9,6 +9,7 @@
 @inject MessageService Msg
 @inject NotificationStore Notif
 @inject ExtensionGroupStore ExtGroups
+@inject LoaderStore Loaders
 @inject TransferStore TransferStore
 @inject ScanStore ScanStore
 @inject IJSRuntime JS
@@ -275,10 +276,11 @@ else
             await Relay.LoadAsync();
             await Notif.LoadAsync();
             await ExtGroups.LoadAsync();
+            await Loaders.LoadAsync();
             await RelaySvc.StartAsync();
             await TransferSvc.StartAsync();
             await ScanSvc.StartAsync();
-            showSetup = Cache.SetupRequired || Cache.NeedsPermission || Relay.SetupRequired || ExtGroups.SetupRequired;
+            showSetup = Cache.SetupRequired || Cache.NeedsPermission || Relay.SetupRequired || ExtGroups.SetupRequired || Loaders.SetupRequired;
             initialized = true;
             StateHasChanged();
 

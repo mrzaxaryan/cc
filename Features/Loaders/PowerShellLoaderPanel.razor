@@ -1,4 +1,5 @@
 @inject IJSRuntime JS
+@inject LoaderStore Loaders
 
 <div class="tool-panel">
     <div class="tool-header">
@@ -73,14 +74,13 @@
 </div>
 
 @code {
-    private const string DefaultLoaderUrl = "https://raw.githubusercontent.com/mrzaxaryan/Position-Independent-Agent/main/loaders/windows/powershell/loader.ps1";
-    private const string RepoUrl = "https://github.com/mrzaxaryan/Position-Independent-Agent/tree/main/loaders/windows/powershell";
+    private string _loaderUrl = "";
 
-    private string _loaderUrl = DefaultLoaderUrl;
+    protected override void OnInitialized() => _loaderUrl = Loaders.PowerShellLoaderUrl;
 
     private void OnLoaderUrlChanged(string value) => _loaderUrl = value;
 
-    private void OpenRepo() => _ = JS.InvokeVoidAsync("open", RepoUrl, "_blank");
+    private void OpenRepo() => _ = JS.InvokeVoidAsync("open", LoaderStore.PowerShellRepoUrl, "_blank");
 
     private void Copy(string text) => _ = JS.InvokeVoidAsync("navigator.clipboard.writeText", text);
 }

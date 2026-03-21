@@ -49,6 +49,8 @@ public record ServiceStateChangedEvent : IEvent;
 
 public record ExtensionGroupStoreChangedEvent : IEvent;
 
+public record LoaderStoreChangedEvent : IEvent;
+
 // ── Theme ─────────────────────────────────────────────────────────────
 
 public record ThemeChangedEvent : IEvent;

