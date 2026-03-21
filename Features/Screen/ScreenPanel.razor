@@ -121,6 +121,7 @@
     private bool _jsInitialized;
     private bool _isFullscreen;
     private string _scaleMode = "stretch";
+    private RelaySocket? _prevRelay;
 
     private static readonly (string Label, uint Value)[] QualityPresets =
     [
@@ -144,22 +145,53 @@
 
     protected override void OnInitialized()
     {
-        _screen = new ScreenService(Relay!, Msg);
-        _screen.StateChanged += OnScreenStateChanged;
-        _screen.FrameReady += OnFrame;
-        _screen.StreamingChanged += OnStreamingChanged;
+        InitScreenService();
 
         On<AgentOnlineEvent>(e =>
         {
-            if (e.AgentId == AgentId && _screen.IsConnected)
+            if (e.Uuid != AgentUuid) return;
+            if (_screen.IsConnected)
                 _ = InvokeAsync(async () => await _screen.FetchDisplaysAsync());
         });
+
+        // Relay may have been reconnected — re-render to pick up new connection state
+        On<WindowChangedEvent>();
     }
 
     protected override async Task OnInitializedAsync()
     {
         if (_screen.IsConnected)
             await _screen.FetchDisplaysAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Relay != _prevRelay && Relay is { IsConnected: true })
+        {
+            // Relay changed (agent reconnected) — recreate service with new relay
+            ReplaceScreenService();
+            await _screen.FetchDisplaysAsync();
+        }
+        _prevRelay = Relay;
+    }
+
+    private void InitScreenService()
+    {
+        if (Relay is null) return;
+        _screen = new ScreenService(Relay, Msg);
+        _screen.StateChanged += OnScreenStateChanged;
+        _screen.FrameReady += OnFrame;
+        _screen.StreamingChanged += OnStreamingChanged;
+        _prevRelay = Relay;
+    }
+
+    private void ReplaceScreenService()
+    {
+        _screen.StateChanged -= OnScreenStateChanged;
+        _screen.FrameReady -= OnFrame;
+        _screen.StreamingChanged -= OnStreamingChanged;
+        _screen.Dispose();
+        InitScreenService();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
