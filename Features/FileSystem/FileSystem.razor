@@ -549,6 +549,7 @@ private HashSet<DirEntry> ActiveSelection =>
     private IDisposable? _dlSub;
     private IDisposable? _disconnectSub;
     private IDisposable? _onlineSub;
+    private IDisposable? _windowSub;
     private IDisposable? _scanSub;
     private bool _agentOffline;
     private bool _pendingNavigate;
@@ -571,6 +572,16 @@ private HashSet<DirEntry> ActiveSelection =>
             _pendingNavigate = true;
             _ = InvokeAsync(StateHasChanged);
         });
+        _windowSub = Bus.Subscribe<WindowChangedEvent>(e =>
+        {
+            // Relay may have been reconnected — re-render to pick up new connection state
+            if (IsConnected && _agentOffline)
+            {
+                _agentOffline = false;
+                _pendingNavigate = true;
+            }
+            InvokeAsync(StateHasChanged);
+        });
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -588,7 +599,7 @@ private HashSet<DirEntry> ActiveSelection =>
         }
     }
 
-    public void Dispose() { _dlSub?.Dispose(); _disconnectSub?.Dispose(); _onlineSub?.Dispose(); _scanSub?.Dispose(); _pendingRefresh?.Cancel(); }
+    public void Dispose() { _dlSub?.Dispose(); _disconnectSub?.Dispose(); _onlineSub?.Dispose(); _windowSub?.Dispose(); _scanSub?.Dispose(); _pendingRefresh?.Cancel(); }
 
     private void OnSortChanged((string column, bool ascending) sort)
     {

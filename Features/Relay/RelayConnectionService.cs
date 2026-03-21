@@ -20,6 +20,8 @@ public class RelayConnectionService : IAsyncDisposable
     private readonly Dictionary<string, RelayState> _relayStates = new();
     /// <summary>Active relay connections per agent, shared across windows and background services.</summary>
     private readonly Dictionary<string, RelaySocket> _activeRelays = new();
+    /// <summary>In-flight CreateRelay tasks to prevent duplicate concurrent connections to the same agent.</summary>
+    private readonly Dictionary<string, Task<RelaySocket?>> _pendingRelays = new();
     /// <summary>Agents whose system info fetch failed (e.g. relay was paired). Key: agentId, Value: relayUrl.</summary>
     private readonly Dictionary<string, string> _pendingInfoFetch = new();
     private IDisposable? _relayStoreSub;
@@ -169,19 +171,30 @@ public class RelayConnectionService : IAsyncDisposable
         }
     }
 
-    public async Task<RelaySocket?> CreateRelay(string agentId, string relayUrl)
+    public Task<RelaySocket?> CreateRelay(string agentId, string relayUrl)
     {
         // Reuse any active relay for this agent (from windows or background services)
         if (_activeRelays.TryGetValue(agentId, out var cached) && cached.IsConnected)
-            return cached;
+            return Task.FromResult<RelaySocket?>(cached);
 
         var existingWin = _wm.Windows.FirstOrDefault(w => w.AgentId == agentId && w.Relay is { IsConnected: true });
         if (existingWin?.Relay is not null)
         {
             _activeRelays[agentId] = existingWin.Relay;
-            return existingWin.Relay;
+            return Task.FromResult<RelaySocket?>(existingWin.Relay);
         }
 
+        // Deduplicate concurrent connection attempts to the same agent
+        if (_pendingRelays.TryGetValue(agentId, out var pending))
+            return pending;
+
+        var task = ConnectRelayCore(agentId, relayUrl);
+        _pendingRelays[agentId] = task;
+        return task;
+    }
+
+    private async Task<RelaySocket?> ConnectRelayCore(string agentId, string relayUrl)
+    {
         var relay = new RelaySocket { BaseUrl = relayUrl, Token = _relayStore.GetTokenByUrl(relayUrl) };
         try
         {
@@ -194,6 +207,10 @@ public class RelayConnectionService : IAsyncDisposable
             _msg.Error("Connection Failed", $"Could not connect to agent: {ex.Message}", "Relay");
             await relay.Disconnect();
             return null;
+        }
+        finally
+        {
+            _pendingRelays.Remove(agentId);
         }
     }
 
@@ -241,8 +258,10 @@ public class RelayConnectionService : IAsyncDisposable
                     var relayEntry = _relayStore.GetByUrl(relayUrl);
                     await _agentDb.UpsertAsync(uuid, agent, relayEntry?.Id ?? "");
                     _bus.Publish(new RelayAgentsChangedEvent(relayUrl));
+                    // Reconnect windows first so the relay is ready when
+                    // subscribers (FileSystem, TransferService) handle the event.
+                    await ReconnectWindowsForAgent(agent.Id, relayUrl, uuid);
                     _bus.Publish(new AgentOnlineEvent(uuid, agent.Id, relayUrl));
-                    _ = ReconnectWindowsForAgent(agent.Id, relayUrl, uuid);
                     return;
                 }
             }
@@ -284,8 +303,14 @@ public class RelayConnectionService : IAsyncDisposable
             if (existingUuid is null)
                 _ = FetchUuid(agent, relayUrl);
             else
-                _bus.Publish(new AgentOnlineEvent(existingUuid, agent.Id, relayUrl));
+                _ = ReconnectAndNotify(agent.Id, relayUrl, existingUuid);
         }
+    }
+
+    private async Task ReconnectAndNotify(string agentId, string relayUrl, string uuid)
+    {
+        await ReconnectWindowsForAgent(agentId, relayUrl, uuid);
+        _bus.Publish(new AgentOnlineEvent(uuid, agentId, relayUrl));
     }
 
     // --- Events WebSocket ---
