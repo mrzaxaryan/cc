@@ -122,9 +122,9 @@
     private async Task Generate()
     {
         if (_pdfBase64 is null || string.IsNullOrWhiteSpace(_url)) return;
-        if (!Uri.TryCreate(_url.Trim(), UriKind.Absolute, out var uri) || (uri.Scheme != "http" && uri.Scheme != "https"))
+        if (!Uri.TryCreate(_url.Trim(), UriKind.Absolute, out _))
         {
-            _error = "Invalid URL — must start with http:// or https://";
+            _error = "Invalid URL — must be an absolute URI (e.g. https://…, ftp://…)";
             return;
         }
         _error = "";
