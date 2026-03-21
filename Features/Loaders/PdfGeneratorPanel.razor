@@ -3,21 +3,30 @@
 <div class="tool-panel">
     <div class="tool-header">
         <h3 class="tool-title">PDF Dropper</h3>
-        <p class="tool-subtitle">Inject invisible full-page link annotations into every page of a PDF — clicking anywhere opens the target URL.</p>
+        <p class="tool-subtitle">Inject invisible link overlays into PDF documents — clicking anywhere opens the target URL.</p>
     </div>
 
     <div class="loader-content">
         <div class="loader-section">
+            <h4 class="loader-section-title">Overview</h4>
+            <p class="loader-text">
+                Adds a transparent full-page link annotation to every page of an existing PDF.
+                The annotation triggers a URI action when clicked — no visual change to the document.
+                Works in all major PDF readers (Adobe Acrobat, Foxit, browser viewers).
+            </p>
+        </div>
+
+        <div class="loader-section">
             <h4 class="loader-section-title">1 — Target URL</h4>
             <p class="loader-text rtf-field-hint">
-                The URL that opens when any page of the PDF is clicked. Covers the entire page area with an invisible annotation.
+                URL opened when the target clicks anywhere on any page of the PDF.
             </p>
             <C2InputActions Value="@_url" ValueChanged="v => _url = v" Monospace BindOnInput
                             Placeholder="https://example.com/payload" />
         </div>
 
         <div class="loader-section">
-            <h4 class="loader-section-title">2 — Upload PDF</h4>
+            <h4 class="loader-section-title">2 — Output</h4>
             <p class="loader-text rtf-field-hint">
                 Upload a PDF document. Each page will receive a transparent clickable overlay linking to the target URL.
             </p>
@@ -31,12 +40,8 @@
                     <span class="loader-text">@_fileName (@_pageCount pages)</span>
                 }
             </div>
-        </div>
-
-        @if (_pdfBase64 is not null)
-        {
-            <div class="loader-section">
-                <h4 class="loader-section-title">3 — Download</h4>
+            @if (_pdfBase64 is not null)
+            {
                 <div class="rtf-actions">
                     <button class="loader-link-btn" @onclick="Generate" disabled="@(string.IsNullOrWhiteSpace(_url) || _generating)">
                         @if (_generating)
@@ -51,21 +56,21 @@
                         }
                     </button>
                 </div>
-                @if (!string.IsNullOrEmpty(_error))
-                {
-                    <p class="loader-text" style="color:var(--c2-accent-red)">@_error</p>
-                }
-            </div>
-        }
+            }
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <p class="loader-text" style="color:var(--c2-accent-red)">@_error</p>
+            }
+        </div>
 
         <div class="loader-section">
             <h4 class="loader-section-title">How It Works</h4>
             <p class="loader-text">
-                1. Upload any PDF document<br/>
-                2. A transparent link annotation covering the full page is added to every page<br/>
-                3. The annotation triggers a URI action pointing to your target URL<br/>
-                4. The border is invisible and highlight mode is NONE — no visual change<br/>
-                5. Target clicks anywhere on any page → browser opens the URL
+                1. Target opens the PDF in any reader<br/>
+                2. Every page has an invisible <code>PdfLinkAnnotation</code> covering the full page area<br/>
+                3. Clicking anywhere triggers a <code>URI</code> action → default browser opens the URL<br/>
+                4. The border is invisible and highlight mode is <code>NONE</code> — document looks untouched<br/>
+                5. Works across Adobe Acrobat, Foxit, Chrome, Edge, and Preview
             </p>
         </div>
     </div>
