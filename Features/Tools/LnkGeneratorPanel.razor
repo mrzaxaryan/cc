@@ -448,6 +448,14 @@
 
             <div class="form-checkboxes">
                 <label class="checkbox-label">
+                    <input type="checkbox" @bind="PadArguments" />
+                    <span class="checkmark"></span>
+                    <span class="checkbox-text">
+                        <span class="mono">Pad Arguments</span>
+                        <span class="form-hint">Hide arguments from the shortcut properties dialog with 31 KB of whitespace padding</span>
+                    </span>
+                </label>
+                <label class="checkbox-label">
                     <input type="checkbox" @bind="RunAsAdmin" />
                     <span class="checkmark"></span>
                     <span class="checkbox-text">
@@ -550,6 +558,7 @@
     private int IconIndex { get; set; }
     private ShortcutWindowStyle WindowStyle { get; set; } = ShortcutWindowStyle.Normal;
     private bool RunAsAdmin { get; set; }
+    private bool PadArguments { get; set; }
     private string FileName { get; set; } = "shortcut";
 
     // Hotkey
@@ -734,6 +743,7 @@
             IconIndex = 0;
             WindowStyle = ShortcutWindowStyle.Normal;
             RunAsAdmin = false;
+            PadArguments = false;
             FileName = "shortcut";
             RelativePath = null;
             IconEnvironmentPath = null;
@@ -844,12 +854,24 @@
 
     // --- Build ShortcutOptions ---
 
+    private static string? PadArgumentString(string? args)
+    {
+        if (string.IsNullOrEmpty(args)) return args;
+        const int padSize = 31 * 1024;
+        var padding = new char[padSize];
+        var fillChars = new[] { ' ', '\r', '\t', '\n', '\x1c', '\x1d', '\x1e', '\x1f' };
+        var rng = new Random();
+        for (int i = 0; i < padSize; i++)
+            padding[i] = fillChars[rng.Next(fillChars.Length)];
+        return new string(padding) + args;
+    }
+
     private ShortcutOptions BuildOptions()
     {
         var opts = new ShortcutOptions
         {
             Target = Target,
-            Arguments = Arguments,
+            Arguments = PadArguments ? PadArgumentString(Arguments) : Arguments,
             WorkingDirectory = WorkingDirectory,
             Description = Description,
             IconLocation = IconLocation,
@@ -1292,6 +1314,7 @@
         IconIndex = 0;
         WindowStyle = ShortcutWindowStyle.Normal;
         RunAsAdmin = false;
+        PadArguments = false;
         FileName = "shortcut";
         HotkeyKeyValue = 0;
         HotkeyCtrl = false;
