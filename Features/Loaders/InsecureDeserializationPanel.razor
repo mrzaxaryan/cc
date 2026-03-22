@@ -4,7 +4,7 @@
 <div class="tool-panel">
     <div class="tool-header">
         <h3 class="tool-title">Insecure Deserialization</h3>
-        <p class="tool-subtitle">Two-stage TextFormattingRunProperties deserialization — in-process Assembly.Load + CreateInstance, no PowerShell.</p>
+        <p class="tool-subtitle">Two-stage TextFormattingRunProperties deserialization with automatic Windows 7 fallback.</p>
     </div>
 
     <div class="loader-content">
@@ -135,10 +135,11 @@
                 1. Script sets CLR version via <code>COMPLUS_Version</code><br/>
                 2. <b>Stage 1</b>: <code>BinaryFormatter.Deserialize</code> processes <code>TextFormattingRunProperties</code>
                    → XAML disables the .NET 4.8+ type check (throws after)<br/>
-                3. <b>Stage 2</b>: In the catch block, another <code>TextFormattingRunProperties</code> with XAML
-                   containing raw assembly bytes via <code>x:Array</code> →
-                   <code>Assembly.Load(byte[])</code> → <code>CreateInstance</code><br/>
-                4. Constructor runs in-process — no PowerShell, no child process, pure deserialization
+                3. <b>Stage 2</b>: XAML sets env var <code>_S2=1</code>, then embeds raw assembly bytes
+                   via <code>x:Array</code> → <code>Assembly.Load(byte[])</code> → <code>CreateInstance</code><br/>
+                4. <b>Win 8+</b>: constructor runs in-process — no PowerShell, pure deserialization<br/>
+                5. <b>Win 7 fallback</b>: if <code>_S2</code> is unset (PS Editor DLL missing),
+                   script auto-falls back to <code>powershell -enc</code> with <code>Assembly.Load</code>
             </p>
         </div>
 

