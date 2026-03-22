@@ -61,7 +61,7 @@
                 case "PowerShellLoader": <PowerShellLoaderPanel /> break;
                 case "RtfGenerator":        <RtfGeneratorPanel /> break;
                 case "PdfGenerator":        <PdfGeneratorPanel /> break;
-                case "DotNetToJScript":     <DotNetToJScriptPanel /> break;
+                case "InsecureDeserialization": <InsecureDeserializationPanel /> break;
             }
         </div>
         @if (!win.Maximized)
@@ -281,7 +281,7 @@
         "LoaderSettings" => "settings",
         "RtfGenerator" => "file-text",
         "PdfGenerator" => "file-text",
-        "DotNetToJScript" => "code",
+        "InsecureDeserialization" => "code",
         _ => "monitor"
     };
 

