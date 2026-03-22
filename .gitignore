@@ -205,3 +205,6 @@ Thumbs.db
 
 # Windows null device artifact
 nul
+
+# .NET Framework reference assemblies (copied at build time)
+wwwroot/refs/
