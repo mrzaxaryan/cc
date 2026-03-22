@@ -61,6 +61,11 @@
                     @if (_compileSuccess)
                     {
                         <p class="loader-text loader-hint" style="color:#27ae60;">Compiled successfully — @FormatSize(_dllBytes?.Length ?? 0)</p>
+                        <div class="loader-actions">
+                            <button class="loader-link-btn" @onclick="DownloadDllZip">
+                                <C2Icon Name="download" Size="Size.Xs" /> Download DLL (.zip)
+                            </button>
+                        </div>
                     }
                 </div>
             }
@@ -274,9 +279,10 @@ public class TestClass : IObjectReference
             _dllFileName = $"{_sourceAssemblyName}.dll";
             _compileSuccess = true;
 
-            var nrbf = D2JSGenerator.BuildNrbfWithPayload(_assemblyName, _typeName, "raw_bytes", _dllBytes!);
+            var nrbf = D2JSGenerator.BuildNrbf(_sourceAssemblyName, _typeName);
             var b64 = Convert.ToBase64String(nrbf);
-            _output = D2JSGenerator.Generate(b64, _typeName, _format, RuntimeVersion);
+            var dllB64 = Convert.ToBase64String(_dllBytes!);
+            _output = D2JSGenerator.Generate(b64, _typeName, _format, RuntimeVersion, dllB64);
         }
         else
         {
@@ -316,14 +322,10 @@ public class TestClass : IObjectReference
             return;
         }
 
-        byte[] nrbf;
-        if (_dllBytes is { Length: > 0 })
-            nrbf = D2JSGenerator.BuildNrbfWithPayload(_assemblyName, _typeName, "raw_bytes", _dllBytes);
-        else
-            nrbf = D2JSGenerator.BuildNrbf(_assemblyName, _typeName);
-
+        var nrbf = D2JSGenerator.BuildNrbf(_assemblyName, _typeName);
         var b64 = Convert.ToBase64String(nrbf);
-        _output = D2JSGenerator.Generate(b64, _typeName, _format, RuntimeVersion);
+        string? dllB64 = _dllBytes is { Length: > 0 } ? Convert.ToBase64String(_dllBytes) : null;
+        _output = D2JSGenerator.Generate(b64, _typeName, _format, RuntimeVersion, dllB64);
     }
 
     private void RebuildFromBlob()
@@ -346,6 +348,33 @@ public class TestClass : IObjectReference
                 var a = document.createElement('a');
                 a.href = 'data:application/octet-stream;base64,{base64}';
                 a.download = 'payload{ext}';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }})()
+        ");
+    }
+
+    private async Task DownloadDllZip()
+    {
+        if (_dllBytes is not { Length: > 0 }) return;
+
+        var name = !string.IsNullOrEmpty(_sourceAssemblyName) ? _sourceAssemblyName : "payload";
+
+        using var ms = new MemoryStream();
+        using (var zip = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Create, true))
+        {
+            var entry = zip.CreateEntry($"{name}.dll");
+            using var es = entry.Open();
+            es.Write(_dllBytes, 0, _dllBytes.Length);
+        }
+
+        var base64 = Convert.ToBase64String(ms.ToArray());
+        await JS.InvokeVoidAsync("eval", $@"
+            (function() {{
+                var a = document.createElement('a');
+                a.href = 'data:application/zip;base64,{base64}';
+                a.download = '{name}.zip';
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);

