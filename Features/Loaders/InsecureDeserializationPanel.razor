@@ -100,6 +100,15 @@
                 }
             </div>
 
+            @if (_format == ScriptFormat.JScript || _format == ScriptFormat.Hta || _format == ScriptFormat.Sct)
+            {
+                <label class="loader-toggle">
+                    <input type="checkbox" checked="@_obfuscate" @onchange="OnObfuscateChanged" />
+                    <span class="loader-toggle-label">Obfuscate JScript</span>
+                    <span class="loader-text loader-hint">Rename variables, encode strings, inject dead code</span>
+                </label>
+            }
+
             @if (!string.IsNullOrEmpty(_output))
             {
                 <div class="loader-preview-wrap">
@@ -167,6 +176,9 @@
     private bool _compileSuccess;
     private string[] _compileErrors = [];
 
+    // Obfuscation
+    private bool _obfuscate;
+
     // Output
     private string _output = "";
 
@@ -194,6 +206,12 @@ public class TestClass
         RebuildCurrent();
     }
 
+    private void OnObfuscateChanged(ChangeEventArgs e)
+    {
+        _obfuscate = (bool)(e.Value ?? false);
+        RebuildCurrent();
+    }
+
     private void RebuildCurrent()
     {
         if (_inputMode == InputMode.Blob) RebuildFromBlob();
@@ -218,6 +236,7 @@ public class TestClass
             _compileSuccess = true;
 
             _output = InsecureDeserializationGenerator.Generate(_dllBytes!, _typeName, _format, RuntimeVersion);
+            if (_obfuscate) _output = ApplyObfuscation(_output);
         }
         else
         {
@@ -255,6 +274,7 @@ public class TestClass
         }
 
         _output = InsecureDeserializationGenerator.Generate(_dllBytes, _typeName, _format, RuntimeVersion);
+        if (_obfuscate) _output = ApplyObfuscation(_output);
     }
 
     private void RebuildFromBlob()
@@ -265,6 +285,7 @@ public class TestClass
             return;
         }
         _output = InsecureDeserializationGenerator.GenerateFromBlob(_rawBlob.Trim(), _format, RuntimeVersion);
+        if (_obfuscate) _output = ApplyObfuscation(_output);
     }
 
     private async Task Download()
@@ -298,6 +319,20 @@ public class TestClass
         if (bytes < 1024) return $"{bytes} B";
         if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
         return $"{bytes / (1024.0 * 1024.0):F1} MB";
+    }
+
+    private string ApplyObfuscation(string output)
+    {
+        if (_format == ScriptFormat.JScript)
+            return JScriptObfuscator.Obfuscate(output);
+
+        // HTA/SCT: obfuscate the JScript block inside the wrapper
+        return System.Text.RegularExpressions.Regex.Replace(output,
+            @"(<script language=""JScript"">(?:<!\[CDATA\[)?)(.*?)((?:\]\]>)?</script>)",
+            m => m.Groups[1].Value
+                 + "\n" + JScriptObfuscator.Obfuscate(m.Groups[2].Value.Trim()) + "\n"
+                 + m.Groups[3].Value,
+            System.Text.RegularExpressions.RegexOptions.Singleline);
     }
 
     private void Copy(string text) => _ = JS.InvokeVoidAsync("navigator.clipboard.writeText", text);
